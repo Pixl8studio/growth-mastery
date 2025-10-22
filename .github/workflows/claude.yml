@@ -33,8 +33,11 @@ jobs:
       - name: 🤖 Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         with:
-          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Using ANTHROPIC_API_KEY from secrets instead of OAuth token
+          # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
 
           # This allows Claude to read CI results on PRs
           additional_permissions: |

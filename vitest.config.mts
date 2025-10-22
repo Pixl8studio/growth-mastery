@@ -6,7 +6,7 @@ export default defineConfig({
     plugins: [react()],
     test: {
         environment: "jsdom",
-        setupFiles: ["./vitest.setup.ts"],
+        setupFiles: ["./vitest.setup.tsx"],
         include: ["__tests__/unit/**/*.{test,spec}.{ts,tsx}"],
         // Parallel execution settings - optimized for 4-core GitHub Actions runner
         pool: "forks",

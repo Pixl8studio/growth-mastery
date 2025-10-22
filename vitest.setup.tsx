@@ -62,4 +62,3 @@ beforeAll(() => {
 afterEach(() => {
     console.error = originalError;
 });
-

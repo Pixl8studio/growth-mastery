@@ -56,13 +56,40 @@ genie-v3/
 
 ## Scripts
 
+### Development
 - `pnpm dev` - Start development server
+- `pnpm dev:turbo` - Start development server with Turbo mode (faster)
 - `pnpm build` - Build for production
+- `pnpm build:analyze` - Build with bundle size analysis
 - `pnpm start` - Start production server
+- `pnpm start:prod` - Start production server with NODE_ENV=production
+
+### Code Quality
 - `pnpm lint` - Run ESLint
-- `pnpm type-check` - Run TypeScript compiler checks
-- `pnpm test` - Run tests
+- `pnpm lint:fix` - Run ESLint and auto-fix issues
 - `pnpm format` - Format code with Prettier
+- `pnpm format:check` - Check code formatting without modifying
+- `pnpm type-check` - Run TypeScript compiler checks
+- `pnpm type-check:watch` - Run TypeScript checks in watch mode
+
+### Testing
+- `pnpm test` - Run unit tests
+- `pnpm test:watch` - Run tests in watch mode
+- `pnpm test:coverage` - Run tests with coverage report
+- `pnpm test:ui` - Open Vitest UI for interactive testing
+- `pnpm test:e2e` - Run end-to-end tests with Playwright
+- `pnpm test:e2e:ui` - Run E2E tests with Playwright UI
+- `pnpm test:e2e:debug` - Debug E2E tests
+- `pnpm test:e2e:headed` - Run E2E tests in headed mode (visible browser)
+
+### Pre-Push Validation
+- `pnpm pre-push` - Run full validation suite (lint, format, type-check, tests)
+- `pnpm pre-push:checks` - Run all quality checks in parallel
+- `pnpm pre-push:test` - Run test suite with coverage
+
+### Utilities
+- `pnpm clean` - Clean build artifacts and cache
+- `pnpm clean:all` - Deep clean including node_modules
 
 ## Architecture Principles
 
@@ -73,6 +100,50 @@ Following patterns from mcp-hubby and lessons learned from v1/v2:
 3. **Error Handling** - Typed errors with proper boundaries
 4. **Testing** - Vitest for unit tests, Playwright for e2e
 5. **Code Quality** - ESLint, Prettier, and pre-commit hooks
+
+## Git Hooks & Quality Gates
+
+This project uses Husky for automated quality checks:
+
+### Pre-Commit Hook
+Runs automatically before every commit:
+- ✨ **Lint-Staged** - Auto-fixes and formats only staged files
+- 🔍 **ESLint** - Fixes linting issues
+- ✨ **Prettier** - Formats code consistently
+- ⚡ **Fast** - Only processes changed files (2-5 seconds)
+
+### Pre-Push Hook
+Runs automatically before every push:
+- 🔎 **ESLint** - Full codebase linting
+- ✨ **Prettier** - Format checking
+- 🔧 **TypeScript** - Type checking
+- 🧪 **Tests** - Full test suite with coverage
+- ⏱️ **Comprehensive** - Full validation (30-60 seconds)
+
+### CI/CD Pipeline
+GitHub Actions runs on every PR and push to main:
+- **Job 1: Code Quality** - Lint, format, type-check (parallel)
+- **Job 2: Tests & Coverage** - Full test suite with Codecov integration
+- **Job 3: Production Build** - Next.js build verification
+
+## Testing Strategy
+
+### Unit Tests (Vitest)
+- Located in `__tests__/unit/`
+- Run with `pnpm test`
+- Coverage reports in `coverage/`
+- Testing Library for React components
+
+### E2E Tests (Playwright)
+- Located in `__tests__/e2e/`
+- Run with `pnpm test:e2e`
+- Browser automation and visual testing
+- Auto-starts dev server
+
+### Coverage Requirements
+- Aim for 80%+ coverage on critical paths
+- Coverage reports uploaded to Codecov
+- View reports locally in `coverage/index.html`
 
 ## Next Steps
 

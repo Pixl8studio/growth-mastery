@@ -1,0 +1,21 @@
+# pnpm Configuration
+# Optimizes package installation and caching for production deployments
+
+# Use a local store directory for better caching
+store-dir=.pnpm-store
+
+# Cache modules for 7 days (604800 seconds)
+modules-cache-maxage=604800
+
+# Prefer offline mode - use cache first, fallback to network
+prefer-offline=true
+
+# Auto-install peer dependencies to avoid warnings
+auto-install-peers=true
+
+# Don't fail on peer dependency mismatches (more lenient)
+strict-peer-dependencies=false
+
+# Enable shamefully-hoist for better Next.js compatibility
+shamefully-hoist=true
+

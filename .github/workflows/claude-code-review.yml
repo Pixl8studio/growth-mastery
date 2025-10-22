@@ -1,0 +1,102 @@
+name: Claude Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    # Only run on code changes
+    paths:
+      - "app/**/*.ts"
+      - "app/**/*.tsx"
+      - "lib/**/*.ts"
+      - "components/**/*.tsx"
+      - "middleware.ts"
+      - "types/**/*.ts"
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: read
+      id-token: write
+
+    steps:
+      - name: 📥 Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: 🔍 Run Claude Code Review
+        id: claude-review
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            REPO: ${{ github.repository }}
+            PR NUMBER: ${{ github.event.pull_request.number }}
+            
+            You are reviewing a Pull Request for **Genie v3**, a Next.js 15 application with Supabase integration.
+            
+            Please review this PR using the **Sherlock personality** - be methodical, analytical, and precise.
+            
+            ## Review Guidelines (from CLAUDE.md)
+            
+            Focus on:
+            1. **Code Quality**
+               - TypeScript strict mode compliance
+               - Proper error handling patterns
+               - Consistent naming conventions
+               
+            2. **Architecture & Patterns**
+               - Proper use of Server/Client Components
+               - Supabase client usage (browser vs server)
+               - Middleware implementation
+               - Type safety throughout
+               
+            3. **Performance**
+               - Unnecessary re-renders
+               - Proper use of async/await
+               - Database query optimization
+               
+            4. **Security**
+               - Environment variable handling
+               - API route protection
+               - Input validation with Zod
+               - Supabase RLS policies
+               
+            5. **Testing**
+               - Test coverage for new features
+               - Proper mocking of Supabase
+               - Edge cases covered
+               
+            6. **Observability**
+               - Structured logging with Pino
+               - Proper error tracking
+               - Context in log messages
+            
+            ## Output Format
+            
+            Provide your review in this structure:
+            
+            ### 🔍 Elementary! Code Review Analysis
+            
+            **Summary:** [Brief overview of changes]
+            
+            **Findings:**
+            - ✅ **Strengths:** [What's done well]
+            - ⚠️  **Concerns:** [Issues to address]
+            - 💡 **Suggestions:** [Improvements to consider]
+            
+            **Detailed Analysis:**
+            [Specific file-by-file feedback with line references]
+            
+            **Verdict:** [Approve / Request Changes / Comment]
+            
+            Use `gh pr comment` to post your review. Be constructive and helpful!
+
+          claude_args:
+            '--permission-mode bypassPermissions --allowed-tools "Bash(gh issue
+            view:*),Bash(gh search:*),Bash(gh issue list:*),Bash(gh pr
+            comment:*),Bash(gh pr diff:*),Bash(gh pr view:*),Bash(gh pr list:*)"'
+

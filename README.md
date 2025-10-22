@@ -41,19 +41,67 @@ This project is configured with:
 - **React/Next.js patterns** - Modern component architecture
 - **Git workflows** - Commit message standards and automation
 - **Observability** - Structured logging and error monitoring
+- **Cursor Bugbot** - Automatic PR reviews
+- **Claude Code** - AI-powered code reviews and assistance
 
 The AI will automatically reference these rules when working in this codebase.
+
+### Cursor Bugbot Integration
+
+Cursor Bugbot automatically reviews every pull request:
+
+```bash
+# Check Bugbot installation status
+./scripts/check-bugbot.sh
+
+# Manual trigger on PR (comment)
+cursor review
+
+# Verbose mode for debugging
+cursor review verbose=true
+```
+
+**Quick Setup:**
+
+1. Install: https://github.com/apps/cursor-bugbot
+2. Enable at: https://cursor.com/dashboard
+
+See [docs/BUGBOT_QUICKSTART.md](./docs/BUGBOT_QUICKSTART.md) for setup.
+
+### Claude Code Integration
+
+Claude Code is integrated for intelligent code reviews:
+
+```bash
+pnpm claude:review          # Review your code changes
+pnpm claude:chat            # Interactive AI chat about your code
+pnpm claude                 # Launch full CLI
+```
+
+### Dual AI Review System
+
+| Tool              | Trigger                            | Best For                  |
+| ----------------- | ---------------------------------- | ------------------------- |
+| **Cursor Bugbot** | Automatic on every PR              | Quick bug detection       |
+| **Claude Code**   | Manual (`@claude` or pnpm scripts) | Deep architectural review |
 
 ## Project Structure
 
 ```
 genie-v3/
-├── .cursor/rules/        # AI coding standards and patterns
-├── .claude/commands/     # Claude Code automation commands
-├── app/                  # Next.js app directory (to be created)
-├── components/           # React components (to be created)
-├── lib/                  # Shared utilities (to be created)
-└── public/               # Static assets (to be created)
+├── .cursor/
+│   ├── rules/           # AI coding standards and patterns
+│   └── bugbot.json      # Cursor Bugbot configuration
+├── .claude/commands/    # Claude Code automation commands
+├── app/                 # Next.js 15 App Router
+├── components/          # React components
+├── lib/                 # Shared utilities
+├── docs/                # Documentation
+│   ├── BUGBOT_QUICKSTART.md
+│   └── CURSOR_BUGBOT_SETUP.md
+├── scripts/             # Utility scripts
+│   └── check-bugbot.sh
+└── public/              # Static assets
 ```
 
 ## Scripts
@@ -93,10 +141,17 @@ genie-v3/
 - `pnpm pre-push:checks` - Run all quality checks in parallel
 - `pnpm pre-push:test` - Run test suite with coverage
 
+### AI Code Review
+
+- `pnpm claude` - Launch Claude Code CLI
+- `pnpm claude:review` - Get AI code review
+- `pnpm claude:chat` - Start interactive AI chat
+
 ### Utilities
 
 - `pnpm clean` - Clean build artifacts and cache
 - `pnpm clean:all` - Deep clean including node_modules
+- `./scripts/check-bugbot.sh` - Verify Cursor Bugbot installation
 
 ## Architecture Principles
 

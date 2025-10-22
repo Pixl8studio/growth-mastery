@@ -156,3 +156,17 @@ GitHub Actions runs on every PR and push to main:
 ---
 
 Built with precision and deductive reasoning. 🔍
+
+
+## 🎯 Quick Start
+
+This project is now live with full CI/CD! Every commit and push is validated automatically.
+
+### Try It Out
+
+```bash
+pnpm install  # Sets up git hooks
+pnpm dev      # Start developing
+```
+
+🔍 Elementary! The tooling is operational.

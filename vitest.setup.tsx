@@ -15,6 +15,7 @@ afterEach(() => {
 // Setup environment variables for testing
 beforeAll(() => {
     // Mock Next.js environment variables
+    // @ts-expect-error - NODE_ENV is readonly but we need to set it for tests
     process.env.NODE_ENV = "test";
     process.env.NEXT_PUBLIC_APP_URL = "http://localhost:3000";
 });

@@ -1,0 +1,103 @@
+{
+  "$schema": "https://cdn.jsdelivr.net/npm/@anthropic-ai/claude-code@latest/schema.json",
+  "project": {
+    "name": "Genie v3",
+    "description": "Next.js 15 App Router with Supabase, TypeScript, Tailwind CSS, Vitest, and Playwright",
+    "version": "0.1.0"
+  },
+  "codeReview": {
+    "enabled": true,
+    "guidelines": "CLAUDE.md",
+    "autoReview": true,
+    "reviewChecks": {
+      "typescript": true,
+      "security": true,
+      "performance": true,
+      "testing": true,
+      "patterns": true
+    }
+  },
+  "personality": {
+    "type": "sherlock",
+    "description": "Methodical, analytical code reviews with deductive reasoning"
+  },
+  "tech": {
+    "framework": "Next.js 15",
+    "language": "TypeScript",
+    "runtime": "Node.js 22+",
+    "packageManager": "pnpm",
+    "styling": "Tailwind CSS",
+    "database": "Supabase (PostgreSQL)",
+    "testing": {
+      "unit": "Vitest",
+      "e2e": "Playwright"
+    }
+  },
+  "standards": {
+    "logging": "Pino (structured JSON)",
+    "errorHandling": "Custom error classes (lib/errors.ts)",
+    "env": "Zod validation (lib/env.ts)",
+    "codeStyle": {
+      "formatter": "Prettier",
+      "linter": "ESLint",
+      "typeChecking": "strict"
+    }
+  },
+  "patterns": {
+    "prefer": [
+      "Server Components for data fetching",
+      "Client Components only when needed",
+      "Server Actions for mutations",
+      "Structured logging with context",
+      "Custom error classes",
+      "Environment validation with Zod",
+      "Type-safe database queries"
+    ],
+    "avoid": [
+      "console.log (use logger)",
+      "any types without justification",
+      "Client-side data fetching",
+      "Unvalidated environment variables",
+      "Generic error throwing",
+      "Direct database queries in components"
+    ]
+  },
+  "fileOrganization": {
+    "app": "Routes, pages, layouts (Next.js App Router)",
+    "lib": "Utilities, helpers, configuration",
+    "components": "React components (ui/ for reusable, features/ for specific)",
+    "types": "TypeScript type definitions",
+    "__tests__": "Unit and E2E tests"
+  },
+  "security": {
+    "envValidation": "lib/env.ts",
+    "inputValidation": "Zod schemas",
+    "authentication": "Supabase Auth",
+    "authorization": "Supabase RLS policies",
+    "secretManagement": "Environment variables only"
+  },
+  "observability": {
+    "logging": {
+      "library": "Pino",
+      "format": "JSON (structured)",
+      "levels": ["debug", "info", "warn", "error"],
+      "context": "Always include requestId, userId where applicable"
+    }
+  },
+  "scripts": {
+    "dev": "pnpm dev",
+    "build": "pnpm build",
+    "test": "pnpm test",
+    "testWatch": "pnpm test:watch",
+    "testCoverage": "pnpm test:coverage",
+    "testE2E": "pnpm test:e2e",
+    "lint": "pnpm lint",
+    "format": "pnpm format",
+    "typeCheck": "pnpm type-check"
+  },
+  "documentation": {
+    "architecture": "README.md",
+    "codeReview": "CLAUDE.md",
+    "setup": "TOOLING_SETUP.md"
+  }
+}

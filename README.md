@@ -41,8 +41,21 @@ This project is configured with:
 - **React/Next.js patterns** - Modern component architecture
 - **Git workflows** - Commit message standards and automation
 - **Observability** - Structured logging and error monitoring
+- **Claude Code** - AI-powered code reviews and assistance
 
 The AI will automatically reference these rules when working in this codebase.
+
+### Claude Code Integration
+
+Claude Code is integrated for intelligent code reviews:
+
+```bash
+pnpm claude:review          # Review your code changes
+pnpm claude:chat            # Interactive AI chat about your code
+pnpm claude                 # Launch full CLI
+```
+
+See [CLAUDE_CODE.md](./CLAUDE_CODE.md) for complete documentation.
 
 ## Project Structure
 
@@ -92,6 +105,12 @@ genie-v3/
 - `pnpm pre-push` - Run full validation suite (lint, format, type-check, tests)
 - `pnpm pre-push:checks` - Run all quality checks in parallel
 - `pnpm pre-push:test` - Run test suite with coverage
+
+### AI Code Review
+
+- `pnpm claude` - Launch Claude Code CLI
+- `pnpm claude:review` - Get AI code review
+- `pnpm claude:chat` - Start interactive AI chat
 
 ### Utilities
 

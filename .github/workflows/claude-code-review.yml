@@ -3,14 +3,8 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize]
-    # Only run on code changes
-    paths:
-      - "app/**/*.ts"
-      - "app/**/*.tsx"
-      - "lib/**/*.ts"
-      - "components/**/*.tsx"
-      - "middleware.ts"
-      - "types/**/*.ts"
+    # Run on all PRs (config, docs, code, scripts, etc.)
+    # Removed paths filter to review everything
 
 jobs:
   claude-review:

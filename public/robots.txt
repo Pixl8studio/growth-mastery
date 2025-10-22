@@ -1,0 +1,6 @@
+# robots.txt for genie-v3
+User-agent: *
+Allow: /
+
+Sitemap: https://your-domain.com/sitemap.xml
+

@@ -33,4 +33,3 @@ describe("Array Operations", () => {
         expect(doubled).toEqual([2, 4, 6]);
     });
 });
-

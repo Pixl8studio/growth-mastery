@@ -24,3 +24,6 @@ coverage
 .vscode
 .idea
 
+# Test setup (contains JSX in .ts file)
+vitest.setup.ts
+

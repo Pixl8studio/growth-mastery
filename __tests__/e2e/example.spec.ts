@@ -26,4 +26,3 @@ test.describe("Basic Functionality", () => {
         // await expect(page.locator('div[data-testid="result"]')).toBeVisible();
     });
 });
-

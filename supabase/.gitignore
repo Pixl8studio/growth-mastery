@@ -1,0 +1,8 @@
+# Supabase local development files
+.branches
+.temp
+.env
+
+# Generated files
+*.local.json
+

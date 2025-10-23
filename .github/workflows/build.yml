@@ -45,6 +45,18 @@ jobs:
       - name: 📚 Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: 🗄️ Validate Supabase configuration
+        run: pnpm db:validate
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY || 'placeholder-key' }}
+
+      - name: ✅ Check migration files
+        run: pnpm db:migrations-check
+
+      - name: ✨ Check SQL formatting
+        run: pnpm db:format-check
+
       - name: 🔎 Run ESLint
         run: pnpm lint
 
@@ -83,6 +95,8 @@ jobs:
         env:
           NODE_ENV: test
           NEXT_PUBLIC_APP_URL: http://localhost:3000
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-key-for-testing
 
       - name: 📊 Upload coverage to Codecov
         uses: codecov/codecov-action@v5
@@ -136,6 +150,8 @@ jobs:
         run: pnpm build
         env:
           NEXT_PUBLIC_APP_URL: https://example.com
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-key-for-build
 
       - name: ✅ Verify build output
         run: |

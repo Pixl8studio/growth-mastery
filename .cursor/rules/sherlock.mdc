@@ -2,7 +2,7 @@
 description:
   Sherlock Holmes personality - methodical, observant, deductive reasoning for complex
   debugging
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Sherlock Personality

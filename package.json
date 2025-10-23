@@ -23,8 +23,14 @@
     "test:e2e:ui": "playwright test --ui",
     "test:e2e:debug": "playwright test --debug",
     "test:e2e:headed": "playwright test --headed",
+    "db:types": "supabase gen types typescript --local > types/database.ts || echo '⚠️  Skipping type generation (no local Supabase running)'",
+    "db:types:remote": "supabase gen types typescript --project-id $SUPABASE_PROJECT_ID > types/database.ts",
+    "db:validate": "tsx scripts/validate-supabase.ts",
+    "db:migrations-check": "tsx scripts/check-migrations.ts",
+    "db:format": "test -n \"$(ls supabase/migrations/*.sql 2>/dev/null)\" && sql-formatter --language postgresql --output supabase/migrations/*.sql || echo '⚠️  No migration files to format'",
+    "db:format-check": "test -n \"$(ls supabase/migrations/*.sql 2>/dev/null)\" && (for file in supabase/migrations/*.sql; do sql-formatter --language postgresql \"$file\" | diff -q \"$file\" - || exit 1; done) || echo '⚠️  No migration files to check'",
     "pre-push": "pnpm exec run-s pre-push:checks pre-push:test",
-    "pre-push:checks": "run-p lint format:check type-check",
+    "pre-push:checks": "run-p lint format:check type-check db:validate db:migrations-check",
     "pre-push:test": "pnpm test:coverage",
     "clean": "rm -rf .next out node_modules/.cache",
     "clean:all": "rm -rf .next out node_modules",
@@ -63,11 +69,14 @@
     "husky": "^9.1.7",
     "jsdom": "^27.0.1",
     "lint-staged": "^16.2.5",
+    "node-sql-parser": "^5.3.13",
     "npm-run-all2": "^8.0.4",
     "playwright": "^1.56.1",
     "postcss": "^8.5.6",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.7.1",
+    "sql-formatter": "^15.6.10",
+    "supabase": "^2.53.6",
     "tailwindcss": "^3.4.18",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3",
@@ -85,6 +94,9 @@
     ],
     "*.{json,md}": [
       "prettier --write"
+    ],
+    "supabase/migrations/*.sql": [
+      "sql-formatter --language postgresql --output"
     ]
   }
 }

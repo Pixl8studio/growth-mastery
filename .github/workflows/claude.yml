@@ -24,6 +24,9 @@ jobs:
       issues: write
       id-token: write
       actions: read # Required for Claude to read CI results on PRs
+    env:
+      # Set OAuth token at job level so action can access it
+      CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
     steps:
       - name: 📥 Checkout repository
         uses: actions/checkout@v4
@@ -33,9 +36,6 @@ jobs:
       - name: 🤖 Run Claude Code
         id: claude
         uses: anthropics/claude-code-action@v1
-        env:
-          # The action reads ANTHROPIC_API_KEY from environment
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         with:
 
           # This allows Claude to read CI results on PRs

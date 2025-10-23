@@ -1,290 +1,310 @@
 "use client";
 
-/**
- * Step 8: Watch Page
- * AI-generated video landing page
- */
-
-import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { logger } from "@/lib/client-logger";
+import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Sparkles } from "lucide-react";
-
-interface FunnelProject {
-    id: string;
-    name: string;
-    current_step: number;
-}
-
-interface PitchVideo {
-    id: string;
-    video_url?: string;
-}
+import { Sparkles, PlayCircle, Trash2 } from "lucide-react";
+import { logger } from "@/lib/client-logger";
+import { createClient } from "@/lib/supabase/client";
 
 interface WatchPage {
     id: string;
-    headline: string;
-    subheadline?: string;
-    cta_config?: {
-        text?: string;
+    content: {
+        headline?: string;
+        subheadline?: string;
+        watchPrompt?: string;
+        ctaText?: string;
     };
+    created_at: string;
 }
 
-export default function Step8Page() {
-    const params = useParams();
-    const projectId = params.projectId as string;
+export default function Step8Page({
+    params,
+}: {
+    params: Promise<{ projectId: string }>;
+}) {
+    const [projectId, setProjectId] = useState("");
+    const [project, setProject] = useState<any>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generationProgress, setGenerationProgress] = useState(0);
+    const [watchPages, setWatchPages] = useState<WatchPage[]>([]);
+    const [hasVideo, setHasVideo] = useState(false);
+    const [hasDeck, setHasDeck] = useState(false);
 
-    const [loading, setLoading] = useState(true);
-    const [generating, setGenerating] = useState(false);
-    const [saving, setSaving] = useState(false);
+    useEffect(() => {
+        const resolveParams = async () => {
+            const resolved = await params;
+            setProjectId(resolved.projectId);
+        };
+        resolveParams();
+    }, [params]);
 
-    const [project, setProject] = useState<FunnelProject | null>(null);
-    const [pitchVideos, setPitchVideos] = useState<PitchVideo[]>([]);
-    const [watchPage, setWatchPage] = useState<WatchPage | null>(null);
+    useEffect(() => {
+        const loadProject = async () => {
+            if (!projectId) return;
+            try {
+                const supabase = createClient();
+                const { data: projectData, error: projectError } = await supabase
+                    .from("funnel_projects")
+                    .select("*")
+                    .eq("id", projectId)
+                    .single();
 
-    const [headline, setHeadline] = useState("");
-    const [subheadline, setSubheadline] = useState("");
-    const [ctaText, setCtaText] = useState("");
-
-    const loadData = useCallback(async () => {
-        try {
-            const supabase = createClient();
-
-            const { data: projectData } = await supabase
-                .from("funnel_projects")
-                .select("*")
-                .eq("id", projectId)
-                .single();
-
-            setProject(projectData);
-
-            const { data: videosData } = await supabase
-                .from("pitch_videos")
-                .select("*")
-                .eq("funnel_project_id", projectId);
-
-            setPitchVideos(videosData || []);
-
-            const { data: pageData } = await supabase
-                .from("watch_pages")
-                .select("*")
-                .eq("funnel_project_id", projectId)
-                .limit(1)
-                .single();
-
-            if (pageData) {
-                setWatchPage(pageData);
-                setHeadline(pageData.headline);
-                setSubheadline(pageData.subheadline || "");
-                setCtaText(pageData.cta_config?.text || "");
+                if (projectError) throw projectError;
+                setProject(projectData);
+            } catch (error) {
+                logger.error({ error }, "Failed to load project");
             }
-        } catch (err) {
-            logger.error({ error: err }, "Failed to load data");
-        } finally {
-            setLoading(false);
-        }
+        };
+        loadProject();
     }, [projectId]);
 
     useEffect(() => {
-        loadData();
-    }, [loadData]);
+        const loadPages = async () => {
+            if (!projectId) return;
+            try {
+                const supabase = createClient();
+                const [pagesResult, videoResult, deckResult] = await Promise.all([
+                    supabase
+                        .from("watch_pages")
+                        .select("*")
+                        .eq("funnel_project_id", projectId)
+                        .order("created_at", { ascending: false }),
+                    supabase
+                        .from("pitch_videos")
+                        .select("id")
+                        .eq("funnel_project_id", projectId),
+                    supabase
+                        .from("deck_structures")
+                        .select("id")
+                        .eq("funnel_project_id", projectId),
+                ]);
+
+                if (pagesResult.data) setWatchPages(pagesResult.data);
+                if (videoResult.data) setHasVideo(videoResult.data.length > 0);
+                if (deckResult.data) setHasDeck(deckResult.data.length > 0);
+            } catch (error) {
+                logger.error({ error }, "Failed to load watch pages");
+            }
+        };
+        loadPages();
+    }, [projectId]);
 
     const handleGenerate = async () => {
-        setGenerating(true);
+        setIsGenerating(true);
+        setGenerationProgress(0);
 
         try {
-            setHeadline("Watch This Exclusive Training");
-            setSubheadline(
-                "Discover the exact framework used by top performers to close more deals"
-            );
-            setCtaText("Get Full Access Now");
-            logger.info({}, "Watch page copy generated");
-        } catch (err) {
-            logger.error({ error: err }, "Failed to generate watch page copy");
-        } finally {
-            setGenerating(false);
+            setGenerationProgress(30);
+
+            const response = await fetch("/api/generate/watch-copy", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ projectId }),
+            });
+
+            setGenerationProgress(80);
+
+            if (!response.ok) throw new Error("Failed to generate page");
+
+            const result = await response.json();
+            setWatchPages((prev) => [result.page, ...prev]);
+            setGenerationProgress(100);
+
+            setTimeout(() => {
+                setIsGenerating(false);
+                setGenerationProgress(0);
+            }, 1000);
+        } catch (error) {
+            logger.error({ error }, "Failed to generate watch page");
+            setIsGenerating(false);
+            setGenerationProgress(0);
+            alert("Failed to generate watch page. Please try again.");
         }
     };
 
-    const handleSave = async () => {
-        setSaving(true);
+    const handleDelete = async (pageId: string) => {
+        if (!confirm("Delete this watch page?")) return;
 
         try {
             const supabase = createClient();
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
+            const { error } = await supabase
+                .from("watch_pages")
+                .delete()
+                .eq("id", pageId);
 
-            if (!user) throw new Error("Not authenticated");
-
-            const pageData = {
-                funnel_project_id: projectId,
-                user_id: user.id,
-                pitch_video_id: pitchVideos[0]?.id,
-                headline,
-                subheadline,
-                content_sections: {},
-                cta_config: { text: ctaText },
-            };
-
-            if (watchPage) {
-                await supabase
-                    .from("watch_pages")
-                    .update(pageData)
-                    .eq("id", watchPage.id);
-            } else {
-                await supabase.from("watch_pages").insert(pageData);
+            if (!error) {
+                setWatchPages((prev) => prev.filter((p) => p.id !== pageId));
             }
-
-            logger.info({ projectId }, "Watch page saved");
-            await loadData();
-        } catch (err) {
-            logger.error({ error: err }, "Failed to save watch page");
-        } finally {
-            setSaving(false);
+        } catch (error) {
+            logger.error({ error }, "Failed to delete watch page");
         }
     };
 
-    const hasVideo = pitchVideos.length > 0;
-    const hasWatchPage = !!watchPage;
+    const hasCompletedPage = watchPages.length > 0;
 
-    if (loading) {
+    if (!projectId) {
         return (
-            <StepLayout
-                projectId={projectId}
-                currentStep={8}
-                stepTitle="Watch Page"
-                stepDescription="Loading..."
-            >
-                <div className="flex items-center justify-center py-12">
-                    <div className="text-gray-500">Loading...</div>
-                </div>
-            </StepLayout>
+            <div className="flex h-screen items-center justify-center">
+                <div className="text-gray-500">Loading...</div>
+            </div>
         );
     }
 
     return (
         <StepLayout
-            projectId={projectId}
             currentStep={8}
-            stepTitle="Watch Page"
-            stepDescription="Create your video landing page"
+            projectId={projectId}
             funnelName={project?.name}
-            nextDisabled={!hasWatchPage}
-            nextLabel="Continue to Registration Page"
+            nextDisabled={!hasCompletedPage}
+            nextLabel={
+                hasCompletedPage ? "Generate Registration" : "Generate Page First"
+            }
+            stepTitle="Watch Page Copy"
+            stepDescription="AI generates engaging copy for your video watch page"
         >
-            <div className="space-y-6">
-                {!hasVideo && (
+            <div className="space-y-8">
+                {(!hasVideo || !hasDeck) && (
                     <DependencyWarning
-                        missingStep={7}
-                        missingStepName="Upload Video"
+                        message={
+                            !hasVideo
+                                ? "You need to upload a video first."
+                                : "You need to create a deck structure first."
+                        }
+                        requiredStep={!hasVideo ? 7 : 3}
+                        requiredStepName={!hasVideo ? "Upload Video" : "Deck Structure"}
                         projectId={projectId}
-                        message="Upload your pitch video first"
                     />
                 )}
 
-                {hasVideo && (
-                    <>
-                        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
-                            <CardHeader>
-                                <CardTitle className="flex items-center">
-                                    <Sparkles className="mr-2 h-5 w-5 text-blue-600" />
-                                    AI Watch Page Copy
-                                </CardTitle>
-                                <CardDescription>
-                                    Generate compelling copy for your video page
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Button
-                                    onClick={handleGenerate}
-                                    disabled={generating}
-                                    className="w-full"
-                                >
-                                    {generating
-                                        ? "Generating Copy..."
-                                        : "Generate Watch Page Copy"}
-                                </Button>
-                            </CardContent>
-                        </Card>
+                {!isGenerating ? (
+                    <div className="rounded-lg border border-cyan-100 bg-gradient-to-br from-cyan-50 to-sky-50 p-8">
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-cyan-100">
+                                <PlayCircle className="h-8 w-8 text-cyan-600" />
+                            </div>
+                            <h2 className="mb-3 text-2xl font-semibold text-gray-900">
+                                Generate Watch Page Copy
+                            </h2>
+                            <p className="mx-auto max-w-lg text-gray-600">
+                                AI will create compelling copy for your video watch page
+                                to maximize engagement and conversions.
+                            </p>
+                        </div>
 
-                        {headline && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Watch Page Content</CardTitle>
-                                    <CardDescription>
-                                        Edit your video landing page copy
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            Headline *
-                                        </label>
-                                        <Input
-                                            value={headline}
-                                            onChange={(e) =>
-                                                setHeadline(e.target.value)
-                                            }
-                                            className="mt-1"
-                                        />
-                                    </div>
+                        <div className="text-center">
+                            <button
+                                onClick={handleGenerate}
+                                disabled={!hasVideo || !hasDeck}
+                                className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
+                                    hasVideo && hasDeck
+                                        ? "bg-cyan-600 text-white hover:bg-cyan-700"
+                                        : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                }`}
+                            >
+                                <Sparkles className="h-6 w-6" />
+                                {hasVideo && hasDeck
+                                    ? "Generate Watch Page"
+                                    : "Complete Prerequisites First"}
+                            </button>
 
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            Subheadline
-                                        </label>
-                                        <Textarea
-                                            value={subheadline}
-                                            onChange={(e) =>
-                                                setSubheadline(e.target.value)
-                                            }
-                                            className="mt-1"
-                                            rows={2}
-                                        />
-                                    </div>
+                            <div className="mt-4 space-y-1 text-sm text-gray-500">
+                                <p>⚡ Generation time: ~15-20 seconds</p>
+                                <p>📺 Creates engaging video page copy</p>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-6">
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-cyan-100">
+                                <Sparkles className="h-6 w-6 text-cyan-600" />
+                            </div>
+                            <h3 className="mb-2 text-xl font-semibold text-cyan-900">
+                                Generating Watch Page Copy
+                            </h3>
+                            <p className="text-cyan-700">
+                                AI is crafting engaging copy...
+                            </p>
+                        </div>
 
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            CTA Button Text *
-                                        </label>
-                                        <Input
-                                            value={ctaText}
-                                            onChange={(e) => setCtaText(e.target.value)}
-                                            placeholder="e.g., Get Full Access Now"
-                                            className="mt-1"
-                                        />
-                                    </div>
-
-                                    <Button
-                                        onClick={handleSave}
-                                        disabled={saving || !headline || !ctaText}
-                                        className="w-full"
-                                    >
-                                        {saving
-                                            ? "Saving..."
-                                            : hasWatchPage
-                                              ? "Update Page"
-                                              : "Save Page"}
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        )}
-                    </>
+                        <div className="mx-auto max-w-md">
+                            <div className="mb-2 flex items-center justify-between">
+                                <span className="text-sm font-medium text-cyan-700">
+                                    Progress
+                                </span>
+                                <span className="text-sm text-cyan-600">
+                                    {generationProgress}%
+                                </span>
+                            </div>
+                            <div className="h-3 w-full rounded-full bg-cyan-200">
+                                <div
+                                    className="h-3 rounded-full bg-cyan-600 transition-all duration-500 ease-out"
+                                    style={{ width: `${generationProgress}%` }}
+                                />
+                            </div>
+                        </div>
+                    </div>
                 )}
+
+                <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+                    <div className="border-b border-gray-200 p-6">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-semibold text-gray-900">
+                                Your Watch Pages
+                            </h3>
+                            <span className="text-sm text-gray-500">
+                                {watchPages.length} created
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="p-6">
+                        {watchPages.length === 0 ? (
+                            <div className="py-12 text-center text-gray-500">
+                                <PlayCircle className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                                <p>
+                                    No watch pages yet. Generate your first one above!
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {watchPages.map((page) => (
+                                    <div
+                                        key={page.id}
+                                        className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-cyan-300 hover:shadow-md"
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <h4 className="mb-2 text-lg font-semibold text-gray-900">
+                                                    {page.content.headline ||
+                                                        "Untitled Page"}
+                                                </h4>
+                                                <p className="mb-2 text-sm text-gray-600">
+                                                    {page.content.subheadline ||
+                                                        "No subheadline"}
+                                                </p>
+                                                <span className="text-xs text-gray-500">
+                                                    Created{" "}
+                                                    {new Date(
+                                                        page.created_at
+                                                    ).toLocaleDateString()}
+                                                </span>
+                                            </div>
+
+                                            <button
+                                                onClick={() => handleDelete(page.id)}
+                                                className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </StepLayout>
     );

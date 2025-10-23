@@ -5,6 +5,7 @@
 
 import { z } from "zod";
 
+// Environment schema - all variables optional for flexibility
 const envSchema = z.object({
     // ===========================================
     // Node Environment
@@ -35,6 +36,8 @@ const envSchema = z.object({
     VAPI_API_KEY: z.string().optional(),
     VAPI_PHONE_NUMBER_ID: z.string().optional(),
     VAPI_WEBHOOK_SECRET: z.string().optional(),
+    NEXT_PUBLIC_VAPI_PUBLIC_KEY: z.string().optional(),
+    NEXT_PUBLIC_VAPI_ASSISTANT_ID: z.string().optional(),
 
     // ===========================================
     // Gamma API Configuration

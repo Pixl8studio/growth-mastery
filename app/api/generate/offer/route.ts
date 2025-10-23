@@ -63,7 +63,7 @@ export async function POST(request: NextRequest) {
         }
 
         // Generate offer with AI
-        const offer = await generateWithAI<OfferGeneration>(
+        const generatedOffer = await generateWithAI<OfferGeneration>(
             createOfferGenerationPrompt({
                 transcript_text: transcript.transcript_text,
                 extracted_data: transcript.extracted_data,
@@ -71,13 +71,47 @@ export async function POST(request: NextRequest) {
         );
 
         requestLogger.info(
-            { userId: user.id, offerName: offer.name, price: offer.price },
+            {
+                userId: user.id,
+                offerName: generatedOffer.name,
+                price: generatedOffer.price,
+            },
             "Offer generated successfully"
+        );
+
+        // Save offer to database
+        const { data: savedOffer, error: saveError } = await supabase
+            .from("offers")
+            .insert({
+                funnel_project_id: projectId,
+                user_id: user.id,
+                name: generatedOffer.name,
+                tagline: generatedOffer.tagline,
+                price: generatedOffer.price,
+                currency: generatedOffer.currency,
+                features: generatedOffer.features,
+                bonuses: generatedOffer.bonuses,
+                guarantee: generatedOffer.guarantee,
+            })
+            .select()
+            .single();
+
+        if (saveError || !savedOffer) {
+            requestLogger.error(
+                { error: saveError },
+                "Failed to save offer to database"
+            );
+            throw new Error("Failed to save offer to database");
+        }
+
+        requestLogger.info(
+            { userId: user.id, offerId: savedOffer.id, offerName: savedOffer.name },
+            "Offer saved to database successfully"
         );
 
         return NextResponse.json({
             success: true,
-            offer,
+            offer: savedOffer,
         });
     } catch (error) {
         requestLogger.error({ error }, "Failed to generate offer");

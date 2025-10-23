@@ -3,7 +3,6 @@
  * Wrapper around VAPI API for AI-powered intake calls
  */
 
-import { logger } from "@/lib/logger";
 import type { VapiCallConfig, CallSummary, ExtractedCallData } from "./types";
 import { createHmac, timingSafeEqual } from "crypto";
 
@@ -15,7 +14,7 @@ import { createHmac, timingSafeEqual } from "crypto";
  */
 export async function createCall(config: VapiCallConfig): Promise<{ callId: string }> {
     try {
-        logger.info({ config }, "Creating VAPI call");
+        console.log("📞 Creating VAPI call:", config);
 
         // TODO: Implement actual VAPI call creation
         // const call = await vapi.calls.create({
@@ -28,11 +27,11 @@ export async function createCall(config: VapiCallConfig): Promise<{ callId: stri
         // For now, return a placeholder
         const callId = `call_${Date.now()}`;
 
-        logger.info({ callId }, "VAPI call created successfully");
+        console.log("✅ VAPI call created successfully:", callId);
 
         return { callId };
     } catch (error) {
-        logger.error({ error, config }, "Failed to create VAPI call");
+        console.error("❌ Failed to create VAPI call:", error);
         throw new Error(
             `Failed to initiate call: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -44,15 +43,38 @@ export async function createCall(config: VapiCallConfig): Promise<{ callId: stri
  */
 export async function getCall(callId: string) {
     try {
-        logger.info({ callId }, "Fetching VAPI call");
+        console.log("📞 Fetching VAPI call:", callId);
 
-        // TODO: Implement actual VAPI call fetching
-        // const call = await vapi.calls.get(callId);
-        // return call;
+        const apiKey = process.env.VAPI_API_KEY;
+        if (!apiKey) {
+            throw new Error("VAPI_API_KEY not configured");
+        }
 
-        return null;
+        const response = await fetch(`https://api.vapi.ai/call/${callId}`, {
+            method: "GET",
+            headers: {
+                Authorization: `Bearer ${apiKey}`,
+                "Content-Type": "application/json",
+            },
+        });
+
+        if (!response.ok) {
+            throw new Error(
+                `VAPI API error: ${response.status} ${response.statusText}`
+            );
+        }
+
+        const call = await response.json();
+        console.log(
+            "✅ Fetched VAPI call successfully:",
+            callId,
+            "status:",
+            call.status
+        );
+
+        return call;
     } catch (error) {
-        logger.error({ error, callId }, "Failed to fetch VAPI call");
+        console.error("❌ Failed to fetch VAPI call:", callId, error);
         throw new Error(
             `Failed to fetch call: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -64,7 +86,7 @@ export async function getCall(callId: string) {
  */
 export async function listCalls(assistantId?: string) {
     try {
-        logger.info({ assistantId }, "Listing VAPI calls");
+        console.log("📋 Listing VAPI calls:", assistantId || "all");
 
         // TODO: Implement actual VAPI call listing
         // const calls = await vapi.calls.list({
@@ -75,7 +97,7 @@ export async function listCalls(assistantId?: string) {
 
         return [];
     } catch (error) {
-        logger.error({ error, assistantId }, "Failed to list VAPI calls");
+        console.error("❌ Failed to list VAPI calls:", error);
         throw new Error(
             `Failed to list calls: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -90,7 +112,7 @@ export async function extractDataFromTranscript(
     _transcript: string
 ): Promise<ExtractedCallData> {
     try {
-        logger.info("Extracting data from transcript");
+        console.log("🔍 Extracting data from transcript");
 
         // TODO: Use OpenAI to extract structured data
         // This would use a specific prompt to parse the transcript
@@ -104,7 +126,7 @@ export async function extractDataFromTranscript(
 
         return extracted;
     } catch (error) {
-        logger.error({ error }, "Failed to extract data from transcript");
+        console.error("❌ Failed to extract data from transcript:", error);
         throw new Error(
             `Failed to extract data: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -117,7 +139,7 @@ export async function extractDataFromTranscript(
  */
 export async function processCompletedCall(callId: string): Promise<CallSummary> {
     try {
-        logger.info({ callId }, "Processing completed VAPI call");
+        console.log("⚙️ Processing completed VAPI call:", callId);
 
         const call = await getCall(callId);
 
@@ -125,31 +147,55 @@ export async function processCompletedCall(callId: string): Promise<CallSummary>
             throw new Error("Call not found");
         }
 
-        // Extract transcript
-        const transcript = ""; // call.artifact?.transcript || call.transcript || "";
+        // Extract transcript from various possible locations
+        const transcript = call.artifact?.transcript || call.transcript || "";
 
-        // Extract structured data
-        const extractedData = await extractDataFromTranscript(transcript);
+        // Extract structured data if we have a transcript
+        const extractedData = transcript
+            ? await extractDataFromTranscript(transcript)
+            : {
+                  businessName: undefined,
+                  industry: undefined,
+                  targetAudience: undefined,
+                  mainProblem: undefined,
+              };
 
         // Calculate duration
-        const duration = 0; // call.startedAt && call.endedAt
-        // ? Math.floor((new Date(call.endedAt).getTime() - new Date(call.startedAt).getTime()) / 1000)
-        // : 0;
+        const duration =
+            call.startedAt && call.endedAt
+                ? Math.floor(
+                      (new Date(call.endedAt).getTime() -
+                          new Date(call.startedAt).getTime()) /
+                          1000
+                  )
+                : 0;
+
+        // Get recording URL from various possible locations
+        const recordingUrl =
+            call.artifact?.recordingUrl || call.recordingUrl || call.recording?.url;
 
         const summary: CallSummary = {
             callId,
             duration,
             transcript,
             extractedData,
-            recordingUrl: undefined, // call.recordingUrl
-            cost: undefined, // call.cost
+            recordingUrl,
+            cost: call.cost,
+            call, // Include full call object for reference
         };
 
-        logger.info({ callId, duration }, "VAPI call processed successfully");
+        console.log(
+            "✅ VAPI call processed successfully:",
+            callId,
+            "duration:",
+            duration,
+            "hasTranscript:",
+            !!transcript
+        );
 
         return summary;
     } catch (error) {
-        logger.error({ error, callId }, "Failed to process VAPI call");
+        console.error("❌ Failed to process VAPI call:", callId, error);
         throw new Error(
             `Failed to process call: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -177,19 +223,19 @@ export function verifyWebhookSignature(
 
         // Signatures must be same length for timingSafeEqual
         if (signatureBuffer.length !== expectedBuffer.length) {
-            logger.warn("Webhook signature length mismatch");
+            console.warn("⚠️ Webhook signature length mismatch");
             return false;
         }
 
         const isValid = timingSafeEqual(signatureBuffer, expectedBuffer);
 
         if (!isValid) {
-            logger.warn("Webhook signature verification failed");
+            console.warn("⚠️ Webhook signature verification failed");
         }
 
         return isValid;
     } catch (error) {
-        logger.error({ error }, "Failed to verify webhook signature");
+        console.error("❌ Failed to verify webhook signature:", error);
         return false;
     }
 }

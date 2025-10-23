@@ -1,48 +1,37 @@
-/**
- * Dependency Warning Component
- * Shows warning when prerequisite steps are not completed
- */
+"use client";
 
 import Link from "next/link";
-import { AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { AlertTriangle } from "lucide-react";
 
 interface DependencyWarningProps {
-    missingStep: number;
-    missingStepName: string;
+    message: string;
+    requiredStep: number;
+    requiredStepName: string;
     projectId: string;
-    message?: string;
 }
 
 export function DependencyWarning({
-    missingStep,
-    missingStepName,
-    projectId,
     message,
+    requiredStep,
+    requiredStepName,
+    projectId,
 }: DependencyWarningProps) {
     return (
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6">
-            <div className="flex">
-                <div className="flex-shrink-0">
-                    <AlertCircle className="h-5 w-5 text-yellow-600" />
+        <div className="mb-8 rounded-lg border-2 border-amber-200 bg-amber-50 p-6">
+            <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-amber-100">
+                    <AlertTriangle className="h-6 w-6 text-amber-600" />
                 </div>
-                <div className="ml-3">
-                    <h3 className="text-sm font-medium text-yellow-800">
-                        Prerequisite Required
+                <div className="flex-1">
+                    <h3 className="mb-2 text-lg font-semibold text-amber-900">
+                        ⚠️ Missing Prerequisites
                     </h3>
-                    <div className="mt-2 text-sm text-yellow-700">
-                        <p>
-                            {message ||
-                                `Please complete Step ${missingStep}: ${missingStepName} before proceeding with this step.`}
-                        </p>
-                    </div>
-                    <div className="mt-4">
-                        <Link href={`/funnel-builder/${projectId}/step/${missingStep}`}>
-                            <Button size="sm" variant="outline">
-                                Go to {missingStepName} →
-                            </Button>
-                        </Link>
-                    </div>
+                    <p className="mb-4 text-amber-800">{message}</p>
+                    <Link href={`/funnel-builder/${projectId}/step/${requiredStep}`}>
+                        <button className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-amber-700">
+                            Go to Step {requiredStep}: {requiredStepName} →
+                        </button>
+                    </Link>
                 </div>
             </div>
         </div>

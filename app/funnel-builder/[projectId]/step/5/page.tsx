@@ -1,448 +1,308 @@
 "use client";
 
-/**
- * Step 5: Enrollment Page
- * AI-generated sales page with two types: Direct Purchase or Book Call
- */
-
-import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { logger } from "@/lib/client-logger";
+import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Sparkles, ShoppingCart, Phone } from "lucide-react";
-
-type PageType = "direct_purchase" | "book_call";
-
-interface FunnelProject {
-    id: string;
-    name: string;
-    current_step: number;
-}
-
-interface FunnelOffer {
-    id: string;
-    name: string;
-    price?: number;
-}
+import { Sparkles, FileText, Trash2 } from "lucide-react";
+import { logger } from "@/lib/client-logger";
+import { createClient } from "@/lib/supabase/client";
 
 interface EnrollmentPage {
     id: string;
-    page_type: PageType;
-    headline: string;
-    subheadline?: string;
-    cta_config?: {
-        text?: string;
-        url?: string;
+    content: {
+        headline?: string;
+        subheadline?: string;
+        opening?: string;
+        ctaText?: string;
     };
+    created_at: string;
 }
 
-export default function Step5Page() {
-    const params = useParams();
-    const projectId = params.projectId as string;
+export default function Step5Page({
+    params,
+}: {
+    params: Promise<{ projectId: string }>;
+}) {
+    const [projectId, setProjectId] = useState("");
+    const [project, setProject] = useState<any>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generationProgress, setGenerationProgress] = useState(0);
+    const [enrollmentPages, setEnrollmentPages] = useState<EnrollmentPage[]>([]);
+    const [selectedPage, setSelectedPage] = useState<EnrollmentPage | null>(null);
+    const [hasOffer, setHasOffer] = useState(false);
 
-    const [loading, setLoading] = useState(true);
-    const [generating, setGenerating] = useState(false);
-    const [saving, setSaving] = useState(false);
+    useEffect(() => {
+        const resolveParams = async () => {
+            const resolved = await params;
+            setProjectId(resolved.projectId);
+        };
+        resolveParams();
+    }, [params]);
 
-    const [project, setProject] = useState<FunnelProject | null>(null);
-    const [offers, setOffers] = useState<FunnelOffer[]>([]);
-    const [selectedOfferId, setSelectedOfferId] = useState<string>("");
-    const [enrollmentPage, setEnrollmentPage] = useState<EnrollmentPage | null>(null);
+    useEffect(() => {
+        const loadProject = async () => {
+            if (!projectId) return;
+            try {
+                const supabase = createClient();
+                const { data: projectData, error: projectError } = await supabase
+                    .from("funnel_projects")
+                    .select("*")
+                    .eq("id", projectId)
+                    .single();
 
-    const [pageType, setPageType] = useState<PageType>("direct_purchase");
-    const [headline, setHeadline] = useState("");
-    const [subheadline, setSubheadline] = useState("");
-    const [ctaText, setCtaText] = useState("");
-    const [ctaUrl, setCtaUrl] = useState("");
-
-    const loadData = useCallback(async () => {
-        try {
-            const supabase = createClient();
-
-            // Get project
-            const { data: projectData } = await supabase
-                .from("funnel_projects")
-                .select("*")
-                .eq("id", projectId)
-                .single();
-
-            setProject(projectData);
-
-            // Get offers
-            const { data: offersData } = await supabase
-                .from("offers")
-                .select("*")
-                .eq("funnel_project_id", projectId)
-                .order("created_at", { ascending: false });
-
-            setOffers(offersData || []);
-
-            if (offersData && offersData.length > 0) {
-                setSelectedOfferId(offersData[0].id);
-                // Auto-select page type based on price
-                const offerPrice = offersData[0].price || 0;
-                setPageType(offerPrice >= 2000 ? "book_call" : "direct_purchase");
+                if (projectError) throw projectError;
+                setProject(projectData);
+            } catch (error) {
+                logger.error({ error }, "Failed to load project");
             }
-
-            // Get existing enrollment page
-            const { data: pageData } = await supabase
-                .from("enrollment_pages")
-                .select("*")
-                .eq("funnel_project_id", projectId)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .single();
-
-            if (pageData) {
-                setEnrollmentPage(pageData);
-                setPageType(pageData.page_type);
-                setHeadline(pageData.headline);
-                setSubheadline(pageData.subheadline || "");
-                setCtaText(pageData.cta_config?.text || "");
-                setCtaUrl(pageData.cta_config?.url || "");
-            }
-        } catch (err) {
-            logger.error({ error: err }, "Failed to load data");
-        } finally {
-            setLoading(false);
-        }
+        };
+        loadProject();
     }, [projectId]);
 
     useEffect(() => {
-        loadData();
-    }, [loadData]);
+        const loadPages = async () => {
+            if (!projectId) return;
+            try {
+                const supabase = createClient();
+                const [pagesResult, offerResult] = await Promise.all([
+                    supabase
+                        .from("enrollment_pages")
+                        .select("*")
+                        .eq("funnel_project_id", projectId)
+                        .order("created_at", { ascending: false }),
+                    supabase
+                        .from("offers")
+                        .select("id")
+                        .eq("funnel_project_id", projectId),
+                ]);
+
+                if (pagesResult.data) setEnrollmentPages(pagesResult.data);
+                if (offerResult.data) setHasOffer(offerResult.data.length > 0);
+            } catch (error) {
+                logger.error({ error }, "Failed to load enrollment pages");
+            }
+        };
+        loadPages();
+    }, [projectId]);
 
     const handleGenerate = async () => {
-        setGenerating(true);
-        logger.info(
-            { projectId, offerId: selectedOfferId, pageType },
-            "Generating enrollment copy"
-        );
+        setIsGenerating(true);
+        setGenerationProgress(0);
 
         try {
-            // TODO: Call AI generation API
-            // Simulate generation
-            if (pageType === "direct_purchase") {
-                setHeadline("Transform Your Pitch and Close More Deals");
-                setSubheadline(
-                    "Join hundreds of founders who've raised millions with compelling pitch decks"
-                );
-                setCtaText("Get Instant Access Now");
-                setCtaUrl("");
-            } else {
-                setHeadline("Book Your Strategy Session Today");
-                setSubheadline(
-                    "Let's discuss how we can help you create a pitch that investors can't ignore"
-                );
-                setCtaText("Schedule Your Free Call");
-                setCtaUrl("https://calendly.com/your-calendar");
-            }
+            setGenerationProgress(30);
 
-            logger.info({}, "Enrollment copy generated");
-        } catch (err) {
-            logger.error({ error: err }, "Failed to generate enrollment copy");
-        } finally {
-            setGenerating(false);
+            const response = await fetch("/api/generate/enrollment-copy", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ projectId }),
+            });
+
+            setGenerationProgress(80);
+
+            if (!response.ok) throw new Error("Failed to generate page");
+
+            const result = await response.json();
+            setEnrollmentPages((prev) => [result.page, ...prev]);
+            setGenerationProgress(100);
+
+            setTimeout(() => {
+                setIsGenerating(false);
+                setGenerationProgress(0);
+            }, 1000);
+        } catch (error) {
+            logger.error({ error }, "Failed to generate enrollment page");
+            setIsGenerating(false);
+            setGenerationProgress(0);
+            alert("Failed to generate enrollment page. Please try again.");
         }
     };
 
-    const handleSave = async () => {
-        setSaving(true);
+    const handleDelete = async (pageId: string) => {
+        if (!confirm("Delete this enrollment page?")) return;
 
         try {
             const supabase = createClient();
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
+            const { error } = await supabase
+                .from("enrollment_pages")
+                .delete()
+                .eq("id", pageId);
 
-            if (!user) throw new Error("Not authenticated");
-
-            const pageData = {
-                funnel_project_id: projectId,
-                user_id: user.id,
-                offer_id: selectedOfferId,
-                page_type: pageType,
-                headline,
-                subheadline,
-                content_sections: {},
-                cta_config: {
-                    text: ctaText,
-                    url: ctaUrl,
-                    type: pageType === "direct_purchase" ? "payment" : "calendar",
-                },
-            };
-
-            if (enrollmentPage) {
-                await supabase
-                    .from("enrollment_pages")
-                    .update(pageData)
-                    .eq("id", enrollmentPage.id);
-            } else {
-                await supabase.from("enrollment_pages").insert(pageData);
+            if (!error) {
+                setEnrollmentPages((prev) => prev.filter((p) => p.id !== pageId));
             }
-
-            logger.info({ projectId }, "Enrollment page saved");
-            await loadData();
-        } catch (err) {
-            logger.error({ error: err }, "Failed to save enrollment page");
-        } finally {
-            setSaving(false);
+        } catch (error) {
+            logger.error({ error }, "Failed to delete enrollment page");
         }
     };
 
-    const hasOffer = offers.length > 0;
-    const hasEnrollmentPage = !!enrollmentPage;
+    const hasCompletedPage = enrollmentPages.length > 0;
 
-    if (loading) {
+    if (!projectId) {
         return (
-            <StepLayout
-                projectId={projectId}
-                currentStep={5}
-                stepTitle="Enrollment Page"
-                stepDescription="Loading..."
-            >
-                <div className="flex items-center justify-center py-12">
-                    <div className="text-gray-500">Loading...</div>
-                </div>
-            </StepLayout>
+            <div className="flex h-screen items-center justify-center">
+                <div className="text-gray-500">Loading...</div>
+            </div>
         );
     }
 
     return (
         <StepLayout
-            projectId={projectId}
             currentStep={5}
-            stepTitle="Enrollment Page"
-            stepDescription="Create your sales page with AI-generated copy"
+            projectId={projectId}
             funnelName={project?.name}
-            nextDisabled={!hasEnrollmentPage}
-            nextLabel="Continue to Talk Track"
+            nextDisabled={!hasCompletedPage}
+            nextLabel={hasCompletedPage ? "Generate Talk Track" : "Generate Page First"}
+            stepTitle="Enrollment Page Copy"
+            stepDescription="AI generates compelling sales copy for your enrollment page"
         >
-            <div className="space-y-6">
-                {/* Dependency Check */}
+            <div className="space-y-8">
                 {!hasOffer && (
                     <DependencyWarning
-                        missingStep={2}
-                        missingStepName="Craft Offer"
+                        message="You need to create an offer first to generate enrollment page copy."
+                        requiredStep={2}
+                        requiredStepName="Craft Offer"
                         projectId={projectId}
-                        message="Create your offer before building the enrollment page"
                     />
                 )}
 
-                {hasOffer && (
-                    <>
-                        {/* Page Type Selection */}
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Enrollment Page Type</CardTitle>
-                                <CardDescription>
-                                    Choose based on your offer price
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Tabs
-                                    value={pageType}
-                                    onValueChange={(v) => setPageType(v as PageType)}
-                                >
-                                    <TabsList className="grid w-full grid-cols-2">
-                                        <TabsTrigger value="direct_purchase">
-                                            <ShoppingCart className="mr-2 h-4 w-4" />
-                                            Direct Purchase
-                                        </TabsTrigger>
-                                        <TabsTrigger value="book_call">
-                                            <Phone className="mr-2 h-4 w-4" />
-                                            Book Call
-                                        </TabsTrigger>
-                                    </TabsList>
+                {!isGenerating ? (
+                    <div className="rounded-lg border border-emerald-100 bg-gradient-to-br from-emerald-50 to-teal-50 p-8">
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
+                                <Sparkles className="h-8 w-8 text-emerald-600" />
+                            </div>
+                            <h2 className="mb-3 text-2xl font-semibold text-gray-900">
+                                Generate Enrollment Page Copy
+                            </h2>
+                            <p className="mx-auto max-w-lg text-gray-600">
+                                AI will create persuasive, conversion-optimized copy for
+                                your enrollment page based on your offer and deck
+                                structure.
+                            </p>
+                        </div>
 
-                                    <TabsContent
-                                        value="direct_purchase"
-                                        className="mt-4"
-                                    >
-                                        <div className="rounded-md bg-blue-50 p-4">
-                                            <p className="text-sm text-blue-900">
-                                                <strong>Direct Purchase</strong> - Best
-                                                for offers under $2,000
-                                            </p>
-                                            <p className="mt-1 text-sm text-blue-800">
-                                                Full sales page with immediate payment
-                                                integration
-                                            </p>
-                                        </div>
-                                    </TabsContent>
+                        <div className="text-center">
+                            <button
+                                onClick={handleGenerate}
+                                disabled={!hasOffer}
+                                className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
+                                    hasOffer
+                                        ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                                        : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                }`}
+                            >
+                                <Sparkles className="h-6 w-6" />
+                                {hasOffer
+                                    ? "Generate Enrollment Copy"
+                                    : "Create Offer First"}
+                            </button>
 
-                                    <TabsContent value="book_call" className="mt-4">
-                                        <div className="rounded-md bg-purple-50 p-4">
-                                            <p className="text-sm text-purple-900">
-                                                <strong>Book Call</strong> - Best for
-                                                offers over $2,000
-                                            </p>
-                                            <p className="mt-1 text-sm text-purple-800">
-                                                Streamlined page with calendar booking
-                                                integration
-                                            </p>
-                                        </div>
-                                    </TabsContent>
-                                </Tabs>
-                            </CardContent>
-                        </Card>
+                            <div className="mt-4 space-y-1 text-sm text-gray-500">
+                                <p>⚡ Generation time: ~15-20 seconds</p>
+                                <p>
+                                    ✍️ Creates headline, subheadline, and compelling
+                                    copy
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6">
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-emerald-100">
+                                <Sparkles className="h-6 w-6 text-emerald-600" />
+                            </div>
+                            <h3 className="mb-2 text-xl font-semibold text-emerald-900">
+                                Generating Enrollment Page Copy
+                            </h3>
+                            <p className="text-emerald-700">
+                                AI is crafting persuasive copy...
+                            </p>
+                        </div>
 
-                        {/* AI Generation */}
-                        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
-                            <CardHeader>
-                                <CardTitle className="flex items-center">
-                                    <Sparkles className="mr-2 h-5 w-5 text-blue-600" />
-                                    AI Copy Generation
-                                </CardTitle>
-                                <CardDescription>
-                                    Generate sales copy optimized for{" "}
-                                    {pageType === "direct_purchase"
-                                        ? "direct purchase"
-                                        : "booking calls"}
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div>
-                                    <Label>Select Offer</Label>
-                                    <Select
-                                        value={selectedOfferId}
-                                        onValueChange={setSelectedOfferId}
-                                    >
-                                        <SelectTrigger className="mt-1">
-                                            <SelectValue placeholder="Select an offer" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {offers.map((offer) => (
-                                                <SelectItem
-                                                    key={offer.id}
-                                                    value={offer.id}
-                                                >
-                                                    {offer.name} - ${offer.price}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <Button
-                                    onClick={handleGenerate}
-                                    disabled={generating || !selectedOfferId}
-                                    className="w-full"
-                                >
-                                    {generating
-                                        ? "Generating Copy..."
-                                        : "Generate Sales Copy"}
-                                </Button>
-                            </CardContent>
-                        </Card>
-
-                        {/* Copy Editor */}
-                        {headline && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Enrollment Page Content</CardTitle>
-                                    <CardDescription>
-                                        Edit and customize your sales copy
-                                    </CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div>
-                                        <Label htmlFor="headline">Headline *</Label>
-                                        <Input
-                                            id="headline"
-                                            value={headline}
-                                            onChange={(e) =>
-                                                setHeadline(e.target.value)
-                                            }
-                                            className="mt-1"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="subheadline">Subheadline</Label>
-                                        <Textarea
-                                            id="subheadline"
-                                            value={subheadline}
-                                            onChange={(e) =>
-                                                setSubheadline(e.target.value)
-                                            }
-                                            className="mt-1"
-                                            rows={2}
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="ctaText">
-                                            CTA Button Text *
-                                        </Label>
-                                        <Input
-                                            id="ctaText"
-                                            value={ctaText}
-                                            onChange={(e) => setCtaText(e.target.value)}
-                                            placeholder={
-                                                pageType === "direct_purchase"
-                                                    ? "Get Instant Access"
-                                                    : "Book Your Call"
-                                            }
-                                            className="mt-1"
-                                        />
-                                    </div>
-
-                                    {pageType === "book_call" && (
-                                        <div>
-                                            <Label htmlFor="ctaUrl">
-                                                Calendar Booking URL *
-                                            </Label>
-                                            <Input
-                                                id="ctaUrl"
-                                                type="url"
-                                                value={ctaUrl}
-                                                onChange={(e) =>
-                                                    setCtaUrl(e.target.value)
-                                                }
-                                                placeholder="https://calendly.com/your-calendar"
-                                                className="mt-1"
-                                            />
-                                        </div>
-                                    )}
-
-                                    <Button
-                                        onClick={handleSave}
-                                        disabled={saving || !headline || !ctaText}
-                                        className="w-full"
-                                    >
-                                        {saving
-                                            ? "Saving..."
-                                            : hasEnrollmentPage
-                                              ? "Update Page"
-                                              : "Save Page"}
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        )}
-                    </>
+                        <div className="mx-auto max-w-md">
+                            <div className="mb-2 flex items-center justify-between">
+                                <span className="text-sm font-medium text-emerald-700">
+                                    Progress
+                                </span>
+                                <span className="text-sm text-emerald-600">
+                                    {generationProgress}%
+                                </span>
+                            </div>
+                            <div className="h-3 w-full rounded-full bg-emerald-200">
+                                <div
+                                    className="h-3 rounded-full bg-emerald-600 transition-all duration-500 ease-out"
+                                    style={{ width: `${generationProgress}%` }}
+                                />
+                            </div>
+                        </div>
+                    </div>
                 )}
+
+                <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+                    <div className="border-b border-gray-200 p-6">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-semibold text-gray-900">
+                                Your Enrollment Pages
+                            </h3>
+                            <span className="text-sm text-gray-500">
+                                {enrollmentPages.length} created
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="p-6">
+                        {enrollmentPages.length === 0 ? (
+                            <div className="py-12 text-center text-gray-500">
+                                <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                                <p>
+                                    No enrollment pages yet. Generate your first one
+                                    above!
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {enrollmentPages.map((page) => (
+                                    <div
+                                        key={page.id}
+                                        onClick={() => setSelectedPage(page)}
+                                        className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md"
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <h4 className="mb-2 text-lg font-semibold text-gray-900">
+                                                    {page.content.headline ||
+                                                        "Untitled Page"}
+                                                </h4>
+                                                <p className="mb-2 text-sm text-gray-600">
+                                                    {page.content.subheadline ||
+                                                        "No subheadline"}
+                                                </p>
+                                                <span className="text-xs text-gray-500">
+                                                    Created{" "}
+                                                    {new Date(
+                                                        page.created_at
+                                                    ).toLocaleDateString()}
+                                                </span>
+                                            </div>
+
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDelete(page.id);
+                                                }}
+                                                className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </StepLayout>
     );

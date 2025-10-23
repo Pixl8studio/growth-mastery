@@ -1,49 +1,26 @@
 "use client";
 
-/**
- * Step 3: Deck Structure
- * AI-generated 55-slide presentation outline
- */
-
-import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { logger } from "@/lib/client-logger";
+import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Sparkles, FileText } from "lucide-react";
-import { FUNNEL_CONFIG } from "@/lib/config";
+import { DeckStructureEditor } from "@/components/funnel/deck-structure-editor";
+import { Sparkles, FileText, Trash2, Pencil, Download } from "lucide-react";
+import { logger } from "@/lib/client-logger";
+import { createClient } from "@/lib/supabase/client";
 
-interface Slide {
-    slideNumber: number;
-    title: string;
-    description: string;
-    section: string;
-}
-
-interface FunnelProject {
+interface DeckStructure {
     id: string;
-    name: string;
-    current_step: number;
+    title: string;
+    slideCount: number;
+    status: "generating" | "completed" | "failed";
+    slides: Array<{
+        slideNumber: number;
+        title: string;
+        description: string;
+        section: string;
+    }>;
+    version: number;
+    created_at: string;
 }
 
 interface VapiTranscript {
@@ -52,387 +29,674 @@ interface VapiTranscript {
     created_at: string;
 }
 
-interface DeckStructure {
-    id: string;
-    sections: string[];
-    slides: Slide[];
-}
-
-export default function Step3Page() {
-    const params = useParams();
-    const projectId = params.projectId as string;
-
-    const [loading, setLoading] = useState(true);
-    const [generating, setGenerating] = useState(false);
-    const [saving, setSaving] = useState(false);
-
-    const [project, setProject] = useState<FunnelProject | null>(null);
+export default function Step3Page({
+    params,
+}: {
+    params: Promise<{ projectId: string }>;
+}) {
+    const [projectId, setProjectId] = useState("");
+    const [project, setProject] = useState<any>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generationProgress, setGenerationProgress] = useState(0);
+    const [selectedTranscript, setSelectedTranscript] = useState("");
     const [transcripts, setTranscripts] = useState<VapiTranscript[]>([]);
-    const [selectedTranscriptId, setSelectedTranscriptId] = useState<string>("");
-    const [deckStructure, setDeckStructure] = useState<DeckStructure | null>(null);
-    const [slides, setSlides] = useState<Slide[]>([]);
+    const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
+    const [selectedDeck, setSelectedDeck] = useState<DeckStructure | null>(null);
+    const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
+    const [editingDeckName, setEditingDeckName] = useState("");
+    const [slideCount, setSlideCount] = useState<"5" | "55">("55");
 
-    const loadData = useCallback(async () => {
-        try {
-            const supabase = createClient();
+    useEffect(() => {
+        const resolveParams = async () => {
+            const resolved = await params;
+            setProjectId(resolved.projectId);
+        };
+        resolveParams();
+    }, [params]);
 
-            // Get project
-            const { data: projectData } = await supabase
-                .from("funnel_projects")
-                .select("*")
-                .eq("id", projectId)
-                .single();
+    useEffect(() => {
+        const loadProject = async () => {
+            if (!projectId) return;
 
-            setProject(projectData);
+            try {
+                const supabase = createClient();
+                const { data: projectData, error: projectError } = await supabase
+                    .from("funnel_projects")
+                    .select("*")
+                    .eq("id", projectId)
+                    .single();
 
-            // Get transcripts
-            const { data: transcriptsData } = await supabase
-                .from("vapi_transcripts")
-                .select("*")
-                .eq("funnel_project_id", projectId)
-                .eq("call_status", "completed")
-                .order("created_at", { ascending: false });
-
-            setTranscripts(transcriptsData || []);
-
-            if (transcriptsData && transcriptsData.length > 0) {
-                setSelectedTranscriptId(transcriptsData[0].id);
+                if (projectError) throw projectError;
+                setProject(projectData);
+            } catch (error) {
+                logger.error({ error }, "Failed to load project");
             }
+        };
 
-            // Get existing deck structure
-            const { data: deckData } = await supabase
-                .from("deck_structures")
-                .select("*")
-                .eq("funnel_project_id", projectId)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .single();
-
-            if (deckData) {
-                setDeckStructure(deckData);
-                setSlides(deckData.slides || []);
-            }
-        } catch (err) {
-            logger.error({ error: err }, "Failed to load data");
-        } finally {
-            setLoading(false);
-        }
+        loadProject();
     }, [projectId]);
 
     useEffect(() => {
-        loadData();
-    }, [loadData]);
+        const loadTranscripts = async () => {
+            if (!projectId) return;
 
-    const handleGenerate = async () => {
-        setGenerating(true);
-        logger.info(
-            { projectId, transcriptId: selectedTranscriptId },
-            "Generating deck structure"
-        );
+            try {
+                const supabase = createClient();
+                const { data: transcriptData, error: transcriptError } = await supabase
+                    .from("vapi_transcripts")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (transcriptError) throw transcriptError;
+                setTranscripts(transcriptData || []);
+
+                if (
+                    transcriptData &&
+                    transcriptData.length > 0 &&
+                    !selectedTranscript
+                ) {
+                    setSelectedTranscript(transcriptData[0].id);
+                }
+            } catch (error) {
+                logger.error({ error }, "Failed to load transcripts");
+            }
+        };
+
+        loadTranscripts();
+    }, [projectId, selectedTranscript]);
+
+    useEffect(() => {
+        const loadDeckStructures = async () => {
+            if (!projectId) return;
+
+            try {
+                const supabase = createClient();
+                const { data: deckData, error: deckError } = await supabase
+                    .from("deck_structures")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (deckError) throw deckError;
+
+                const transformed = (deckData || []).map((deck: any) => ({
+                    id: deck.id,
+                    title: deck.metadata?.title || "Untitled Deck",
+                    slideCount: Array.isArray(deck.slides)
+                        ? deck.slides.length
+                        : deck.total_slides || 55,
+                    status: "completed" as const,
+                    slides: deck.slides || [],
+                    version: 1,
+                    created_at: deck.created_at,
+                }));
+                setDeckStructures(transformed);
+            } catch (error) {
+                logger.error({ error }, "Failed to load deck structures");
+            }
+        };
+
+        loadDeckStructures();
+    }, [projectId]);
+
+    const handleGenerateDeck = async () => {
+        if (!selectedTranscript) {
+            alert("Please select an intake call first");
+            return;
+        }
+
+        setIsGenerating(true);
+        setGenerationProgress(0);
 
         try {
-            // TODO: Call AI generation API
-            // Placeholder - simulate AI generation of 55 slides
-            const generatedSlides: Slide[] = [];
-            const sections: Array<{ section: string; count: number }> = [
-                { section: "hook", count: 8 },
-                { section: "problem", count: 10 },
-                { section: "agitate", count: 7 },
-                { section: "solution", count: 18 },
-                { section: "offer", count: 8 },
-                { section: "close", count: 4 },
-            ];
+            const progressSteps = [5, 15, 30, 45, 60, 75, 85, 95, 100];
+            let currentStep = 0;
 
-            let slideNumber = 1;
-            sections.forEach(({ section, count }) => {
-                for (let i = 0; i < count; i++) {
-                    generatedSlides.push({
-                        slideNumber,
-                        title: `${section.charAt(0).toUpperCase() + section.slice(1)} Slide ${i + 1}`,
-                        description: `Content for this ${section} slide goes here...`,
-                        section,
-                    });
-                    slideNumber++;
+            const progressInterval = setInterval(() => {
+                if (currentStep < progressSteps.length) {
+                    setGenerationProgress(progressSteps[currentStep]);
+                    currentStep++;
+                } else {
+                    clearInterval(progressInterval);
                 }
+            }, 3000);
+
+            const response = await fetch("/api/generate/deck-structure", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    projectId,
+                    transcriptId: selectedTranscript,
+                    slideCount,
+                }),
             });
 
-            setSlides(generatedSlides);
-            logger.info({}, "Deck structure generated");
-        } catch (err) {
-            logger.error({ error: err }, "Failed to generate deck structure");
-        } finally {
-            setGenerating(false);
+            clearInterval(progressInterval);
+            setGenerationProgress(100);
+
+            if (!response.ok) {
+                throw new Error("Failed to generate deck structure");
+            }
+
+            const result = await response.json();
+            const newDeck: DeckStructure = {
+                id: result.deckStructure.id,
+                title: result.deckStructure.title || "Deck Structure",
+                slideCount: result.deckStructure.slides?.length || 55,
+                status: "completed",
+                slides: result.deckStructure.slides || [],
+                version: 1,
+                created_at: result.deckStructure.created_at,
+            };
+
+            setDeckStructures((prev) => [newDeck, ...prev]);
+
+            setTimeout(() => {
+                setIsGenerating(false);
+                setGenerationProgress(0);
+            }, 1000);
+        } catch (error) {
+            logger.error({ error }, "Failed to generate deck structure");
+            setIsGenerating(false);
+            setGenerationProgress(0);
+            alert("Failed to generate deck structure. Please try again.");
         }
     };
 
-    const handleSave = async () => {
-        setSaving(true);
+    const handleViewDeck = (deck: DeckStructure) => {
+        setSelectedDeck(deck);
+    };
+
+    const handleDownloadDeck = (deck: DeckStructure) => {
+        const content = JSON.stringify(deck.slides, null, 2);
+        const blob = new Blob([content], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${deck.title.replace(/[^a-zA-Z0-9]/g, "_")}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+    const handleDeleteDeck = async (deckId: string) => {
+        if (!confirm("Delete this deck?")) return;
 
         try {
             const supabase = createClient();
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
+            const { error } = await supabase
+                .from("deck_structures")
+                .delete()
+                .eq("id", deckId);
 
-            if (!user) throw new Error("Not authenticated");
-
-            const deckData = {
-                funnel_project_id: projectId,
-                user_id: user.id,
-                template_type: "55_slide_promo",
-                total_slides: slides.length,
-                slides,
-                sections: calculateSections(slides),
-            };
-
-            if (deckStructure) {
-                await supabase
-                    .from("deck_structures")
-                    .update(deckData)
-                    .eq("id", deckStructure.id);
-            } else {
-                await supabase.from("deck_structures").insert(deckData);
+            if (!error) {
+                setDeckStructures((prev) => prev.filter((d) => d.id !== deckId));
+                if (selectedDeck?.id === deckId) {
+                    setSelectedDeck(null);
+                }
             }
-
-            logger.info({ projectId }, "Deck structure saved");
-            await loadData();
-        } catch (err) {
-            logger.error({ error: err }, "Failed to save deck structure");
-        } finally {
-            setSaving(false);
+        } catch (error) {
+            logger.error({ error }, "Failed to delete deck");
         }
     };
 
-    const calculateSections = (slideList: Slide[]) => {
-        const sections: Record<string, number> = {};
-        FUNNEL_CONFIG.deckStructure.sections.forEach((section) => {
-            sections[section] = slideList.filter((s) => s.section === section).length;
-        });
-        return sections;
+    const startEditingName = (deck: DeckStructure) => {
+        setEditingDeckId(deck.id);
+        setEditingDeckName(deck.title);
     };
 
-    const updateSlide = (
-        slideNumber: number,
-        field: "title" | "description",
-        value: string
-    ) => {
-        setSlides(
-            slides.map((s) =>
-                s.slideNumber === slideNumber ? { ...s, [field]: value } : s
-            )
-        );
+    const saveDeckName = async (deckId: string) => {
+        try {
+            const supabase = createClient();
+
+            // Get the current deck to update metadata
+            const { data: currentDeck } = await supabase
+                .from("deck_structures")
+                .select("metadata")
+                .eq("id", deckId)
+                .single();
+
+            const updatedMetadata = {
+                ...(currentDeck?.metadata || {}),
+                title: editingDeckName.trim(),
+            };
+
+            const { error } = await supabase
+                .from("deck_structures")
+                .update({ metadata: updatedMetadata })
+                .eq("id", deckId);
+
+            if (!error) {
+                setDeckStructures((prev) =>
+                    prev.map((d) =>
+                        d.id === deckId ? { ...d, title: editingDeckName.trim() } : d
+                    )
+                );
+                setEditingDeckId(null);
+                setEditingDeckName("");
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to update deck name");
+        }
     };
 
-    const hasTranscript = transcripts.length > 0;
-    const hasDeckStructure = !!deckStructure;
+    const hasCompletedDeck = deckStructures.some((d) => d.status === "completed");
 
-    if (loading) {
+    if (!projectId) {
         return (
-            <StepLayout
-                projectId={projectId}
-                currentStep={3}
-                stepTitle="Deck Structure"
-                stepDescription="Loading..."
-            >
-                <div className="flex items-center justify-center py-12">
-                    <div className="text-gray-500">Loading...</div>
-                </div>
-            </StepLayout>
+            <div className="flex h-screen items-center justify-center">
+                <div className="text-gray-500">Loading...</div>
+            </div>
         );
     }
 
     return (
         <StepLayout
-            projectId={projectId}
             currentStep={3}
-            stepTitle="Deck Structure"
-            stepDescription="Create a 55-slide presentation outline"
+            projectId={projectId}
             funnelName={project?.name}
-            nextDisabled={!hasDeckStructure}
-            nextLabel="Continue to Gamma Presentation"
+            nextDisabled={!hasCompletedDeck}
+            nextLabel={hasCompletedDeck ? "Create Gamma Deck" : "Generate Deck First"}
+            stepTitle="Deck Structure"
+            stepDescription="AI generates your 55-slide presentation outline"
         >
-            <div className="space-y-6">
-                {/* Dependency Check */}
-                {!hasTranscript && (
+            <div className="space-y-8">
+                {/* Dependency Warning */}
+                {transcripts.length === 0 && (
                     <DependencyWarning
-                        missingStep={1}
-                        missingStepName="AI Intake Call"
+                        message="You need to complete your AI intake call first to generate a deck structure."
+                        requiredStep={1}
+                        requiredStepName="AI Intake Call"
                         projectId={projectId}
-                        message="Complete the AI intake call to generate deck structure"
                     />
                 )}
 
-                {/* AI Generation Section */}
-                {hasTranscript && (
-                    <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
-                        <CardHeader>
-                            <CardTitle className="flex items-center">
-                                <Sparkles className="mr-2 h-5 w-5 text-blue-600" />
-                                AI Deck Structure Generation
-                            </CardTitle>
-                            <CardDescription>
-                                Generate a {FUNNEL_CONFIG.deckStructure.totalSlides}
-                                -slide presentation outline
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
+                {/* Generation Interface */}
+                {!isGenerating ? (
+                    <div className="rounded-lg border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-8">
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                                <Sparkles className="h-8 w-8 text-blue-600" />
+                            </div>
+                            <h2 className="mb-3 text-2xl font-semibold text-gray-900">
+                                Generate Your Deck Structure
+                            </h2>
+                            <p className="mx-auto max-w-lg text-gray-600">
+                                AI will analyze your intake call and create a compelling
+                                55-slide structure using the proven Hook → Problem →
+                                Agitate → Solution → Offer → Close framework.
+                            </p>
+                        </div>
+
+                        <div className="mx-auto mb-6 max-w-md space-y-4">
                             <div>
-                                <label className="block text-sm font-medium text-gray-700">
-                                    Select Intake Call
+                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                    Select Intake Call Source
                                 </label>
-                                <Select
-                                    value={selectedTranscriptId}
-                                    onValueChange={setSelectedTranscriptId}
+                                <select
+                                    value={selectedTranscript}
+                                    onChange={(e) =>
+                                        setSelectedTranscript(e.target.value)
+                                    }
+                                    disabled={transcripts.length === 0}
+                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100"
                                 >
-                                    <SelectTrigger className="mt-1">
-                                        <SelectValue placeholder="Select a transcript" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {transcripts.map((t) => (
-                                            <SelectItem key={t.id} value={t.id}>
-                                                {new Date(
-                                                    t.created_at
-                                                ).toLocaleDateString()}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <Button
-                                onClick={handleGenerate}
-                                disabled={generating || !selectedTranscriptId}
-                                className="w-full"
-                            >
-                                {generating
-                                    ? "Generating Structure..."
-                                    : `Generate ${FUNNEL_CONFIG.deckStructure.totalSlides} Slides`}
-                            </Button>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Slide Editor */}
-                {slides.length > 0 && (
-                    <Card>
-                        <CardHeader>
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <CardTitle className="flex items-center">
-                                        <FileText className="mr-2 h-5 w-5 text-gray-600" />
-                                        Deck Structure ({slides.length} slides)
-                                    </CardTitle>
-                                    <CardDescription>
-                                        Edit slide titles and descriptions
-                                    </CardDescription>
-                                </div>
-                                <div className="flex space-x-2">
-                                    {FUNNEL_CONFIG.deckStructure.sections.map(
-                                        (section) => {
-                                            const count = slides.filter(
-                                                (s) => s.section === section
-                                            ).length;
-                                            return (
-                                                <Badge
-                                                    key={section}
-                                                    variant="secondary"
+                                    {transcripts.length === 0 ? (
+                                        <option value="">
+                                            No intake calls available
+                                        </option>
+                                    ) : (
+                                        <>
+                                            <option value="">
+                                                Select an intake call...
+                                            </option>
+                                            {transcripts.map((transcript) => (
+                                                <option
+                                                    key={transcript.id}
+                                                    value={transcript.id}
                                                 >
-                                                    {section}: {count}
-                                                </Badge>
-                                            );
-                                        }
+                                                    Call from{" "}
+                                                    {new Date(
+                                                        transcript.created_at
+                                                    ).toLocaleDateString()}
+                                                </option>
+                                            ))}
+                                        </>
                                     )}
-                                </div>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <Tabs
-                                defaultValue={FUNNEL_CONFIG.deckStructure.sections[0]}
-                            >
-                                <TabsList className="mb-4">
-                                    {FUNNEL_CONFIG.deckStructure.sections.map(
-                                        (section) => (
-                                            <TabsTrigger
-                                                key={section}
-                                                value={section}
-                                                className="capitalize"
-                                            >
-                                                {section}
-                                            </TabsTrigger>
-                                        )
-                                    )}
-                                </TabsList>
+                                </select>
 
-                                {FUNNEL_CONFIG.deckStructure.sections.map((section) => (
-                                    <TabsContent key={section} value={section}>
-                                        <div className="max-h-96 space-y-3 overflow-y-auto">
-                                            {slides
-                                                .filter((s) => s.section === section)
-                                                .map((slide) => (
-                                                    <div
-                                                        key={slide.slideNumber}
-                                                        className="rounded-lg border border-gray-200 bg-white p-4"
-                                                    >
-                                                        <div className="mb-2 flex items-center justify-between">
-                                                            <span className="text-sm font-semibold text-gray-900">
-                                                                Slide{" "}
-                                                                {slide.slideNumber}
-                                                            </span>
-                                                            <Badge
-                                                                variant="outline"
-                                                                className="capitalize"
-                                                            >
-                                                                {section}
-                                                            </Badge>
-                                                        </div>
-                                                        <Input
-                                                            value={slide.title}
-                                                            onChange={(e) =>
-                                                                updateSlide(
-                                                                    slide.slideNumber,
-                                                                    "title",
-                                                                    e.target.value
-                                                                )
-                                                            }
-                                                            className="mb-2"
-                                                            placeholder="Slide title"
-                                                        />
-                                                        <Textarea
-                                                            value={slide.description}
-                                                            onChange={(e) =>
-                                                                updateSlide(
-                                                                    slide.slideNumber,
-                                                                    "description",
-                                                                    e.target.value
-                                                                )
-                                                            }
-                                                            rows={2}
-                                                            placeholder="Slide description"
-                                                        />
-                                                    </div>
-                                                ))}
+                                {transcripts.length === 0 && (
+                                    <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-600">
+                                        💡 Complete Step 1 first to record intake calls
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                    Deck Size
+                                </label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        onClick={() => setSlideCount("5")}
+                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
+                                            slideCount === "5"
+                                                ? "border-blue-500 bg-blue-50 text-blue-900"
+                                                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                                        }`}
+                                    >
+                                        <div className="font-semibold">5 Slides</div>
+                                        <div className="text-xs text-gray-600">
+                                            Test Mode (~30s)
                                         </div>
-                                    </TabsContent>
-                                ))}
-                            </Tabs>
-
-                            <div className="mt-6">
-                                <Button
-                                    onClick={handleSave}
-                                    disabled={saving}
-                                    className="w-full"
-                                >
-                                    {saving
-                                        ? "Saving..."
-                                        : hasDeckStructure
-                                          ? "Update Deck Structure"
-                                          : "Save Deck Structure"}
-                                </Button>
+                                    </button>
+                                    <button
+                                        onClick={() => setSlideCount("55")}
+                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
+                                            slideCount === "55"
+                                                ? "border-blue-500 bg-blue-50 text-blue-900"
+                                                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                                        }`}
+                                    >
+                                        <div className="font-semibold">55 Slides</div>
+                                        <div className="text-xs text-gray-600">
+                                            Full Deck (~3-5 min)
+                                        </div>
+                                    </button>
+                                </div>
+                                <p className="mt-2 text-xs text-gray-500">
+                                    {slideCount === "5"
+                                        ? "🚀 Quick test with first 5 slides from the framework"
+                                        : "📊 Complete Magnetic Masterclass Framework (recommended)"}
+                                </p>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+
+                        <div className="text-center">
+                            <button
+                                onClick={handleGenerateDeck}
+                                disabled={!selectedTranscript}
+                                className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
+                                    selectedTranscript
+                                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                                        : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                }`}
+                            >
+                                <Sparkles className="h-6 w-6" />
+                                {!selectedTranscript
+                                    ? "Select Call First"
+                                    : "Generate Deck Structure"}
+                            </button>
+
+                            <div className="mt-4 space-y-1 text-sm text-gray-500">
+                                <p>
+                                    ⚡ Generation time:{" "}
+                                    {slideCount === "5"
+                                        ? "~30 seconds"
+                                        : "~3-5 minutes"}
+                                </p>
+                                <p>
+                                    📊 Creates {slideCount} slides using Magnetic
+                                    Masterclass Framework
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-blue-100">
+                                <Sparkles className="h-6 w-6 text-blue-600" />
+                            </div>
+                            <h3 className="mb-2 text-xl font-semibold text-blue-900">
+                                Generating Your Deck Structure
+                            </h3>
+                            <p className="text-blue-700">
+                                AI is analyzing your intake call and creating slides...
+                            </p>
+                        </div>
+
+                        <div className="mx-auto max-w-md">
+                            <div className="mb-2 flex items-center justify-between">
+                                <span className="text-sm font-medium text-blue-700">
+                                    Progress
+                                </span>
+                                <span className="text-sm text-blue-600">
+                                    {generationProgress}%
+                                </span>
+                            </div>
+                            <div className="h-3 w-full rounded-full bg-blue-200">
+                                <div
+                                    className="h-3 rounded-full bg-blue-600 transition-all duration-500 ease-out"
+                                    style={{ width: `${generationProgress}%` }}
+                                />
+                            </div>
+                        </div>
+                    </div>
                 )}
+
+                {/* Generated Deck Structures */}
+                <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+                    <div className="border-b border-gray-200 p-6">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-semibold text-gray-900">
+                                Your Deck Structures
+                            </h3>
+                            <span className="text-sm text-gray-500">
+                                {deckStructures.length} created
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="p-6">
+                        {deckStructures.length === 0 ? (
+                            <div className="py-12 text-center text-gray-500">
+                                <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                                <p>
+                                    No deck structures yet. Generate your first one
+                                    above!
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {deckStructures.map((deck) => (
+                                    <div
+                                        key={deck.id}
+                                        className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-blue-300 hover:shadow-md"
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <div className="mb-2 flex items-center gap-3">
+                                                    {editingDeckId === deck.id ? (
+                                                        <div className="flex flex-1 items-center gap-2">
+                                                            <input
+                                                                type="text"
+                                                                value={editingDeckName}
+                                                                onChange={(e) =>
+                                                                    setEditingDeckName(
+                                                                        e.target.value
+                                                                    )
+                                                                }
+                                                                className="flex-1 rounded border border-blue-300 px-2 py-1 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                onKeyDown={(e) => {
+                                                                    if (
+                                                                        e.key ===
+                                                                        "Enter"
+                                                                    )
+                                                                        saveDeckName(
+                                                                            deck.id
+                                                                        );
+                                                                    if (
+                                                                        e.key ===
+                                                                        "Escape"
+                                                                    )
+                                                                        setEditingDeckId(
+                                                                            null
+                                                                        );
+                                                                }}
+                                                                autoFocus
+                                                            />
+                                                            <button
+                                                                onClick={() =>
+                                                                    saveDeckName(
+                                                                        deck.id
+                                                                    )
+                                                                }
+                                                                className="rounded bg-blue-600 px-2 py-1 text-sm text-white hover:bg-blue-700"
+                                                            >
+                                                                Save
+                                                            </button>
+                                                            <button
+                                                                onClick={() =>
+                                                                    setEditingDeckId(
+                                                                        null
+                                                                    )
+                                                                }
+                                                                className="rounded bg-gray-300 px-2 py-1 text-sm text-gray-700 hover:bg-gray-400"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <h4 className="text-lg font-semibold text-gray-900">
+                                                                {deck.title}
+                                                            </h4>
+                                                            <button
+                                                                onClick={() =>
+                                                                    startEditingName(
+                                                                        deck
+                                                                    )
+                                                                }
+                                                                className="rounded p-1 text-blue-600 hover:bg-blue-50"
+                                                            >
+                                                                <Pencil className="h-4 w-4" />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex items-center gap-4 text-sm text-gray-600">
+                                                    <span>
+                                                        📊 {deck.slideCount} slides
+                                                    </span>
+                                                    <span>
+                                                        📅{" "}
+                                                        {new Date(
+                                                            deck.created_at
+                                                        ).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() => handleViewDeck(deck)}
+                                                    className="rounded p-2 text-blue-600 hover:bg-blue-50"
+                                                >
+                                                    View
+                                                </button>
+                                                <button
+                                                    onClick={() =>
+                                                        handleDownloadDeck(deck)
+                                                    }
+                                                    className="rounded p-2 text-gray-600 hover:bg-gray-50"
+                                                >
+                                                    <Download className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() =>
+                                                        handleDeleteDeck(deck.id)
+                                                    }
+                                                    className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
+
+            {/* Deck Editor Modal */}
+            {selectedDeck && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+                    <div className="flex h-[90vh] w-full max-w-6xl flex-col rounded-lg bg-white shadow-2xl">
+                        <div className="rounded-t-lg border-b border-gray-200 bg-gray-50 p-6">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-2xl font-bold text-gray-900">
+                                    {selectedDeck.title}
+                                </h2>
+                                <button
+                                    onClick={() => setSelectedDeck(null)}
+                                    className="text-2xl font-bold text-gray-400 hover:text-gray-600"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-scroll p-6">
+                            <DeckStructureEditor
+                                initialSlides={selectedDeck.slides}
+                                onSave={async (slides) => {
+                                    try {
+                                        const supabase = createClient();
+                                        const { error } = await supabase
+                                            .from("deck_structures")
+                                            .update({ slides })
+                                            .eq("id", selectedDeck.id);
+
+                                        if (!error) {
+                                            const { data: deckData } = await supabase
+                                                .from("deck_structures")
+                                                .select("*")
+                                                .eq("funnel_project_id", projectId)
+                                                .order("created_at", {
+                                                    ascending: false,
+                                                });
+
+                                            if (deckData) {
+                                                const transformed = deckData.map(
+                                                    (deck: any) => ({
+                                                        id: deck.id,
+                                                        title:
+                                                            deck.metadata?.title ||
+                                                            "Untitled Deck",
+                                                        slideCount: Array.isArray(
+                                                            deck.slides
+                                                        )
+                                                            ? deck.slides.length
+                                                            : deck.total_slides || 55,
+                                                        status: "completed" as const,
+                                                        slides: deck.slides || [],
+                                                        version: 1,
+                                                        created_at: deck.created_at,
+                                                    })
+                                                );
+                                                setDeckStructures(transformed);
+                                            }
+                                            setSelectedDeck(null);
+                                        }
+                                    } catch (error) {
+                                        logger.error(
+                                            { error },
+                                            "Failed to save deck structure"
+                                        );
+                                        throw error;
+                                    }
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </StepLayout>
     );
 }

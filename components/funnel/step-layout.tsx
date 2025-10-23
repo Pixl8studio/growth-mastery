@@ -1,150 +1,184 @@
-/**
- * Step Layout Component
- * Layout wrapper for funnel builder steps
- */
-
 "use client";
 
+import { ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-} from "@/components/ui/card";
-import { ArrowLeft, ArrowRight } from "lucide-react";
-import { FUNNEL_CONFIG } from "@/lib/config";
+import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { StepperNav } from "./stepper-nav";
 
 interface StepLayoutProps {
-    projectId: string;
+    children: ReactNode;
     currentStep: number;
-    stepTitle: string;
-    stepDescription: string;
+    stepTitle?: string;
+    stepDescription?: string;
+    completedSteps?: number[];
     funnelName?: string;
-    children: React.ReactNode;
+    funnelId?: string;
+    projectId: string;
+    onNext?: () => void;
+    onPrevious?: () => void;
     nextDisabled?: boolean;
     nextLabel?: string;
-    onNext?: () => void | Promise<void>;
+    showSaveButton?: boolean;
+    onSave?: () => void;
+    saveLabel?: string;
 }
 
+const getNextStepHref = (currentStep: number, projectId: string) => {
+    const nextStep = currentStep + 1;
+    if (nextStep > 11) return `/funnel-builder/${projectId}`;
+    return `/funnel-builder/${projectId}/step/${nextStep}`;
+};
+
+const getPreviousStepHref = (currentStep: number, projectId: string) => {
+    const prevStep = currentStep - 1;
+    if (prevStep < 1) return `/funnel-builder/${projectId}`;
+    return `/funnel-builder/${projectId}/step/${prevStep}`;
+};
+
 export function StepLayout({
-    projectId,
+    children,
     currentStep,
     stepTitle,
     stepDescription,
+    completedSteps = [],
     funnelName,
-    children,
+    funnelId,
+    projectId,
+    onNext,
+    onPrevious,
     nextDisabled = false,
     nextLabel = "Continue",
-    onNext,
+    showSaveButton = false,
+    onSave,
+    saveLabel = "Save Progress",
 }: StepLayoutProps) {
-    const router = useRouter();
-
-    const handleNext = async () => {
-        if (onNext) {
-            await onNext();
-        } else {
-            // Default: go to next step
-            const nextStep = currentStep + 1;
-            if (nextStep <= FUNNEL_CONFIG.totalSteps) {
-                router.push(`/funnel-builder/${projectId}/step/${nextStep}`);
-            }
-        }
-    };
-
-    const handlePrevious = () => {
-        const prevStep = currentStep - 1;
-        if (prevStep >= 1) {
-            router.push(`/funnel-builder/${projectId}/step/${prevStep}`);
-        } else {
-            router.push(`/funnel-builder/${projectId}`);
-        }
-    };
+    const nextHref = getNextStepHref(currentStep, projectId);
+    const previousHref = getPreviousStepHref(currentStep, projectId);
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <header className="border-b bg-white">
-                <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                            <Link
-                                href="/funnel-builder"
-                                className="text-xl font-bold text-gray-900"
-                            >
-                                Genie AI
-                            </Link>
-                            <span className="text-gray-400">|</span>
-                            <span className="text-gray-600">
-                                {funnelName || "Funnel"}
-                            </span>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                            <Link href={`/funnel-builder/${projectId}`}>
-                                <Button variant="outline" size="sm">
-                                    Overview
-                                </Button>
-                            </Link>
-                        </div>
-                    </div>
+            {/* Step Navigation Sidebar */}
+            <div className="fixed left-0 top-0 h-screen w-64 overflow-y-auto border-r border-gray-200 bg-white">
+                <div className="p-6">
+                    <Link href={`/funnel-builder/${projectId}`} className="mb-6 block">
+                        <h2 className="truncate text-lg font-semibold text-gray-900">
+                            {funnelName || "Funnel Builder"}
+                        </h2>
+                        <p className="text-sm text-gray-500">
+                            Step {currentStep} of 11
+                        </p>
+                    </Link>
 
-                    {/* Step Progress */}
-                    <div className="mt-4">
-                        <div className="flex items-center justify-between text-sm text-gray-600">
-                            <span className="font-medium">
-                                Step {currentStep} of {FUNNEL_CONFIG.totalSteps}
-                            </span>
-                            <span className="text-gray-500">
-                                {Math.round(
-                                    (currentStep / FUNNEL_CONFIG.totalSteps) * 100
-                                )}
-                                % Complete
-                            </span>
-                        </div>
-                        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-200">
-                            <div
-                                className="h-full bg-blue-600 transition-all duration-300"
-                                style={{
-                                    width: `${(currentStep / FUNNEL_CONFIG.totalSteps) * 100}%`,
-                                }}
-                            />
-                        </div>
-                    </div>
+                    <StepperNav projectId={projectId} currentStep={currentStep} />
                 </div>
-            </header>
+            </div>
 
             {/* Main Content */}
-            <main className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-                <Card className="mb-6">
-                    <CardHeader>
-                        <CardTitle>{stepTitle}</CardTitle>
-                        <CardDescription>{stepDescription}</CardDescription>
-                    </CardHeader>
-                    <CardContent>{children}</CardContent>
-                </Card>
+            <div className="ml-64 min-h-screen">
+                <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+                    {/* Step Header */}
+                    {(stepTitle || stepDescription) && (
+                        <div className="mb-8 text-center">
+                            {stepTitle && (
+                                <h1 className="mb-3 text-3xl font-bold text-gray-900">
+                                    {stepTitle}
+                                </h1>
+                            )}
+                            {stepDescription && (
+                                <p className="mx-auto max-w-2xl text-lg text-gray-600">
+                                    {stepDescription}
+                                </p>
+                            )}
+                        </div>
+                    )}
 
-                {/* Navigation */}
-                <div className="flex items-center justify-between">
-                    <Button
-                        variant="outline"
-                        onClick={handlePrevious}
-                        disabled={currentStep === 1}
-                    >
-                        <ArrowLeft className="mr-2 h-4 w-4" />
-                        Previous
-                    </Button>
+                    {/* Step Content */}
+                    {children}
 
-                    <Button onClick={handleNext} disabled={nextDisabled}>
-                        {nextLabel}
-                        {currentStep < FUNNEL_CONFIG.totalSteps && (
-                            <ArrowRight className="ml-2 h-4 w-4" />
-                        )}
-                    </Button>
+                    {/* Navigation Buttons */}
+                    <div className="mt-8 flex items-center justify-between">
+                        {/* Previous Button */}
+                        <div>
+                            {currentStep > 1 ? (
+                                onPrevious ? (
+                                    <button
+                                        onClick={onPrevious}
+                                        className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                                    >
+                                        <ArrowLeft className="mr-2 h-4 w-4" />
+                                        Previous
+                                    </button>
+                                ) : (
+                                    <Link href={previousHref}>
+                                        <button className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                                            <ArrowLeft className="mr-2 h-4 w-4" />
+                                            Previous
+                                        </button>
+                                    </Link>
+                                )
+                            ) : (
+                                <Link href={`/funnel-builder/${projectId}`}>
+                                    <button className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                                        <ArrowLeft className="mr-2 h-4 w-4" />
+                                        Back to Dashboard
+                                    </button>
+                                </Link>
+                            )}
+                        </div>
+
+                        {/* Save & Next Buttons */}
+                        <div className="flex items-center space-x-3">
+                            {showSaveButton && (
+                                <button
+                                    onClick={onSave}
+                                    className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                                >
+                                    <Check className="mr-2 h-4 w-4" />
+                                    {saveLabel}
+                                </button>
+                            )}
+
+                            {currentStep < 11 ? (
+                                onNext ? (
+                                    <button
+                                        onClick={onNext}
+                                        disabled={nextDisabled}
+                                        className={`inline-flex items-center rounded-lg px-6 py-3 font-medium transition-colors ${
+                                            nextDisabled
+                                                ? "cursor-not-allowed bg-gray-300 text-gray-500"
+                                                : "bg-blue-600 text-white hover:bg-blue-700"
+                                        }`}
+                                    >
+                                        {nextLabel}
+                                        <ArrowRight className="ml-2 h-4 w-4" />
+                                    </button>
+                                ) : (
+                                    <Link href={nextHref}>
+                                        <button
+                                            disabled={nextDisabled}
+                                            className={`inline-flex items-center rounded-lg px-6 py-3 font-medium transition-colors ${
+                                                nextDisabled
+                                                    ? "cursor-not-allowed bg-gray-300 text-gray-500"
+                                                    : "bg-blue-600 text-white hover:bg-blue-700"
+                                            }`}
+                                        >
+                                            {nextLabel}
+                                            <ArrowRight className="ml-2 h-4 w-4" />
+                                        </button>
+                                    </Link>
+                                )
+                            ) : (
+                                <Link href={`/funnel-builder/${projectId}`}>
+                                    <button className="inline-flex items-center rounded-lg bg-green-600 px-6 py-3 font-medium text-white transition-colors hover:bg-green-700">
+                                        Complete Funnel
+                                        <Check className="ml-2 h-4 w-4" />
+                                    </button>
+                                </Link>
+                            )}
+                        </div>
+                    </div>
                 </div>
-            </main>
+            </div>
         </div>
     );
 }

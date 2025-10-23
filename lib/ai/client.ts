@@ -108,8 +108,9 @@ export async function generateTextWithAI(
     const temperature = options?.temperature ?? AI_CONFIG.defaultTemperature;
     const maxTokens = options?.maxTokens || AI_CONFIG.defaultMaxTokens;
 
-    const requestLogger = logger.child({ model, temperature, maxTokens });
-    requestLogger.info("Generating text with OpenAI");
+    console.log(
+        `[AI] Generating text with OpenAI - Model: ${model}, Temperature: ${temperature}, MaxTokens: ${maxTokens}`
+    );
 
     try {
         const result = await retry(
@@ -127,13 +128,8 @@ export async function generateTextWithAI(
                     throw new Error("No content returned from OpenAI");
                 }
 
-                requestLogger.info(
-                    {
-                        tokensUsed: completion.usage?.total_tokens,
-                        promptTokens: completion.usage?.prompt_tokens,
-                        completionTokens: completion.usage?.completion_tokens,
-                    },
-                    "OpenAI text generation successful"
+                console.log(
+                    `[AI] OpenAI text generation successful - Tokens: ${completion.usage?.total_tokens} (prompt: ${completion.usage?.prompt_tokens}, completion: ${completion.usage?.completion_tokens})`
                 );
 
                 return content;
@@ -147,7 +143,10 @@ export async function generateTextWithAI(
 
         return result;
     } catch (error) {
-        requestLogger.error({ error, model }, "Failed to generate text with OpenAI");
+        console.error(
+            `[AI] Failed to generate text with OpenAI - Model: ${model}`,
+            error
+        );
         throw new Error(
             `AI text generation failed: ${error instanceof Error ? error.message : "Unknown error"}`
         );

@@ -76,8 +76,12 @@ export interface VapiCall {
     transcript?: string;
     recordingUrl?: string;
     stereoRecordingUrl?: string;
+    recording?: {
+        url?: string;
+    };
     artifact?: {
         transcript?: string;
+        recordingUrl?: string;
         messages?: VapiMessage[];
         messagesOpenAIFormatted?: Array<{
             role: string;
@@ -117,4 +121,5 @@ export interface CallSummary {
     extractedData: ExtractedCallData;
     recordingUrl?: string;
     cost?: number;
+    call?: VapiCall; // Full call object for reference
 }

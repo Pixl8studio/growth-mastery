@@ -1,355 +1,550 @@
 "use client";
 
-/**
- * Step 4: Gamma Presentation
- * Generate visual presentation with theme selection
- */
-
-import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { logger } from "@/lib/client-logger";
+import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
+import GammaThemeSelector from "@/components/funnel/gamma-theme-selector";
 import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Sparkles, Palette, ExternalLink, CheckCircle } from "lucide-react";
-import { GAMMA_THEMES } from "@/lib/gamma/types";
-
-interface FunnelProject {
-    id: string;
-    name: string;
-    current_step: number;
-}
+    Rocket,
+    Presentation,
+    Link as LinkIcon,
+    Trash2,
+    Eye,
+    Pencil,
+    Check,
+    X,
+} from "lucide-react";
+import { logger } from "@/lib/client-logger";
+import { createClient } from "@/lib/supabase/client";
 
 interface DeckStructure {
     id: string;
-    sections: string[];
-    total_slides?: number;
-    created_at?: string;
+    title: string;
+    slideCount: number;
+    slides: unknown[];
+    created_at: string;
 }
 
 interface GammaDeck {
     id: string;
+    title: string;
+    status: "generating" | "completed" | "failed";
+    gamma_session_id?: string;
     deck_url?: string;
-    edit_url?: string;
-    status: string;
-    theme_name?: string;
+    deck_data?: Record<string, unknown>;
+    settings: {
+        theme: string;
+        style: string;
+        length: string;
+    };
+    created_at: string;
 }
 
-export default function Step4Page() {
-    const params = useParams();
-    const projectId = params.projectId as string;
-
-    const [loading, setLoading] = useState(true);
-    const [generating, setGenerating] = useState(false);
-
-    const [project, setProject] = useState<FunnelProject | null>(null);
+export default function Step4Page({
+    params,
+}: {
+    params: Promise<{ projectId: string }>;
+}) {
+    const [projectId, setProjectId] = useState("");
+    const [project, setProject] = useState<any>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generationProgress, setGenerationProgress] = useState(0);
+    const [selectedDeckId, setSelectedDeckId] = useState("");
     const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
-    const [selectedDeckId, setSelectedDeckId] = useState<string>("");
-    const [selectedTheme, setSelectedTheme] = useState<string>("alpine");
-    const [gammaDeck, setGammaDeck] = useState<GammaDeck | null>(null);
+    const [gammaDecks, setGammaDecks] = useState<GammaDeck[]>([]);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingName, setEditingName] = useState("");
 
-    const loadData = useCallback(async () => {
-        try {
-            const supabase = createClient();
+    const [settings, setSettings] = useState({
+        theme: "nebulae",
+        style: "professional",
+        length: "full",
+    });
 
-            // Get project
-            const { data: projectData } = await supabase
-                .from("funnel_projects")
-                .select("*")
-                .eq("id", projectId)
-                .single();
+    useEffect(() => {
+        const resolveParams = async () => {
+            const resolved = await params;
+            setProjectId(resolved.projectId);
+        };
+        resolveParams();
+    }, [params]);
 
-            setProject(projectData);
+    useEffect(() => {
+        const loadProject = async () => {
+            if (!projectId) return;
 
-            // Get deck structures
-            const { data: deckData } = await supabase
-                .from("deck_structures")
-                .select("*")
-                .eq("funnel_project_id", projectId)
-                .order("created_at", { ascending: false });
+            try {
+                const supabase = createClient();
+                const { data: projectData, error: projectError } = await supabase
+                    .from("funnel_projects")
+                    .select("*")
+                    .eq("id", projectId)
+                    .single();
 
-            setDeckStructures(deckData || []);
-
-            if (deckData && deckData.length > 0) {
-                setSelectedDeckId(deckData[0].id);
+                if (projectError) throw projectError;
+                setProject(projectData);
+            } catch (error) {
+                logger.error({ error }, "Failed to load project");
             }
+        };
 
-            // Get existing Gamma deck
-            const { data: gammaData } = await supabase
-                .from("gamma_decks")
-                .select("*")
-                .eq("funnel_project_id", projectId)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .single();
-
-            if (gammaData) {
-                setGammaDeck(gammaData);
-            }
-        } catch (err) {
-            logger.error({ error: err }, "Failed to load data");
-        } finally {
-            setLoading(false);
-        }
+        loadProject();
     }, [projectId]);
 
     useEffect(() => {
-        loadData();
-    }, [loadData]);
+        const loadDeckStructures = async () => {
+            if (!projectId) return;
 
-    const handleGenerate = async () => {
-        setGenerating(true);
-        logger.info(
-            { projectId, deckId: selectedDeckId, theme: selectedTheme },
-            "Generating Gamma deck"
-        );
+            try {
+                const supabase = createClient();
+                const { data: deckData, error: deckError } = await supabase
+                    .from("deck_structures")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (deckError) throw deckError;
+
+                const transformed = (deckData || []).map((deck: any) => ({
+                    id: deck.id,
+                    title: deck.title || "Untitled Deck",
+                    slideCount: Array.isArray(deck.slides) ? deck.slides.length : 55,
+                    slides: deck.slides || [],
+                    created_at: deck.created_at,
+                }));
+                setDeckStructures(transformed);
+
+                if (transformed.length > 0 && !selectedDeckId) {
+                    setSelectedDeckId(transformed[0].id);
+                }
+            } catch (error) {
+                logger.error({ error }, "Failed to load deck structures");
+            }
+        };
+
+        loadDeckStructures();
+    }, [projectId, selectedDeckId]);
+
+    useEffect(() => {
+        const loadGammaDecks = async () => {
+            if (!projectId) return;
+
+            try {
+                const supabase = createClient();
+                const { data: gammaData, error: gammaError } = await supabase
+                    .from("gamma_decks")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (gammaError) throw gammaError;
+                setGammaDecks(gammaData || []);
+            } catch (error) {
+                logger.error({ error }, "Failed to load gamma decks");
+            }
+        };
+
+        loadGammaDecks();
+    }, [projectId]);
+
+    const handleGenerateGammaDeck = async () => {
+        setIsGenerating(true);
+        setGenerationProgress(0);
 
         try {
-            const supabase = createClient();
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
+            setGenerationProgress(20);
 
-            if (!user) throw new Error("Not authenticated");
+            const response = await fetch("/api/generate/gamma-decks", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    projectId,
+                    deckStructureId: selectedDeckId,
+                    settings,
+                }),
+            });
 
-            // TODO: Call Gamma API
-            // Placeholder - save gamma deck record
-            const themeName =
-                GAMMA_THEMES.find((t) => t.id === selectedTheme)?.name || selectedTheme;
+            setGenerationProgress(80);
 
-            const { data: newDeck } = await supabase
-                .from("gamma_decks")
-                .insert({
-                    funnel_project_id: projectId,
-                    deck_structure_id: selectedDeckId,
-                    user_id: user.id,
-                    gamma_session_id: `session_${Date.now()}`,
-                    theme_id: selectedTheme,
-                    theme_name: themeName,
-                    deck_url: `https://gamma.app/docs/demo-${Date.now()}`,
-                    edit_url: `https://gamma.app/docs/demo-${Date.now()}/edit`,
-                    generation_status: "ready",
-                })
-                .select()
-                .single();
+            if (!response.ok) {
+                throw new Error("Failed to generate Gamma deck");
+            }
 
-            setGammaDeck(newDeck);
-            logger.info({}, "Gamma deck generated");
-        } catch (err) {
-            logger.error({ error: err }, "Failed to generate Gamma deck");
-        } finally {
-            setGenerating(false);
+            const result = await response.json();
+            setGammaDecks((prev) => [result.gammaDeck, ...prev]);
+            setGenerationProgress(100);
+
+            setTimeout(() => {
+                setIsGenerating(false);
+                setGenerationProgress(0);
+            }, 1000);
+        } catch (error) {
+            logger.error({ error }, "Failed to generate Gamma deck");
+            setIsGenerating(false);
+            setGenerationProgress(0);
+            alert("Failed to generate Gamma deck. Please try again.");
         }
     };
 
-    const hasDeckStructure = deckStructures.length > 0;
-    const hasGammaDeck = !!gammaDeck;
+    const handleDeleteDeck = async (deckId: string) => {
+        if (!confirm("Delete this Gamma deck?")) return;
 
-    if (loading) {
+        try {
+            const supabase = createClient();
+            const { error } = await supabase
+                .from("gamma_decks")
+                .delete()
+                .eq("id", deckId);
+
+            if (!error) {
+                setGammaDecks((prev) => prev.filter((d) => d.id !== deckId));
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to delete Gamma deck");
+        }
+    };
+
+    const handleEditSave = async (deckId: string) => {
+        try {
+            const supabase = createClient();
+            const { error } = await supabase
+                .from("gamma_decks")
+                .update({ title: editingName.trim() })
+                .eq("id", deckId);
+
+            if (!error) {
+                setGammaDecks((prev) =>
+                    prev.map((d) =>
+                        d.id === deckId ? { ...d, title: editingName.trim() } : d
+                    )
+                );
+                setEditingId(null);
+                setEditingName("");
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to update deck name");
+        }
+    };
+
+    const hasCompletedGammaDeck = gammaDecks.some((d) => d.status === "completed");
+
+    if (!projectId) {
         return (
-            <StepLayout
-                projectId={projectId}
-                currentStep={4}
-                stepTitle="Gamma Presentation"
-                stepDescription="Loading..."
-            >
-                <div className="flex items-center justify-center py-12">
-                    <div className="text-gray-500">Loading...</div>
-                </div>
-            </StepLayout>
+            <div className="flex h-screen items-center justify-center">
+                <div className="text-gray-500">Loading...</div>
+            </div>
         );
     }
 
     return (
         <StepLayout
-            projectId={projectId}
             currentStep={4}
-            stepTitle="Gamma Presentation"
-            stepDescription="Generate a beautiful visual presentation"
+            projectId={projectId}
             funnelName={project?.name}
-            nextDisabled={!hasGammaDeck}
-            nextLabel="Continue to Enrollment Page"
+            nextDisabled={!hasCompletedGammaDeck}
+            nextLabel={
+                hasCompletedGammaDeck ? "Create Enrollment Page" : "Generate Deck First"
+            }
+            stepTitle="Gamma Presentation"
+            stepDescription="Generate beautiful slides with Gamma AI"
         >
-            <div className="space-y-6">
-                {/* Dependency Check */}
-                {!hasDeckStructure && (
+            <div className="space-y-8">
+                {/* Dependency Warning */}
+                {deckStructures.length === 0 && (
                     <DependencyWarning
-                        missingStep={3}
-                        missingStepName="Deck Structure"
+                        message="You need to create a deck structure first before generating Gamma slides."
+                        requiredStep={3}
+                        requiredStepName="Deck Structure"
                         projectId={projectId}
-                        message="Create your deck structure before generating the Gamma presentation"
                     />
                 )}
 
-                {/* Gamma Deck Generated */}
-                {hasGammaDeck ? (
-                    <Card className="border-green-200 bg-green-50">
-                        <CardHeader>
-                            <div className="flex items-center">
-                                <CheckCircle className="mr-3 h-6 w-6 text-green-600" />
-                                <div>
-                                    <CardTitle className="text-green-900">
-                                        Presentation Created!
-                                    </CardTitle>
-                                    <CardDescription className="text-green-700">
-                                        Your Gamma presentation is ready
-                                    </CardDescription>
-                                </div>
+                {/* Generation Interface */}
+                {!isGenerating ? (
+                    <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-pink-50 p-6">
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-purple-100">
+                                <Rocket className="h-8 w-8 text-purple-600" />
                             </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <span className="text-sm text-green-700">Theme:</span>
-                                <Badge variant="success">{gammaDeck.theme_name}</Badge>
-                            </div>
+                            <h2 className="mb-3 text-2xl font-semibold text-gray-900">
+                                Generate Gamma Presentation
+                            </h2>
+                            <p className="mx-auto max-w-lg text-gray-600">
+                                Transform your deck structure into a stunning visual
+                                presentation using Gamma AI's advanced design
+                                capabilities.
+                            </p>
+                        </div>
 
-                            <div className="flex space-x-3">
-                                <a
-                                    href={gammaDeck.deck_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex-1"
+                        <div className="mb-6 space-y-6">
+                            <div className="mx-auto max-w-md">
+                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                    Select Deck Structure
+                                </label>
+                                <select
+                                    value={selectedDeckId}
+                                    onChange={(e) => setSelectedDeckId(e.target.value)}
+                                    disabled={deckStructures.length === 0}
+                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:bg-gray-100"
                                 >
-                                    <Button
-                                        variant="outline"
-                                        className="w-full"
-                                        size="sm"
-                                    >
-                                        <ExternalLink className="mr-2 h-4 w-4" />
-                                        View Deck
-                                    </Button>
-                                </a>
-                                <a
-                                    href={gammaDeck.edit_url}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex-1"
-                                >
-                                    <Button
-                                        variant="outline"
-                                        className="w-full"
-                                        size="sm"
-                                    >
-                                        Edit in Gamma
-                                    </Button>
-                                </a>
-                            </div>
-
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={handleGenerate}
-                                className="w-full"
-                            >
-                                Generate New Variation
-                            </Button>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    // Generation Interface
-                    hasDeckStructure && (
-                        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
-                            <CardHeader>
-                                <CardTitle className="flex items-center">
-                                    <Sparkles className="mr-2 h-5 w-5 text-blue-600" />
-                                    Generate Gamma Presentation
-                                </CardTitle>
-                                <CardDescription>
-                                    Choose a theme and create your visual presentation
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent className="space-y-6">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">
-                                        Select Deck Structure
-                                    </label>
-                                    <Select
-                                        value={selectedDeckId}
-                                        onValueChange={setSelectedDeckId}
-                                    >
-                                        <SelectTrigger className="mt-1">
-                                            <SelectValue placeholder="Select a deck" />
-                                        </SelectTrigger>
-                                        <SelectContent>
+                                    {deckStructures.length === 0 ? (
+                                        <option value="">
+                                            No deck structures available
+                                        </option>
+                                    ) : (
+                                        <>
+                                            <option value="">
+                                                Select a deck structure...
+                                            </option>
                                             {deckStructures.map((deck) => (
-                                                <SelectItem
-                                                    key={deck.id}
-                                                    value={deck.id}
-                                                >
-                                                    {deck.total_slides} slides -{" "}
-                                                    {deck.created_at
-                                                        ? new Date(
-                                                              deck.created_at
-                                                          ).toLocaleDateString()
-                                                        : "N/A"}
-                                                </SelectItem>
+                                                <option key={deck.id} value={deck.id}>
+                                                    {deck.title} ({deck.slideCount}{" "}
+                                                    slides)
+                                                </option>
                                             ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
+                                        </>
+                                    )}
+                                </select>
 
-                                <div>
-                                    <label className="mb-3 block text-sm font-medium text-gray-700">
-                                        <Palette className="mr-2 inline h-4 w-4" />
-                                        Choose Theme
-                                    </label>
-                                    <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-                                        {GAMMA_THEMES.map((theme) => (
-                                            <button
-                                                key={theme.id}
-                                                type="button"
-                                                onClick={() =>
-                                                    setSelectedTheme(theme.id)
-                                                }
-                                                className={`relative rounded-lg border-2 p-2 text-left transition-all ${
-                                                    selectedTheme === theme.id
-                                                        ? "border-blue-500 ring-2 ring-blue-200"
-                                                        : "border-gray-200 hover:border-gray-300"
-                                                }`}
-                                            >
-                                                <div className="mb-2 h-16 rounded bg-gradient-to-br from-gray-100 to-gray-200"></div>
-                                                <p className="text-xs font-medium text-gray-900">
-                                                    {theme.name}
-                                                </p>
-                                                {selectedTheme === theme.id && (
-                                                    <div className="absolute right-1 top-1 rounded-full bg-blue-500 p-1">
-                                                        <CheckCircle className="h-3 w-3 text-white" />
-                                                    </div>
-                                                )}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
+                                {deckStructures.length === 0 && (
+                                    <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-600">
+                                        💡 Complete Step 3 first to create deck
+                                        structures
+                                    </p>
+                                )}
+                            </div>
 
-                                <Button
-                                    onClick={handleGenerate}
-                                    disabled={generating || !selectedDeckId}
-                                    className="w-full"
-                                >
-                                    {generating
-                                        ? "Generating Presentation..."
-                                        : "Generate Presentation"}
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    )
+                            <div className="-mx-6 px-6 py-6 bg-white/50 rounded-lg">
+                                <GammaThemeSelector
+                                    selectedTheme={settings.theme}
+                                    onThemeChange={(theme) =>
+                                        setSettings({ ...settings, theme })
+                                    }
+                                />
+                            </div>
+                        </div>
+
+                        <div className="text-center">
+                            <button
+                                onClick={handleGenerateGammaDeck}
+                                disabled={!selectedDeckId}
+                                className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
+                                    selectedDeckId
+                                        ? "bg-purple-600 text-white hover:bg-purple-700"
+                                        : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                }`}
+                            >
+                                <Rocket className="h-6 w-6" />
+                                {selectedDeckId
+                                    ? "Generate Gamma Deck"
+                                    : "Select Deck Structure First"}
+                            </button>
+
+                            <div className="mt-4 space-y-1 text-sm text-gray-500">
+                                <p>⚡ Generation time: ~2-3 minutes</p>
+                                <p>🎨 Creates professionally designed slides</p>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="rounded-lg border border-purple-200 bg-purple-50 p-6">
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-purple-100">
+                                <Rocket className="h-6 w-6 text-purple-600" />
+                            </div>
+                            <h3 className="mb-2 text-xl font-semibold text-purple-900">
+                                Generating Gamma Presentation
+                            </h3>
+                            <p className="text-purple-700">
+                                AI is creating your beautiful slides...
+                            </p>
+                        </div>
+
+                        <div className="mx-auto max-w-md">
+                            <div className="mb-2 flex items-center justify-between">
+                                <span className="text-sm font-medium text-purple-700">
+                                    Progress
+                                </span>
+                                <span className="text-sm text-purple-600">
+                                    {generationProgress}%
+                                </span>
+                            </div>
+                            <div className="h-3 w-full rounded-full bg-purple-200">
+                                <div
+                                    className="h-3 rounded-full bg-purple-600 transition-all duration-500 ease-out"
+                                    style={{ width: `${generationProgress}%` }}
+                                />
+                            </div>
+                        </div>
+                    </div>
                 )}
+
+                {/* Generated Gamma Decks */}
+                <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+                    <div className="border-b border-gray-200 p-6">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-semibold text-gray-900">
+                                Your Gamma Presentations
+                            </h3>
+                            <span className="text-sm text-gray-500">
+                                {gammaDecks.length} created
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="p-6">
+                        {gammaDecks.length === 0 ? (
+                            <div className="py-12 text-center text-gray-500">
+                                <Presentation className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                                <p>
+                                    No Gamma presentations yet. Generate your first one
+                                    above!
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {gammaDecks.map((deck) => (
+                                    <div
+                                        key={deck.id}
+                                        className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md"
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <div className="mb-2 flex items-center gap-3">
+                                                    {editingId === deck.id ? (
+                                                        <div className="flex flex-1 items-center gap-2">
+                                                            <input
+                                                                type="text"
+                                                                value={editingName}
+                                                                onChange={(e) =>
+                                                                    setEditingName(
+                                                                        e.target.value
+                                                                    )
+                                                                }
+                                                                className="flex-1 rounded border border-purple-300 px-2 py-1 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                                onKeyDown={(e) => {
+                                                                    if (
+                                                                        e.key ===
+                                                                        "Enter"
+                                                                    )
+                                                                        handleEditSave(
+                                                                            deck.id
+                                                                        );
+                                                                    if (
+                                                                        e.key ===
+                                                                        "Escape"
+                                                                    )
+                                                                        setEditingId(
+                                                                            null
+                                                                        );
+                                                                }}
+                                                                autoFocus
+                                                            />
+                                                            <button
+                                                                onClick={() =>
+                                                                    handleEditSave(
+                                                                        deck.id
+                                                                    )
+                                                                }
+                                                                className="rounded bg-purple-600 px-2 py-1 text-sm text-white hover:bg-purple-700"
+                                                            >
+                                                                <Check className="h-4 w-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() =>
+                                                                    setEditingId(null)
+                                                                }
+                                                                className="rounded bg-gray-300 px-2 py-1 text-sm text-gray-700 hover:bg-gray-400"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <h4 className="text-lg font-semibold text-gray-900">
+                                                                {deck.title}
+                                                            </h4>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingId(
+                                                                        deck.id
+                                                                    );
+                                                                    setEditingName(
+                                                                        deck.title
+                                                                    );
+                                                                }}
+                                                                className="rounded p-1 text-purple-600 hover:bg-purple-50"
+                                                            >
+                                                                <Pencil className="h-4 w-4" />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+
+                                                <div className="mb-3 flex items-center gap-4 text-sm text-gray-600">
+                                                    <span
+                                                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                                            deck.status === "completed"
+                                                                ? "bg-green-100 text-green-800"
+                                                                : deck.status ===
+                                                                    "generating"
+                                                                  ? "bg-yellow-100 text-yellow-800"
+                                                                  : "bg-red-100 text-red-800"
+                                                        }`}
+                                                    >
+                                                        {deck.status}
+                                                    </span>
+                                                    <span>
+                                                        🎨 {deck.settings.theme}
+                                                    </span>
+                                                    <span>
+                                                        📅{" "}
+                                                        {new Date(
+                                                            deck.created_at
+                                                        ).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+
+                                                {deck.deck_url && (
+                                                    <a
+                                                        href={deck.deck_url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700"
+                                                    >
+                                                        <LinkIcon className="h-4 w-4" />
+                                                        Open in Gamma
+                                                    </a>
+                                                )}
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                {deck.deck_url && (
+                                                    <a
+                                                        href={deck.deck_url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="rounded p-2 text-purple-600 hover:bg-purple-50"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </a>
+                                                )}
+                                                <button
+                                                    onClick={() =>
+                                                        handleDeleteDeck(deck.id)
+                                                    }
+                                                    className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </StepLayout>
     );

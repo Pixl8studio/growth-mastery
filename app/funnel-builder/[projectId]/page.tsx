@@ -169,7 +169,6 @@ export default async function FunnelProjectPage({ params }: PageProps) {
                         <StepperNav
                             projectId={projectId}
                             currentStep={project.current_step}
-                            completedSteps={[]}
                         />
                     </CardContent>
                 </Card>

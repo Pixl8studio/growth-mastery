@@ -1,112 +1,128 @@
-/**
- * Stepper Nav Component
- * Visual step indicator for funnel builder
- */
-
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
-import { FUNNEL_CONFIG } from "@/lib/config";
+
+interface Step {
+    number: number;
+    title: string;
+    description: string;
+    icon: string;
+}
+
+const STEPS: Step[] = [
+    {
+        number: 1,
+        title: "AI Intake Call",
+        description: "Voice conversation",
+        icon: "📞",
+    },
+    { number: 2, title: "Craft Offer", description: "Pricing & features", icon: "💰" },
+    { number: 3, title: "Deck Structure", description: "55-slide outline", icon: "📊" },
+    { number: 4, title: "Gamma Decks", description: "Visual presentation", icon: "🎨" },
+    { number: 5, title: "Enrollment Page", description: "AI sales copy", icon: "📝" },
+    { number: 6, title: "Talk Track", description: "Video script", icon: "📖" },
+    { number: 7, title: "Upload Video", description: "Pitch recording", icon: "🎥" },
+    { number: 8, title: "Watch Page", description: "Video landing", icon: "▶️" },
+    { number: 9, title: "Registration", description: "Lead capture", icon: "📋" },
+    { number: 10, title: "Flow Setup", description: "Connect pages", icon: "🔗" },
+    { number: 11, title: "Analytics", description: "Track performance", icon: "📈" },
+];
 
 interface StepperNavProps {
     projectId: string;
     currentStep: number;
-    completedSteps?: number[];
+    className?: string;
 }
 
-export function StepperNav({
-    projectId,
-    currentStep,
-    completedSteps = [],
-}: StepperNavProps) {
-    return (
-        <nav aria-label="Progress">
-            <ol className="space-y-4 md:flex md:space-x-8 md:space-y-0">
-                {FUNNEL_CONFIG.stepNames.map((stepName, index) => {
-                    const stepNumber = index + 1;
-                    const isCompleted = completedSteps.includes(stepNumber);
-                    const isCurrent = stepNumber === currentStep;
-                    const isClickable = true; // All steps are clickable (unlocked)
+export function StepperNav({ projectId, currentStep, className }: StepperNavProps) {
+    const pathname = usePathname();
 
-                    return (
-                        <li key={stepNumber} className="md:flex-1">
-                            {isClickable ? (
-                                <Link
-                                    href={`/funnel-builder/${projectId}/step/${stepNumber}`}
-                                    className={cn(
-                                        "group flex flex-col border-l-4 py-2 pl-4 md:border-l-0 md:border-t-4 md:pb-0 md:pl-0 md:pt-4",
-                                        {
-                                            "border-blue-600": isCurrent,
-                                            "border-green-600":
-                                                isCompleted && !isCurrent,
-                                            "border-gray-200 hover:border-gray-300":
-                                                !isCurrent && !isCompleted,
-                                        }
-                                    )}
-                                >
-                                    <span
-                                        className={cn("text-sm font-medium", {
-                                            "text-blue-600": isCurrent,
-                                            "text-green-600": isCompleted && !isCurrent,
-                                            "text-gray-500 group-hover:text-gray-700":
-                                                !isCurrent && !isCompleted,
-                                        })}
-                                    >
-                                        <span className="flex items-center">
-                                            {isCompleted ? (
-                                                <Check className="mr-2 h-5 w-5" />
-                                            ) : (
-                                                <span className="mr-2">
-                                                    Step {stepNumber}
-                                                </span>
-                                            )}
-                                        </span>
-                                    </span>
-                                    <span className="text-sm font-medium text-gray-900">
-                                        {stepName}
-                                    </span>
-                                </Link>
-                            ) : (
-                                <div
-                                    className={cn(
-                                        "flex flex-col border-l-4 py-2 pl-4 md:border-l-0 md:border-t-4 md:pb-0 md:pl-0 md:pt-4",
-                                        {
-                                            "border-blue-600": isCurrent,
-                                            "border-green-600":
-                                                isCompleted && !isCurrent,
-                                            "border-gray-200":
-                                                !isCurrent && !isCompleted,
-                                        }
-                                    )}
-                                >
-                                    <span
-                                        className={cn("text-sm font-medium", {
-                                            "text-blue-600": isCurrent,
-                                            "text-green-600": isCompleted && !isCurrent,
-                                            "text-gray-500": !isCurrent && !isCompleted,
-                                        })}
-                                    >
-                                        <span className="flex items-center">
-                                            {isCompleted ? (
-                                                <Check className="mr-2 h-5 w-5" />
-                                            ) : (
-                                                <span className="mr-2">
-                                                    Step {stepNumber}
-                                                </span>
-                                            )}
-                                        </span>
-                                    </span>
-                                    <span className="text-sm font-medium text-gray-900">
-                                        {stepName}
-                                    </span>
-                                </div>
+    return (
+        <nav className={cn("space-y-2", className)}>
+            {STEPS.map((step) => {
+                const isActive = step.number === currentStep;
+                const isCompleted = step.number < currentStep;
+                const isFuture = step.number > currentStep;
+                const href = `/funnel-builder/${projectId}/step/${step.number}`;
+                const isCurrentPage = pathname === href;
+
+                return (
+                    <Link
+                        key={step.number}
+                        href={href}
+                        className={cn(
+                            "group flex items-center gap-4 rounded-lg border p-4 transition-all",
+                            {
+                                // Current page
+                                "border-blue-500 bg-blue-50 shadow-sm": isCurrentPage,
+                                // Active step (not on page)
+                                "border-blue-300 bg-white hover:border-blue-400 hover:bg-blue-50":
+                                    isActive && !isCurrentPage,
+                                // Completed or future steps (all clickable!)
+                                "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50":
+                                    isCompleted || isFuture,
+                            }
+                        )}
+                    >
+                        {/* Step Number/Icon */}
+                        <div
+                            className={cn(
+                                "flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full text-xl",
+                                {
+                                    "bg-blue-500 text-white": isCurrentPage,
+                                    "bg-blue-100 text-blue-600":
+                                        isActive && !isCurrentPage,
+                                    "bg-green-100 text-green-600": isCompleted,
+                                    "bg-gray-100 text-gray-500": isFuture,
+                                }
                             )}
-                        </li>
-                    );
-                })}
-            </ol>
+                        >
+                            {isCompleted ? "✓" : step.icon}
+                        </div>
+
+                        {/* Step Info */}
+                        <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                                <span
+                                    className={cn(
+                                        "text-xs font-medium uppercase tracking-wider",
+                                        {
+                                            "text-blue-600": isCurrentPage || isActive,
+                                            "text-green-600": isCompleted && !isActive,
+                                            "text-gray-500": isFuture,
+                                            "text-gray-600":
+                                                !isActive && !isCompleted && !isFuture,
+                                        }
+                                    )}
+                                >
+                                    Step {step.number}
+                                </span>
+                                {isCurrentPage && (
+                                    <span className="rounded-full bg-blue-500 px-2 py-0.5 text-xs font-medium text-white">
+                                        Current
+                                    </span>
+                                )}
+                                {isCompleted && !isCurrentPage && (
+                                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                                        Complete
+                                    </span>
+                                )}
+                            </div>
+                            <h3 className="mb-1 font-semibold text-gray-900">
+                                {step.title}
+                            </h3>
+                            <p className="text-sm text-gray-600">{step.description}</p>
+                        </div>
+
+                        {/* Arrow for all steps */}
+                        <div className="flex-shrink-0 text-gray-400 transition-transform group-hover:translate-x-1">
+                            →
+                        </div>
+                    </Link>
+                );
+            })}
         </nav>
     );
 }

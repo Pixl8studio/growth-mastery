@@ -1,316 +1,308 @@
 "use client";
 
-/**
- * Step 9: Registration Page
- * AI-generated lead capture page
- */
-
-import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { logger } from "@/lib/client-logger";
+import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Sparkles } from "lucide-react";
-
-interface FunnelProject {
-    id: string;
-    name: string;
-    current_step: number;
-}
-
-interface DeckStructure {
-    id: string;
-}
+import { Sparkles, ClipboardList, Trash2 } from "lucide-react";
+import { logger } from "@/lib/client-logger";
+import { createClient } from "@/lib/supabase/client";
 
 interface RegistrationPage {
     id: string;
-    headline: string;
-    subheadline?: string;
-    benefit_bullets?: string[];
-    cta_config?: {
-        text?: string;
+    content: {
+        headline?: string;
+        subheadline?: string;
+        bulletPoints?: string[];
+        ctaText?: string;
     };
+    created_at: string;
 }
 
-export default function Step9Page() {
-    const params = useParams();
-    const projectId = params.projectId as string;
+export default function Step9Page({
+    params,
+}: {
+    params: Promise<{ projectId: string }>;
+}) {
+    const [projectId, setProjectId] = useState("");
+    const [project, setProject] = useState<any>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generationProgress, setGenerationProgress] = useState(0);
+    const [registrationPages, setRegistrationPages] = useState<RegistrationPage[]>([]);
+    const [hasDeck, setHasDeck] = useState(false);
 
-    const [loading, setLoading] = useState(true);
-    const [generating, setGenerating] = useState(false);
-    const [saving, setSaving] = useState(false);
+    useEffect(() => {
+        const resolveParams = async () => {
+            const resolved = await params;
+            setProjectId(resolved.projectId);
+        };
+        resolveParams();
+    }, [params]);
 
-    const [project, setProject] = useState<FunnelProject | null>(null);
-    const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
-    const [registrationPage, setRegistrationPage] = useState<RegistrationPage | null>(
-        null
-    );
+    useEffect(() => {
+        const loadProject = async () => {
+            if (!projectId) return;
+            try {
+                const supabase = createClient();
+                const { data: projectData, error: projectError } = await supabase
+                    .from("funnel_projects")
+                    .select("*")
+                    .eq("id", projectId)
+                    .single();
 
-    const [headline, setHeadline] = useState("");
-    const [subheadline, setSubheadline] = useState("");
-    const [bulletPoints, setBulletPoints] = useState<string[]>(["", "", "", "", ""]);
-    const [ctaText, setCtaText] = useState("");
-
-    const loadData = useCallback(async () => {
-        try {
-            const supabase = createClient();
-
-            const { data: projectData } = await supabase
-                .from("funnel_projects")
-                .select("*")
-                .eq("id", projectId)
-                .single();
-
-            setProject(projectData);
-
-            const { data: decksData } = await supabase
-                .from("deck_structures")
-                .select("*")
-                .eq("funnel_project_id", projectId);
-
-            setDeckStructures(decksData || []);
-
-            const { data: pageData } = await supabase
-                .from("registration_pages")
-                .select("*")
-                .eq("funnel_project_id", projectId)
-                .limit(1)
-                .single();
-
-            if (pageData) {
-                setRegistrationPage(pageData);
-                setHeadline(pageData.headline);
-                setSubheadline(pageData.subheadline || "");
-                setBulletPoints(pageData.benefit_bullets || ["", "", "", "", ""]);
-                setCtaText(pageData.cta_config?.text || "");
+                if (projectError) throw projectError;
+                setProject(projectData);
+            } catch (error) {
+                logger.error({ error }, "Failed to load project");
             }
-        } catch (err) {
-            logger.error({ error: err }, "Failed to load data");
-        } finally {
-            setLoading(false);
-        }
+        };
+        loadProject();
     }, [projectId]);
 
     useEffect(() => {
-        loadData();
-    }, [loadData]);
+        const loadPages = async () => {
+            if (!projectId) return;
+            try {
+                const supabase = createClient();
+                const [pagesResult, deckResult] = await Promise.all([
+                    supabase
+                        .from("registration_pages")
+                        .select("*")
+                        .eq("funnel_project_id", projectId)
+                        .order("created_at", { ascending: false }),
+                    supabase
+                        .from("deck_structures")
+                        .select("id")
+                        .eq("funnel_project_id", projectId),
+                ]);
+
+                if (pagesResult.data) setRegistrationPages(pagesResult.data);
+                if (deckResult.data) setHasDeck(deckResult.data.length > 0);
+            } catch (error) {
+                logger.error({ error }, "Failed to load registration pages");
+            }
+        };
+        loadPages();
+    }, [projectId]);
 
     const handleGenerate = async () => {
-        setGenerating(true);
+        setIsGenerating(true);
+        setGenerationProgress(0);
 
         try {
-            setHeadline("Discover the Pitch Framework That Closes Deals");
-            setSubheadline(
-                "Watch this exclusive training and transform your pitch in the next 20 minutes"
-            );
-            setBulletPoints([
-                "The 55-slide framework used by top performers",
-                "How to hook investors in the first 30 seconds",
-                "The psychology of persuasive presentations",
-                "Storytelling techniques that create urgency",
-                "Common pitch mistakes that kill deals (and how to avoid them)",
-            ]);
-            setCtaText("Register for Free Access");
-            logger.info({}, "Registration copy generated");
-        } catch (err) {
-            logger.error({ error: err }, "Failed to generate registration copy");
-        } finally {
-            setGenerating(false);
+            setGenerationProgress(30);
+
+            const response = await fetch("/api/generate/registration-copy", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ projectId }),
+            });
+
+            setGenerationProgress(80);
+
+            if (!response.ok) throw new Error("Failed to generate page");
+
+            const result = await response.json();
+            setRegistrationPages((prev) => [result.page, ...prev]);
+            setGenerationProgress(100);
+
+            setTimeout(() => {
+                setIsGenerating(false);
+                setGenerationProgress(0);
+            }, 1000);
+        } catch (error) {
+            logger.error({ error }, "Failed to generate registration page");
+            setIsGenerating(false);
+            setGenerationProgress(0);
+            alert("Failed to generate registration page. Please try again.");
         }
     };
 
-    const handleSave = async () => {
-        setSaving(true);
+    const handleDelete = async (pageId: string) => {
+        if (!confirm("Delete this registration page?")) return;
 
         try {
             const supabase = createClient();
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
+            const { error } = await supabase
+                .from("registration_pages")
+                .delete()
+                .eq("id", pageId);
 
-            if (!user) throw new Error("Not authenticated");
-
-            const pageData = {
-                funnel_project_id: projectId,
-                user_id: user.id,
-                headline,
-                subheadline,
-                benefit_bullets: bulletPoints.filter((b) => b),
-                cta_config: { text: ctaText },
-            };
-
-            if (registrationPage) {
-                await supabase
-                    .from("registration_pages")
-                    .update(pageData)
-                    .eq("id", registrationPage.id);
-            } else {
-                await supabase.from("registration_pages").insert(pageData);
+            if (!error) {
+                setRegistrationPages((prev) => prev.filter((p) => p.id !== pageId));
             }
-
-            logger.info({ projectId }, "Registration page saved");
-            await loadData();
-        } catch (err) {
-            logger.error({ error: err }, "Failed to save registration page");
-        } finally {
-            setSaving(false);
+        } catch (error) {
+            logger.error({ error }, "Failed to delete registration page");
         }
     };
 
-    const hasDeckStructure = deckStructures.length > 0;
-    const hasRegistrationPage = !!registrationPage;
+    const hasCompletedPage = registrationPages.length > 0;
 
-    if (loading) {
+    if (!projectId) {
         return (
-            <StepLayout
-                projectId={projectId}
-                currentStep={9}
-                stepTitle="Registration Page"
-                stepDescription="Loading..."
-            >
-                <div className="flex items-center justify-center py-12">
-                    <div className="text-gray-500">Loading...</div>
-                </div>
-            </StepLayout>
+            <div className="flex h-screen items-center justify-center">
+                <div className="text-gray-500">Loading...</div>
+            </div>
         );
     }
 
     return (
         <StepLayout
-            projectId={projectId}
             currentStep={9}
-            stepTitle="Registration Page"
-            stepDescription="Create your lead capture page"
+            projectId={projectId}
             funnelName={project?.name}
-            nextDisabled={!hasRegistrationPage}
-            nextLabel="Continue to Flow Configuration"
+            nextDisabled={!hasCompletedPage}
+            nextLabel={hasCompletedPage ? "Setup Flow" : "Generate Page First"}
+            stepTitle="Registration Page Copy"
+            stepDescription="AI generates lead capture copy for your registration page"
         >
-            <div className="space-y-6">
-                {!hasDeckStructure && (
+            <div className="space-y-8">
+                {!hasDeck && (
                     <DependencyWarning
-                        missingStep={3}
-                        missingStepName="Deck Structure"
+                        message="You need to create a deck structure first to generate registration page copy."
+                        requiredStep={3}
+                        requiredStepName="Deck Structure"
                         projectId={projectId}
                     />
                 )}
 
-                {hasDeckStructure && (
-                    <>
-                        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
-                            <CardHeader>
-                                <CardTitle className="flex items-center">
-                                    <Sparkles className="mr-2 h-5 w-5 text-blue-600" />
-                                    AI Registration Copy
-                                </CardTitle>
-                                <CardDescription>
-                                    Generate copy that captures leads
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <Button
-                                    onClick={handleGenerate}
-                                    disabled={generating}
-                                    className="w-full"
-                                >
-                                    {generating
-                                        ? "Generating..."
-                                        : "Generate Registration Copy"}
-                                </Button>
-                            </CardContent>
-                        </Card>
+                {!isGenerating ? (
+                    <div className="rounded-lg border border-violet-100 bg-gradient-to-br from-violet-50 to-purple-50 p-8">
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-violet-100">
+                                <ClipboardList className="h-8 w-8 text-violet-600" />
+                            </div>
+                            <h2 className="mb-3 text-2xl font-semibold text-gray-900">
+                                Generate Registration Page Copy
+                            </h2>
+                            <p className="mx-auto max-w-lg text-gray-600">
+                                AI will create persuasive copy for your lead capture
+                                page to maximize webinar registrations.
+                            </p>
+                        </div>
 
-                        {headline && (
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Registration Page Content</CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-4">
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            Headline *
-                                        </label>
-                                        <Input
-                                            value={headline}
-                                            onChange={(e) =>
-                                                setHeadline(e.target.value)
-                                            }
-                                            className="mt-1"
-                                        />
-                                    </div>
+                        <div className="text-center">
+                            <button
+                                onClick={handleGenerate}
+                                disabled={!hasDeck}
+                                className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
+                                    hasDeck
+                                        ? "bg-violet-600 text-white hover:bg-violet-700"
+                                        : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                }`}
+                            >
+                                <Sparkles className="h-6 w-6" />
+                                {hasDeck
+                                    ? "Generate Registration Copy"
+                                    : "Create Deck Structure First"}
+                            </button>
 
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            Subheadline
-                                        </label>
-                                        <Textarea
-                                            value={subheadline}
-                                            onChange={(e) =>
-                                                setSubheadline(e.target.value)
-                                            }
-                                            className="mt-1"
-                                            rows={2}
-                                        />
-                                    </div>
+                            <div className="mt-4 space-y-1 text-sm text-gray-500">
+                                <p>⚡ Generation time: ~15-20 seconds</p>
+                                <p>📋 Creates compelling registration page copy</p>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="rounded-lg border border-violet-200 bg-violet-50 p-6">
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-violet-100">
+                                <Sparkles className="h-6 w-6 text-violet-600" />
+                            </div>
+                            <h3 className="mb-2 text-xl font-semibold text-violet-900">
+                                Generating Registration Page Copy
+                            </h3>
+                            <p className="text-violet-700">
+                                AI is crafting lead capture copy...
+                            </p>
+                        </div>
 
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            Benefit Bullets
-                                        </label>
-                                        {bulletPoints.map((bullet, index) => (
-                                            <Input
-                                                key={index}
-                                                value={bullet}
-                                                onChange={(e) => {
-                                                    const newBullets = [
-                                                        ...bulletPoints,
-                                                    ];
-                                                    newBullets[index] = e.target.value;
-                                                    setBulletPoints(newBullets);
-                                                }}
-                                                placeholder={`Benefit ${index + 1}`}
-                                                className="mt-2"
-                                            />
-                                        ))}
-                                    </div>
-
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700">
-                                            CTA Button Text *
-                                        </label>
-                                        <Input
-                                            value={ctaText}
-                                            onChange={(e) => setCtaText(e.target.value)}
-                                            className="mt-1"
-                                        />
-                                    </div>
-
-                                    <Button
-                                        onClick={handleSave}
-                                        disabled={saving || !headline}
-                                        className="w-full"
-                                    >
-                                        {saving
-                                            ? "Saving..."
-                                            : hasRegistrationPage
-                                              ? "Update Page"
-                                              : "Save Page"}
-                                    </Button>
-                                </CardContent>
-                            </Card>
-                        )}
-                    </>
+                        <div className="mx-auto max-w-md">
+                            <div className="mb-2 flex items-center justify-between">
+                                <span className="text-sm font-medium text-violet-700">
+                                    Progress
+                                </span>
+                                <span className="text-sm text-violet-600">
+                                    {generationProgress}%
+                                </span>
+                            </div>
+                            <div className="h-3 w-full rounded-full bg-violet-200">
+                                <div
+                                    className="h-3 rounded-full bg-violet-600 transition-all duration-500 ease-out"
+                                    style={{ width: `${generationProgress}%` }}
+                                />
+                            </div>
+                        </div>
+                    </div>
                 )}
+
+                <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+                    <div className="border-b border-gray-200 p-6">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-semibold text-gray-900">
+                                Your Registration Pages
+                            </h3>
+                            <span className="text-sm text-gray-500">
+                                {registrationPages.length} created
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="p-6">
+                        {registrationPages.length === 0 ? (
+                            <div className="py-12 text-center text-gray-500">
+                                <ClipboardList className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                                <p>
+                                    No registration pages yet. Generate your first one
+                                    above!
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {registrationPages.map((page) => (
+                                    <div
+                                        key={page.id}
+                                        className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-violet-300 hover:shadow-md"
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <h4 className="mb-2 text-lg font-semibold text-gray-900">
+                                                    {page.content.headline ||
+                                                        "Untitled Page"}
+                                                </h4>
+                                                <p className="mb-2 text-sm text-gray-600">
+                                                    {page.content.subheadline ||
+                                                        "No subheadline"}
+                                                </p>
+                                                {page.content.bulletPoints && (
+                                                    <div className="mb-2 text-sm text-gray-600">
+                                                        {
+                                                            page.content.bulletPoints
+                                                                .length
+                                                        }{" "}
+                                                        bullet points
+                                                    </div>
+                                                )}
+                                                <span className="text-xs text-gray-500">
+                                                    Created{" "}
+                                                    {new Date(
+                                                        page.created_at
+                                                    ).toLocaleDateString()}
+                                                </span>
+                                            </div>
+
+                                            <button
+                                                onClick={() => handleDelete(page.id)}
+                                                className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
         </StepLayout>
     );

@@ -1,119 +1,180 @@
 "use client";
 
-/**
- * Step 7: Upload Video
- * Upload pitch video to Cloudflare Stream
- */
-
-import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { logger } from "@/lib/client-logger";
+import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
+import { VideoUploader } from "@/components/funnel/video-uploader";
 import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
-import { Upload, Video, CheckCircle } from "lucide-react";
-
-interface FunnelProject {
-    id: string;
-    name: string;
-    current_step: number;
-}
+    Video,
+    Trash2,
+    Play,
+    Presentation,
+    FileText,
+    ExternalLink,
+} from "lucide-react";
+import { logger } from "@/lib/client-logger";
+import { createClient } from "@/lib/supabase/client";
 
 interface PitchVideo {
     id: string;
-    video_url?: string;
-    status: string;
-    processing_status?: string;
-    video_duration?: number;
+    video_url: string;
+    thumbnail_url: string | null;
+    video_duration: number;
+    created_at: string;
 }
 
-export default function Step7Page() {
-    const params = useParams();
-    const projectId = params.projectId as string;
+interface DeckStructure {
+    id: string;
+    title: string;
+    slide_count: number;
+    gamma_deck_url?: string;
+}
 
-    const [loading, setLoading] = useState(true);
-    const [uploading, setUploading] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
+interface TalkTrack {
+    id: string;
+    deck_structure_id: string;
+    content: string;
+    created_at: string;
+}
 
-    const [project, setProject] = useState<FunnelProject | null>(null);
-    const [pitchVideo, setPitchVideo] = useState<PitchVideo | null>(null);
+export default function Step7Page({
+    params,
+}: {
+    params: Promise<{ projectId: string }>;
+}) {
+    const [projectId, setProjectId] = useState("");
+    const [project, setProject] = useState<any>(null);
+    const [videos, setVideos] = useState<PitchVideo[]>([]);
+    const [selectedVideo, setSelectedVideo] = useState<PitchVideo | null>(null);
+    const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
+    const [selectedDeckId, setSelectedDeckId] = useState("");
+    const [talkTracks, setTalkTracks] = useState<TalkTrack[]>([]);
+    const [selectedTalkTrack, setSelectedTalkTrack] = useState<TalkTrack | null>(null);
 
-    const loadData = useCallback(async () => {
-        try {
-            const supabase = createClient();
+    useEffect(() => {
+        const resolveParams = async () => {
+            const resolved = await params;
+            setProjectId(resolved.projectId);
+        };
+        resolveParams();
+    }, [params]);
 
-            const { data: projectData } = await supabase
-                .from("funnel_projects")
-                .select("*")
-                .eq("id", projectId)
-                .single();
+    useEffect(() => {
+        const loadProject = async () => {
+            if (!projectId) return;
+            try {
+                const supabase = createClient();
+                const { data: projectData, error: projectError } = await supabase
+                    .from("funnel_projects")
+                    .select("*")
+                    .eq("id", projectId)
+                    .single();
 
-            setProject(projectData);
-
-            const { data: videoData } = await supabase
-                .from("pitch_videos")
-                .select("*")
-                .eq("funnel_project_id", projectId)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .single();
-
-            if (videoData) {
-                setPitchVideo(videoData);
+                if (projectError) throw projectError;
+                setProject(projectData);
+            } catch (error) {
+                logger.error({ error }, "Failed to load project");
             }
-        } catch (err) {
-            logger.error({ error: err }, "Failed to load data");
-        } finally {
-            setLoading(false);
-        }
+        };
+        loadProject();
     }, [projectId]);
 
     useEffect(() => {
-        loadData();
-    }, [loadData]);
+        const loadData = async () => {
+            if (!projectId) return;
+            try {
+                const supabase = createClient();
+                const [
+                    videosResult,
+                    deckStructuresResult,
+                    gammaDecksResult,
+                    talkTracksResult,
+                ] = await Promise.all([
+                    supabase
+                        .from("pitch_videos")
+                        .select("*")
+                        .eq("funnel_project_id", projectId)
+                        .order("created_at", { ascending: false }),
+                    supabase
+                        .from("deck_structures")
+                        .select("*")
+                        .eq("funnel_project_id", projectId)
+                        .order("created_at", { ascending: false }),
+                    supabase
+                        .from("gamma_decks")
+                        .select("*")
+                        .eq("funnel_project_id", projectId)
+                        .order("created_at", { ascending: false }),
+                    supabase
+                        .from("talk_tracks")
+                        .select("*")
+                        .eq("funnel_project_id", projectId)
+                        .order("created_at", { ascending: false }),
+                ]);
 
-    const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file) return;
+                if (videosResult.data) setVideos(videosResult.data);
 
-        setUploading(true);
-        setUploadProgress(0);
+                // Transform deck structures and merge with gamma deck URLs
+                if (deckStructuresResult.data) {
+                    // Create map of gamma deck URLs by deck_structure_id
+                    const gammaDecksMap = new Map(
+                        (gammaDecksResult.data || []).map((deck: any) => [
+                            deck.deck_structure_id,
+                            deck.deck_url, // ← Fixed: was gamma_url, should be deck_url
+                        ])
+                    );
 
-        try {
-            logger.info(
-                { fileName: file.name, fileSize: file.size },
-                "Starting video upload"
-            );
+                    logger.info(
+                        {
+                            totalGammaDecks: gammaDecksResult.data?.length || 0,
+                            gammaDecksWithUrls: Array.from(
+                                gammaDecksMap.values()
+                            ).filter((url) => url).length,
+                        },
+                        "Loaded Gamma decks"
+                    );
 
-            // Get upload URL from Cloudflare
-            const uploadUrlResponse = await fetch("/api/cloudflare/upload-url", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ fileName: file.name, projectId }),
-            });
+                    const transformed = (deckStructuresResult.data || []).map(
+                        (deck: any) => ({
+                            id: deck.id,
+                            title: deck.metadata?.title || "Untitled Deck",
+                            slide_count: Array.isArray(deck.slides)
+                                ? deck.slides.length
+                                : deck.total_slides || 55,
+                            gamma_deck_url: gammaDecksMap.get(deck.id),
+                        })
+                    );
 
-            const { uploadUrl, videoId } = await uploadUrlResponse.json();
+                    logger.info(
+                        {
+                            totalDecks: transformed.length,
+                            decksWithGammaUrls: transformed.filter(
+                                (d) => d.gamma_deck_url
+                            ).length,
+                        },
+                        "Transformed deck structures"
+                    );
 
-            // Upload file to Cloudflare
-            const uploadResponse = await fetch(uploadUrl, {
-                method: "POST",
-                body: file,
-            });
+                    setDeckStructures(transformed);
 
-            if (!uploadResponse.ok) {
-                throw new Error("Upload failed");
+                    // Auto-select first deck if available
+                    if (transformed.length > 0 && !selectedDeckId) {
+                        setSelectedDeckId(transformed[0].id);
+                    }
+                }
+
+                if (talkTracksResult.data) setTalkTracks(talkTracksResult.data);
+            } catch (error) {
+                logger.error({ error }, "Failed to load data");
             }
+        };
+        loadData();
+    }, [projectId]);
 
-            // Save video metadata
+    const handleUploadComplete = async (videoData: {
+        videoId: string;
+        url: string;
+    }) => {
+        try {
             const supabase = createClient();
             const {
                 data: { user },
@@ -121,140 +182,355 @@ export default function Step7Page() {
 
             if (!user) throw new Error("Not authenticated");
 
-            await supabase.from("pitch_videos").insert({
-                funnel_project_id: projectId,
-                user_id: user.id,
-                video_url: `https://customer-${process.env.NEXT_PUBLIC_CLOUDFLARE_ACCOUNT_ID}.cloudflarestream.com/${videoId}/manifest/video.m3u8`,
-                video_provider: "cloudflare",
-                video_id: videoId,
-                processing_status: "processing",
-                file_size: file.size,
-            });
+            const { data, error } = await supabase
+                .from("pitch_videos")
+                .insert({
+                    funnel_project_id: projectId,
+                    user_id: user.id,
+                    video_url: videoData.url,
+                    video_id: videoData.videoId,
+                })
+                .select()
+                .single();
 
-            setUploadProgress(100);
-            logger.info({ videoId }, "Video uploaded successfully");
+            if (error) throw error;
 
-            await loadData();
-        } catch (err) {
-            logger.error({ error: err }, "Failed to upload video");
-        } finally {
-            setUploading(false);
+            setVideos((prev) => [data, ...prev]);
+            logger.info({ videoId: videoData.videoId }, "Video saved successfully");
+        } catch (error) {
+            logger.error({ error }, "Failed to save video");
+            alert("Failed to save video. Please try again.");
         }
     };
 
-    const hasVideo = !!pitchVideo;
+    const handleDeleteVideo = async (videoId: string) => {
+        if (!confirm("Delete this video?")) return;
 
-    if (loading) {
+        try {
+            const supabase = createClient();
+            const { error } = await supabase
+                .from("pitch_videos")
+                .delete()
+                .eq("id", videoId);
+
+            if (!error) {
+                setVideos((prev) => prev.filter((v) => v.id !== videoId));
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to delete video");
+        }
+    };
+
+    const handleViewDeck = () => {
+        const selectedDeck = deckStructures.find((d) => d.id === selectedDeckId);
+
+        logger.info(
+            {
+                selectedDeckId,
+                deckTitle: selectedDeck?.title,
+                hasGammaUrl: !!selectedDeck?.gamma_deck_url,
+                gammaUrl: selectedDeck?.gamma_deck_url,
+            },
+            "View Deck clicked"
+        );
+
+        if (selectedDeck?.gamma_deck_url) {
+            window.open(selectedDeck.gamma_deck_url, "_blank", "width=1200,height=800");
+        } else {
+            alert("No Gamma deck found for this deck structure. Create one in Step 4.");
+        }
+    };
+
+    const handleViewTalkTrack = () => {
+        const track = talkTracks.find((t) => t.deck_structure_id === selectedDeckId);
+        if (track) {
+            setSelectedTalkTrack(track);
+        } else {
+            alert("No talk track found for this deck. Generate one in Step 6.");
+        }
+    };
+
+    const selectedDeck = deckStructures.find((d) => d.id === selectedDeckId);
+
+    const hasVideo = videos.length > 0;
+
+    if (!projectId) {
         return (
-            <StepLayout
-                projectId={projectId}
-                currentStep={7}
-                stepTitle="Upload Video"
-                stepDescription="Loading..."
-            >
-                <div className="flex items-center justify-center py-12">
-                    <div className="text-gray-500">Loading...</div>
-                </div>
-            </StepLayout>
+            <div className="flex h-screen items-center justify-center">
+                <div className="text-gray-500">Loading...</div>
+            </div>
         );
     }
 
     return (
         <StepLayout
-            projectId={projectId}
             currentStep={7}
-            stepTitle="Upload Video"
-            stepDescription="Upload your pitch video"
+            projectId={projectId}
             funnelName={project?.name}
             nextDisabled={!hasVideo}
-            nextLabel="Continue to Watch Page"
+            nextLabel={hasVideo ? "Generate Watch Page" : "Upload Video First"}
+            stepTitle="Upload Presentation Video"
+            stepDescription="Record and upload your pitch video"
         >
-            <div className="space-y-6">
-                {hasVideo ? (
-                    <Card className="border-green-200 bg-green-50">
-                        <CardHeader>
-                            <div className="flex items-center">
-                                <CheckCircle className="mr-3 h-6 w-6 text-green-600" />
-                                <div>
-                                    <CardTitle className="text-green-900">
-                                        Video Uploaded!
-                                    </CardTitle>
-                                    <CardDescription className="text-green-700">
-                                        Your video is processing
-                                    </CardDescription>
-                                </div>
+            <div className="space-y-8">
+                {/* Recording Helper Section */}
+                {deckStructures.length > 0 && (
+                    <div className="rounded-lg border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
+                        <div className="mb-4">
+                            <h3 className="mb-2 text-lg font-semibold text-gray-900">
+                                🎬 Recording Helper
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                                Select your deck to view it alongside your talk track
+                                while recording
+                            </p>
+                        </div>
+
+                        <div className="mb-4">
+                            <label className="mb-2 block text-sm font-medium text-gray-700">
+                                Select Deck Structure
+                            </label>
+                            <select
+                                value={selectedDeckId}
+                                onChange={(e) => setSelectedDeckId(e.target.value)}
+                                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                            >
+                                {deckStructures.map((deck) => (
+                                    <option key={deck.id} value={deck.id}>
+                                        {deck.title} ({deck.slide_count} slides)
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {selectedDeck && (
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={handleViewDeck}
+                                    disabled={!selectedDeck.gamma_deck_url}
+                                    className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 font-medium transition-colors ${
+                                        selectedDeck.gamma_deck_url
+                                            ? "bg-purple-600 text-white hover:bg-purple-700"
+                                            : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                    }`}
+                                >
+                                    <Presentation className="h-5 w-5" />
+                                    View Deck
+                                    <ExternalLink className="h-4 w-4" />
+                                </button>
+
+                                <button
+                                    onClick={handleViewTalkTrack}
+                                    disabled={
+                                        !talkTracks.some(
+                                            (t) =>
+                                                t.deck_structure_id === selectedDeckId
+                                        )
+                                    }
+                                    className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 font-medium transition-colors ${
+                                        talkTracks.some(
+                                            (t) =>
+                                                t.deck_structure_id === selectedDeckId
+                                        )
+                                            ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                                            : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                    }`}
+                                >
+                                    <FileText className="h-5 w-5" />
+                                    View Talk Track
+                                </button>
                             </div>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="flex items-center justify-between text-sm">
-                                <span className="text-green-700">Status:</span>
-                                <Badge variant="success">
-                                    {pitchVideo.processing_status}
-                                </Badge>
-                            </div>
-                            {pitchVideo.video_duration && (
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-green-700">Duration:</span>
-                                    <span className="font-medium text-green-900">
-                                        {Math.floor(pitchVideo.video_duration / 60)}{" "}
-                                        minutes
-                                    </span>
-                                </div>
+                        )}
+
+                        {selectedDeck && !selectedDeck.gamma_deck_url && (
+                            <p className="mt-3 text-sm text-amber-600">
+                                💡 Create a Gamma deck in Step 4 to view it while
+                                recording
+                            </p>
+                        )}
+
+                        {selectedDeck &&
+                            !talkTracks.some(
+                                (t) => t.deck_structure_id === selectedDeckId
+                            ) && (
+                                <p className="mt-3 text-sm text-amber-600">
+                                    💡 Generate a talk track in Step 6 to view it while
+                                    recording
+                                </p>
                             )}
-                            <Button variant="outline" size="sm" className="w-full">
-                                Upload New Video
-                            </Button>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
-                        <CardHeader>
-                            <CardTitle className="flex items-center">
-                                <Upload className="mr-2 h-5 w-5 text-blue-600" />
-                                Upload Your Pitch Video
-                            </CardTitle>
-                            <CardDescription>
-                                Upload your recorded pitch presentation
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            {uploading ? (
-                                <div className="py-8">
-                                    <p className="mb-4 text-center text-sm font-medium text-gray-900">
-                                        Uploading... {uploadProgress}%
-                                    </p>
-                                    <Progress value={uploadProgress} className="mb-4" />
-                                    <p className="text-center text-xs text-gray-600">
-                                        Please don't close this page
-                                    </p>
-                                </div>
-                            ) : (
-                                <div className="py-12 text-center">
-                                    <Video className="mx-auto mb-4 h-16 w-16 text-gray-400" />
-                                    <label
-                                        htmlFor="video-upload"
-                                        className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-500"
-                                    >
-                                        <span className="block">
-                                            Click to upload video
-                                        </span>
-                                        <span className="mt-1 block text-xs text-gray-500">
-                                            MP4, MOV up to 1GB
-                                        </span>
-                                    </label>
-                                    <input
-                                        id="video-upload"
-                                        type="file"
-                                        accept="video/*"
-                                        onChange={handleFileSelect}
-                                        className="hidden"
-                                    />
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                    </div>
                 )}
+
+                <div className="rounded-lg border border-red-100 bg-gradient-to-br from-red-50 to-orange-50 p-8">
+                    <div className="mb-6 text-center">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+                            <Video className="h-8 w-8 text-red-600" />
+                        </div>
+                        <h2 className="mb-3 text-2xl font-semibold text-gray-900">
+                            Upload Your Presentation Video
+                        </h2>
+                        <p className="mx-auto max-w-lg text-gray-600">
+                            Record your pitch using the talk track script, then upload
+                            the video here. It will be hosted securely on Cloudflare
+                            Stream.
+                        </p>
+                    </div>
+
+                    <VideoUploader
+                        projectId={projectId}
+                        onUploadComplete={handleUploadComplete}
+                    />
+                </div>
+
+                <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+                    <div className="border-b border-gray-200 p-6">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-semibold text-gray-900">
+                                Your Videos
+                            </h3>
+                            <span className="text-sm text-gray-500">
+                                {videos.length} uploaded
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="p-6">
+                        {videos.length === 0 ? (
+                            <div className="py-12 text-center text-gray-500">
+                                <Video className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                                <p>No videos yet. Upload your first one above!</p>
+                            </div>
+                        ) : (
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                {videos.map((video) => (
+                                    <div
+                                        key={video.id}
+                                        className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-red-300 hover:shadow-md"
+                                    >
+                                        <div className="mb-3 flex items-center justify-between">
+                                            <span className="text-sm font-semibold text-gray-900">
+                                                Presentation Video
+                                            </span>
+                                            <button
+                                                onClick={() =>
+                                                    handleDeleteVideo(video.id)
+                                                }
+                                                className="rounded p-1 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </div>
+
+                                        <div className="mb-3 aspect-video w-full overflow-hidden rounded-lg bg-gray-900">
+                                            {video.thumbnail_url ? (
+                                                <img
+                                                    src={video.thumbnail_url}
+                                                    alt="Video thumbnail"
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="flex h-full items-center justify-center">
+                                                    <Video className="h-12 w-12 text-gray-500" />
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="mb-3 text-sm text-gray-600">
+                                            <div className="flex items-center justify-between">
+                                                <span>
+                                                    ⏱️{" "}
+                                                    {Math.floor(
+                                                        video.video_duration / 60
+                                                    )}
+                                                    :
+                                                    {(video.video_duration % 60)
+                                                        .toString()
+                                                        .padStart(2, "0")}
+                                                </span>
+                                                <span>
+                                                    {new Date(
+                                                        video.created_at
+                                                    ).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={() => setSelectedVideo(video)}
+                                            className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700"
+                                        >
+                                            <Play className="h-4 w-4" />
+                                            Watch Video
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
+
+            {/* Video Player Modal */}
+            {selectedVideo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
+                    <div className="w-full max-w-4xl">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-xl font-bold text-white">
+                                Presentation Video
+                            </h3>
+                            <button
+                                onClick={() => setSelectedVideo(null)}
+                                className="text-2xl font-bold text-white hover:text-gray-300"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className="aspect-video w-full overflow-hidden rounded-lg">
+                            <iframe
+                                src={selectedVideo.video_url}
+                                className="h-full w-full"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Talk Track Viewer Modal */}
+            {selectedTalkTrack && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+                    <div className="flex h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-white shadow-2xl">
+                        <div className="flex-shrink-0 rounded-t-lg border-b border-gray-200 bg-gray-50 p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-gray-900">
+                                        Talk Track Script
+                                    </h2>
+                                    <p className="mt-1 text-sm text-gray-600">
+                                        Use this script while recording your
+                                        presentation
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedTalkTrack(null)}
+                                    className="text-2xl font-bold text-gray-400 hover:text-gray-600"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-scroll p-6">
+                            <div className="prose max-w-none">
+                                <pre className="whitespace-pre-wrap rounded-lg bg-gray-50 p-4 text-sm">
+                                    {selectedTalkTrack.content}
+                                </pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </StepLayout>
     );
 }

@@ -1,576 +1,547 @@
 "use client";
 
-/**
- * Step 2: Craft Offer
- * AI-generated offer with pricing, features, and bonuses
- */
-
-import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { logger } from "@/lib/client-logger";
+import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Sparkles, DollarSign } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
-
-interface FunnelProject {
-    id: string;
-    name: string;
-    current_step: number;
-}
-
-interface VapiTranscript {
-    id: string;
-    transcript_text: string;
-    created_at: string;
-}
+import { Sparkles, DollarSign, Trash2, Pencil } from "lucide-react";
+import { OfferEditor } from "@/components/funnel/offer-editor";
+import { logger } from "@/lib/client-logger";
+import { createClient } from "@/lib/supabase/client";
 
 interface Offer {
     id: string;
     name: string;
-    tagline: string;
+    description: string | null;
     price: number;
     currency: string;
-    features: string[];
-    bonuses: string[];
-    guarantee: string;
+    features: {
+        features?: string[];
+        bonuses?: string[];
+        guarantee?: string;
+    };
+    created_at: string;
 }
 
-export default function Step2Page() {
-    const params = useParams();
-    const projectId = params.projectId as string;
+export default function Step2Page({
+    params,
+}: {
+    params: Promise<{ projectId: string }>;
+}) {
+    const [projectId, setProjectId] = useState("");
+    const [project, setProject] = useState<any>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generationProgress, setGenerationProgress] = useState(0);
+    const [offers, setOffers] = useState<Offer[]>([]);
+    const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingName, setEditingName] = useState("");
+    const [transcripts, setTranscripts] = useState<any[]>([]);
+    const [selectedTranscript, setSelectedTranscript] = useState("");
 
-    const [loading, setLoading] = useState(true);
-    const [generating, setGenerating] = useState(false);
-    const [saving, setSaving] = useState(false);
+    useEffect(() => {
+        const resolveParams = async () => {
+            const resolved = await params;
+            setProjectId(resolved.projectId);
+        };
+        resolveParams();
+    }, [params]);
 
-    const [project, setProject] = useState<FunnelProject | null>(null);
-    const [transcripts, setTranscripts] = useState<VapiTranscript[]>([]);
-    const [selectedTranscriptId, setSelectedTranscriptId] = useState<string>("");
-    const [offer, setOffer] = useState<Offer | null>(null);
+    useEffect(() => {
+        const loadProject = async () => {
+            if (!projectId) return;
 
-    // Form state
-    const [offerName, setOfferName] = useState("");
-    const [tagline, setTagline] = useState("");
-    const [price, setPrice] = useState("");
-    const [features, setFeatures] = useState<string[]>([""]);
-    const [bonuses, setBonuses] = useState<string[]>([""]);
-    const [guarantee, setGuarantee] = useState("");
+            try {
+                const supabase = createClient();
+                const { data: projectData, error: projectError } = await supabase
+                    .from("funnel_projects")
+                    .select("*")
+                    .eq("id", projectId)
+                    .single();
 
-    const loadData = useCallback(async () => {
-        try {
-            const supabase = createClient();
-
-            // Get project
-            const { data: projectData } = await supabase
-                .from("funnel_projects")
-                .select("*")
-                .eq("id", projectId)
-                .single();
-
-            setProject(projectData);
-
-            // Get transcripts
-            const { data: transcriptsData } = await supabase
-                .from("vapi_transcripts")
-                .select("*")
-                .eq("funnel_project_id", projectId)
-                .eq("call_status", "completed")
-                .order("created_at", { ascending: false });
-
-            setTranscripts(transcriptsData || []);
-
-            if (transcriptsData && transcriptsData.length > 0) {
-                setSelectedTranscriptId(transcriptsData[0].id);
+                if (projectError) throw projectError;
+                setProject(projectData);
+            } catch (error) {
+                logger.error({ error }, "Failed to load project");
             }
+        };
 
-            // Get existing offer
-            const { data: offerData } = await supabase
-                .from("offers")
-                .select("*")
-                .eq("funnel_project_id", projectId)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .single();
-
-            if (offerData) {
-                setOffer(offerData);
-                setOfferName(offerData.name);
-                setTagline(offerData.tagline || "");
-                setPrice(offerData.price?.toString() || "");
-                setFeatures(offerData.features || [""]);
-                setBonuses(offerData.bonuses || [""]);
-                setGuarantee(offerData.guarantee || "");
-            }
-        } catch (err) {
-            logger.error({ error: err }, "Failed to load data");
-        } finally {
-            setLoading(false);
-        }
+        loadProject();
     }, [projectId]);
 
     useEffect(() => {
-        loadData();
-    }, [loadData]);
+        const loadOffers = async () => {
+            if (!projectId) return;
 
-    const handleGenerate = async () => {
-        setGenerating(true);
-        logger.info(
-            { projectId, transcriptId: selectedTranscriptId },
-            "Generating offer"
-        );
+            try {
+                const supabase = createClient();
+
+                // Load offers
+                const { data: offersData, error: offersError } = await supabase
+                    .from("offers")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (offersError) throw offersError;
+                setOffers(offersData || []);
+
+                // Load transcripts
+                const { data: transcriptData, error: transcriptError } = await supabase
+                    .from("vapi_transcripts")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (transcriptError) throw transcriptError;
+                setTranscripts(transcriptData || []);
+
+                if (
+                    transcriptData &&
+                    transcriptData.length > 0 &&
+                    !selectedTranscript
+                ) {
+                    setSelectedTranscript(transcriptData[0].id);
+                }
+            } catch (error) {
+                logger.error({ error }, "Failed to load offers");
+            }
+        };
+
+        loadOffers();
+    }, [projectId, selectedTranscript]);
+
+    const handleGenerateOffer = async () => {
+        setIsGenerating(true);
+        setGenerationProgress(0);
 
         try {
-            // TODO: Call AI generation API
-            // const response = await fetch('/api/generate/offer', {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: JSON.stringify({ projectId, transcriptId: selectedTranscriptId })
-            // });
-            // const data = await response.json();
+            setGenerationProgress(30);
 
-            // Placeholder - simulate AI generation
-            const generated = {
-                name: "Pitch Deck Mastery Program",
-                tagline:
-                    "Transform your pitch from overlooked to oversubscribed in 30 days",
-                price: 997,
-                features: [
-                    "Complete pitch deck framework with 55-slide template",
-                    "AI-powered content generation for every slide",
-                    "Video script with exact timing and delivery notes",
-                    "1-on-1 pitch review session ($500 value)",
-                    "Access to private community of funded founders",
-                ],
-                bonuses: [
-                    "Investor outreach email templates ($197 value)",
-                    "Pitch deck examples from 10 funded startups ($297 value)",
-                    "Follow-up strategy playbook ($147 value)",
-                ],
-                guarantee:
-                    "30-day money-back guarantee. If you don't see improvement in your pitch within 30 days, get a full refund - no questions asked.",
-            };
+            const response = await fetch("/api/generate/offer", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ projectId, transcriptId: selectedTranscript }),
+            });
 
-            setOfferName(generated.name);
-            setTagline(generated.tagline);
-            setPrice(generated.price.toString());
-            setFeatures(generated.features);
-            setBonuses(generated.bonuses);
-            setGuarantee(generated.guarantee);
+            setGenerationProgress(80);
 
-            logger.info({}, "Offer generated successfully");
-        } catch (err) {
-            logger.error({ error: err }, "Failed to generate offer");
-        } finally {
-            setGenerating(false);
+            if (!response.ok) {
+                throw new Error("Failed to generate offer");
+            }
+
+            const result = await response.json();
+
+            setOffers((prev) => [result.offer, ...prev]);
+            setGenerationProgress(100);
+
+            setTimeout(() => {
+                setIsGenerating(false);
+                setGenerationProgress(0);
+            }, 1000);
+        } catch (error) {
+            logger.error({ error }, "Failed to generate offer");
+            setIsGenerating(false);
+            setGenerationProgress(0);
+            alert("Failed to generate offer. Please try again.");
         }
     };
 
-    const handleSave = async () => {
-        setSaving(true);
+    const handleDeleteOffer = async (offerId: string) => {
+        if (!confirm("Delete this offer?")) return;
 
         try {
             const supabase = createClient();
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
+            const { error } = await supabase.from("offers").delete().eq("id", offerId);
 
-            if (!user) throw new Error("Not authenticated");
-
-            const offerData = {
-                funnel_project_id: projectId,
-                user_id: user.id,
-                name: offerName,
-                tagline,
-                price: parseFloat(price),
-                currency: "USD",
-                features,
-                bonuses,
-                guarantee,
-            };
-
-            if (offer) {
-                // Update existing
-                await supabase.from("offers").update(offerData).eq("id", offer.id);
-            } else {
-                // Create new
-                await supabase.from("offers").insert(offerData);
+            if (!error) {
+                setOffers((prev) => prev.filter((o) => o.id !== offerId));
+                if (selectedOffer?.id === offerId) {
+                    setSelectedOffer(null);
+                }
             }
-
-            logger.info({ projectId }, "Offer saved");
-            await loadData();
-        } catch (err) {
-            logger.error({ error: err }, "Failed to save offer");
-        } finally {
-            setSaving(false);
+        } catch (error) {
+            logger.error({ error }, "Failed to delete offer");
         }
     };
 
-    const addFeature = () => setFeatures([...features, ""]);
-    const removeFeature = (index: number) =>
-        setFeatures(features.filter((_, i) => i !== index));
-    const updateFeature = (index: number, value: string) => {
-        const newFeatures = [...features];
-        newFeatures[index] = value;
-        setFeatures(newFeatures);
+    const handleEditSave = async (offerId: string) => {
+        try {
+            const supabase = createClient();
+            const { error } = await supabase
+                .from("offers")
+                .update({ name: editingName.trim() })
+                .eq("id", offerId);
+
+            if (!error) {
+                setOffers((prev) =>
+                    prev.map((o) =>
+                        o.id === offerId ? { ...o, name: editingName.trim() } : o
+                    )
+                );
+                setEditingId(null);
+                setEditingName("");
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to update offer name");
+        }
     };
 
-    const addBonus = () => setBonuses([...bonuses, ""]);
-    const removeBonus = (index: number) =>
-        setBonuses(bonuses.filter((_, i) => i !== index));
-    const updateBonus = (index: number, value: string) => {
-        const newBonuses = [...bonuses];
-        newBonuses[index] = value;
-        setBonuses(newBonuses);
-    };
+    const hasCompletedOffer = offers.length > 0;
 
-    const hasTranscript = transcripts.length > 0;
-    const hasOffer = !!offer;
-
-    if (loading) {
+    if (!projectId) {
         return (
-            <StepLayout
-                projectId={projectId}
-                currentStep={2}
-                stepTitle="Craft Offer"
-                stepDescription="Loading..."
-            >
-                <div className="flex items-center justify-center py-12">
-                    <div className="text-gray-500">Loading...</div>
-                </div>
-            </StepLayout>
+            <div className="flex h-screen items-center justify-center">
+                <div className="text-gray-500">Loading...</div>
+            </div>
         );
     }
 
     return (
         <StepLayout
-            projectId={projectId}
             currentStep={2}
-            stepTitle="Craft Offer"
-            stepDescription="Create a compelling offer with AI-generated pricing and features"
+            projectId={projectId}
             funnelName={project?.name}
-            nextDisabled={!hasOffer}
-            nextLabel="Continue to Deck Structure"
+            nextDisabled={!hasCompletedOffer}
+            nextLabel={
+                hasCompletedOffer ? "Generate Deck Structure" : "Generate Offer First"
+            }
+            stepTitle="Craft Your Offer"
+            stepDescription="AI generates compelling pricing and irresistible features"
         >
-            <div className="space-y-6">
-                {/* Dependency Check */}
-                {!hasTranscript && (
+            <div className="space-y-8">
+                {/* Dependency Warning */}
+                {transcripts.length === 0 && (
                     <DependencyWarning
-                        missingStep={1}
-                        missingStepName="AI Intake Call"
+                        message="You need to complete your AI intake call first so AI can understand your business and create a compelling offer."
+                        requiredStep={1}
+                        requiredStepName="AI Intake Call"
                         projectId={projectId}
-                        message="Complete the AI intake call first to gather information for offer generation"
                     />
                 )}
 
-                {/* AI Generation Section */}
-                {hasTranscript && (
-                    <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
-                        <CardHeader>
-                            <CardTitle className="flex items-center">
-                                <Sparkles className="mr-2 h-5 w-5 text-blue-600" />
-                                AI Offer Generation
-                            </CardTitle>
-                            <CardDescription>
-                                Generate a compelling offer based on your intake call
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div>
-                                <Label>Select Intake Call</Label>
-                                <Select
-                                    value={selectedTranscriptId}
-                                    onValueChange={setSelectedTranscriptId}
-                                >
-                                    <SelectTrigger className="mt-1">
-                                        <SelectValue placeholder="Select a transcript" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {transcripts.map((t) => (
-                                            <SelectItem key={t.id} value={t.id}>
+                {/* Generation Interface */}
+                {!isGenerating ? (
+                    <div className="rounded-lg border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-8">
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+                                <DollarSign className="h-8 w-8 text-green-600" />
+                            </div>
+                            <h2 className="mb-3 text-2xl font-semibold text-gray-900">
+                                Generate Your Offer
+                            </h2>
+                            <p className="mx-auto max-w-lg text-gray-600">
+                                AI will analyze your intake call to create an
+                                irresistible offer with optimal pricing, features,
+                                bonuses, and guarantee.
+                            </p>
+                        </div>
+
+                        <div className="mx-auto mb-6 max-w-md">
+                            <label className="mb-2 block text-sm font-medium text-gray-700">
+                                Select Intake Call Source
+                            </label>
+                            <select
+                                value={selectedTranscript}
+                                onChange={(e) => setSelectedTranscript(e.target.value)}
+                                disabled={transcripts.length === 0}
+                                className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+                            >
+                                {transcripts.length === 0 ? (
+                                    <option value="">No intake calls available</option>
+                                ) : (
+                                    <>
+                                        <option value="">
+                                            Select an intake call...
+                                        </option>
+                                        {transcripts.map((transcript: any) => (
+                                            <option
+                                                key={transcript.id}
+                                                value={transcript.id}
+                                            >
+                                                Call from{" "}
                                                 {new Date(
-                                                    t.created_at
-                                                ).toLocaleDateString()}{" "}
-                                                -{" "}
-                                                {Math.floor(
-                                                    (t.transcript_text?.length || 0) /
-                                                        100
-                                                )}{" "}
-                                                words
-                                            </SelectItem>
+                                                    transcript.created_at
+                                                ).toLocaleDateString()}
+                                            </option>
                                         ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <Button
-                                onClick={handleGenerate}
-                                disabled={generating || !selectedTranscriptId}
-                                className="w-full"
-                            >
-                                {generating
-                                    ? "Generating Offer..."
-                                    : "Generate Offer with AI"}
-                            </Button>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Offer Editor */}
-                {(offerName || hasOffer) && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center">
-                                <DollarSign className="mr-2 h-5 w-5 text-green-600" />
-                                Offer Details
-                            </CardTitle>
-                            <CardDescription>
-                                Edit and refine your offer
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div>
-                                <Label htmlFor="offerName">Offer Name *</Label>
-                                <Input
-                                    id="offerName"
-                                    value={offerName}
-                                    onChange={(e) => setOfferName(e.target.value)}
-                                    placeholder="e.g., Pitch Deck Mastery Program"
-                                    className="mt-1"
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="tagline">Tagline</Label>
-                                <Input
-                                    id="tagline"
-                                    value={tagline}
-                                    onChange={(e) => setTagline(e.target.value)}
-                                    placeholder="One-line value proposition"
-                                    className="mt-1"
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="price">Price (USD) *</Label>
-                                <Input
-                                    id="price"
-                                    type="number"
-                                    value={price}
-                                    onChange={(e) => setPrice(e.target.value)}
-                                    placeholder="997"
-                                    className="mt-1"
-                                />
-                                {price && (
-                                    <p className="mt-1 text-sm text-gray-500">
-                                        Display price:{" "}
-                                        {formatCurrency(parseFloat(price))}
-                                    </p>
+                                    </>
                                 )}
-                            </div>
+                            </select>
 
-                            <div>
-                                <Label>Features *</Label>
-                                <div className="mt-2 space-y-2">
-                                    {features.map((feature, index) => (
-                                        <div key={index} className="flex space-x-2">
-                                            <Input
-                                                value={feature}
-                                                onChange={(e) =>
-                                                    updateFeature(index, e.target.value)
-                                                }
-                                                placeholder={`Feature ${index + 1}`}
-                                            />
-                                            {features.length > 1 && (
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => removeFeature(index)}
-                                                >
-                                                    Remove
-                                                </Button>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={addFeature}
-                                    className="mt-2"
-                                >
-                                    Add Feature
-                                </Button>
-                            </div>
+                            {transcripts.length === 0 && (
+                                <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-600">
+                                    💡 Complete Step 1 first to record intake calls
+                                </p>
+                            )}
+                        </div>
 
-                            <div>
-                                <Label>Bonuses</Label>
-                                <div className="mt-2 space-y-2">
-                                    {bonuses.map((bonus, index) => (
-                                        <div key={index} className="flex space-x-2">
-                                            <Input
-                                                value={bonus}
-                                                onChange={(e) =>
-                                                    updateBonus(index, e.target.value)
-                                                }
-                                                placeholder={`Bonus ${index + 1} (include value)`}
-                                            />
-                                            {bonuses.length > 1 && (
-                                                <Button
-                                                    type="button"
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => removeBonus(index)}
-                                                >
-                                                    Remove
-                                                </Button>
-                                            )}
-                                        </div>
-                                    ))}
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={addBonus}
-                                    className="mt-2"
-                                >
-                                    Add Bonus
-                                </Button>
-                            </div>
+                        <div className="text-center">
+                            <button
+                                onClick={handleGenerateOffer}
+                                disabled={!selectedTranscript}
+                                className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
+                                    selectedTranscript
+                                        ? "bg-green-600 text-white hover:bg-green-700"
+                                        : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                }`}
+                            >
+                                <Sparkles className="h-6 w-6" />
+                                {selectedTranscript
+                                    ? "Generate AI Offer"
+                                    : "Select Call First"}
+                            </button>
 
-                            <div>
-                                <Label htmlFor="guarantee">Guarantee</Label>
-                                <Textarea
-                                    id="guarantee"
-                                    value={guarantee}
-                                    onChange={(e) => setGuarantee(e.target.value)}
-                                    placeholder="e.g., 30-day money-back guarantee..."
-                                    className="mt-1"
-                                    rows={3}
+                            <div className="mt-4 space-y-1 text-sm text-gray-500">
+                                <p>⚡ Generation time: ~20 seconds</p>
+                                <p>💰 Creates pricing, features, and bonuses</p>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="rounded-lg border border-green-200 bg-green-50 p-6">
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-green-100">
+                                <Sparkles className="h-6 w-6 text-green-600" />
+                            </div>
+                            <h3 className="mb-2 text-xl font-semibold text-green-900">
+                                Generating Your Offer
+                            </h3>
+                            <p className="text-green-700">
+                                AI is creating your pricing and features...
+                            </p>
+                        </div>
+
+                        <div className="mx-auto max-w-md">
+                            <div className="mb-2 flex items-center justify-between">
+                                <span className="text-sm font-medium text-green-700">
+                                    Progress
+                                </span>
+                                <span className="text-sm text-green-600">
+                                    {generationProgress}%
+                                </span>
+                            </div>
+                            <div className="h-3 w-full rounded-full bg-green-200">
+                                <div
+                                    className="h-3 rounded-full bg-green-600 transition-all duration-500 ease-out"
+                                    style={{ width: `${generationProgress}%` }}
                                 />
                             </div>
-
-                            <Button
-                                onClick={handleSave}
-                                disabled={saving || !offerName || !price}
-                                className="w-full"
-                            >
-                                {saving
-                                    ? "Saving..."
-                                    : hasOffer
-                                      ? "Update Offer"
-                                      : "Save Offer"}
-                            </Button>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 )}
 
-                {/* Offer Preview */}
-                {hasOffer && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Offer Preview</CardTitle>
-                            <CardDescription>
-                                How your offer will appear
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
+                {/* Generated Offers */}
+                <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
+                    <div className="border-b border-gray-200 p-6">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-semibold text-gray-900">
+                                Your Offers
+                            </h3>
+                            <span className="text-sm text-gray-500">
+                                {offers.length} created
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="p-6">
+                        {offers.length === 0 ? (
+                            <div className="py-12 text-center text-gray-500">
+                                <DollarSign className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                                <p>No offers yet. Generate your first one above!</p>
+                            </div>
+                        ) : (
                             <div className="space-y-4">
-                                <div>
-                                    <h3 className="text-2xl font-bold text-gray-900">
-                                        {offerName}
-                                    </h3>
-                                    {tagline && (
-                                        <p className="mt-1 text-gray-600">{tagline}</p>
-                                    )}
-                                </div>
-                                <div>
-                                    <p className="text-4xl font-bold text-blue-600">
-                                        {formatCurrency(parseFloat(price))}
-                                    </p>
-                                </div>
-                                {features.filter((f) => f).length > 0 && (
-                                    <div>
-                                        <p className="mb-2 font-semibold text-gray-900">
-                                            What's Included:
-                                        </p>
-                                        <ul className="space-y-1">
-                                            {features
-                                                .filter((f) => f)
-                                                .map((feature, index) => (
-                                                    <li
-                                                        key={index}
-                                                        className="flex items-start text-sm text-gray-700"
-                                                    >
-                                                        <Badge
-                                                            variant="success"
-                                                            className="mr-2 mt-0.5"
+                                {offers.map((offer) => (
+                                    <div
+                                        key={offer.id}
+                                        onClick={() => setSelectedOffer(offer)}
+                                        className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-green-300 hover:shadow-md"
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <div className="mb-2 flex items-center gap-3">
+                                                    {editingId === offer.id ? (
+                                                        <div
+                                                            className="flex flex-1 items-center gap-2"
+                                                            onClick={(e) =>
+                                                                e.stopPropagation()
+                                                            }
                                                         >
-                                                            ✓
-                                                        </Badge>
-                                                        {feature}
-                                                    </li>
-                                                ))}
-                                        </ul>
+                                                            <input
+                                                                type="text"
+                                                                value={editingName}
+                                                                onChange={(e) =>
+                                                                    setEditingName(
+                                                                        e.target.value
+                                                                    )
+                                                                }
+                                                                className="flex-1 rounded border border-green-300 px-2 py-1 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-green-500"
+                                                                onKeyDown={(e) => {
+                                                                    if (
+                                                                        e.key ===
+                                                                        "Enter"
+                                                                    )
+                                                                        handleEditSave(
+                                                                            offer.id
+                                                                        );
+                                                                    if (
+                                                                        e.key ===
+                                                                        "Escape"
+                                                                    )
+                                                                        setEditingId(
+                                                                            null
+                                                                        );
+                                                                }}
+                                                                autoFocus
+                                                            />
+                                                            <button
+                                                                onClick={() =>
+                                                                    handleEditSave(
+                                                                        offer.id
+                                                                    )
+                                                                }
+                                                                className="rounded bg-green-600 px-2 py-1 text-sm text-white hover:bg-green-700"
+                                                            >
+                                                                Save
+                                                            </button>
+                                                            <button
+                                                                onClick={() =>
+                                                                    setEditingId(null)
+                                                                }
+                                                                className="rounded bg-gray-300 px-2 py-1 text-sm text-gray-700 hover:bg-gray-400"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <h4
+                                                                className="cursor-pointer text-lg font-semibold text-gray-900 hover:text-green-600"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setEditingId(
+                                                                        offer.id
+                                                                    );
+                                                                    setEditingName(
+                                                                        offer.name
+                                                                    );
+                                                                }}
+                                                            >
+                                                                {offer.name}
+                                                            </h4>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    setEditingId(
+                                                                        offer.id
+                                                                    );
+                                                                    setEditingName(
+                                                                        offer.name
+                                                                    );
+                                                                }}
+                                                                className="rounded p-1 text-green-600 hover:bg-green-50"
+                                                            >
+                                                                <Pencil className="h-4 w-4" />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+
+                                                <div className="mb-2 text-gray-600">
+                                                    {offer.description}
+                                                </div>
+                                                <div className="flex items-center gap-4 text-sm text-gray-600">
+                                                    <span className="text-2xl font-bold text-green-600">
+                                                        ${offer.price}
+                                                    </span>
+                                                    <span>{offer.currency}</span>
+                                                    <span>
+                                                        📦{" "}
+                                                        {offer.features.features
+                                                            ?.length || 0}{" "}
+                                                        features
+                                                    </span>
+                                                    <span>
+                                                        🎁{" "}
+                                                        {offer.features.bonuses
+                                                            ?.length || 0}{" "}
+                                                        bonuses
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    handleDeleteOffer(offer.id);
+                                                }}
+                                                className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </div>
                                     </div>
-                                )}
-                                {bonuses.filter((b) => b).length > 0 && (
-                                    <div>
-                                        <p className="mb-2 font-semibold text-gray-900">
-                                            Bonuses:
-                                        </p>
-                                        <ul className="space-y-1">
-                                            {bonuses
-                                                .filter((b) => b)
-                                                .map((bonus, index) => (
-                                                    <li
-                                                        key={index}
-                                                        className="text-sm text-gray-700"
-                                                    >
-                                                        • {bonus}
-                                                    </li>
-                                                ))}
-                                        </ul>
-                                    </div>
-                                )}
-                                {guarantee && (
-                                    <div className="rounded-md bg-green-50 p-4">
-                                        <p className="text-sm font-semibold text-green-900">
-                                            Our Guarantee:
-                                        </p>
-                                        <p className="mt-1 text-sm text-green-800">
-                                            {guarantee}
-                                        </p>
-                                    </div>
-                                )}
+                                ))}
                             </div>
-                        </CardContent>
-                    </Card>
-                )}
+                        )}
+                    </div>
+                </div>
             </div>
+
+            {/* Offer Editor Modal */}
+            {selectedOffer && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+                    <div className="flex h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-white shadow-2xl">
+                        <div className="rounded-t-lg border-b border-gray-200 bg-gray-50 p-6">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-2xl font-bold text-gray-900">
+                                    {selectedOffer.name}
+                                </h2>
+                                <button
+                                    onClick={() => setSelectedOffer(null)}
+                                    className="text-2xl font-bold text-gray-400 hover:text-gray-600"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-scroll p-6">
+                            <OfferEditor
+                                initialOffer={selectedOffer}
+                                onSave={async (updates) => {
+                                    try {
+                                        const supabase = createClient();
+                                        const { error } = await supabase
+                                            .from("offers")
+                                            .update(updates)
+                                            .eq("id", selectedOffer.id);
+
+                                        if (!error) {
+                                            // Reload offers
+                                            const { data: offersData } = await supabase
+                                                .from("offers")
+                                                .select("*")
+                                                .eq("funnel_project_id", projectId)
+                                                .order("created_at", {
+                                                    ascending: false,
+                                                });
+
+                                            if (offersData) {
+                                                setOffers(offersData);
+                                            }
+                                            setSelectedOffer(null);
+                                        }
+                                    } catch (error) {
+                                        logger.error({ error }, "Failed to save offer");
+                                        throw error;
+                                    }
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </StepLayout>
     );
 }

@@ -1,25 +1,11 @@
 "use client";
 
-/**
- * Step 1: AI Intake Call
- * VAPI-powered conversation to gather business information
- */
-
-import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { logger } from "@/lib/client-logger";
+import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Phone, CheckCircle, AlertCircle } from "lucide-react";
+import { Phone, CheckCircle, Clock, MessageSquare } from "lucide-react";
+import { VapiCallWidget } from "@/components/funnel/vapi-call-widget";
+import { logger } from "@/lib/client-logger";
+import { createClient } from "@/lib/supabase/client";
 
 interface VapiTranscript {
     id: string;
@@ -28,301 +14,285 @@ interface VapiTranscript {
     call_duration: number;
     call_status: string;
     created_at: string;
+    extracted_data?: any;
 }
 
 interface FunnelProject {
     id: string;
     name: string;
-    current_step: number;
+    user_id: string;
 }
 
-export default function Step1Page() {
-    const params = useParams();
-    const projectId = params.projectId as string;
-
-    const [loading, setLoading] = useState(true);
+export default function Step1Page({
+    params,
+}: {
+    params: Promise<{ projectId: string }>;
+}) {
+    const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<FunnelProject | null>(null);
-    const [transcript, setTranscript] = useState<VapiTranscript | null>(null);
-    const [callInProgress, setCallInProgress] = useState(false);
+    const [userId, setUserId] = useState("");
+    const [transcripts, setTranscripts] = useState<VapiTranscript[]>([]);
+    const [isLoadingTranscripts, setIsLoadingTranscripts] = useState(true);
 
-    const loadData = useCallback(async () => {
+    useEffect(() => {
+        const resolveParams = async () => {
+            const resolved = await params;
+            setProjectId(resolved.projectId);
+        };
+        resolveParams();
+    }, [params]);
+
+    // Load project data
+    useEffect(() => {
+        const loadProject = async () => {
+            if (!projectId) return;
+
+            try {
+                const supabase = createClient();
+                const { data: projectData, error: projectError } = await supabase
+                    .from("funnel_projects")
+                    .select("*")
+                    .eq("id", projectId)
+                    .single();
+
+                if (projectError) throw projectError;
+                setProject(projectData);
+                setUserId(projectData.user_id);
+            } catch (error) {
+                logger.error({ error }, "Failed to load project");
+            }
+        };
+
+        loadProject();
+    }, [projectId]);
+
+    // Load transcripts
+    const loadTranscripts = async () => {
+        if (!projectId) return;
+
         try {
+            setIsLoadingTranscripts(true);
             const supabase = createClient();
 
-            // Get project
-            const { data: projectData, error: projectError } = await supabase
-                .from("funnel_projects")
-                .select("*")
-                .eq("id", projectId)
-                .single();
-
-            if (projectError) throw projectError;
-            setProject(projectData);
-
-            // Get latest transcript for this project
-            const { data: transcriptData } = await supabase
+            // Get all transcripts for this project
+            const { data: transcriptData, error } = await supabase
                 .from("vapi_transcripts")
                 .select("*")
                 .eq("funnel_project_id", projectId)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .single();
+                .order("created_at", { ascending: false });
 
-            if (transcriptData) {
-                setTranscript(transcriptData);
-            }
-        } catch (err) {
-            logger.error({ error: err }, "Failed to load data");
+            if (error) throw error;
+
+            logger.info({ count: transcriptData?.length || 0 }, "Loaded transcripts");
+            setTranscripts(transcriptData || []);
+        } catch (error) {
+            logger.error({ error }, "Failed to load transcripts");
         } finally {
-            setLoading(false);
-        }
-    }, [projectId]);
-
-    useEffect(() => {
-        loadData();
-    }, [loadData]);
-
-    const handleStartCall = async () => {
-        setCallInProgress(true);
-        logger.info({ projectId }, "Initiating VAPI call");
-
-        try {
-            // TODO: Implement actual VAPI call initiation
-            // For now, this is a placeholder
-            // const response = await fetch('/api/vapi/initiate-call', {
-            //     method: 'POST',
-            //     headers: { 'Content-Type': 'application/json' },
-            //     body: JSON.stringify({ projectId })
-            // });
-
-            logger.info({}, "VAPI call initiated");
-        } catch (err) {
-            logger.error({ error: err }, "Failed to start call");
-        } finally {
-            setCallInProgress(false);
+            setIsLoadingTranscripts(false);
         }
     };
 
-    const hasCompletedCall = transcript && transcript.call_status === "completed";
+    useEffect(() => {
+        if (projectId) {
+            loadTranscripts();
+        }
+    }, [projectId]);
 
-    if (loading) {
+    const hasCompletedCall = transcripts.length > 0;
+
+    const formatDuration = (seconds: number) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, "0")}`;
+    };
+
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+        });
+    };
+
+    if (!projectId || !userId) {
         return (
-            <StepLayout
-                projectId={projectId}
-                currentStep={1}
-                stepTitle="AI Intake Call"
-                stepDescription="Loading..."
-            >
-                <div className="flex items-center justify-center py-12">
-                    <div className="text-gray-500">Loading...</div>
-                </div>
-            </StepLayout>
+            <div className="flex h-screen items-center justify-center">
+                <div className="text-gray-500">Loading...</div>
+            </div>
         );
     }
 
     return (
         <StepLayout
-            projectId={projectId}
             currentStep={1}
-            stepTitle="AI Intake Call"
-            stepDescription="Have a natural conversation with our AI assistant about your business"
+            projectId={projectId}
             funnelName={project?.name}
             nextDisabled={!hasCompletedCall}
             nextLabel={
-                hasCompletedCall ? "Continue to Craft Offer" : "Complete Call First"
+                hasCompletedCall ? "Generate Deck Structure" : "Complete Call First"
             }
+            stepTitle="AI Intake Call"
+            stepDescription="Have a natural conversation with our AI assistant about your business"
         >
-            <div className="space-y-6">
-                {hasCompletedCall ? (
-                    // Call Completed State
-                    <Card className="border-green-200 bg-green-50">
-                        <CardHeader>
-                            <div className="flex items-center">
-                                <CheckCircle className="mr-3 h-6 w-6 text-green-600" />
-                                <div>
-                                    <CardTitle className="text-green-900">
-                                        Call Complete!
-                                    </CardTitle>
-                                    <CardDescription className="text-green-700">
-                                        Your intake call has been saved and processed
-                                    </CardDescription>
-                                </div>
+            <div className="space-y-8">
+                {/* Instructions */}
+                {!hasCompletedCall && (
+                    <div className="rounded-lg border border-blue-100 bg-gradient-to-br from-blue-50 to-purple-50 p-8">
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                                <Phone className="h-8 w-8 text-blue-600" />
                             </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-green-700">
-                                        Call Duration:
+                            <h2 className="mb-3 text-2xl font-semibold text-gray-900">
+                                Start Your AI Intake Call
+                            </h2>
+                            <p className="mx-auto max-w-lg text-gray-600">
+                                Have a 15-20 minute conversation about your business. AI
+                                will extract key insights to generate your complete
+                                funnel.
+                            </p>
+                        </div>
+
+                        <div className="mb-6 rounded-lg bg-blue-50 p-6">
+                            <h3 className="mb-3 flex items-center text-lg font-semibold text-blue-900">
+                                <span className="mr-2">💡</span> How this works
+                            </h3>
+                            <ul className="space-y-2 text-blue-800">
+                                <li className="flex items-start">
+                                    <span className="mr-2">1.</span>
+                                    <span>
+                                        Click the <strong>"🎙️ Start Call"</strong>{" "}
+                                        button below
                                     </span>
-                                    <span className="font-medium text-green-900">
-                                        {Math.floor(
-                                            (transcript.call_duration || 0) / 60
-                                        )}{" "}
-                                        minutes
+                                </li>
+                                <li className="flex items-start">
+                                    <span className="mr-2">2.</span>
+                                    <span>
+                                        Have a natural conversation about your business
+                                        and offer
                                     </span>
-                                </div>
-                                <div className="flex items-center justify-between text-sm">
-                                    <span className="text-green-700">Completed:</span>
-                                    <span className="font-medium text-green-900">
-                                        {new Date(
-                                            transcript.created_at
-                                        ).toLocaleString()}
+                                </li>
+                                <li className="flex items-start">
+                                    <span className="mr-2">3.</span>
+                                    <span>
+                                        Watch the conversation appear in real-time
                                     </span>
-                                </div>
-                            </div>
-
-                            {/* Transcript Preview */}
-                            {transcript.transcript_text && (
-                                <div className="mt-4">
-                                    <p className="mb-2 text-sm font-semibold text-green-900">
-                                        Transcript Preview:
-                                    </p>
-                                    <div className="max-h-40 overflow-y-auto rounded-md bg-white p-3">
-                                        <p className="text-sm text-gray-700">
-                                            {transcript.transcript_text.substring(
-                                                0,
-                                                500
-                                            )}
-                                            {transcript.transcript_text.length > 500 &&
-                                                "..."}
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="mt-4">
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={handleStartCall}
-                                >
-                                    Start New Call
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ) : (
-                    // Call Not Started State
-                    <div className="space-y-6">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>How It Works</CardTitle>
-                                <CardDescription>
-                                    Our AI will have a natural conversation with you
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <ol className="space-y-3 text-sm text-gray-700">
-                                    <li className="flex items-start">
-                                        <span className="mr-3 font-bold text-blue-600">
-                                            1.
-                                        </span>
-                                        <span>
-                                            Click "Start AI Call" to begin a
-                                            conversation with our AI assistant
-                                        </span>
-                                    </li>
-                                    <li className="flex items-start">
-                                        <span className="mr-3 font-bold text-blue-600">
-                                            2.
-                                        </span>
-                                        <span>
-                                            The AI will ask you about your business,
-                                            target audience, and goals
-                                        </span>
-                                    </li>
-                                    <li className="flex items-start">
-                                        <span className="mr-3 font-bold text-blue-600">
-                                            3.
-                                        </span>
-                                        <span>
-                                            Have a natural conversation - the AI adapts
-                                            to your responses
-                                        </span>
-                                    </li>
-                                    <li className="flex items-start">
-                                        <span className="mr-3 font-bold text-blue-600">
-                                            4.
-                                        </span>
-                                        <span>
-                                            The call typically takes 10-15 minutes
-                                        </span>
-                                    </li>
-                                    <li className="flex items-start">
-                                        <span className="mr-3 font-bold text-blue-600">
-                                            5.
-                                        </span>
-                                        <span>
-                                            We'll automatically transcribe and extract
-                                            key information
-                                        </span>
-                                    </li>
-                                </ol>
-                            </CardContent>
-                        </Card>
-
-                        {/* Call Widget */}
-                        <Card className="border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50">
-                            <CardContent className="pt-12 pb-12 text-center">
-                                <div className="mx-auto mb-6 inline-flex h-24 w-24 items-center justify-center rounded-full bg-blue-100">
-                                    <Phone className="h-12 w-12 text-blue-600" />
-                                </div>
-                                <h3 className="mb-2 text-2xl font-bold text-gray-900">
-                                    Ready to Start Your AI Intake Call?
-                                </h3>
-                                <p className="mb-6 text-gray-600">
-                                    This conversation will help us understand your
-                                    business and create a customized funnel
-                                </p>
-
-                                <Button
-                                    size="lg"
-                                    onClick={handleStartCall}
-                                    disabled={callInProgress}
-                                    className="min-w-[200px]"
-                                >
-                                    {callInProgress ? (
-                                        <>Starting Call...</>
-                                    ) : (
-                                        <>
-                                            <Phone className="mr-2 h-5 w-5" />
-                                            Start AI Call
-                                        </>
-                                    )}
-                                </Button>
-
-                                {callInProgress && (
-                                    <div className="mt-4">
-                                        <Badge variant="default">
-                                            Call in progress...
-                                        </Badge>
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-
-                        {/* Info Card */}
-                        <Card>
-                            <CardContent className="py-4">
-                                <div className="flex items-start">
-                                    <AlertCircle className="mr-3 h-5 w-5 text-blue-600" />
-                                    <div className="text-sm text-gray-700">
-                                        <p className="font-medium text-gray-900">
-                                            Note:
-                                        </p>
-                                        <p className="mt-1">
-                                            The AI will ask about your business, offer,
-                                            target audience, pricing, and goals. The
-                                            more detailed you are, the better your
-                                            funnel will be.
-                                        </p>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
+                                </li>
+                                <li className="flex items-start">
+                                    <span className="mr-2">4.</span>
+                                    <span>
+                                        Your transcript is automatically saved for
+                                        funnel generation
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
                 )}
+
+                {/* VAPI Widget */}
+                <VapiCallWidget
+                    projectId={projectId}
+                    userId={userId}
+                    onCallComplete={loadTranscripts}
+                />
+
+                {/* Saved Calls List */}
+                {hasCompletedCall && (
+                    <div className="rounded-lg border border-gray-200 bg-white p-6">
+                        <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                            Your Intake Calls
+                        </h3>
+
+                        {isLoadingTranscripts ? (
+                            <div className="py-8 text-center text-gray-500">
+                                Loading calls...
+                            </div>
+                        ) : transcripts.length === 0 ? (
+                            <div className="py-8 text-center text-gray-500">
+                                <MessageSquare className="mx-auto mb-3 h-12 w-12 opacity-50" />
+                                <p>No calls yet. Start your first call above!</p>
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {transcripts.map((transcript) => (
+                                    <div
+                                        key={transcript.id}
+                                        className="rounded-lg border border-gray-200 bg-gray-50 p-4 transition-all hover:border-gray-300 hover:bg-gray-100"
+                                    >
+                                        <div className="mb-3 flex items-center justify-between">
+                                            <div className="flex items-center space-x-3">
+                                                <div
+                                                    className={`h-3 w-3 rounded-full ${
+                                                        transcript.call_status ===
+                                                        "completed"
+                                                            ? "bg-green-500"
+                                                            : transcript.call_status ===
+                                                                "in_progress"
+                                                              ? "bg-blue-500"
+                                                              : "bg-red-500"
+                                                    }`}
+                                                />
+                                                <span className="font-medium text-gray-900">
+                                                    {formatDate(transcript.created_at)}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center space-x-4 text-sm text-gray-600">
+                                                <div className="flex items-center space-x-1">
+                                                    <Clock className="h-4 w-4" />
+                                                    <span>
+                                                        {formatDuration(
+                                                            transcript.call_duration ||
+                                                                0
+                                                        )}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center space-x-1">
+                                                    <CheckCircle className="h-4 w-4 text-green-600" />
+                                                    <span className="capitalize">
+                                                        {transcript.call_status}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {transcript.transcript_text && (
+                                            <div className="mt-3">
+                                                <details className="group">
+                                                    <summary className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-700">
+                                                        View Transcript
+                                                    </summary>
+                                                    <div className="mt-3 max-h-64 overflow-y-auto rounded bg-white p-3 text-sm text-gray-700">
+                                                        {transcript.transcript_text}
+                                                    </div>
+                                                </details>
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* What's Next */}
+                <div className="rounded-lg border border-gray-200 bg-gray-50 p-6">
+                    <h3 className="mb-3 flex items-center text-sm font-semibold text-gray-900">
+                        <span className="mr-2">👉</span> After This Call
+                    </h3>
+                    <p className="mb-3 text-sm text-gray-600">
+                        Once you complete your intake call, the AI will:
+                    </p>
+                    <ul className="space-y-1 text-sm text-gray-600">
+                        <li>• Extract key business insights from your conversation</li>
+                        <li>• Identify your target audience and pain points</li>
+                        <li>• Understand your offer and value proposition</li>
+                        <li>
+                            • Generate your complete 55-slide presentation structure
+                        </li>
+                    </ul>
+                </div>
             </div>
         </StepLayout>
     );

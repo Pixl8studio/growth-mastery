@@ -179,6 +179,9 @@ Return ONLY a JSON object with this structure:
 
 /**
  * 4. Generate talk track script from deck structure
+ * Note: This function is kept for backward compatibility and reference.
+ * The new implementation in /api/generate/talk-track uses chunked generation
+ * for better quality and generates 2-4 sentences per slide.
  */
 export function createTalkTrackPrompt(
     deckSlides: {
@@ -194,12 +197,13 @@ export function createTalkTrackPrompt(
             content: `You are a master presentation coach who writes compelling video scripts for pitch presentations.
 
 Create a natural, conversational script for a pitch video with:
+- 2-4 compelling sentences per slide (not more!)
 - Smooth transitions between slides
 - Emotional storytelling that builds engagement
 - Clear, concise talking points (no fluff)
 - Appropriate pacing (aim for 15-20 minute total video)
 - Suggestions for tone and delivery
-- Estimated time per slide (in seconds)
+- Estimated time per slide (15-30 seconds)
 - Conversational language (use "you", be authentic)
 
 Write as if speaking directly to one person who has a problem you can solve. Build rapport, create desire, overcome objections naturally.`,
@@ -217,16 +221,17 @@ Return ONLY a JSON object with this structure:
   "slides": [
     {
       "slideNumber": 1,
-      "script": "What you'll say for this slide (2-4 sentences, conversational)",
-      "duration": 20,
-      "notes": "Delivery notes (tone, pacing, emphasis, gestures)"
+      "script": "2-4 sentences of what to say for this slide (conversational, compelling)",
+      "duration": 25,
+      "notes": "Delivery notes (tone, pacing, emphasis)"
     },
     ...for all ${deckSlides.length} slides
   ]
 }
 
-Duration in seconds. Total should be around 900-1200 seconds (15-20 minutes).
-Each slide should have enough script to fill the duration naturally.`,
+IMPORTANT: Each script must be exactly 2-4 sentences. Not more, not less.
+Duration should be 15-30 seconds per slide depending on content complexity.
+Total should be around 900-1200 seconds (15-20 minutes).`,
         },
     ];
 }

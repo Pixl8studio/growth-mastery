@@ -1,316 +1,201 @@
 "use client";
 
-/**
- * Step 11: Analytics & Publish
- * View analytics and publish funnel
- */
-
-import { useState, useEffect, useCallback } from "react";
-import { useParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { logger } from "@/lib/client-logger";
+import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
-import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-    CardDescription,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { BarChart3, Rocket, Copy } from "lucide-react";
-import { useToast } from "@/components/ui/use-toast";
+import { BarChart3, TrendingUp, Users, DollarSign } from "lucide-react";
+import { logger } from "@/lib/client-logger";
+import { createClient } from "@/lib/supabase/client";
 
-interface FunnelProject {
-    id: string;
-    name: string;
-    current_step: number;
-    status?: string;
+interface Analytics {
+    registrations: number;
+    views: number;
+    conversions: number;
+    revenue: number;
 }
 
-interface FlowConfig {
-    id: string;
-    name: string;
-}
+export default function Step11Page({
+    params,
+}: {
+    params: Promise<{ projectId: string }>;
+}) {
+    const [projectId, setProjectId] = useState("");
+    const [project, setProject] = useState<any>(null);
+    const [analytics, setAnalytics] = useState<Analytics>({
+        registrations: 0,
+        views: 0,
+        conversions: 0,
+        revenue: 0,
+    });
 
-interface RegistrationPage {
-    id: string;
-    public_id: string;
-    vanity_slug?: string;
-}
+    useEffect(() => {
+        const resolveParams = async () => {
+            const resolved = await params;
+            setProjectId(resolved.projectId);
+        };
+        resolveParams();
+    }, [params]);
 
-interface UserProfile {
-    id: string;
-    username?: string;
-}
-
-export default function Step11Page() {
-    const params = useParams();
-    const projectId = params.projectId as string;
-    const { toast } = useToast();
-
-    const [loading, setLoading] = useState(true);
-    const [publishing, setPublishing] = useState(false);
-
-    const [project, setProject] = useState<FunnelProject | null>(null);
-    const [flows, setFlows] = useState<FlowConfig[]>([]);
-    const [registrationPage, setRegistrationPage] = useState<RegistrationPage | null>(
-        null
-    );
-    const [profile, setProfile] = useState<UserProfile | null>(null);
-
-    const loadData = useCallback(async () => {
-        try {
-            const supabase = createClient();
-
-            const { data: projectData } = await supabase
-                .from("funnel_projects")
-                .select("*")
-                .eq("id", projectId)
-                .single();
-
-            setProject(projectData);
-
-            const { data: flowsData } = await supabase
-                .from("funnel_flows")
-                .select("*")
-                .eq("funnel_project_id", projectId);
-
-            setFlows(flowsData || []);
-
-            const { data: regPage } = await supabase
-                .from("registration_pages")
-                .select("*")
-                .eq("funnel_project_id", projectId)
-                .limit(1)
-                .single();
-
-            setRegistrationPage(regPage);
-
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
-
-            if (user) {
-                const { data: userProfile } = await supabase
-                    .from("user_profiles")
+    useEffect(() => {
+        const loadProject = async () => {
+            if (!projectId) return;
+            try {
+                const supabase = createClient();
+                const { data: projectData, error: projectError } = await supabase
+                    .from("funnel_projects")
                     .select("*")
-                    .eq("id", user.id)
+                    .eq("id", projectId)
                     .single();
 
-                setProfile(userProfile);
+                if (projectError) throw projectError;
+                setProject(projectData);
+            } catch (error) {
+                logger.error({ error }, "Failed to load project");
             }
-        } catch (err) {
-            logger.error({ error: err }, "Failed to load data");
-        } finally {
-            setLoading(false);
-        }
+        };
+        loadProject();
     }, [projectId]);
 
     useEffect(() => {
-        loadData();
-    }, [loadData]);
+        const loadAnalytics = async () => {
+            if (!projectId) return;
+            try {
+                // TODO: Implement analytics fetching
+                // Placeholder data for now
+                setAnalytics({
+                    registrations: 0,
+                    views: 0,
+                    conversions: 0,
+                    revenue: 0,
+                });
+            } catch (error) {
+                logger.error({ error }, "Failed to load analytics");
+            }
+        };
+        loadAnalytics();
+    }, [projectId]);
 
-    const handlePublish = async () => {
-        setPublishing(true);
+    const conversionRate =
+        analytics.views > 0
+            ? ((analytics.conversions / analytics.views) * 100).toFixed(2)
+            : "0.00";
 
-        try {
-            const supabase = createClient();
-
-            // Update project status
-            await supabase
-                .from("funnel_projects")
-                .update({ status: "active" })
-                .eq("id", projectId);
-
-            // Publish all pages
-            await Promise.all([
-                supabase
-                    .from("registration_pages")
-                    .update({ is_published: true })
-                    .eq("funnel_project_id", projectId),
-                supabase
-                    .from("watch_pages")
-                    .update({ is_published: true })
-                    .eq("funnel_project_id", projectId),
-                supabase
-                    .from("enrollment_pages")
-                    .update({ is_published: true })
-                    .eq("funnel_project_id", projectId),
-            ]);
-
-            logger.info({ projectId }, "Funnel published");
-
-            toast({
-                title: "Funnel Published!",
-                description: "Your funnel is now live and accepting leads.",
-            });
-
-            await loadData();
-        } catch (err) {
-            logger.error({ error: err }, "Failed to publish funnel");
-            toast({
-                title: "Publish Failed",
-                description: "Could not publish funnel",
-                variant: "destructive",
-            });
-        } finally {
-            setPublishing(false);
-        }
-    };
-
-    const copyPublicUrl = () => {
-        if (registrationPage && profile) {
-            const url = registrationPage.vanity_slug
-                ? `${window.location.origin}/${profile.username}/${registrationPage.vanity_slug}`
-                : `${window.location.origin}/${registrationPage.id}`;
-
-            navigator.clipboard.writeText(url);
-
-            toast({
-                title: "URL Copied!",
-                description: "Public funnel URL copied to clipboard",
-            });
-        }
-    };
-
-    const hasFlow = flows.length > 0;
-    const isPublished = project?.status === "active";
-
-    if (loading) {
+    if (!projectId) {
         return (
-            <StepLayout
-                projectId={projectId}
-                currentStep={11}
-                stepTitle="Analytics & Publish"
-                stepDescription="Loading..."
-            >
-                <div className="flex items-center justify-center py-12">
-                    <div className="text-gray-500">Loading...</div>
-                </div>
-            </StepLayout>
+            <div className="flex h-screen items-center justify-center">
+                <div className="text-gray-500">Loading...</div>
+            </div>
         );
     }
 
     return (
         <StepLayout
-            projectId={projectId}
             currentStep={11}
-            stepTitle="Analytics & Publish"
-            stepDescription="View performance and publish your funnel"
+            projectId={projectId}
             funnelName={project?.name}
-            nextDisabled={false}
-            nextLabel="Back to Dashboard"
-            onNext={async () => {
-                window.location.href = "/funnel-builder";
-            }}
+            stepTitle="Analytics & Performance"
+            stepDescription="Track your funnel's performance and optimize for conversions"
         >
-            <div className="space-y-6">
-                {!hasFlow && (
-                    <DependencyWarning
-                        missingStep={10}
-                        missingStepName="Flow Configuration"
-                        projectId={projectId}
-                        message="Configure your funnel flow before publishing"
-                    />
-                )}
-
-                {/* Analytics (Placeholder) */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center">
-                            <BarChart3 className="mr-2 h-5 w-5 text-gray-600" />
-                            Analytics Overview
-                        </CardTitle>
-                        <CardDescription>
-                            Performance metrics for your funnel
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="grid gap-4 md:grid-cols-4">
-                            <div>
-                                <p className="text-sm text-gray-600">Registrations</p>
-                                <p className="text-2xl font-bold text-gray-900">0</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-600">Video Views</p>
-                                <p className="text-2xl font-bold text-gray-900">0</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-600">Enrollments</p>
-                                <p className="text-2xl font-bold text-gray-900">0</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-600">Revenue</p>
-                                <p className="text-2xl font-bold text-gray-900">$0</p>
-                            </div>
+            <div className="space-y-8">
+                <div className="rounded-lg border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-8">
+                    <div className="mb-6 text-center">
+                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                            <BarChart3 className="h-8 w-8 text-blue-600" />
                         </div>
-                    </CardContent>
-                </Card>
+                        <h2 className="mb-3 text-2xl font-semibold text-gray-900">
+                            Funnel Analytics
+                        </h2>
+                        <p className="mx-auto max-w-lg text-gray-600">
+                            Monitor key metrics and optimize your funnel for better
+                            performance.
+                        </p>
+                    </div>
+                </div>
 
-                {/* Publish */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center">
-                            <Rocket className="mr-2 h-5 w-5 text-gray-600" />
-                            Publish Funnel
-                        </CardTitle>
-                        <CardDescription>
-                            Make your funnel live and start accepting leads
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-700">
-                                Status:
-                            </span>
-                            <Badge variant={isPublished ? "success" : "secondary"}>
-                                {isPublished ? "Published" : "Draft"}
-                            </Badge>
+                {/* Key Metrics */}
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                        <div className="mb-3 flex items-center justify-between">
+                            <h3 className="text-sm font-medium text-gray-600">
+                                Registrations
+                            </h3>
+                            <Users className="h-5 w-5 text-blue-600" />
                         </div>
+                        <div className="text-3xl font-bold text-gray-900">
+                            {analytics.registrations.toLocaleString()}
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">
+                            Total sign-ups to date
+                        </p>
+                    </div>
 
-                        {isPublished && registrationPage && (
-                            <div>
-                                <p className="mb-2 text-sm font-medium text-gray-700">
-                                    Public URL:
-                                </p>
-                                <div className="flex space-x-2">
-                                    <Input
-                                        value={
-                                            registrationPage.vanity_slug
-                                                ? `${window.location.origin}/${profile?.username}/${registrationPage.vanity_slug}`
-                                                : `${window.location.origin}/${registrationPage.id}`
-                                        }
-                                        readOnly
-                                        className="flex-1"
-                                    />
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        onClick={copyPublicUrl}
-                                    >
-                                        <Copy className="h-4 w-4" />
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
+                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                        <div className="mb-3 flex items-center justify-between">
+                            <h3 className="text-sm font-medium text-gray-600">
+                                Video Views
+                            </h3>
+                            <TrendingUp className="h-5 w-5 text-purple-600" />
+                        </div>
+                        <div className="text-3xl font-bold text-gray-900">
+                            {analytics.views.toLocaleString()}
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">
+                            Presentation watches
+                        </p>
+                    </div>
 
-                        <Button
-                            onClick={handlePublish}
-                            disabled={publishing || !hasFlow}
-                            className="w-full"
-                        >
-                            {publishing
-                                ? "Publishing..."
-                                : isPublished
-                                  ? "Update & Republish"
-                                  : "Publish Funnel"}
-                        </Button>
-                    </CardContent>
-                </Card>
+                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                        <div className="mb-3 flex items-center justify-between">
+                            <h3 className="text-sm font-medium text-gray-600">
+                                Conversions
+                            </h3>
+                            <Users className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div className="text-3xl font-bold text-gray-900">
+                            {analytics.conversions.toLocaleString()}
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">
+                            {conversionRate}% conversion rate
+                        </p>
+                    </div>
+
+                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                        <div className="mb-3 flex items-center justify-between">
+                            <h3 className="text-sm font-medium text-gray-600">
+                                Revenue
+                            </h3>
+                            <DollarSign className="h-5 w-5 text-emerald-600" />
+                        </div>
+                        <div className="text-3xl font-bold text-gray-900">
+                            ${analytics.revenue.toLocaleString()}
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">Total generated</p>
+                    </div>
+                </div>
+
+                {/* Coming Soon */}
+                <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow-sm">
+                    <BarChart3 className="mx-auto mb-4 h-16 w-16 text-gray-300" />
+                    <h3 className="mb-2 text-xl font-semibold text-gray-900">
+                        Detailed Analytics Coming Soon
+                    </h3>
+                    <p className="mx-auto max-w-lg text-gray-600">
+                        Track page-by-page performance, conversion funnels, A/B test
+                        results, and more detailed metrics to optimize your funnel.
+                    </p>
+                </div>
+
+                {/* Completion Message */}
+                <div className="rounded-lg border border-green-200 bg-green-50 p-8 text-center">
+                    <div className="mb-4 text-6xl">🎉</div>
+                    <h2 className="mb-3 text-2xl font-bold text-green-900">
+                        Congratulations! Your Funnel is Complete
+                    </h2>
+                    <p className="mx-auto max-w-2xl text-green-800">
+                        You've successfully created your complete webinar funnel with
+                        AI. All your pages are generated and ready to be published.
+                        Track your performance here and optimize for better conversions.
+                    </p>
+                </div>
             </div>
         </StepLayout>
     );

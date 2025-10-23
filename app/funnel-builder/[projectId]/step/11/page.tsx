@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
-import { BarChart3, TrendingUp, Users, DollarSign } from "lucide-react";
+import { BarChart3, TrendingUp, Users, DollarSign, Copy } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/use-toast";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 
@@ -26,6 +29,11 @@ export default function Step11Page({
         conversions: 0,
         revenue: 0,
     });
+    const [publishing, setPublishing] = useState(false);
+    const [isPublished, setIsPublished] = useState(false);
+    const [registrationPage, setRegistrationPage] = useState<any>(null);
+    const [profile, setProfile] = useState<any>(null);
+    const { toast } = useToast();
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -55,24 +63,68 @@ export default function Step11Page({
         loadProject();
     }, [projectId]);
 
-    useEffect(() => {
-        const loadAnalytics = async () => {
-            if (!projectId) return;
-            try {
-                // TODO: Implement analytics fetching
-                // Placeholder data for now
-                setAnalytics({
-                    registrations: 0,
-                    views: 0,
-                    conversions: 0,
-                    revenue: 0,
-                });
-            } catch (error) {
-                logger.error({ error }, "Failed to load analytics");
-            }
-        };
-        loadAnalytics();
-    }, [projectId]);
+    const handlePublish = async () => {
+        setPublishing(true);
+
+        try {
+            const supabase = createClient();
+
+            // Update project status
+            await supabase
+                .from("funnel_projects")
+                .update({ status: "active" })
+                .eq("id", projectId);
+
+            // Publish all pages
+            await Promise.all([
+                supabase
+                    .from("registration_pages")
+                    .update({ is_published: true })
+                    .eq("funnel_project_id", projectId),
+                supabase
+                    .from("watch_pages")
+                    .update({ is_published: true })
+                    .eq("funnel_project_id", projectId),
+                supabase
+                    .from("enrollment_pages")
+                    .update({ is_published: true })
+                    .eq("funnel_project_id", projectId),
+            ]);
+
+            logger.info({ projectId }, "Funnel published");
+
+            toast({
+                title: "Funnel Published!",
+                description: "Your funnel is now live and accepting leads.",
+            });
+
+            setIsPublished(true);
+        } catch (err) {
+            logger.error({ error: err }, "Failed to publish funnel");
+            toast({
+                title: "Publish Failed",
+                description: "Could not publish funnel",
+                variant: "destructive",
+            });
+        } finally {
+            setPublishing(false);
+        }
+    };
+
+    const copyPublicUrl = () => {
+        if (registrationPage && profile) {
+            const url = registrationPage.vanity_slug
+                ? `${window.location.origin}/${profile.username}/${registrationPage.vanity_slug}`
+                : `${window.location.origin}/p/${registrationPage.id}`;
+
+            navigator.clipboard.writeText(url);
+
+            toast({
+                title: "URL Copied!",
+                description: "Public funnel URL copied to clipboard",
+            });
+        }
+    };
 
     const conversionRate =
         analytics.views > 0
@@ -172,17 +224,27 @@ export default function Step11Page({
                     </div>
                 </div>
 
-                {/* Coming Soon */}
-                <div className="rounded-lg border border-gray-200 bg-white p-12 text-center shadow-sm">
-                    <BarChart3 className="mx-auto mb-4 h-16 w-16 text-gray-300" />
-                    <h3 className="mb-2 text-xl font-semibold text-gray-900">
-                        Detailed Analytics Coming Soon
-                    </h3>
-                    <p className="mx-auto max-w-lg text-gray-600">
-                        Track page-by-page performance, conversion funnels, A/B test
-                        results, and more detailed metrics to optimize your funnel.
-                    </p>
-                </div>
+                {isPublished && registrationPage && (
+                    <div>
+                        <p className="mb-2 text-sm font-medium text-gray-700">
+                            Public URL:
+                        </p>
+                        <div className="flex space-x-2">
+                            <Input
+                                value={
+                                    registrationPage.vanity_slug
+                                        ? `${window.location.origin}/${profile?.username}/${registrationPage.vanity_slug}`
+                                        : `${window.location.origin}/p/${registrationPage.id}`
+                                }
+                                readOnly
+                                className="flex-1"
+                            />
+                            <Button variant="outline" size="sm" onClick={copyPublicUrl}>
+                                <Copy className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Completion Message */}
                 <div className="rounded-lg border border-green-200 bg-green-50 p-8 text-center">

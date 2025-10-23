@@ -4,17 +4,17 @@
  */
 
 import { createBrowserClient } from "@supabase/ssr";
-import { env } from "../env";
 
 export const createClient = () => {
-    if (!env.NEXT_PUBLIC_SUPABASE_URL || !env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    // Use process.env directly for client-side to ensure Next.js injects these at build time
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
         throw new Error(
             "Missing Supabase environment variables. Please set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY"
         );
     }
 
-    return createBrowserClient(
-        env.NEXT_PUBLIC_SUPABASE_URL,
-        env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-    );
+    return createBrowserClient(supabaseUrl, supabaseAnonKey);
 };

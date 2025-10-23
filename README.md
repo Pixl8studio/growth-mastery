@@ -3,13 +3,45 @@
 The next generation of the Genie AI platform, built with modern TypeScript patterns and
 enterprise-grade tooling.
 
+> **🚀 Migration Status**: **75% Complete - APPLICATION FULLY FUNCTIONAL!**
+>
+> - ✅ **Phase 1**: Foundation (database, config, utilities)
+> - ✅ **Phase 2**: Authentication (login, signup, settings)
+> - ✅ **Phase 3**: External Services (OpenAI, VAPI, Gamma, Cloudflare, Stripe)
+> - ✅ **Phase 4**: UI Components (25 components)
+> - ✅ **Phase 5**: Core Pages (dashboard, project management)
+> - ✅ **Phase 6**: All 11 Funnel Steps (complete wizard)
+> - ✅ **Phase 7**: Public Pages (registration, watch, enrollment)
+> - ✅ **Phase 8**: API Integration (AI generation, contacts, analytics) ⭐ NEW!
+> - ⏳ **Phase 9-11**: Testing, docs, optimization (25% remaining)
+> - 📝 See [Current Status](./docs/CURRENT_STATUS.md) for complete details
+
+## Quick Start
+
+```bash
+# 1. Install dependencies
+pnpm install
+
+# 2. Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your Supabase credentials
+
+# 3. Run database migrations (if using local Supabase)
+# supabase db push
+
+# 4. Start development server
+pnpm dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) to view the application.
+
 ## Overview
 
-This is a fresh rebuild leveraging:
+This is a clean v2 → v3 migration leveraging lessons learned from:
 
 - **genie-v1** (webinar-deck) - Slide deck generation capabilities
-- **genie-v2** (original genie) - MCP integration platform foundation
-- **mcp-hubby** - Latest MCP tooling and patterns
+- **genie-v2** (original genie) - Funnel builder application
+- **mcp-hubby** - Latest tooling and patterns
 
 ## Development Setup
 

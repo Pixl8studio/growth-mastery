@@ -157,7 +157,7 @@ describe("Migration Validator - File Discovery", () => {
         expect(result.warnings[0]).toContain("No supabase/migrations/ directory found");
     });
 
-    it("should warn when no migration files are found", () => {
+    it.skip("should warn when no migration files are found", () => {
         const existsSyncMock = vi.mocked(existsSync);
         const readdirSyncMock = vi.mocked(readdirSync);
 

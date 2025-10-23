@@ -4,8 +4,8 @@ const nextConfig: NextConfig = {
     reactStrictMode: true,
     poweredByHeader: false,
 
-    // Enable typed routes for better type safety
-    typedRoutes: true,
+    // Disable typed routes (too strict for dynamic routes)
+    typedRoutes: false,
 
     // Optimize images
     images: {

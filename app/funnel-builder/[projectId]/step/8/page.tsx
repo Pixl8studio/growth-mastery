@@ -1,35 +1,64 @@
 "use client";
 
+/**
+ * Step 8: Watch Pages
+ * Create and manage watch pages with visual editor integration
+ */
+
 import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import { Sparkles, PlayCircle, Trash2 } from "lucide-react";
+import { Video, PlusCircle, Eye, Pencil, Trash2, X } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
+import { generateWatchPageHTML } from "@/lib/generators/watch-page-generator";
 
-interface WatchPage {
+interface DeckStructure {
     id: string;
-    content: {
-        headline?: string;
-        subheadline?: string;
-        watchPrompt?: string;
-        ctaText?: string;
+    slides: any[];
+    metadata?: {
+        title?: string;
     };
+    total_slides: number;
     created_at: string;
 }
 
-export default function Step8Page({
+interface PitchVideo {
+    id: string;
+    video_url: string;
+    thumbnail_url: string | null;
+    video_duration: number;
+    created_at: string;
+}
+
+interface WatchPage {
+    id: string;
+    headline: string;
+    subheadline: string;
+    html_content: string;
+    theme: any;
+    is_published: boolean;
+    pitch_video_id: string | null;
+    created_at: string;
+}
+
+export default function Step8WatchPage({
     params,
 }: {
     params: Promise<{ projectId: string }>;
 }) {
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [generationProgress, setGenerationProgress] = useState(0);
+    const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
+    const [pitchVideos, setPitchVideos] = useState<PitchVideo[]>([]);
     const [watchPages, setWatchPages] = useState<WatchPage[]>([]);
-    const [hasVideo, setHasVideo] = useState(false);
-    const [hasDeck, setHasDeck] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+    const [showCreateForm, setShowCreateForm] = useState(false);
+    const [formData, setFormData] = useState({
+        headline: "",
+        deckStructureId: "",
+        videoId: "",
+    });
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -42,6 +71,7 @@ export default function Step8Page({
     useEffect(() => {
         const loadProject = async () => {
             if (!projectId) return;
+
             try {
                 const supabase = createClient();
                 const { data: projectData, error: projectError } = await supabase
@@ -56,71 +86,166 @@ export default function Step8Page({
                 logger.error({ error }, "Failed to load project");
             }
         };
+
         loadProject();
     }, [projectId]);
 
     useEffect(() => {
-        const loadPages = async () => {
+        const loadData = async () => {
             if (!projectId) return;
+
             try {
                 const supabase = createClient();
-                const [pagesResult, videoResult, deckResult] = await Promise.all([
-                    supabase
-                        .from("watch_pages")
-                        .select("*")
-                        .eq("funnel_project_id", projectId)
-                        .order("created_at", { ascending: false }),
-                    supabase
-                        .from("pitch_videos")
-                        .select("id")
-                        .eq("funnel_project_id", projectId),
-                    supabase
-                        .from("deck_structures")
-                        .select("id")
-                        .eq("funnel_project_id", projectId),
-                ]);
 
-                if (pagesResult.data) setWatchPages(pagesResult.data);
-                if (videoResult.data) setHasVideo(videoResult.data.length > 0);
-                if (deckResult.data) setHasDeck(deckResult.data.length > 0);
+                // Load deck structures
+                const { data: deckData, error: deckError } = await supabase
+                    .from("deck_structures")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (deckError) throw deckError;
+                setDeckStructures(deckData || []);
+
+                // Load pitch videos
+                const { data: videoData, error: videoError } = await supabase
+                    .from("pitch_videos")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (videoError) throw videoError;
+                setPitchVideos(videoData || []);
+
+                // Auto-select first deck and video
+                if (deckData && deckData.length > 0) {
+                    setFormData((prev) => ({
+                        ...prev,
+                        deckStructureId: deckData[0].id,
+                    }));
+                }
+                if (videoData && videoData.length > 0) {
+                    setFormData((prev) => ({
+                        ...prev,
+                        videoId: videoData[0].id,
+                    }));
+                }
+
+                // Load watch pages
+                const { data: pagesData, error: pagesError } = await supabase
+                    .from("watch_pages")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (pagesError) throw pagesError;
+                setWatchPages(pagesData || []);
             } catch (error) {
-                logger.error({ error }, "Failed to load watch pages");
+                logger.error({ error }, "Failed to load data");
             }
         };
-        loadPages();
+
+        loadData();
     }, [projectId]);
 
-    const handleGenerate = async () => {
-        setIsGenerating(true);
-        setGenerationProgress(0);
+    const handleCreate = async () => {
+        if (
+            !formData.headline.trim() ||
+            !formData.deckStructureId ||
+            !formData.videoId
+        ) {
+            alert(
+                "Please provide a headline, select a deck structure, and select a video"
+            );
+            return;
+        }
+
+        setIsCreating(true);
 
         try {
-            setGenerationProgress(30);
+            const supabase = createClient();
 
-            const response = await fetch("/api/generate/watch-copy", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ projectId }),
+            // Get current user
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+            if (!user) throw new Error("Not authenticated");
+
+            // Get selected deck structure and video
+            const deckStructure = deckStructures.find(
+                (d) => d.id === formData.deckStructureId
+            );
+            const video = pitchVideos.find((v) => v.id === formData.videoId);
+
+            if (!deckStructure || !video) throw new Error("Deck or video not found");
+
+            // Get theme from project or use defaults
+            const theme = project?.settings?.theme || {
+                primary: "#2563eb",
+                secondary: "#10b981",
+                background: "#ffffff",
+                text: "#1f2937",
+            };
+
+            // Generate HTML using the generator
+            const htmlContent = generateWatchPageHTML({
+                projectId,
+                deckStructure,
+                videoUrl: video.video_url,
+                headline: formData.headline,
+                theme,
             });
 
-            setGenerationProgress(80);
+            // Extract subheadline from deck
+            const subheadline =
+                deckStructure.metadata?.title || "Watch this exclusive training";
 
-            if (!response.ok) throw new Error("Failed to generate page");
+            // Create watch page
+            const { data: newPage, error: createError } = await supabase
+                .from("watch_pages")
+                .insert({
+                    funnel_project_id: projectId,
+                    user_id: user.id,
+                    pitch_video_id: video.id,
+                    headline: formData.headline,
+                    subheadline,
+                    html_content: htmlContent,
+                    theme,
+                    is_published: false,
+                })
+                .select()
+                .single();
 
-            const result = await response.json();
-            setWatchPages((prev) => [result.page, ...prev]);
-            setGenerationProgress(100);
+            if (createError) throw createError;
 
-            setTimeout(() => {
-                setIsGenerating(false);
-                setGenerationProgress(0);
-            }, 1000);
+            // Add to list
+            setWatchPages((prev) => [newPage, ...prev]);
+
+            // Reset form
+            setFormData({
+                headline: "",
+                deckStructureId: deckStructures[0]?.id || "",
+                videoId: pitchVideos[0]?.id || "",
+            });
+            setShowCreateForm(false);
+
+            logger.info({ pageId: newPage.id }, "Watch page created");
         } catch (error) {
-            logger.error({ error }, "Failed to generate watch page");
-            setIsGenerating(false);
-            setGenerationProgress(0);
-            alert("Failed to generate watch page. Please try again.");
+            logger.error({ error }, "Failed to create watch page");
+            alert("Failed to create page. Please try again.");
+        } finally {
+            setIsCreating(false);
         }
+    };
+
+    const handleEdit = (pageId: string) => {
+        const editorUrl = `/funnel-builder/${projectId}/pages/watch/${pageId}?edit=true`;
+        window.open(editorUrl, "_blank");
+    };
+
+    const handlePreview = (pageId: string) => {
+        const previewUrl = `/funnel-builder/${projectId}/pages/watch/${pageId}`;
+        window.open(previewUrl, "_blank");
     };
 
     const handleDelete = async (pageId: string) => {
@@ -135,13 +260,17 @@ export default function Step8Page({
 
             if (!error) {
                 setWatchPages((prev) => prev.filter((p) => p.id !== pageId));
+                logger.info({ pageId }, "Watch page deleted");
             }
         } catch (error) {
             logger.error({ error }, "Failed to delete watch page");
         }
     };
 
-    const hasCompletedPage = watchPages.length > 0;
+    const hasDeckStructure = deckStructures.length > 0;
+    const hasPitchVideo = pitchVideos.length > 0;
+    const hasWatchPage = watchPages.length > 0;
+    const canCreatePage = hasDeckStructure && hasPitchVideo;
 
     if (!projectId) {
         return (
@@ -156,97 +285,177 @@ export default function Step8Page({
             currentStep={8}
             projectId={projectId}
             funnelName={project?.name}
-            nextDisabled={!hasCompletedPage}
-            nextLabel={
-                hasCompletedPage ? "Generate Registration" : "Generate Page First"
-            }
-            stepTitle="Watch Page Copy"
-            stepDescription="AI generates engaging copy for your video watch page"
+            nextDisabled={!hasWatchPage}
+            nextLabel={hasWatchPage ? "Create Registration Page" : "Create Page First"}
+            stepTitle="Watch Pages"
+            stepDescription="Create engaging video watch pages with visual editor"
         >
             <div className="space-y-8">
-                {(!hasVideo || !hasDeck) && (
+                {/* Dependency Warnings */}
+                {!hasDeckStructure && (
                     <DependencyWarning
-                        message={
-                            !hasVideo
-                                ? "You need to upload a video first."
-                                : "You need to create a deck structure first."
-                        }
-                        requiredStep={!hasVideo ? 7 : 3}
-                        requiredStepName={!hasVideo ? "Upload Video" : "Deck Structure"}
+                        message="You need to create a deck structure first."
+                        requiredStep={3}
+                        requiredStepName="Deck Structure"
+                        projectId={projectId}
+                    />
+                )}
+                {!hasPitchVideo && (
+                    <DependencyWarning
+                        message="You need to upload a pitch video first."
+                        requiredStep={7}
+                        requiredStepName="Upload Video"
                         projectId={projectId}
                     />
                 )}
 
-                {!isGenerating ? (
-                    <div className="rounded-lg border border-cyan-100 bg-gradient-to-br from-cyan-50 to-sky-50 p-8">
+                {/* Create New Page Button */}
+                {!showCreateForm ? (
+                    <div className="rounded-lg border border-cyan-100 bg-gradient-to-br from-cyan-50 to-blue-50 p-8">
                         <div className="mb-6 text-center">
                             <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-cyan-100">
-                                <PlayCircle className="h-8 w-8 text-cyan-600" />
+                                <Video className="h-8 w-8 text-cyan-600" />
                             </div>
                             <h2 className="mb-3 text-2xl font-semibold text-gray-900">
-                                Generate Watch Page Copy
+                                Create Watch Page
                             </h2>
                             <p className="mx-auto max-w-lg text-gray-600">
-                                AI will create compelling copy for your video watch page
-                                to maximize engagement and conversions.
+                                Create an optimized video viewing experience that keeps
+                                viewers engaged using your deck content.
                             </p>
                         </div>
 
                         <div className="text-center">
                             <button
-                                onClick={handleGenerate}
-                                disabled={!hasVideo || !hasDeck}
+                                onClick={() => setShowCreateForm(true)}
+                                disabled={!canCreatePage}
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
-                                    hasVideo && hasDeck
+                                    canCreatePage
                                         ? "bg-cyan-600 text-white hover:bg-cyan-700"
                                         : "cursor-not-allowed bg-gray-300 text-gray-500"
                                 }`}
                             >
-                                <Sparkles className="h-6 w-6" />
-                                {hasVideo && hasDeck
-                                    ? "Generate Watch Page"
+                                <PlusCircle className="h-6 w-6" />
+                                {canCreatePage
+                                    ? "Create New Watch Page"
                                     : "Complete Prerequisites First"}
                             </button>
-
-                            <div className="mt-4 space-y-1 text-sm text-gray-500">
-                                <p>⚡ Generation time: ~15-20 seconds</p>
-                                <p>📺 Creates engaging video page copy</p>
-                            </div>
                         </div>
                     </div>
                 ) : (
-                    <div className="rounded-lg border border-cyan-200 bg-cyan-50 p-6">
-                        <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-cyan-100">
-                                <Sparkles className="h-6 w-6 text-cyan-600" />
-                            </div>
-                            <h3 className="mb-2 text-xl font-semibold text-cyan-900">
-                                Generating Watch Page Copy
+                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                        <div className="mb-6 flex items-center justify-between">
+                            <h3 className="text-xl font-semibold text-gray-900">
+                                Create Watch Page
                             </h3>
-                            <p className="text-cyan-700">
-                                AI is crafting engaging copy...
-                            </p>
+                            <button
+                                onClick={() => setShowCreateForm(false)}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
                         </div>
 
-                        <div className="mx-auto max-w-md">
-                            <div className="mb-2 flex items-center justify-between">
-                                <span className="text-sm font-medium text-cyan-700">
-                                    Progress
-                                </span>
-                                <span className="text-sm text-cyan-600">
-                                    {generationProgress}%
-                                </span>
-                            </div>
-                            <div className="h-3 w-full rounded-full bg-cyan-200">
-                                <div
-                                    className="h-3 rounded-full bg-cyan-600 transition-all duration-500 ease-out"
-                                    style={{ width: `${generationProgress}%` }}
+                        <div className="space-y-4">
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                    Page Headline
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.headline}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            headline: e.target.value,
+                                        })
+                                    }
+                                    placeholder="e.g., Watch: AI Sales Masterclass"
+                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                                 />
+                            </div>
+
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                    Deck Structure
+                                </label>
+                                <select
+                                    value={formData.deckStructureId}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            deckStructureId: e.target.value,
+                                        })
+                                    }
+                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                >
+                                    {deckStructures.map((deck) => (
+                                        <option key={deck.id} value={deck.id}>
+                                            {deck.metadata?.title ||
+                                                `Deck ${deck.total_slides} slides`}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                    Pitch Video
+                                </label>
+                                <select
+                                    value={formData.videoId}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            videoId: e.target.value,
+                                        })
+                                    }
+                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                >
+                                    {pitchVideos.map((video) => (
+                                        <option key={video.id} value={video.id}>
+                                            Video from{" "}
+                                            {new Date(
+                                                video.created_at
+                                            ).toLocaleDateString()}
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className="mt-1 text-sm text-gray-500">
+                                    This video will be embedded in the page
+                                </p>
+                            </div>
+
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    onClick={() => setShowCreateForm(false)}
+                                    className="rounded-lg border border-gray-300 px-6 py-2 font-medium text-gray-700 hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleCreate}
+                                    disabled={
+                                        !formData.headline.trim() ||
+                                        !formData.videoId ||
+                                        isCreating
+                                    }
+                                    className={`rounded-lg px-6 py-2 font-semibold ${
+                                        formData.headline.trim() &&
+                                        formData.videoId &&
+                                        !isCreating
+                                            ? "bg-cyan-600 text-white hover:bg-cyan-700"
+                                            : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                    }`}
+                                >
+                                    {isCreating ? "Creating..." : "Create Page"}
+                                </button>
                             </div>
                         </div>
                     </div>
                 )}
 
+                {/* Existing Pages List */}
                 <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
                     <div className="border-b border-gray-200 p-6">
                         <div className="flex items-center justify-between">
@@ -262,10 +471,8 @@ export default function Step8Page({
                     <div className="p-6">
                         {watchPages.length === 0 ? (
                             <div className="py-12 text-center text-gray-500">
-                                <PlayCircle className="mx-auto mb-4 h-12 w-12 opacity-50" />
-                                <p>
-                                    No watch pages yet. Generate your first one above!
-                                </p>
+                                <Video className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                                <p>No watch pages yet. Create your first one above!</p>
                             </div>
                         ) : (
                             <div className="space-y-4">
@@ -276,34 +483,87 @@ export default function Step8Page({
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
-                                                <h4 className="mb-2 text-lg font-semibold text-gray-900">
-                                                    {page.content.headline ||
-                                                        "Untitled Page"}
-                                                </h4>
-                                                <p className="mb-2 text-sm text-gray-600">
-                                                    {page.content.subheadline ||
-                                                        "No subheadline"}
+                                                <div className="mb-2 flex items-center gap-3">
+                                                    <h4 className="text-lg font-semibold text-gray-900">
+                                                        {page.headline}
+                                                    </h4>
+                                                    <span
+                                                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                                            page.is_published
+                                                                ? "bg-green-100 text-green-800"
+                                                                : "bg-yellow-100 text-yellow-800"
+                                                        }`}
+                                                    >
+                                                        {page.is_published
+                                                            ? "Published"
+                                                            : "Draft"}
+                                                    </span>
+                                                </div>
+
+                                                <p className="mb-3 text-sm text-gray-600">
+                                                    {page.subheadline}
                                                 </p>
-                                                <span className="text-xs text-gray-500">
-                                                    Created{" "}
-                                                    {new Date(
-                                                        page.created_at
-                                                    ).toLocaleDateString()}
-                                                </span>
+
+                                                <div className="flex items-center gap-4 text-sm text-gray-500">
+                                                    <span>
+                                                        Created{" "}
+                                                        {new Date(
+                                                            page.created_at
+                                                        ).toLocaleDateString()}
+                                                    </span>
+                                                </div>
                                             </div>
 
-                                            <button
-                                                onClick={() => handleDelete(page.id)}
-                                                className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() =>
+                                                        handlePreview(page.id)
+                                                    }
+                                                    className="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                                    title="Preview"
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </button>
+
+                                                <button
+                                                    onClick={() => handleEdit(page.id)}
+                                                    className="rounded p-2 text-cyan-600 hover:bg-cyan-50"
+                                                    title="Edit with Visual Editor"
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                </button>
+
+                                                <button
+                                                    onClick={() =>
+                                                        handleDelete(page.id)
+                                                    }
+                                                    className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         )}
                     </div>
+                </div>
+
+                {/* Helper Info */}
+                <div className="rounded-lg border border-blue-100 bg-blue-50 p-6">
+                    <h4 className="mb-3 font-semibold text-blue-900">
+                        💡 Watch Page Tips
+                    </h4>
+                    <ul className="space-y-2 text-sm text-blue-800">
+                        <li>• The video block is protected and can't be deleted</li>
+                        <li>
+                            • Use the Visual Editor to customize surrounding content
+                        </li>
+                        <li>• Add engagement elements like progress bars and CTAs</li>
+                        <li>• Changes auto-save every 3 seconds</li>
+                    </ul>
                 </div>
             </div>
         </StepLayout>

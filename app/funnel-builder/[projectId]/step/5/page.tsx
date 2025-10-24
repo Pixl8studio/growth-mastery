@@ -1,35 +1,72 @@
 "use client";
 
+/**
+ * Step 5: Enrollment Pages
+ * Create and manage enrollment/sales pages with visual editor integration
+ */
+
 import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import { Sparkles, FileText, Trash2 } from "lucide-react";
+import { ShoppingCart, PlusCircle, Eye, Pencil, Trash2, X } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
+import { generateEnrollmentHTML } from "@/lib/generators/enrollment-page-generator";
 
-interface EnrollmentPage {
+interface DeckStructure {
     id: string;
-    content: {
-        headline?: string;
-        subheadline?: string;
-        opening?: string;
-        ctaText?: string;
+    slides: any[];
+    metadata?: {
+        title?: string;
     };
+    total_slides: number;
     created_at: string;
 }
 
-export default function Step5Page({
+interface Offer {
+    id: string;
+    name: string;
+    tagline: string | null;
+    description: string | null;
+    price: number;
+    currency: string;
+    features: any;
+    created_at: string;
+}
+
+interface EnrollmentPage {
+    id: string;
+    headline: string;
+    subheadline: string;
+    html_content: string;
+    theme: any;
+    is_published: boolean;
+    offer_id: string | null;
+    page_type: string;
+    created_at: string;
+}
+
+export default function Step5EnrollmentPage({
     params,
 }: {
     params: Promise<{ projectId: string }>;
 }) {
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [generationProgress, setGenerationProgress] = useState(0);
+    const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
+    const [offers, setOffers] = useState<Offer[]>([]);
     const [enrollmentPages, setEnrollmentPages] = useState<EnrollmentPage[]>([]);
-    const [selectedPage, setSelectedPage] = useState<EnrollmentPage | null>(null);
-    const [hasOffer, setHasOffer] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+    const [showCreateForm, setShowCreateForm] = useState(false);
+    const [formData, setFormData] = useState({
+        headline: "",
+        deckStructureId: "",
+        offerId: "",
+        templateType: "urgency-convert" as
+            | "urgency-convert"
+            | "premium-elegant"
+            | "value-focused",
+    });
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -42,6 +79,7 @@ export default function Step5Page({
     useEffect(() => {
         const loadProject = async () => {
             if (!projectId) return;
+
             try {
                 const supabase = createClient();
                 const { data: projectData, error: projectError } = await supabase
@@ -56,66 +94,164 @@ export default function Step5Page({
                 logger.error({ error }, "Failed to load project");
             }
         };
+
         loadProject();
     }, [projectId]);
 
     useEffect(() => {
-        const loadPages = async () => {
+        const loadData = async () => {
             if (!projectId) return;
+
             try {
                 const supabase = createClient();
-                const [pagesResult, offerResult] = await Promise.all([
-                    supabase
-                        .from("enrollment_pages")
-                        .select("*")
-                        .eq("funnel_project_id", projectId)
-                        .order("created_at", { ascending: false }),
-                    supabase
-                        .from("offers")
-                        .select("id")
-                        .eq("funnel_project_id", projectId),
-                ]);
 
-                if (pagesResult.data) setEnrollmentPages(pagesResult.data);
-                if (offerResult.data) setHasOffer(offerResult.data.length > 0);
+                // Load deck structures
+                const { data: deckData, error: deckError } = await supabase
+                    .from("deck_structures")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (deckError) throw deckError;
+                setDeckStructures(deckData || []);
+
+                // Load offers
+                const { data: offerData, error: offerError } = await supabase
+                    .from("offers")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (offerError) throw offerError;
+                setOffers(offerData || []);
+
+                // Auto-select first deck and offer
+                if (deckData && deckData.length > 0) {
+                    setFormData((prev) => ({
+                        ...prev,
+                        deckStructureId: deckData[0].id,
+                    }));
+                }
+                if (offerData && offerData.length > 0) {
+                    setFormData((prev) => ({
+                        ...prev,
+                        offerId: offerData[0].id,
+                    }));
+                }
+
+                // Load enrollment pages
+                const { data: pagesData, error: pagesError } = await supabase
+                    .from("enrollment_pages")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (pagesError) throw pagesError;
+                setEnrollmentPages(pagesData || []);
             } catch (error) {
-                logger.error({ error }, "Failed to load enrollment pages");
+                logger.error({ error }, "Failed to load data");
             }
         };
-        loadPages();
+
+        loadData();
     }, [projectId]);
 
-    const handleGenerate = async () => {
-        setIsGenerating(true);
-        setGenerationProgress(0);
+    const handleCreate = async () => {
+        if (
+            !formData.headline.trim() ||
+            !formData.deckStructureId ||
+            !formData.offerId
+        ) {
+            alert(
+                "Please provide a headline, select a deck structure, and select an offer"
+            );
+            return;
+        }
+
+        setIsCreating(true);
 
         try {
-            setGenerationProgress(30);
+            const supabase = createClient();
 
-            const response = await fetch("/api/generate/enrollment-copy", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ projectId }),
+            // Get current user
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+            if (!user) throw new Error("Not authenticated");
+
+            // Get selected deck structure and offer
+            const deckStructure = deckStructures.find(
+                (d) => d.id === formData.deckStructureId
+            );
+            const offer = offers.find((o) => o.id === formData.offerId);
+
+            if (!deckStructure || !offer) throw new Error("Deck or offer not found");
+
+            // Get theme from project or use defaults
+            const theme = project?.settings?.theme || {
+                primary: "#2563eb",
+                secondary: "#10b981",
+                background: "#ffffff",
+                text: "#1f2937",
+            };
+
+            // Generate HTML using the generator
+            const htmlContent = generateEnrollmentHTML({
+                projectId,
+                offer,
+                deckStructure,
+                theme,
+                templateType: formData.templateType,
             });
 
-            setGenerationProgress(80);
+            // Create enrollment page
+            const { data: newPage, error: createError } = await supabase
+                .from("enrollment_pages")
+                .insert({
+                    funnel_project_id: projectId,
+                    user_id: user.id,
+                    offer_id: offer.id,
+                    headline: formData.headline,
+                    subheadline: offer.tagline || offer.description || "",
+                    html_content: htmlContent,
+                    theme,
+                    is_published: false,
+                    page_type: "direct_purchase",
+                })
+                .select()
+                .single();
 
-            if (!response.ok) throw new Error("Failed to generate page");
+            if (createError) throw createError;
 
-            const result = await response.json();
-            setEnrollmentPages((prev) => [result.page, ...prev]);
-            setGenerationProgress(100);
+            // Add to list
+            setEnrollmentPages((prev) => [newPage, ...prev]);
 
-            setTimeout(() => {
-                setIsGenerating(false);
-                setGenerationProgress(0);
-            }, 1000);
+            // Reset form
+            setFormData({
+                headline: "",
+                deckStructureId: deckStructures[0]?.id || "",
+                offerId: offers[0]?.id || "",
+                templateType: "urgency-convert",
+            });
+            setShowCreateForm(false);
+
+            logger.info({ pageId: newPage.id }, "Enrollment page created");
         } catch (error) {
-            logger.error({ error }, "Failed to generate enrollment page");
-            setIsGenerating(false);
-            setGenerationProgress(0);
-            alert("Failed to generate enrollment page. Please try again.");
+            logger.error({ error }, "Failed to create enrollment page");
+            alert("Failed to create page. Please try again.");
+        } finally {
+            setIsCreating(false);
         }
+    };
+
+    const handleEdit = (pageId: string) => {
+        const editorUrl = `/funnel-builder/${projectId}/pages/enrollment/${pageId}?edit=true`;
+        window.open(editorUrl, "_blank");
+    };
+
+    const handlePreview = (pageId: string) => {
+        const previewUrl = `/funnel-builder/${projectId}/pages/enrollment/${pageId}`;
+        window.open(previewUrl, "_blank");
     };
 
     const handleDelete = async (pageId: string) => {
@@ -130,13 +266,17 @@ export default function Step5Page({
 
             if (!error) {
                 setEnrollmentPages((prev) => prev.filter((p) => p.id !== pageId));
+                logger.info({ pageId }, "Enrollment page deleted");
             }
         } catch (error) {
             logger.error({ error }, "Failed to delete enrollment page");
         }
     };
 
-    const hasCompletedPage = enrollmentPages.length > 0;
+    const hasDeckStructure = deckStructures.length > 0;
+    const hasOffer = offers.length > 0;
+    const hasEnrollmentPage = enrollmentPages.length > 0;
+    const canCreatePage = hasDeckStructure && hasOffer;
 
     if (!projectId) {
         return (
@@ -151,95 +291,202 @@ export default function Step5Page({
             currentStep={5}
             projectId={projectId}
             funnelName={project?.name}
-            nextDisabled={!hasCompletedPage}
-            nextLabel={hasCompletedPage ? "Generate Talk Track" : "Generate Page First"}
-            stepTitle="Enrollment Page Copy"
-            stepDescription="AI generates compelling sales copy for your enrollment page"
+            nextDisabled={!hasEnrollmentPage}
+            nextLabel={hasEnrollmentPage ? "Create Talk Track" : "Create Page First"}
+            stepTitle="Enrollment Pages"
+            stepDescription="Create high-converting sales pages with visual editor"
         >
             <div className="space-y-8">
+                {/* Dependency Warnings */}
+                {!hasDeckStructure && (
+                    <DependencyWarning
+                        message="You need to create a deck structure first."
+                        requiredStep={3}
+                        requiredStepName="Deck Structure"
+                        projectId={projectId}
+                    />
+                )}
                 {!hasOffer && (
                     <DependencyWarning
-                        message="You need to create an offer first to generate enrollment page copy."
+                        message="You need to create an offer first."
                         requiredStep={2}
                         requiredStepName="Craft Offer"
                         projectId={projectId}
                     />
                 )}
 
-                {!isGenerating ? (
-                    <div className="rounded-lg border border-emerald-100 bg-gradient-to-br from-emerald-50 to-teal-50 p-8">
+                {/* Create New Page Button */}
+                {!showCreateForm ? (
+                    <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-indigo-50 p-8">
                         <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-                                <Sparkles className="h-8 w-8 text-emerald-600" />
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-purple-100">
+                                <ShoppingCart className="h-8 w-8 text-purple-600" />
                             </div>
                             <h2 className="mb-3 text-2xl font-semibold text-gray-900">
-                                Generate Enrollment Page Copy
+                                Create Enrollment Page
                             </h2>
                             <p className="mx-auto max-w-lg text-gray-600">
-                                AI will create persuasive, conversion-optimized copy for
-                                your enrollment page based on your offer and deck
-                                structure.
+                                Build a high-converting sales page that transforms
+                                viewers into customers using your offer and deck
+                                content.
                             </p>
                         </div>
 
                         <div className="text-center">
                             <button
-                                onClick={handleGenerate}
-                                disabled={!hasOffer}
+                                onClick={() => setShowCreateForm(true)}
+                                disabled={!canCreatePage}
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
-                                    hasOffer
-                                        ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                                    canCreatePage
+                                        ? "bg-purple-600 text-white hover:bg-purple-700"
                                         : "cursor-not-allowed bg-gray-300 text-gray-500"
                                 }`}
                             >
-                                <Sparkles className="h-6 w-6" />
-                                {hasOffer
-                                    ? "Generate Enrollment Copy"
-                                    : "Create Offer First"}
+                                <PlusCircle className="h-6 w-6" />
+                                {canCreatePage
+                                    ? "Create New Enrollment Page"
+                                    : "Complete Prerequisites First"}
                             </button>
-
-                            <div className="mt-4 space-y-1 text-sm text-gray-500">
-                                <p>⚡ Generation time: ~15-20 seconds</p>
-                                <p>
-                                    ✍️ Creates headline, subheadline, and compelling
-                                    copy
-                                </p>
-                            </div>
                         </div>
                     </div>
                 ) : (
-                    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-6">
-                        <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-emerald-100">
-                                <Sparkles className="h-6 w-6 text-emerald-600" />
-                            </div>
-                            <h3 className="mb-2 text-xl font-semibold text-emerald-900">
-                                Generating Enrollment Page Copy
+                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                        <div className="mb-6 flex items-center justify-between">
+                            <h3 className="text-xl font-semibold text-gray-900">
+                                Create Enrollment Page
                             </h3>
-                            <p className="text-emerald-700">
-                                AI is crafting persuasive copy...
-                            </p>
+                            <button
+                                onClick={() => setShowCreateForm(false)}
+                                className="text-gray-500 hover:text-gray-700"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
                         </div>
 
-                        <div className="mx-auto max-w-md">
-                            <div className="mb-2 flex items-center justify-between">
-                                <span className="text-sm font-medium text-emerald-700">
-                                    Progress
-                                </span>
-                                <span className="text-sm text-emerald-600">
-                                    {generationProgress}%
-                                </span>
-                            </div>
-                            <div className="h-3 w-full rounded-full bg-emerald-200">
-                                <div
-                                    className="h-3 rounded-full bg-emerald-600 transition-all duration-500 ease-out"
-                                    style={{ width: `${generationProgress}%` }}
+                        <div className="space-y-4">
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                    Page Headline
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.headline}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            headline: e.target.value,
+                                        })
+                                    }
+                                    placeholder="e.g., Enroll in AI Sales Mastery Program"
+                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
                                 />
+                            </div>
+
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                    Offer
+                                </label>
+                                <select
+                                    value={formData.offerId}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            offerId: e.target.value,
+                                        })
+                                    }
+                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                >
+                                    {offers.map((offer) => (
+                                        <option key={offer.id} value={offer.id}>
+                                            {offer.name} - {offer.currency}{" "}
+                                            {offer.price.toLocaleString()}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                    Deck Structure
+                                </label>
+                                <select
+                                    value={formData.deckStructureId}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            deckStructureId: e.target.value,
+                                        })
+                                    }
+                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                >
+                                    {deckStructures.map((deck) => (
+                                        <option key={deck.id} value={deck.id}>
+                                            {deck.metadata?.title ||
+                                                `Deck ${deck.total_slides} slides`}
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className="mt-1 text-sm text-gray-500">
+                                    Testimonials and content from this deck
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                    Template Style
+                                </label>
+                                <select
+                                    value={formData.templateType}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            templateType: e.target.value as any,
+                                        })
+                                    }
+                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                >
+                                    <option value="urgency-convert">
+                                        Urgency Convert (High-pressure sales)
+                                    </option>
+                                    <option value="premium-elegant">
+                                        Premium Elegant (High-ticket positioning)
+                                    </option>
+                                    <option value="value-focused">
+                                        Value Focused (Education/coaching)
+                                    </option>
+                                </select>
+                            </div>
+
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    onClick={() => setShowCreateForm(false)}
+                                    className="rounded-lg border border-gray-300 px-6 py-2 font-medium text-gray-700 hover:bg-gray-50"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleCreate}
+                                    disabled={
+                                        !formData.headline.trim() ||
+                                        !formData.offerId ||
+                                        isCreating
+                                    }
+                                    className={`rounded-lg px-6 py-2 font-semibold ${
+                                        formData.headline.trim() &&
+                                        formData.offerId &&
+                                        !isCreating
+                                            ? "bg-purple-600 text-white hover:bg-purple-700"
+                                            : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                    }`}
+                                >
+                                    {isCreating ? "Creating..." : "Create Page"}
+                                </button>
                             </div>
                         </div>
                     </div>
                 )}
 
+                {/* Existing Pages List */}
                 <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
                     <div className="border-b border-gray-200 p-6">
                         <div className="flex items-center justify-between">
@@ -255,9 +502,9 @@ export default function Step5Page({
                     <div className="p-6">
                         {enrollmentPages.length === 0 ? (
                             <div className="py-12 text-center text-gray-500">
-                                <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                                <ShoppingCart className="mx-auto mb-4 h-12 w-12 opacity-50" />
                                 <p>
-                                    No enrollment pages yet. Generate your first one
+                                    No enrollment pages yet. Create your first one
                                     above!
                                 </p>
                             </div>
@@ -266,42 +513,98 @@ export default function Step5Page({
                                 {enrollmentPages.map((page) => (
                                     <div
                                         key={page.id}
-                                        onClick={() => setSelectedPage(page)}
-                                        className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-emerald-300 hover:shadow-md"
+                                        className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md"
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
-                                                <h4 className="mb-2 text-lg font-semibold text-gray-900">
-                                                    {page.content.headline ||
-                                                        "Untitled Page"}
-                                                </h4>
-                                                <p className="mb-2 text-sm text-gray-600">
-                                                    {page.content.subheadline ||
-                                                        "No subheadline"}
+                                                <div className="mb-2 flex items-center gap-3">
+                                                    <h4 className="text-lg font-semibold text-gray-900">
+                                                        {page.headline}
+                                                    </h4>
+                                                    <span
+                                                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                                            page.is_published
+                                                                ? "bg-green-100 text-green-800"
+                                                                : "bg-yellow-100 text-yellow-800"
+                                                        }`}
+                                                    >
+                                                        {page.is_published
+                                                            ? "Published"
+                                                            : "Draft"}
+                                                    </span>
+                                                </div>
+
+                                                <p className="mb-3 text-sm text-gray-600">
+                                                    {page.subheadline}
                                                 </p>
-                                                <span className="text-xs text-gray-500">
-                                                    Created{" "}
-                                                    {new Date(
-                                                        page.created_at
-                                                    ).toLocaleDateString()}
-                                                </span>
+
+                                                <div className="flex items-center gap-4 text-sm text-gray-500">
+                                                    <span>
+                                                        Created{" "}
+                                                        {new Date(
+                                                            page.created_at
+                                                        ).toLocaleDateString()}
+                                                    </span>
+                                                    <span>Type: {page.page_type}</span>
+                                                </div>
                                             </div>
 
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDelete(page.id);
-                                                }}
-                                                className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() =>
+                                                        handlePreview(page.id)
+                                                    }
+                                                    className="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                                    title="Preview"
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </button>
+
+                                                <button
+                                                    onClick={() => handleEdit(page.id)}
+                                                    className="rounded p-2 text-purple-600 hover:bg-purple-50"
+                                                    title="Edit with Visual Editor"
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                </button>
+
+                                                <button
+                                                    onClick={() =>
+                                                        handleDelete(page.id)
+                                                    }
+                                                    className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
                             </div>
                         )}
                     </div>
+                </div>
+
+                {/* Helper Info */}
+                <div className="rounded-lg border border-blue-100 bg-blue-50 p-6">
+                    <h4 className="mb-3 font-semibold text-blue-900">
+                        💡 Enrollment Page Tips
+                    </h4>
+                    <ul className="space-y-2 text-sm text-blue-800">
+                        <li>
+                            • Use urgency and scarcity elements to drive immediate
+                            action
+                        </li>
+                        <li>
+                            • Customize pricing and value stack in the Visual Editor
+                        </li>
+                        <li>
+                            • Add testimonials from your deck structure or create new
+                            ones
+                        </li>
+                        <li>• Changes auto-save every 3 seconds</li>
+                    </ul>
                 </div>
             </div>
         </StepLayout>

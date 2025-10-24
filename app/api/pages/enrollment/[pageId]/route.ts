@@ -1,86 +1,53 @@
 /**
- * Enrollment Page API
- * Handles updates to enrollment/sales pages including HTML content from visual editor
+ * API route to update enrollment page details
  */
 
-import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserWithProfile } from "@/lib/auth";
+import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 
-export async function PUT(
+export async function PATCH(
     request: NextRequest,
-    context: { params: Promise<{ pageId: string }> }
+    { params }: { params: Promise<{ pageId: string }> }
 ) {
     try {
-        const { pageId } = await context.params;
+        const { user } = await getCurrentUserWithProfile();
+        const { pageId } = await params;
         const body = await request.json();
-        const { html_content, headline, subheadline, is_published } = body;
+        const { vanity_slug } = body;
 
         const supabase = await createClient();
 
-        // Get current user
-        const {
-            data: { user },
-            error: userError,
-        } = await supabase.auth.getUser();
+        // Check if slug already exists for another page
+        if (vanity_slug) {
+            const { data: existingPage } = await supabase
+                .from("enrollment_pages")
+                .select("id")
+                .eq("user_id", user.id)
+                .eq("vanity_slug", vanity_slug)
+                .neq("id", pageId)
+                .single();
 
-        if (userError || !user) {
-            logger.warn({ pageId }, "Unauthorized page update attempt");
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            if (existingPage) {
+                return NextResponse.json(
+                    { error: "Slug already in use" },
+                    { status: 400 }
+                );
+            }
         }
 
-        // Verify user owns this page
-        const { data: existingPage, error: fetchError } = await supabase
+        const { data: page, error } = await supabase
             .from("enrollment_pages")
-            .select("user_id")
+            .update({ vanity_slug, updated_at: new Date().toISOString() })
             .eq("id", pageId)
-            .single();
-
-        if (fetchError || !existingPage) {
-            logger.error({ error: fetchError, pageId }, "Page not found");
-            return NextResponse.json({ error: "Page not found" }, { status: 404 });
-        }
-
-        if (existingPage.user_id !== user.id) {
-            logger.warn(
-                { pageId, userId: user.id, ownerId: existingPage.user_id },
-                "User attempted to update page they don't own"
-            );
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
-
-        // Prepare update data
-        const updateData: Record<string, unknown> = {
-            updated_at: new Date().toISOString(),
-        };
-
-        if (html_content !== undefined) {
-            updateData.html_content = html_content;
-        }
-
-        if (headline !== undefined) {
-            updateData.headline = headline;
-        }
-
-        if (subheadline !== undefined) {
-            updateData.subheadline = subheadline;
-        }
-
-        if (is_published !== undefined) {
-            updateData.is_published = is_published;
-        }
-
-        // Update the page
-        const { data: updatedPage, error: updateError } = await supabase
-            .from("enrollment_pages")
-            .update(updateData)
-            .eq("id", pageId)
+            .eq("user_id", user.id)
             .select()
             .single();
 
-        if (updateError) {
+        if (error) {
             logger.error(
-                { error: updateError, pageId },
+                { error, pageId, userId: user.id },
                 "Failed to update enrollment page"
             );
             return NextResponse.json(
@@ -90,45 +57,13 @@ export async function PUT(
         }
 
         logger.info(
-            { pageId, userId: user.id, hasHtmlContent: !!html_content },
+            { pageId, vanity_slug, userId: user.id },
             "Enrollment page updated successfully"
         );
 
-        return NextResponse.json({
-            success: true,
-            page: updatedPage,
-        });
+        return NextResponse.json({ success: true, page });
     } catch (error) {
-        logger.error({ error }, "Error updating enrollment page");
-        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
-    }
-}
-
-export async function GET(
-    request: NextRequest,
-    context: { params: Promise<{ pageId: string }> }
-) {
-    try {
-        const { pageId } = await context.params;
-        const supabase = await createClient();
-
-        const { data: page, error } = await supabase
-            .from("enrollment_pages")
-            .select("*")
-            .eq("id", pageId)
-            .single();
-
-        if (error || !page) {
-            logger.error({ error, pageId }, "Page not found");
-            return NextResponse.json({ error: "Page not found" }, { status: 404 });
-        }
-
-        return NextResponse.json({
-            success: true,
-            page,
-        });
-    } catch (error) {
-        logger.error({ error }, "Error fetching enrollment page");
+        logger.error({ error }, "Error in enrollment page update route");
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

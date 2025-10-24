@@ -10,11 +10,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { PublishToggle } from "@/components/pages/publish-toggle";
-import { ShareButton } from "@/components/pages/share-button";
+import { SlugEditor } from "@/components/pages/slug-editor";
 import { formatDate } from "@/lib/utils";
-import { ExternalLink, Edit } from "lucide-react";
+import { ExternalLink, Edit, Copy, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/client-logger";
+import { useToast } from "@/components/ui/use-toast";
 import Link from "next/link";
 
 interface PageData {
@@ -37,6 +38,8 @@ interface PagesListProps {
 export function PagesList({ userId, username }: PagesListProps) {
     const [pages, setPages] = useState<PageData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+    const { toast } = useToast();
 
     useEffect(() => {
         fetchPages();
@@ -156,6 +159,46 @@ export function PagesList({ userId, username }: PagesListProps) {
         }
     };
 
+    const handleCopyUrl = async (pageId: string, vanitySlug: string | null) => {
+        if (!vanitySlug) {
+            toast({
+                title: "No slug set",
+                description: "Set a slug first to get a public URL",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        const url = `${window.location.origin}/${username}/${vanitySlug}`;
+
+        try {
+            await navigator.clipboard.writeText(url);
+            setCopiedUrl(pageId);
+
+            toast({
+                title: "URL copied!",
+                description: "The full public URL has been copied to your clipboard",
+            });
+
+            setTimeout(() => setCopiedUrl(null), 2000);
+        } catch (error) {
+            logger.error({ error }, "Failed to copy URL");
+            toast({
+                title: "Copy failed",
+                description: "Failed to copy URL. Please try again.",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleSlugUpdate = (pageId: string, newSlug: string) => {
+        setPages((currentPages) =>
+            currentPages.map((page) =>
+                page.id === pageId ? { ...page, vanitySlug: newSlug } : page
+            )
+        );
+    };
+
     if (isLoading) {
         return (
             <div className="text-center py-12 text-gray-500">
@@ -200,10 +243,54 @@ export function PagesList({ userId, username }: PagesListProps) {
                                 </div>
                             </div>
 
-                            <ShareButton
-                                username={username}
-                                vanitySlug={page.vanitySlug}
-                            />
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                                        Slug
+                                    </label>
+                                    <SlugEditor
+                                        pageId={page.id}
+                                        pageType={page.type}
+                                        initialSlug={page.vanitySlug}
+                                        username={username}
+                                        onUpdate={(newSlug) =>
+                                            handleSlugUpdate(page.id, newSlug)
+                                        }
+                                    />
+                                </div>
+
+                                {page.vanitySlug && (
+                                    <div>
+                                        <label className="mb-1 block text-xs font-medium text-gray-700">
+                                            Public URL
+                                        </label>
+                                        <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                                            <code className="flex-1 text-sm text-gray-700 truncate">
+                                                {window.location.origin}/{username}/
+                                                {page.vanitySlug}
+                                            </code>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() =>
+                                                    handleCopyUrl(
+                                                        page.id,
+                                                        page.vanitySlug
+                                                    )
+                                                }
+                                                className="h-8 px-2 flex-shrink-0"
+                                                title="Copy full URL"
+                                            >
+                                                {copiedUrl === page.id ? (
+                                                    <Check className="h-4 w-4 text-green-600" />
+                                                ) : (
+                                                    <Copy className="h-4 w-4" />
+                                                )}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
 
                             <div className="flex items-center justify-between pt-2 border-t border-gray-200">
                                 <div className="flex items-center gap-4">

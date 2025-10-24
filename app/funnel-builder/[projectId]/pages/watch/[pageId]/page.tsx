@@ -84,10 +84,8 @@ export default async function WatchPageEditor({ params, searchParams }: PageProp
         );
     }
 
-    logger.info(
-        { pageId, projectId, isEditMode, userId: user.id },
-        "Rendering watch page"
-    );
+    // Note: Removed logger.info here - was causing "worker has exited" error
+    // in Next.js server components. Logging moved to client-side component.
 
     return (
         <EditorPageWrapper

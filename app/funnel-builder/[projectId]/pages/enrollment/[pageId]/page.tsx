@@ -87,10 +87,8 @@ export default async function EnrollmentPageEditor({
         );
     }
 
-    logger.info(
-        { pageId, projectId, isEditMode, userId: user.id },
-        "Rendering enrollment page"
-    );
+    // Note: Removed logger.info here - was causing "worker has exited" error
+    // in Next.js server components. Logging moved to client-side component.
 
     return (
         <EditorPageWrapper

@@ -59,8 +59,11 @@ export function EditorPageWrapper({
 
         logger.info(
             { pageId, pageType, isEditMode },
-            "Editor page wrapper initialized"
+            "📝 Editor page wrapper mounted - loading editor scripts"
         );
+
+        // Debug log for theme
+        logger.info({ theme }, "🎨 Theme CSS variables injected");
     }, [isEditMode, theme, pageId, pageType]);
 
     // If not in edit mode, just render the HTML content
@@ -131,6 +134,12 @@ export function EditorPageWrapper({
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Visual editor script loaded");
+
+                    // CRITICAL: Instantiate the visual editor
+                    if (typeof VisualEditor !== "undefined" && !window.visualEditor) {
+                        window.visualEditor = new VisualEditor();
+                        console.log("✅ Visual editor instantiated!");
+                    }
                 }}
                 onError={(e) => {
                     logger.error({ error: e }, "Failed to load visual editor script");
@@ -139,18 +148,43 @@ export function EditorPageWrapper({
             <Script
                 src="/funnel-system/assets/js/blocks.js"
                 strategy="afterInteractive"
-                onLoad={() => logger.info({}, "Blocks script loaded")}
+                onLoad={() => {
+                    logger.info({}, "Blocks script loaded");
+
+                    // CRITICAL: Instantiate BlockManager
+                    if (typeof BlockManager !== "undefined" && !window.blockManager) {
+                        window.blockManager = new BlockManager();
+                        console.log("✅ Block manager instantiated!");
+                    }
+                }}
             />
             <Script
                 src="/funnel-system/assets/js/component-library.js"
                 strategy="afterInteractive"
-                onLoad={() => logger.info({}, "Component library script loaded")}
+                onLoad={() => {
+                    logger.info({}, "Component library script loaded");
+
+                    // CRITICAL: Instantiate ComponentLibrary
+                    if (
+                        typeof ComponentLibrary !== "undefined" &&
+                        !window.componentLibrary
+                    ) {
+                        window.componentLibrary = new ComponentLibrary();
+                        console.log("✅ Component library instantiated!");
+                    }
+                }}
             />
 
             {/* Editor UI containers - populated by vanilla JS */}
-            <div id="editor-interface" className="editor-interface" />
-            <div id="block-settings" className="block-settings" />
-            <div id="component-library" />
+            <div id="editor-interface" className="editor-interface">
+                <div id="editor-toolbar" className="editor-toolbar">
+                    {/* Populated by visual-editor.js setupToolbar() */}
+                </div>
+            </div>
+            <div id="block-settings" className="block-settings">
+                {/* Populated by visual-editor.js when block selected */}
+            </div>
+            <div id="component-library">{/* Populated by component-library.js */}</div>
 
             {/* Page content - editor attaches to DOM automatically */}
             <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
@@ -178,9 +212,122 @@ export function EditorPageWrapper({
                 ✏️
             </button>
 
-            {/* Auto-save integration */}
-            <Script id="auto-save-setup" strategy="afterInteractive">
+            {/* Editor initialization and auto-save */}
+            <Script id="editor-init" strategy="afterInteractive">
                 {`
+                    // Initialize immediately - DOM is already ready since scripts load afterInteractive
+                    console.log('🎯 Initializing visual editor...');
+
+                    // Setup function to connect toggle button
+                    function connectToggleButton() {
+                        const toggleBtn = document.getElementById('toggle-editor');
+                        const editorInterface = document.getElementById('editor-interface');
+
+                        if (toggleBtn && editorInterface) {
+                            toggleBtn.addEventListener('click', () => {
+                                editorInterface.classList.toggle('active');
+
+                                // Toggle the visual editor edit mode
+                                if (window.visualEditor) {
+                                    window.visualEditor.toggleEditMode();
+                                } else {
+                                    console.warn('⚠️ Visual editor not loaded yet');
+                                }
+                            });
+
+                            console.log('✅ Toggle button connected');
+                            return true;
+                        }
+                        return false;
+                    }
+
+                    // Try connecting immediately, retry if elements not ready
+                    if (!connectToggleButton()) {
+                        setTimeout(connectToggleButton, 50);
+                    }
+
+                    // Wait for editor to load, then activate edit mode automatically
+                    const waitForEditor = setInterval(() => {
+                        if (window.visualEditor) {
+                            clearInterval(waitForEditor);
+                            console.log('✅ Visual editor loaded successfully');
+
+                            const editorInterface = document.getElementById('editor-interface');
+                            const editorToolbar = document.getElementById('editor-toolbar');
+
+                            console.log('🔍 Editor elements:', {
+                                editorInterface: editorInterface ? 'found' : 'MISSING',
+                                editorToolbar: editorToolbar ? 'found' : 'MISSING',
+                                toolbarHTML: editorToolbar?.innerHTML?.length || 0
+                            });
+
+                            if (editorInterface) {
+                                // Show editor interface immediately
+                                editorInterface.classList.add('active');
+                                editorInterface.style.opacity = '1';
+                                console.log('✅ Editor interface activated (should be visible now)');
+                            }
+
+                            // Activate edit mode
+                            if (window.visualEditor.isEditMode === false) {
+                                window.visualEditor.toggleEditMode();
+                            }
+                            
+                            // CRITICAL: Hook auto-save into editor events
+                            // Override the editor's save function to use our database save
+                            const originalSave = window.visualEditor.savePage || function() {};
+                            window.visualEditor.savePage = function() {
+                                console.log('💾 Editor save triggered - saving to database...');
+                                if (window.saveToDatabase) {
+                                    window.saveToDatabase();
+                                }
+                            };
+                            
+                            // Auto-save on content changes
+                            document.addEventListener('input', function(e) {
+                                if (e.target.hasAttribute('data-editable') || e.target.closest('[data-editable]')) {
+                                    console.log('✏️ Content edited - scheduling auto-save...');
+                                    if (window.scheduleAutoSave) {
+                                        window.scheduleAutoSave();
+                                    }
+                                }
+                            });
+                            
+                            // Auto-save on drag/drop
+                            document.addEventListener('dragend', function() {
+                                console.log('🔀 Block reordered - scheduling auto-save...');
+                                if (window.scheduleAutoSave) {
+                                    window.scheduleAutoSave();
+                                }
+                            });
+                            
+                            // Auto-save on block deletion
+                            document.addEventListener('click', function(e) {
+                                if (e.target.closest('.delete-section-btn')) {
+                                    console.log('🗑️ Block deleted - scheduling auto-save...');
+                                    setTimeout(() => {
+                                        if (window.scheduleAutoSave) {
+                                            window.scheduleAutoSave();
+                                        }
+                                    }, 500); // Delay to let delete complete
+                                }
+                            });
+                            
+                            console.log('🎨 Editor is now active and ready to use!');
+                            console.log('📊 Toolbar should contain buttons, undo/redo, theme switcher');
+                            console.log('💾 Auto-save hooks installed - edits will save in 3 seconds');
+                        }
+                    }, 100);
+
+                    // Timeout after 10 seconds
+                    setTimeout(() => {
+                        clearInterval(waitForEditor);
+                        if (!window.visualEditor) {
+                            console.error('❌ Visual editor failed to load within 10 seconds');
+                            console.error('Check that funnel-system assets are deployed correctly');
+                        }
+                    }, 10000);
+
                     // Auto-save function for database persistence
                     window.saveToDatabase = async function() {
                         try {

@@ -88,10 +88,8 @@ export default async function RegistrationPageEditor({
         );
     }
 
-    logger.info(
-        { pageId, projectId, isEditMode, userId: user.id },
-        "Rendering registration page"
-    );
+    // Note: Removed logger.info here - was causing "worker has exited" error
+    // in Next.js server components. Logging moved to client-side component.
 
     return (
         <EditorPageWrapper

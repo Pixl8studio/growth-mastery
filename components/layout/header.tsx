@@ -14,7 +14,8 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { User, Settings, LogOut } from "lucide-react";
+import { User, Settings } from "lucide-react";
+import { LogoutButton } from "@/components/auth/logout-button";
 
 export async function Header() {
     const user = await getCurrentUser();
@@ -25,7 +26,7 @@ export async function Header() {
                 <div className="flex h-16 items-center justify-between">
                     {/* Logo */}
                     <Link
-                        href={user ? "/dashboard" : "/"}
+                        href={user ? "/funnel-builder" : "/"}
                         className="flex items-center space-x-2"
                     >
                         <span className="text-2xl font-bold text-gray-900">
@@ -71,15 +72,6 @@ export async function Header() {
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem asChild>
                                         <Link
-                                            href="/dashboard"
-                                            className="cursor-pointer"
-                                        >
-                                            <User className="mr-2 h-4 w-4" />
-                                            Dashboard
-                                        </Link>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem asChild>
-                                        <Link
                                             href="/settings"
                                             className="cursor-pointer"
                                         >
@@ -88,16 +80,8 @@ export async function Header() {
                                         </Link>
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
-                                    <DropdownMenuItem asChild>
-                                        <form action="/api/auth/logout" method="POST">
-                                            <button
-                                                type="submit"
-                                                className="flex w-full cursor-pointer items-center"
-                                            >
-                                                <LogOut className="mr-2 h-4 w-4" />
-                                                Sign out
-                                            </button>
-                                        </form>
+                                    <DropdownMenuItem>
+                                        <LogoutButton />
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>

@@ -6,6 +6,7 @@
 import { getCurrentUserWithProfile } from "@/lib/auth";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Header } from "@/components/layout/header";
 
 export const metadata = {
     title: "Settings | Genie AI",
@@ -32,25 +33,7 @@ export default async function SettingsLayout({
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <header className="border-b bg-white">
-                <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between">
-                        <Link
-                            href="/dashboard"
-                            className="text-2xl font-bold text-gray-900"
-                        >
-                            Genie AI
-                        </Link>
-                        <Link
-                            href="/dashboard"
-                            className="text-sm font-medium text-gray-600 hover:text-gray-900"
-                        >
-                            ← Back to Dashboard
-                        </Link>
-                    </div>
-                </div>
-            </header>
+            <Header />
 
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                 <div className="grid gap-8 lg:grid-cols-12">

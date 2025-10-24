@@ -13,6 +13,7 @@ import { formatDate } from "@/lib/utils";
 import { FUNNEL_CONFIG } from "@/lib/config";
 import { Plus, BarChart3, Users, Zap } from "lucide-react";
 import { PagesList } from "@/components/funnel-builder/pages-list";
+import { Header } from "@/components/layout/header";
 
 export const metadata = {
     title: "Funnel Builder | Genie AI",
@@ -41,32 +42,7 @@ export default async function FunnelBuilderPage() {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <header className="border-b bg-white">
-                <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <Link
-                                href="/dashboard"
-                                className="text-xl font-bold text-gray-900"
-                            >
-                                Genie AI
-                            </Link>
-                            <p className="mt-1 text-sm text-gray-600">Funnel Builder</p>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                            <span className="text-sm text-gray-600">
-                                {profile.full_name || user.email}
-                            </span>
-                            <Link href="/settings">
-                                <Button variant="outline" size="sm">
-                                    Settings
-                                </Button>
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <Header />
 
             {/* Main Content */}
             <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">

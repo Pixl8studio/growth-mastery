@@ -5,9 +5,10 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserWithProfile } from "@/lib/auth";
-import Link from "next/link";
 import { ContactsTable } from "@/components/contacts/contacts-table";
 import { ContactsStats } from "@/components/contacts/contacts-stats";
+import { Header } from "@/components/layout/header";
+import Link from "next/link";
 
 export const metadata = {
     title: "Contacts | Genie AI",
@@ -54,7 +55,7 @@ export default async function ContactsPage({
         contactsQuery = contactsQuery.eq("funnel_project_id", funnelProjectId);
     }
 
-    const { data: contacts, error, count } = await contactsQuery;
+    const { data: contacts, error, count: _count } = await contactsQuery;
 
     if (error) {
         console.error("Error fetching contacts:", error);
@@ -88,30 +89,7 @@ export default async function ContactsPage({
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <header className="border-b bg-white">
-                <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-2xl font-bold text-gray-900">
-                                Contacts
-                            </h1>
-                            <p className="text-sm text-gray-600">
-                                {count} {count === 1 ? "contact" : "contacts"} in your
-                                funnels
-                            </p>
-                        </div>
-                        <div className="flex items-center space-x-4">
-                            <Link
-                                href="/dashboard"
-                                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                            >
-                                ← Back to Dashboard
-                            </Link>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <Header />
 
             {/* Main Content */}
             <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">

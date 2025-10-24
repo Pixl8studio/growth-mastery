@@ -3,7 +3,7 @@
  */
 
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentUserWithProfile } from "@/lib/auth";
+import { getCurrentUserWithProfileForAPI } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 
@@ -12,7 +12,7 @@ export async function POST(
     { params }: { params: Promise<{ pageId: string }> }
 ) {
     try {
-        const { user } = await getCurrentUserWithProfile();
+        const { user } = await getCurrentUserWithProfileForAPI();
         const { pageId } = await params;
         const { published } = await request.json();
 
@@ -44,6 +44,13 @@ export async function POST(
 
         return NextResponse.json({ success: true, page });
     } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+        // Handle authentication errors
+        if (errorMessage === "Unauthorized") {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         logger.error({ error }, "Error in watch page publish route");
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }

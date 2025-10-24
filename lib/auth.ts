@@ -72,9 +72,29 @@ export async function getUserProfile(userId: string) {
 
 /**
  * Get current user with profile
+ * Uses requireAuth which redirects - only for server components
  */
 export async function getCurrentUserWithProfile() {
     const user = await requireAuth();
+    const profile = await getUserProfile(user.id);
+
+    return {
+        user,
+        profile,
+    };
+}
+
+/**
+ * Get current user with profile for API routes
+ * Throws error instead of redirecting
+ */
+export async function getCurrentUserWithProfileForAPI() {
+    const user = await getCurrentUser();
+
+    if (!user) {
+        throw new Error("Unauthorized");
+    }
+
     const profile = await getUserProfile(user.id);
 
     return {

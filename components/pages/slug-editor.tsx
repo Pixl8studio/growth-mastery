@@ -55,38 +55,88 @@ export function SlugEditor({
         setIsSaving(true);
 
         try {
-            const response = await fetch(`/api/pages/${pageType}/${pageId}`, {
+            logger.info(
+                { pageId, pageType, slug: formattedSlug },
+                "Attempting to update slug"
+            );
+
+            const url = `/api/pages/${pageType}/${pageId}`;
+            const response = await fetch(url, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ vanity_slug: formattedSlug }),
             });
 
+            logger.info(
+                {
+                    status: response.status,
+                    statusText: response.statusText,
+                    url,
+                },
+                "Received response from API"
+            );
+
+            let data;
+            try {
+                data = await response.json();
+            } catch (jsonError) {
+                logger.error(
+                    {
+                        status: response.status,
+                        statusText: response.statusText,
+                        jsonError:
+                            jsonError instanceof Error ? jsonError.message : "Unknown",
+                    },
+                    "Failed to parse API response as JSON"
+                );
+                throw new Error(`API error: ${response.status} ${response.statusText}`);
+            }
+
             if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || "Failed to update slug");
+                logger.error(
+                    {
+                        status: response.status,
+                        statusText: response.statusText,
+                        errorData: data,
+                        url,
+                    },
+                    "API returned error response"
+                );
+                throw new Error(
+                    data.error || `Failed to update slug (${response.status})`
+                );
             }
 
             logger.info(
                 { pageId, pageType, slug: formattedSlug },
-                "Slug updated successfully"
+                "Slug updated successfully ✨"
             );
 
+            const fullUrl = `${window.location.origin}/${username}/${formattedSlug}`;
+
             toast({
-                title: "Slug updated",
-                description: `Your page URL is now /${username}/${formattedSlug}`,
+                title: "Slug updated ✨",
+                description: `Your page URL is now ${fullUrl}`,
             });
 
             setSlug(formattedSlug);
             setIsEditing(false);
             onUpdate?.(formattedSlug);
         } catch (error) {
-            logger.error({ error, pageId, pageType }, "Failed to update slug");
+            const errorMessage =
+                error instanceof Error ? error.message : "Unknown error";
+            const errorDetails = {
+                pageId,
+                pageType,
+                message: errorMessage,
+                errorType: error?.constructor?.name,
+            };
+
+            logger.error(errorDetails, "Failed to update slug");
+
             toast({
                 title: "Error",
-                description:
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to update slug. Please try again.",
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {
@@ -99,17 +149,31 @@ export function SlugEditor({
         setIsEditing(false);
     };
 
-    const handleCopySlug = async () => {
-        if (!slug) return;
+    const getPageUrl = () => {
+        // Prefer vanity URL if slug is set, otherwise use hard link
+        if (slug) {
+            return `${window.location.origin}/${username}/${slug}`;
+        }
+        return `${window.location.origin}/p/${pageId}`;
+    };
+
+    const handleCopyUrl = async () => {
+        const fullUrl = getPageUrl();
 
         try {
-            await navigator.clipboard.writeText(slug);
+            await navigator.clipboard.writeText(fullUrl);
+            const urlType = slug ? "Vanity URL" : "Page URL";
             toast({
-                title: "Slug copied!",
-                description: "The slug has been copied to your clipboard",
+                title: `${urlType} copied! ✨`,
+                description: "The URL has been copied to your clipboard",
             });
         } catch (error) {
-            logger.error({ error }, "Failed to copy slug");
+            logger.error({ error }, "Failed to copy URL");
+            toast({
+                title: "Copy failed",
+                description: "Failed to copy URL. Please try again.",
+                variant: "destructive",
+            });
         }
     };
 
@@ -132,8 +196,9 @@ export function SlugEditor({
                         }}
                         autoFocus
                     />
-                    <p className="mt-1 text-xs text-gray-500">
-                        URL will be: /{username}/{formatSlug(slug)}
+                    <p className="mt-1 text-xs text-gray-500 truncate">
+                        URL will be: {window.location.origin}/{username}/
+                        {formatSlug(slug)}
                     </p>
                 </div>
                 <Button
@@ -158,35 +223,44 @@ export function SlugEditor({
         );
     }
 
+    const displayUrl = getPageUrl();
+    const isVanityUrl = !!slug;
+
     return (
         <div className="flex items-center gap-2">
-            <div className="flex-1">
-                {slug ? (
-                    <code className="text-sm text-gray-700">
-                        /{username}/{slug}
+            <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                    <code className="text-sm text-gray-700 truncate block">
+                        {displayUrl}
                     </code>
-                ) : (
-                    <span className="text-sm text-gray-500 italic">No slug set</span>
+                    {!isVanityUrl && (
+                        <span className="text-xs text-gray-500 italic whitespace-nowrap">
+                            (ID link)
+                        </span>
+                    )}
+                </div>
+                {!isVanityUrl && (
+                    <p className="text-xs text-gray-500 mt-1">
+                        Set a vanity slug for a custom URL
+                    </p>
                 )}
             </div>
-            <div className="flex gap-1">
-                {slug && (
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleCopySlug}
-                        className="h-8 px-2"
-                        title="Copy slug"
-                    >
-                        <Copy className="h-4 w-4" />
-                    </Button>
-                )}
+            <div className="flex gap-1 flex-shrink-0">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleCopyUrl}
+                    className="h-8 px-2"
+                    title={isVanityUrl ? "Copy vanity URL" : "Copy page URL"}
+                >
+                    <Copy className="h-4 w-4" />
+                </Button>
                 <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => setIsEditing(true)}
                     className="h-8 px-2"
-                    title="Edit slug"
+                    title="Edit vanity slug"
                 >
                     <Pencil className="h-4 w-4" />
                 </Button>

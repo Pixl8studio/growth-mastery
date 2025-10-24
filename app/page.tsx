@@ -4,8 +4,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import Link from "next/link";
 import { Sparkles, Zap, Users, BarChart3 } from "lucide-react";
+import { getCurrentUser } from "@/lib/auth";
+import { redirect } from "next/navigation";
 
-export default function HomePage() {
+export default async function HomePage() {
+    const user = await getCurrentUser();
+
+    if (user) {
+        redirect("/funnel-builder");
+    }
+
     return (
         <div className="flex min-h-screen flex-col">
             <Header />

@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { StepperNav } from "@/components/funnel/stepper-nav";
 import { ProgressBar } from "@/components/funnel/progress-bar";
 import { formatDate } from "@/lib/utils";
-import { ArrowLeft, Settings, Play } from "lucide-react";
+import { Header } from "@/components/layout/header";
 
 interface PageProps {
     params: Promise<{
@@ -46,36 +46,7 @@ export default async function FunnelProjectPage({ params }: PageProps) {
 
     return (
         <div className="min-h-screen bg-gray-50">
-            {/* Header */}
-            <header className="border-b bg-white">
-                <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                            <Link
-                                href="/funnel-builder"
-                                className="inline-flex items-center text-sm font-medium text-gray-600 hover:text-gray-900"
-                            >
-                                <ArrowLeft className="mr-2 h-4 w-4" />
-                                All Funnels
-                            </Link>
-                        </div>
-                        <div className="flex items-center space-x-3">
-                            {project.status === "active" && (
-                                <Link href={`/funnel-builder/${projectId}/analytics`}>
-                                    <Button variant="outline" size="sm">
-                                        <Play className="mr-2 h-4 w-4" />
-                                        View Live Funnel
-                                    </Button>
-                                </Link>
-                            )}
-                            <Button variant="outline" size="sm">
-                                <Settings className="mr-2 h-4 w-4" />
-                                Settings
-                            </Button>
-                        </div>
-                    </div>
-                </div>
-            </header>
+            <Header />
 
             {/* Main Content */}
             <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">

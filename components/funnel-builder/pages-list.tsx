@@ -306,21 +306,22 @@ export function PagesList({ userId, username }: PagesListProps) {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Link
-                                        href={`/funnel-builder/${page.projectId}/step/${page.stepNumber}`}
+                                        href={`/funnel-builder/${page.projectId}/pages/${page.type}/${page.id}?edit=true`}
+                                        target="_blank"
                                     >
                                         <Button variant="outline" size="sm">
                                             <Edit className="mr-2 h-4 w-4" />
-                                            Edit
+                                            Edit Page
                                         </Button>
                                     </Link>
-                                    {page.isPublished && page.vanitySlug && (
+                                    {page.vanitySlug && (
                                         <Link
                                             href={`/${username}/${page.vanitySlug}`}
                                             target="_blank"
                                         >
                                             <Button variant="outline" size="sm">
                                                 <ExternalLink className="mr-2 h-4 w-4" />
-                                                View
+                                                View Public
                                             </Button>
                                         </Link>
                                     )}

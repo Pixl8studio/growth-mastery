@@ -9,6 +9,7 @@ import { notFound } from "next/navigation";
 import { RegistrationPageTemplate } from "@/components/public/registration-page-template";
 import { WatchPageTemplate } from "@/components/public/watch-page-template";
 import { EnrollmentPageTemplate } from "@/components/public/enrollment-page-template";
+import { PublicPageWrapper } from "@/components/public/public-page-wrapper";
 
 interface PageProps {
     params: Promise<{
@@ -37,7 +38,7 @@ export default async function PublicPageBySlug({ params }: PageProps) {
 
     // Try to find the page in each table by vanity_slug
     // Check registration pages
-    const { data: registrationPage } = await supabase
+    const { data: registrationPage, error: regError } = await supabase
         .from("registration_pages")
         .select("*, funnel_projects(*)")
         .eq("user_id", userId)
@@ -46,11 +47,22 @@ export default async function PublicPageBySlug({ params }: PageProps) {
         .single();
 
     if (registrationPage) {
+        // If html_content exists, render it with proper wrapper
+        if (registrationPage.html_content) {
+            return (
+                <PublicPageWrapper
+                    htmlContent={registrationPage.html_content}
+                    theme={registrationPage.theme}
+                />
+            );
+        }
+
+        // Fallback to template if no html_content
         return <RegistrationPageTemplate page={registrationPage} />;
     }
 
     // Check watch pages
-    const { data: watchPage } = await supabase
+    const { data: watchPage, error: watchError } = await supabase
         .from("watch_pages")
         .select("*, funnel_projects(*), pitch_videos(*)")
         .eq("user_id", userId)
@@ -59,11 +71,22 @@ export default async function PublicPageBySlug({ params }: PageProps) {
         .single();
 
     if (watchPage) {
+        // If html_content exists, render it with proper wrapper
+        if (watchPage.html_content) {
+            return (
+                <PublicPageWrapper
+                    htmlContent={watchPage.html_content}
+                    theme={watchPage.theme}
+                />
+            );
+        }
+
+        // Fallback to template if no html_content
         return <WatchPageTemplate page={watchPage} />;
     }
 
     // Check enrollment pages
-    const { data: enrollmentPage } = await supabase
+    const { data: enrollmentPage, error: enrollError } = await supabase
         .from("enrollment_pages")
         .select("*, funnel_projects(*), offers(*)")
         .eq("user_id", userId)
@@ -72,6 +95,17 @@ export default async function PublicPageBySlug({ params }: PageProps) {
         .single();
 
     if (enrollmentPage) {
+        // If html_content exists, render it with proper wrapper
+        if (enrollmentPage.html_content) {
+            return (
+                <PublicPageWrapper
+                    htmlContent={enrollmentPage.html_content}
+                    theme={enrollmentPage.theme}
+                />
+            );
+        }
+
+        // Fallback to template if no html_content
         return <EnrollmentPageTemplate page={enrollmentPage} />;
     }
 

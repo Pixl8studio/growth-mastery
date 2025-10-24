@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { FUNNEL_CONFIG } from "@/lib/config";
 import { Plus, BarChart3, Users, Zap } from "lucide-react";
+import { PagesList } from "@/components/funnel-builder/pages-list";
 
 export const metadata = {
     title: "Funnel Builder | Genie AI",
@@ -278,6 +279,14 @@ export default async function FunnelBuilderPage() {
                             </CardContent>
                         </Card>
                     )}
+                </div>
+
+                {/* Recent Pages */}
+                <div className="mb-12">
+                    <div className="mb-6 flex items-center justify-between">
+                        <h2 className="text-2xl font-bold text-gray-900">Your Pages</h2>
+                    </div>
+                    <PagesList userId={user.id} username={profile.username || ""} />
                 </div>
 
                 {/* Process Overview */}

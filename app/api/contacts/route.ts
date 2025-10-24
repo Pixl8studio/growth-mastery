@@ -6,7 +6,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import { PAGINATION } from "@/lib/config";
+import { PAGINATION, APP_CONFIG } from "@/lib/config";
+import { sendWebhook, buildRegistrationPayload } from "@/lib/webhook-service";
 import { z } from "zod";
 
 // Validation schemas
@@ -207,6 +208,64 @@ export async function POST(request: NextRequest) {
         }
 
         requestLogger.info({ contactId: contact.id }, "Contact created successfully");
+
+        // Get funnel project details for webhook payload
+        const { data: projectDetails } = await supabase
+            .from("funnel_projects")
+            .select("name, slug")
+            .eq("id", funnelProjectId)
+            .single();
+
+        // Get user profile for webhook URL construction
+        const { data: userProfile } = await supabase
+            .from("user_profiles")
+            .select("username")
+            .eq("id", project.user_id)
+            .single();
+
+        // Send webhook notification (non-blocking)
+        if (projectDetails && userProfile) {
+            const pageUrl = registrationPageId
+                ? `${APP_CONFIG.url}/${userProfile.username}/${projectDetails.slug}/register`
+                : `${APP_CONFIG.url}/${userProfile.username}/${projectDetails.slug}`;
+
+            void (async () => {
+                try {
+                    const webhookPayload = buildRegistrationPayload({
+                        email,
+                        name,
+                        funnelProjectId,
+                        funnelProjectName: projectDetails.name,
+                        pageId: registrationPageId || funnelProjectId,
+                        pageUrl,
+                        visitorId: visitorId || contact.id,
+                        userAgent,
+                        referrer,
+                        utmParams: utmData
+                            ? {
+                                  source: utmData.source,
+                                  medium: utmData.medium,
+                                  campaign: utmData.campaign,
+                                  term: utmData.term,
+                                  content: utmData.content,
+                              }
+                            : undefined,
+                    });
+
+                    await sendWebhook(project.user_id, webhookPayload);
+                    requestLogger.info(
+                        { contactId: contact.id },
+                        "Webhook sent for new contact"
+                    );
+                } catch (webhookError) {
+                    // Log but don't fail the request
+                    requestLogger.error(
+                        { error: webhookError, contactId: contact.id },
+                        "Failed to send webhook"
+                    );
+                }
+            })();
+        }
 
         return NextResponse.json({
             success: true,

@@ -230,9 +230,31 @@ export default function IntegrationsSettingsPage() {
                                     required={webhookEnabled}
                                 />
                                 <p className="mt-1 text-xs text-gray-500">
-                                    We'll send a POST request to this URL when a user
-                                    registers
+                                    We'll send a POST request to this URL when a contact
+                                    registers through your funnel pages
                                 </p>
+                            </div>
+
+                            {/* Popular CRM Setup Instructions */}
+                            <div className="rounded-md bg-blue-50 p-4">
+                                <h4 className="mb-2 text-sm font-semibold text-blue-900">
+                                    Popular CRM Setup
+                                </h4>
+                                <div className="space-y-2 text-xs text-blue-800">
+                                    <div>
+                                        <strong>GoHighLevel:</strong> Create a custom
+                                        webhook in Automation → Workflows, then paste
+                                        the URL here
+                                    </div>
+                                    <div>
+                                        <strong>Make.com / Zapier:</strong> Create a
+                                        webhook trigger and use the provided webhook URL
+                                    </div>
+                                    <div>
+                                        <strong>HubSpot / Salesforce:</strong> Use a
+                                        webhook integration tool or custom API endpoint
+                                    </div>
+                                </div>
                             </div>
 
                             <div>
@@ -271,25 +293,38 @@ export default function IntegrationsSettingsPage() {
                                 <h4 className="mb-2 text-sm font-semibold text-gray-900">
                                     Webhook Payload Example
                                 </h4>
+                                <p className="mb-3 text-xs text-gray-600">
+                                    This is what your CRM will receive when someone
+                                    registers:
+                                </p>
                                 <pre className="overflow-x-auto text-xs text-gray-700">
                                     {JSON.stringify(
                                         {
                                             event: "registration.submitted",
-                                            timestamp: "2025-01-23T12:00:00Z",
+                                            timestamp: "2025-01-24T12:00:00Z",
                                             data: {
                                                 email: "user@example.com",
                                                 name: "John Doe",
                                                 funnel: {
-                                                    projectId: "uuid",
-                                                    projectName: "My Funnel",
-                                                    pageId: "uuid",
+                                                    projectId: "abc-123",
+                                                    projectName:
+                                                        "My Masterclass Funnel",
+                                                    pageId: "page-456",
                                                     pageUrl:
-                                                        "https://genieai.com/username/funnel",
+                                                        "https://genieai.com/yourname/my-funnel/register",
                                                 },
                                                 visitor: {
-                                                    id: "visitor-uuid",
-                                                    userAgent: "Mozilla/5.0...",
+                                                    id: "visitor-789",
+                                                    userAgent:
+                                                        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
                                                     referrer: "https://google.com",
+                                                },
+                                                utm: {
+                                                    source: "facebook",
+                                                    medium: "cpc",
+                                                    campaign: "summer-promo",
+                                                    term: "online-course",
+                                                    content: "ad-variant-a",
                                                 },
                                             },
                                         },
@@ -297,6 +332,21 @@ export default function IntegrationsSettingsPage() {
                                         2
                                     )}
                                 </pre>
+                                <p className="mt-3 text-xs text-gray-600">
+                                    Headers:{" "}
+                                    <code className="rounded bg-gray-200 px-1">
+                                        Content-Type: application/json
+                                    </code>
+                                    {webhookSecret && (
+                                        <>
+                                            ,{" "}
+                                            <code className="rounded bg-gray-200 px-1">
+                                                X-Webhook-Signature: [HMAC-SHA256
+                                                signature]
+                                            </code>
+                                        </>
+                                    )}
+                                </p>
                             </div>
                         </div>
                     )}

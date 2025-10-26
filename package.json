@@ -119,7 +119,7 @@
       "prettier --write"
     ],
     "supabase/migrations/*.sql": [
-      "sql-formatter --language postgresql"
+      "sql-formatter --language postgresql --output"
     ]
   }
 }

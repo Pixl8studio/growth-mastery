@@ -185,6 +185,65 @@ genie-v3/
 - `pnpm clean:all` - Deep clean including node_modules
 - `./scripts/check-bugbot.sh` - Verify Cursor Bugbot installation
 
+## Database Schema
+
+### Core Funnel Builder Tables
+
+The application uses Supabase (PostgreSQL) for data storage with the following core
+tables:
+
+- `user_profiles` - User accounts and settings
+- `funnel_projects` - Webinar funnel projects
+- `vapi_transcripts` - AI call transcriptions
+- `offers` - Product/service offers
+- `deck_structures` - Slide deck structures
+- `gamma_decks` - Generated Gamma presentations
+- `enrollment_pages` - Purchase/booking pages
+- `talk_tracks` - Webinar scripts
+- `pitch_videos` - Video content
+- `watch_pages` - Video viewing pages
+- `registration_pages` - Signup pages
+- `funnel_flows` - Complete funnel configurations
+- `contacts` - Prospect/customer contacts
+- `contact_events` - Engagement tracking
+- `funnel_analytics` - Analytics data
+- `webhook_logs` - Webhook delivery logs
+- `payment_transactions` - Stripe payments
+- `stripe_accounts` - Stripe Connect accounts
+
+### AI Follow-Up Engine (GitHub Issue #23)
+
+**Status**: Data schema complete ✅ (Sub-Issue #1)
+
+The AI Follow-Up Engine adds intelligent, personalized post-webinar follow-up
+automation:
+
+**Core Tables**:
+
+- `followup_agent_configs` - AI agent configuration and knowledge base
+- `followup_prospects` - Prospect tracking and engagement data
+- `followup_sequences` - Message sequence definitions
+- `followup_messages` - Individual message templates
+- `followup_deliveries` - Actual message sends and tracking
+- `followup_events` - Prospect engagement event stream
+- `followup_intent_scores` - Intent scoring history
+- `followup_story_library` - Proof/story content library
+- `followup_experiments` - A/B testing and experimentation
+
+**Key Features**:
+
+- 5-segment prospect categorization (No-Show, Skimmer, Sampler, Engaged, Hot)
+- Token-based message personalization
+- Intent scoring based on engagement
+- Multi-channel orchestration (Email + SMS)
+- Automated sequence triggering
+- A/B testing framework
+- Compliance and opt-out management
+
+See
+[migrations/20250126000001_ai_followup_schema.sql](./supabase/migrations/20250126000001_ai_followup_schema.sql)
+for complete schema details.
+
 ## Architecture Principles
 
 Following patterns from mcp-hubby and lessons learned from v1/v2:

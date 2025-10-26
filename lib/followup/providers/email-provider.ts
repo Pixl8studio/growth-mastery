@@ -1,0 +1,254 @@
+/**
+ * Email Provider Abstraction
+ *
+ * Unified interface for email providers (SendGrid, Postmark, etc.).
+ * Handles actual email sending, tracking, and webhook processing.
+ */
+
+import { logger } from "@/lib/logger";
+
+export interface EmailMessage {
+    to: string;
+    from: string;
+    subject: string;
+    html_body: string;
+    text_body?: string;
+    reply_to?: string;
+    tracking_enabled?: boolean;
+    metadata?: Record<string, unknown>;
+}
+
+export interface EmailSendResult {
+    success: boolean;
+    provider_message_id?: string;
+    error?: string;
+}
+
+export interface EmailProvider {
+    name: string;
+    sendEmail(message: EmailMessage): Promise<EmailSendResult>;
+    verifyWebhook(body: unknown, signature: string): boolean;
+    processWebhookEvent(body: unknown): EmailWebhookEvent | null;
+}
+
+export interface EmailWebhookEvent {
+    provider_message_id: string;
+    event_type:
+        | "delivered"
+        | "opened"
+        | "clicked"
+        | "bounced"
+        | "complained"
+        | "unsubscribed";
+    email: string;
+    timestamp: string;
+    metadata?: Record<string, unknown>;
+}
+
+/**
+ * Console Email Provider (for testing)
+ *
+ * Logs emails to console instead of sending.
+ * Useful for development and testing.
+ */
+export class ConsoleEmailProvider implements EmailProvider {
+    name = "console";
+
+    async sendEmail(message: EmailMessage): Promise<EmailSendResult> {
+        logger.info(
+            {
+                to: message.to,
+                from: message.from,
+                subject: message.subject,
+                bodyLength: message.html_body.length,
+            },
+            "📧 [Console] Email would be sent"
+        );
+
+        console.log("=".repeat(80));
+        console.log(`To: ${message.to}`);
+        console.log(`From: ${message.from}`);
+        console.log(`Subject: ${message.subject}`);
+        console.log("=".repeat(80));
+        console.log(message.html_body);
+        console.log("=".repeat(80));
+
+        return {
+            success: true,
+            provider_message_id: `console-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        };
+    }
+
+    verifyWebhook(): boolean {
+        return true;
+    }
+
+    processWebhookEvent(): null {
+        return null;
+    }
+}
+
+/**
+ * SendGrid Email Provider
+ *
+ * Integration with SendGrid API for production email delivery.
+ * Requires SENDGRID_API_KEY environment variable.
+ */
+export class SendGridEmailProvider implements EmailProvider {
+    name = "sendgrid";
+    private apiKey: string;
+
+    constructor(apiKey: string) {
+        this.apiKey = apiKey;
+    }
+
+    async sendEmail(message: EmailMessage): Promise<EmailSendResult> {
+        logger.info(
+            {
+                to: message.to,
+                from: message.from,
+                subject: message.subject,
+            },
+            "📧 [SendGrid] Sending email"
+        );
+
+        try {
+            const response = await fetch("https://api.sendgrid.com/v3/mail/send", {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${this.apiKey}`,
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    personalizations: [
+                        {
+                            to: [{ email: message.to }],
+                            custom_args: message.metadata || {},
+                        },
+                    ],
+                    from: { email: message.from },
+                    reply_to: message.reply_to
+                        ? { email: message.reply_to }
+                        : undefined,
+                    subject: message.subject,
+                    content: [
+                        {
+                            type: "text/html",
+                            value: message.html_body,
+                        },
+                        message.text_body
+                            ? {
+                                  type: "text/plain",
+                                  value: message.text_body,
+                              }
+                            : null,
+                    ].filter(Boolean),
+                    tracking_settings: {
+                        click_tracking: { enable: message.tracking_enabled ?? true },
+                        open_tracking: { enable: message.tracking_enabled ?? true },
+                    },
+                }),
+            });
+
+            if (!response.ok) {
+                const error = await response.text();
+                logger.error(
+                    { error, status: response.status, to: message.to },
+                    "❌ [SendGrid] Email send failed"
+                );
+                return { success: false, error: `SendGrid error: ${error}` };
+            }
+
+            // SendGrid returns message ID in X-Message-Id header
+            const messageId = response.headers.get("X-Message-Id");
+
+            logger.info(
+                { messageId, to: message.to },
+                "✅ [SendGrid] Email sent successfully"
+            );
+
+            return {
+                success: true,
+                provider_message_id: messageId || undefined,
+            };
+        } catch (error) {
+            logger.error({ error, to: message.to }, "❌ [SendGrid] Email send error");
+            return { success: false, error: String(error) };
+        }
+    }
+
+    verifyWebhook(body: unknown, signature: string): boolean {
+        // SendGrid webhook verification would go here
+        // For now, return true (implement proper verification in production)
+        return true;
+    }
+
+    processWebhookEvent(body: unknown): EmailWebhookEvent | null {
+        const event = body as Record<string, unknown>;
+
+        if (!event || typeof event !== "object") {
+            return null;
+        }
+
+        const eventType = this.mapSendGridEvent(event.event as string);
+        if (!eventType) {
+            return null;
+        }
+
+        return {
+            provider_message_id: event.sg_message_id as string,
+            event_type: eventType,
+            email: event.email as string,
+            timestamp: new Date((event.timestamp as number) * 1000).toISOString(),
+            metadata: event as Record<string, unknown>,
+        };
+    }
+
+    private mapSendGridEvent(
+        event: string
+    ):
+        | "delivered"
+        | "opened"
+        | "clicked"
+        | "bounced"
+        | "complained"
+        | "unsubscribed"
+        | null {
+        const mapping: Record<
+            string,
+            | "delivered"
+            | "opened"
+            | "clicked"
+            | "bounced"
+            | "complained"
+            | "unsubscribed"
+        > = {
+            delivered: "delivered",
+            open: "opened",
+            click: "clicked",
+            bounce: "bounced",
+            dropped: "bounced",
+            spamreport: "complained",
+            unsubscribe: "unsubscribed",
+        };
+
+        return mapping[event] || null;
+    }
+}
+
+/**
+ * Get configured email provider.
+ *
+ * Returns appropriate provider based on environment configuration.
+ */
+export function getEmailProvider(): EmailProvider {
+    const sendgridKey = process.env.SENDGRID_API_KEY;
+
+    if (sendgridKey) {
+        logger.info({}, "📧 Using SendGrid email provider");
+        return new SendGridEmailProvider(sendgridKey);
+    }
+
+    logger.info({}, "📧 Using Console email provider (development mode)");
+    return new ConsoleEmailProvider();
+}

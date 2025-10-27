@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,7 +26,16 @@ interface AgentConfig {
         urgency_level: string;
     };
     knowledge_base: Record<string, unknown>;
-    scoring_rules: Record<string, unknown>;
+    scoring_rules: {
+        watch_weight?: number;
+        offer_click_weight?: number;
+        email_engagement_weight?: number;
+        reply_weight?: number;
+        hot_threshold?: number;
+        engaged_threshold?: number;
+        sampler_threshold?: number;
+        skimmer_threshold?: number;
+    };
 }
 
 interface AgentConfigFormProps {
@@ -36,8 +45,37 @@ interface AgentConfigFormProps {
 }
 
 export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps) {
-    const [formData, setFormData] = useState<AgentConfig>(
-        config || {
+    const [formData, setFormData] = useState<AgentConfig>(() => {
+        if (config) {
+            return {
+                ...config,
+                knowledge_base:
+                    typeof config.knowledge_base === "object" &&
+                    config.knowledge_base !== null
+                        ? config.knowledge_base
+                        : {
+                              brand_voice: "",
+                              product_knowledge: "",
+                              objection_responses: "",
+                              blacklist_topics: "",
+                          },
+                scoring_rules:
+                    typeof config.scoring_rules === "object" &&
+                    config.scoring_rules !== null
+                        ? config.scoring_rules
+                        : {
+                              watch_weight: 45,
+                              offer_click_weight: 25,
+                              email_engagement_weight: 5,
+                              reply_weight: 15,
+                              hot_threshold: 75,
+                              engaged_threshold: 50,
+                              sampler_threshold: 25,
+                              skimmer_threshold: 1,
+                          },
+            };
+        }
+        return {
             name: "Main Follow-Up Agent",
             voice_config: {
                 tone: "conversational",
@@ -45,10 +83,57 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                 empathy_level: "moderate",
                 urgency_level: "gentle",
             },
-            knowledge_base: {},
-            scoring_rules: {},
+            knowledge_base: {
+                brand_voice: "",
+                product_knowledge: "",
+                objection_responses: "",
+                blacklist_topics: "",
+            },
+            scoring_rules: {
+                watch_weight: 45,
+                offer_click_weight: 25,
+                email_engagement_weight: 5,
+                reply_weight: 15,
+                hot_threshold: 75,
+                engaged_threshold: 50,
+                sampler_threshold: 25,
+                skimmer_threshold: 1,
+            },
+        };
+    });
+
+    // Update formData when config prop changes
+    useEffect(() => {
+        if (config) {
+            setFormData({
+                ...config,
+                knowledge_base:
+                    typeof config.knowledge_base === "object" &&
+                    config.knowledge_base !== null
+                        ? config.knowledge_base
+                        : {
+                              brand_voice: "",
+                              product_knowledge: "",
+                              objection_responses: "",
+                              blacklist_topics: "",
+                          },
+                scoring_rules:
+                    typeof config.scoring_rules === "object" &&
+                    config.scoring_rules !== null
+                        ? config.scoring_rules
+                        : {
+                              watch_weight: 45,
+                              offer_click_weight: 25,
+                              email_engagement_weight: 5,
+                              reply_weight: 15,
+                              hot_threshold: 75,
+                              engaged_threshold: 50,
+                              sampler_threshold: 25,
+                              skimmer_threshold: 1,
+                          },
+            });
         }
-    );
+    }, [config]);
 
     const handleSave = async () => {
         await onSave(formData);
@@ -190,6 +275,22 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                     <div>
                         <Label>Brand Voice Guidelines</Label>
                         <Textarea
+                            value={
+                                typeof formData.knowledge_base === "object" &&
+                                formData.knowledge_base !== null
+                                    ? (formData.knowledge_base.brand_voice as string) ||
+                                      ""
+                                    : ""
+                            }
+                            onChange={(e) =>
+                                setFormData({
+                                    ...formData,
+                                    knowledge_base: {
+                                        ...formData.knowledge_base,
+                                        brand_voice: e.target.value,
+                                    },
+                                })
+                            }
                             placeholder="Describe your brand's voice and communication style..."
                             rows={4}
                             className="mt-2"
@@ -199,6 +300,22 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                     <div>
                         <Label>Product/Service Knowledge</Label>
                         <Textarea
+                            value={
+                                typeof formData.knowledge_base === "object" &&
+                                formData.knowledge_base !== null
+                                    ? (formData.knowledge_base
+                                          .product_knowledge as string) || ""
+                                    : ""
+                            }
+                            onChange={(e) =>
+                                setFormData({
+                                    ...formData,
+                                    knowledge_base: {
+                                        ...formData.knowledge_base,
+                                        product_knowledge: e.target.value,
+                                    },
+                                })
+                            }
                             placeholder="Key facts about your product/service that the AI should know..."
                             rows={4}
                             className="mt-2"
@@ -208,6 +325,22 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                     <div>
                         <Label>Common Objection Responses</Label>
                         <Textarea
+                            value={
+                                typeof formData.knowledge_base === "object" &&
+                                formData.knowledge_base !== null
+                                    ? (formData.knowledge_base
+                                          .objection_responses as string) || ""
+                                    : ""
+                            }
+                            onChange={(e) =>
+                                setFormData({
+                                    ...formData,
+                                    knowledge_base: {
+                                        ...formData.knowledge_base,
+                                        objection_responses: e.target.value,
+                                    },
+                                })
+                            }
                             placeholder="How should the AI handle common objections like price, timing, etc.?"
                             rows={4}
                             className="mt-2"
@@ -217,6 +350,22 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                     <div>
                         <Label>Do Not Mention (Blacklist)</Label>
                         <Textarea
+                            value={
+                                typeof formData.knowledge_base === "object" &&
+                                formData.knowledge_base !== null
+                                    ? (formData.knowledge_base
+                                          .blacklist_topics as string) || ""
+                                    : ""
+                            }
+                            onChange={(e) =>
+                                setFormData({
+                                    ...formData,
+                                    knowledge_base: {
+                                        ...formData.knowledge_base,
+                                        blacklist_topics: e.target.value,
+                                    },
+                                })
+                            }
                             placeholder="Topics or phrases the AI should avoid..."
                             rows={2}
                             className="mt-2"
@@ -233,7 +382,21 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
 
                     <div>
                         <Label>Watch Percentage Weight</Label>
-                        <Input type="number" min="0" max="100" defaultValue="30" />
+                        <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={formData.scoring_rules?.watch_weight ?? 45}
+                            onChange={(e) =>
+                                setFormData({
+                                    ...formData,
+                                    scoring_rules: {
+                                        ...formData.scoring_rules,
+                                        watch_weight: parseInt(e.target.value) || 0,
+                                    },
+                                })
+                            }
+                        />
                         <p className="text-xs text-gray-500 mt-1">
                             How much weight to give webinar watch percentage (0-100)
                         </p>
@@ -241,7 +404,22 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
 
                     <div>
                         <Label>Offer Click Weight</Label>
-                        <Input type="number" min="0" max="100" defaultValue="40" />
+                        <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={formData.scoring_rules?.offer_click_weight ?? 25}
+                            onChange={(e) =>
+                                setFormData({
+                                    ...formData,
+                                    scoring_rules: {
+                                        ...formData.scoring_rules,
+                                        offer_click_weight:
+                                            parseInt(e.target.value) || 0,
+                                    },
+                                })
+                            }
+                        />
                         <p className="text-xs text-gray-500 mt-1">
                             How much weight to give clicking on offer CTAs
                         </p>
@@ -249,7 +427,22 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
 
                     <div>
                         <Label>Email Engagement Weight</Label>
-                        <Input type="number" min="0" max="100" defaultValue="20" />
+                        <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={formData.scoring_rules?.email_engagement_weight ?? 5}
+                            onChange={(e) =>
+                                setFormData({
+                                    ...formData,
+                                    scoring_rules: {
+                                        ...formData.scoring_rules,
+                                        email_engagement_weight:
+                                            parseInt(e.target.value) || 0,
+                                    },
+                                })
+                            }
+                        />
                         <p className="text-xs text-gray-500 mt-1">
                             How much weight to give email opens and clicks
                         </p>
@@ -257,7 +450,21 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
 
                     <div>
                         <Label>Reply Weight</Label>
-                        <Input type="number" min="0" max="100" defaultValue="50" />
+                        <Input
+                            type="number"
+                            min="0"
+                            max="100"
+                            value={formData.scoring_rules?.reply_weight ?? 15}
+                            onChange={(e) =>
+                                setFormData({
+                                    ...formData,
+                                    scoring_rules: {
+                                        ...formData.scoring_rules,
+                                        reply_weight: parseInt(e.target.value) || 0,
+                                    },
+                                })
+                            }
+                        />
                         <p className="text-xs text-gray-500 mt-1">
                             How much weight to give direct replies to messages
                         </p>
@@ -272,7 +479,17 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                     type="number"
                                     min="0"
                                     max="100"
-                                    defaultValue="75"
+                                    value={formData.scoring_rules?.hot_threshold ?? 75}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            scoring_rules: {
+                                                ...formData.scoring_rules,
+                                                hot_threshold:
+                                                    parseInt(e.target.value) || 0,
+                                            },
+                                        })
+                                    }
                                     className="mt-1"
                                 />
                             </div>
@@ -282,7 +499,19 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                     type="number"
                                     min="0"
                                     max="100"
-                                    defaultValue="50"
+                                    value={
+                                        formData.scoring_rules?.engaged_threshold ?? 50
+                                    }
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            scoring_rules: {
+                                                ...formData.scoring_rules,
+                                                engaged_threshold:
+                                                    parseInt(e.target.value) || 0,
+                                            },
+                                        })
+                                    }
                                     className="mt-1"
                                 />
                             </div>
@@ -292,7 +521,19 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                     type="number"
                                     min="0"
                                     max="100"
-                                    defaultValue="25"
+                                    value={
+                                        formData.scoring_rules?.sampler_threshold ?? 25
+                                    }
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            scoring_rules: {
+                                                ...formData.scoring_rules,
+                                                sampler_threshold:
+                                                    parseInt(e.target.value) || 0,
+                                            },
+                                        })
+                                    }
                                     className="mt-1"
                                 />
                             </div>
@@ -302,7 +543,19 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                     type="number"
                                     min="0"
                                     max="100"
-                                    defaultValue="1"
+                                    value={
+                                        formData.scoring_rules?.skimmer_threshold ?? 1
+                                    }
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            scoring_rules: {
+                                                ...formData.scoring_rules,
+                                                skimmer_threshold:
+                                                    parseInt(e.target.value) || 0,
+                                            },
+                                        })
+                                    }
                                     className="mt-1"
                                 />
                             </div>

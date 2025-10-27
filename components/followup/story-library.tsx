@@ -78,6 +78,7 @@ export function StoryLibrary({
     onDeleteStory,
 }: StoryLibraryProps) {
     const [showCreateForm, setShowCreateForm] = useState(false);
+    const [editingId, setEditingId] = useState<string | null>(null);
     const [searchQuery, setSearchQuery] = useState("");
     const [filterObjection, setFilterObjection] = useState<string>("");
     const [filterType, setFilterType] = useState<string>("");
@@ -94,6 +95,44 @@ export function StoryLibrary({
     const handleCreate = async () => {
         await onCreateStory(formData);
         setShowCreateForm(false);
+        setFormData({
+            title: "",
+            story_type: "micro_story",
+            objection_category: "price_concern",
+            business_niche: [],
+            price_band: "mid",
+            content: "",
+        });
+    };
+
+    const handleStartEdit = (story: StoryEntry) => {
+        setEditingId(story.id);
+        setFormData({
+            title: story.title,
+            story_type: story.story_type,
+            objection_category: story.objection_category,
+            business_niche: story.business_niche,
+            price_band: story.price_band,
+            content: story.content,
+        });
+    };
+
+    const handleUpdate = async () => {
+        if (!editingId) return;
+        await onUpdateStory(editingId, formData);
+        setEditingId(null);
+        setFormData({
+            title: "",
+            story_type: "micro_story",
+            objection_category: "price_concern",
+            business_niche: [],
+            price_band: "mid",
+            content: "",
+        });
+    };
+
+    const handleCancelEdit = () => {
+        setEditingId(null);
         setFormData({
             title: "",
             story_type: "micro_story",
@@ -202,6 +241,139 @@ export function StoryLibrary({
                     </div>
                 </div>
             </Card>
+
+            {/* Edit Form */}
+            {editingId && (
+                <Card className="p-6 border-2 border-orange-500 mb-6">
+                    <h4 className="font-semibold mb-4 text-orange-700">Edit Story</h4>
+                    <div className="space-y-4">
+                        <div>
+                            <Label>Story Title</Label>
+                            <Input
+                                value={formData.title}
+                                onChange={(e) =>
+                                    setFormData({ ...formData, title: e.target.value })
+                                }
+                                placeholder="Sarah doubled revenue in 90 days"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4">
+                            <div>
+                                <Label>Story Type</Label>
+                                <select
+                                    value={formData.story_type}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            story_type: e.target.value as any,
+                                        })
+                                    }
+                                    className="w-full border rounded p-2"
+                                >
+                                    {STORY_TYPES.map((type) => (
+                                        <option key={type.value} value={type.value}>
+                                            {type.label}
+                                        </option>
+                                    ))}
+                                </select>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    {
+                                        STORY_TYPES.find(
+                                            (t) => t.value === formData.story_type
+                                        )?.description
+                                    }
+                                </p>
+                            </div>
+
+                            <div>
+                                <Label>Objection Category</Label>
+                                <select
+                                    value={formData.objection_category}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            objection_category: e.target.value,
+                                        })
+                                    }
+                                    className="w-full border rounded p-2"
+                                >
+                                    {OBJECTION_CATEGORIES.map((obj) => (
+                                        <option key={obj} value={obj}>
+                                            {obj.replace("_", " ")}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div>
+                                <Label>Price Band</Label>
+                                <select
+                                    value={formData.price_band}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            price_band: e.target.value as
+                                                | "low"
+                                                | "mid"
+                                                | "high",
+                                        })
+                                    }
+                                    className="w-full border rounded p-2"
+                                >
+                                    <option value="low">Low (&lt;$500)</option>
+                                    <option value="mid">Mid ($500-$5k)</option>
+                                    <option value="high">High ($5k+)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <Label>Business Niches (comma-separated)</Label>
+                            <Input
+                                value={
+                                    Array.isArray(formData.business_niche)
+                                        ? formData.business_niche.join(", ")
+                                        : ""
+                                }
+                                placeholder="coaching, consulting, saas"
+                                onChange={(e) =>
+                                    setFormData({
+                                        ...formData,
+                                        business_niche: e.target.value
+                                            .split(",")
+                                            .map((n) => n.trim()),
+                                    })
+                                }
+                            />
+                        </div>
+
+                        <div>
+                            <Label>Story Content</Label>
+                            <Textarea
+                                value={formData.content}
+                                onChange={(e) =>
+                                    setFormData({
+                                        ...formData,
+                                        content: e.target.value,
+                                    })
+                                }
+                                rows={6}
+                                placeholder="Sarah was skeptical about the price, but after seeing our ROI calculator showing a 5x return, she invested. 90 days later, she'd doubled her revenue and thanked us for pushing her to take action."
+                            />
+                        </div>
+
+                        <div className="flex gap-2 pt-4">
+                            <Button onClick={handleUpdate} className="flex-1">
+                                Save Changes
+                            </Button>
+                            <Button variant="outline" onClick={handleCancelEdit}>
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                </Card>
+            )}
 
             {/* Create Form */}
             {showCreateForm && (
@@ -431,7 +603,11 @@ export function StoryLibrary({
                                         </div>
                                     )}
 
-                                    <Button variant="outline" size="sm">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleStartEdit(story)}
+                                    >
                                         Edit
                                     </Button>
                                 </div>

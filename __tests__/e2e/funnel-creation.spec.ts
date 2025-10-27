@@ -68,9 +68,9 @@ test.describe("Funnel Creation Flow", () => {
         await page.goto(`/funnel-builder/${projectId}/step/1`);
 
         // Should show progress bar
-        await expect(page.locator("text=/Step 1 of 11/i")).toBeVisible();
+        await expect(page.locator("text=/Step 1 of 12/i")).toBeVisible();
 
         // Should show percentage
-        await expect(page.locator("text=/9%/i")).toBeVisible();
+        await expect(page.locator("text=/8%/i")).toBeVisible();
     });
 });

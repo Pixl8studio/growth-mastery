@@ -9,6 +9,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -51,6 +52,7 @@ export default function Step11Page({
     const [sequences, setSequences] = useState<any[]>([]);
     const [messages, setMessages] = useState<any[]>([]);
     const [stories, setStories] = useState<any[]>([]);
+    const [offer, setOffer] = useState<any>(null);
     const [analytics, setAnalytics] = useState<any>({
         sequences: [],
         overall: {
@@ -80,6 +82,25 @@ export default function Step11Page({
             try {
                 setLoading(true);
 
+                const supabase = createClient();
+
+                // Load offer for this funnel
+                const { data: offerData, error: offerError } = await supabase
+                    .from("offers")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false })
+                    .limit(1)
+                    .single();
+
+                if (!offerError && offerData) {
+                    setOffer(offerData);
+                    logger.info(
+                        { offerId: offerData.id, offerName: offerData.name },
+                        "Loaded offer for funnel"
+                    );
+                }
+
                 // Load agent config
                 const configRes = await fetch(
                     `/api/followup/agent-configs?funnel_project_id=${projectId}`
@@ -92,14 +113,39 @@ export default function Step11Page({
                     }
                 }
 
-                // Load sequences
+                // Load sequences with message counts
                 if (agentConfig) {
-                    const seqRes = await fetch(
-                        `/api/followup/sequences?agent_config_id=${agentConfig.id}`
-                    );
-                    if (seqRes.ok) {
-                        const seqData = await seqRes.json();
-                        setSequences(seqData.sequences || []);
+                    const { data: sequencesData, error: seqError } = await supabase
+                        .from("followup_sequences")
+                        .select("*")
+                        .eq("agent_config_id", agentConfig.id)
+                        .order("created_at", { ascending: false });
+
+                    if (!seqError && sequencesData) {
+                        // Get message counts for each sequence
+                        const sequencesWithCount = await Promise.all(
+                            sequencesData.map(async (seq: any) => {
+                                const { count } = await supabase
+                                    .from("followup_messages")
+                                    .select("*", { count: "exact", head: true })
+                                    .eq("sequence_id", seq.id);
+
+                                return {
+                                    ...seq,
+                                    message_count: count || 0,
+                                };
+                            })
+                        );
+                        setSequences(sequencesWithCount);
+                        logger.info(
+                            {
+                                sequenceCount: sequencesWithCount.length,
+                                messageCounts: sequencesWithCount.map(
+                                    (s) => s.message_count
+                                ),
+                            },
+                            "Loaded sequences with message counts"
+                        );
                     }
                 }
 
@@ -139,21 +185,43 @@ export default function Step11Page({
         loadData();
     }, [projectId, agentConfig?.id]);
 
-    // Load messages for selected sequence
+    // Load messages for selected sequence OR all messages
     useEffect(() => {
         const loadMessages = async () => {
-            if (!selectedSequenceId) {
+            if (!agentConfig?.id) {
                 setMessages([]);
                 return;
             }
 
             try {
-                const res = await fetch(
-                    `/api/followup/sequences/${selectedSequenceId}/messages`
-                );
-                if (res.ok) {
-                    const data = await res.json();
-                    setMessages(data.messages || []);
+                if (selectedSequenceId) {
+                    // Load messages for specific sequence
+                    const res = await fetch(
+                        `/api/followup/sequences/${selectedSequenceId}/messages`
+                    );
+                    if (res.ok) {
+                        const data = await res.json();
+                        setMessages(data.messages || []);
+                    }
+                } else if (sequences.length > 0) {
+                    // Load all messages across all sequences
+                    const allMessages = await Promise.all(
+                        sequences.map(async (seq) => {
+                            const res = await fetch(
+                                `/api/followup/sequences/${seq.id}/messages`
+                            );
+                            if (res.ok) {
+                                const data = await res.json();
+                                return data.messages || [];
+                            }
+                            return [];
+                        })
+                    );
+                    setMessages(allMessages.flat());
+                    logger.info(
+                        { totalMessages: allMessages.flat().length },
+                        "📨 Loaded all messages across sequences"
+                    );
                 }
             } catch (error) {
                 logger.error({ error }, "Failed to load messages");
@@ -161,7 +229,7 @@ export default function Step11Page({
         };
 
         loadMessages();
-    }, [selectedSequenceId]);
+    }, [selectedSequenceId, sequences, agentConfig?.id]);
 
     const handleEnableFollowup = async (enabled: boolean) => {
         setFollowupEnabled(enabled);
@@ -206,6 +274,11 @@ export default function Step11Page({
                 ? `/api/followup/agent-configs/${agentConfig.id}`
                 : "/api/followup/agent-configs";
 
+            logger.info(
+                { method, url, hasConfig: !!agentConfig },
+                "Saving agent config"
+            );
+
             const response = await fetch(url, {
                 method,
                 headers: { "Content-Type": "application/json" },
@@ -215,20 +288,38 @@ export default function Step11Page({
                 }),
             });
 
+            if (!response.ok) {
+                const errorData = await response.json();
+                logger.error(
+                    { status: response.status, error: errorData },
+                    "Failed to save agent config"
+                );
+                throw new Error(errorData.error || "Failed to save configuration");
+            }
+
             const data = await response.json();
 
             if (data.success) {
                 setAgentConfig(data.config);
+                logger.info(
+                    { configId: data.config?.id },
+                    "Agent config saved successfully"
+                );
                 toast({
                     title: "✅ Configuration Saved",
                     description: "Your AI agent settings have been saved",
                 });
+            } else {
+                throw new Error(data.error || "Configuration save failed");
             }
         } catch (error) {
-            logger.error({ error }, "Failed to save agent config");
+            logger.error({ error }, "❌ Failed to save agent config");
             toast({
                 title: "Error",
-                description: "Failed to save configuration",
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to save configuration",
                 variant: "destructive",
             });
         }
@@ -236,6 +327,14 @@ export default function Step11Page({
 
     const handleCreateSequence = async (sequence: any) => {
         try {
+            if (!agentConfig?.id) {
+                throw new Error(
+                    "Agent configuration is required before creating sequences"
+                );
+            }
+
+            logger.info({ sequenceName: sequence.name }, "Creating sequence");
+
             const response = await fetch("/api/followup/sequences", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -245,20 +344,40 @@ export default function Step11Page({
                 }),
             });
 
+            if (!response.ok) {
+                const errorData = await response.json();
+                logger.error(
+                    { status: response.status, error: errorData },
+                    "Failed to create sequence"
+                );
+                throw new Error(errorData.error || "Failed to create sequence");
+            }
+
             const data = await response.json();
 
             if (data.success) {
-                setSequences([...sequences, data.sequence]);
+                const newSequence = data.sequence;
+                setSequences([...sequences, newSequence]);
+                logger.info(
+                    { sequenceId: newSequence?.id },
+                    "Sequence created successfully"
+                );
+
                 toast({
                     title: "✅ Sequence Created",
-                    description: `${data.sequence.name} has been created`,
+                    description: `${newSequence.name} has been created successfully`,
                 });
+            } else {
+                throw new Error(data.error || "Sequence creation failed");
             }
         } catch (error) {
-            logger.error({ error }, "Failed to create sequence");
+            logger.error({ error }, "❌ Failed to create sequence");
             toast({
                 title: "Error",
-                description: "Failed to create sequence",
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to create sequence",
                 variant: "destructive",
             });
         }
@@ -337,11 +456,73 @@ export default function Step11Page({
     };
 
     const handleUpdateMessage = async (id: string, updates: any) => {
-        // Implementation similar to update sequence
+        try {
+            const response = await fetch(
+                `/api/followup/sequences/${selectedSequenceId}/messages/${id}`,
+                {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(updates),
+                }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to update message");
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                setMessages(
+                    messages.map((msg) => (msg.id === id ? data.message : msg))
+                );
+                toast({
+                    title: "✅ Message Updated",
+                    description: "Message template has been updated",
+                });
+            } else {
+                throw new Error(data.error || "Update failed");
+            }
+        } catch (error) {
+            logger.error({ error }, "❌ Failed to update message");
+            toast({
+                title: "Error",
+                description:
+                    error instanceof Error ? error.message : "Failed to update message",
+                variant: "destructive",
+            });
+        }
     };
 
     const handleDeleteMessage = async (id: string) => {
-        // Implementation similar to delete sequence
+        try {
+            const response = await fetch(
+                `/api/followup/sequences/${selectedSequenceId}/messages/${id}`,
+                {
+                    method: "DELETE",
+                }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to delete message");
+            }
+
+            setMessages(messages.filter((msg) => msg.id !== id));
+            toast({
+                title: "✅ Message Deleted",
+                description: "Message template has been deleted",
+            });
+        } catch (error) {
+            logger.error({ error }, "❌ Failed to delete message");
+            toast({
+                title: "Error",
+                description:
+                    error instanceof Error ? error.message : "Failed to delete message",
+                variant: "destructive",
+            });
+        }
     };
 
     const handleCreateStory = async (story: any) => {
@@ -367,11 +548,119 @@ export default function Step11Page({
     };
 
     const handleUpdateStory = async (id: string, updates: any) => {
-        // Implementation similar to update sequence
+        try {
+            const response = await fetch(`/api/followup/stories/${id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(updates),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to update story");
+            }
+
+            const data = await response.json();
+
+            if (data.success) {
+                setStories(
+                    stories.map((story) => (story.id === id ? data.story : story))
+                );
+                toast({
+                    title: "✅ Story Updated",
+                    description: "Story has been updated",
+                });
+            } else {
+                throw new Error(data.error || "Update failed");
+            }
+        } catch (error) {
+            logger.error({ error }, "❌ Failed to update story");
+            toast({
+                title: "Error",
+                description:
+                    error instanceof Error ? error.message : "Failed to update story",
+                variant: "destructive",
+            });
+        }
     };
 
     const handleDeleteStory = async (id: string) => {
-        // Implementation similar to delete sequence
+        try {
+            const response = await fetch(`/api/followup/stories/${id}`, {
+                method: "DELETE",
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to delete story");
+            }
+
+            setStories(stories.filter((story) => story.id !== id));
+            toast({
+                title: "✅ Story Deleted",
+                description: "Story has been deleted",
+            });
+        } catch (error) {
+            logger.error({ error }, "❌ Failed to delete story");
+            toast({
+                title: "Error",
+                description:
+                    error instanceof Error ? error.message : "Failed to delete story",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const reloadSequences = async () => {
+        if (!agentConfig?.id) return;
+
+        try {
+            const supabase = createClient();
+
+            const { data: sequencesData, error: seqError } = await supabase
+                .from("followup_sequences")
+                .select("*")
+                .eq("agent_config_id", agentConfig.id)
+                .order("created_at", { ascending: false });
+
+            if (!seqError && sequencesData) {
+                // Get message counts for each sequence
+                const sequencesWithCount = await Promise.all(
+                    sequencesData.map(async (seq: any) => {
+                        const { count } = await supabase
+                            .from("followup_messages")
+                            .select("*", { count: "exact", head: true })
+                            .eq("sequence_id", seq.id);
+
+                        return {
+                            ...seq,
+                            message_count: count || 0,
+                        };
+                    })
+                );
+                setSequences(sequencesWithCount);
+                logger.info(
+                    {
+                        sequenceCount: sequencesWithCount.length,
+                        messageCounts: sequencesWithCount.map(
+                            (s) => `${s.name}: ${s.message_count} messages`
+                        ),
+                    },
+                    "✅ Sequences reloaded with updated message counts"
+                );
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to reload sequences");
+        }
+    };
+
+    const handleSelectSequence = async (sequenceId: string) => {
+        logger.info({ sequenceId }, "Selecting sequence");
+        setSelectedSequenceId(sequenceId);
+        setActiveTab("messages");
+
+        // Reload sequences to ensure counts are fresh
+        await reloadSequences();
     };
 
     if (loading) {
@@ -467,10 +756,7 @@ export default function Step11Page({
                                     <Mail className="h-4 w-4 mr-2" />
                                     Sequences
                                 </TabsTrigger>
-                                <TabsTrigger
-                                    value="messages"
-                                    disabled={!selectedSequenceId}
-                                >
+                                <TabsTrigger value="messages">
                                     <MessageSquare className="h-4 w-4 mr-2" />
                                     Messages
                                 </TabsTrigger>
@@ -503,14 +789,19 @@ export default function Step11Page({
                                     onCreateSequence={handleCreateSequence}
                                     onUpdateSequence={handleUpdateSequence}
                                     onDeleteSequence={handleDeleteSequence}
+                                    onSelectSequence={handleSelectSequence}
+                                    onReloadSequences={reloadSequences}
+                                    funnelProjectId={projectId}
+                                    offerId={offer?.id}
                                 />
 
                                 {sequences.length > 0 && (
                                     <Card className="mt-4 p-4 bg-blue-50 border-blue-200">
                                         <p className="text-sm text-blue-900">
-                                            💡 <strong>Tip:</strong> Select a sequence
-                                            above to view and edit its message templates
-                                            in the Messages tab.
+                                            💡 <strong>Tip:</strong> Click "View
+                                            Messages" on any sequence or go to the
+                                            Messages tab to view and edit all message
+                                            templates.
                                         </p>
                                     </Card>
                                 )}
@@ -518,27 +809,16 @@ export default function Step11Page({
 
                             {/* Messages Tab */}
                             <TabsContent value="messages" className="mt-6">
-                                {selectedSequenceId ? (
-                                    <MessageTemplateEditor
-                                        sequenceId={selectedSequenceId}
-                                        messages={messages}
-                                        onCreateMessage={handleCreateMessage}
-                                        onUpdateMessage={handleUpdateMessage}
-                                        onDeleteMessage={handleDeleteMessage}
-                                    />
-                                ) : (
-                                    <Card className="p-12 text-center">
-                                        <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                                        <h4 className="text-lg font-semibold mb-2">
-                                            Select a Sequence
-                                        </h4>
-                                        <p className="text-gray-600">
-                                            Go to the Sequences tab and select a
-                                            sequence to view and edit its message
-                                            templates.
-                                        </p>
-                                    </Card>
-                                )}
+                                <MessageTemplateEditor
+                                    sequenceId={
+                                        selectedSequenceId || sequences[0]?.id || ""
+                                    }
+                                    messages={messages}
+                                    sequences={sequences}
+                                    onCreateMessage={handleCreateMessage}
+                                    onUpdateMessage={handleUpdateMessage}
+                                    onDeleteMessage={handleDeleteMessage}
+                                />
                             </TabsContent>
 
                             {/* Stories Tab */}

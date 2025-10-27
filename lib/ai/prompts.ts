@@ -394,3 +394,193 @@ Return ONLY a JSON object:
         },
     ];
 }
+
+/**
+ * 8. Generate follow-up sequence messages from deck and offer context
+ */
+export interface DeckContext {
+    title: string;
+    keyPoints: string[];
+    painPoints: string[];
+    solutions: string[];
+    mainPromise: string;
+}
+
+export interface OfferContext {
+    name: string;
+    tagline?: string;
+    price: number;
+    features: string[];
+    bonuses?: string[];
+    guarantee?: string;
+}
+
+export function createFollowupSequencePrompt(
+    deckContext: DeckContext,
+    offerContext: OfferContext,
+    segment: "no_show" | "skimmer" | "sampler" | "engaged" | "hot" = "engaged"
+): OpenAI.Chat.Completions.ChatCompletionMessageParam[] {
+    const segmentGuidance = {
+        no_show: {
+            focus: "Gentle re-engagement, create curiosity about what they missed",
+            tone: "Warm and inviting, no pressure",
+            cta: "Watch the replay or key highlights",
+        },
+        skimmer: {
+            focus: "Show them the value they started to discover, pique curiosity",
+            tone: "Encouraging and intriguing",
+            cta: "Complete watching or see key moments",
+        },
+        sampler: {
+            focus: "Reinforce value, encourage completion, soft conversion",
+            tone: "Supportive and value-focused",
+            cta: "Finish watching then decide",
+        },
+        engaged: {
+            focus: "Move to conversion, address objections, show transformation",
+            tone: "Professional and consultative",
+            cta: "Book call or enroll",
+        },
+        hot: {
+            focus: "Direct conversion, urgency, strong social proof",
+            tone: "Confident and urgent",
+            cta: "Enroll now or book immediately",
+        },
+    };
+
+    const guidance = segmentGuidance[segment];
+
+    return [
+        {
+            role: "system",
+            content: `You are an expert follow-up sequence writer who creates personalized, professional email and SMS messages for post-webinar engagement.
+
+Your messages are:
+- Professional yet personal (conversational tone, first-person)
+- Focused on transformation and value (not just features)
+- Strategic use of storytelling and social proof
+- Token-based for dynamic personalization
+- Following the proven 3-day discount sequence structure
+
+IMPORTANT GUIDELINES:
+1. Use token placeholders: {{first_name}}, {{watch_pct}}, {{minutes_watched}}, {{challenge_notes}}, {{goal_notes}}, {{objection_hint}}, {{offer_click}}, {{timezone}}, {{replay_link}}, {{next_step}}, {{checkout_url}}, {{book_call_url}}
+
+2. Each message should mirror the prospect's language ({{challenge_notes}}) in the opening
+
+3. Focus on OUTCOMES not features - paint the transformation picture
+
+4. Use micro-stories (120-200 words) that reframe objections
+
+5. Include specific, non-defensive objection handling when {{objection_hint}} is present
+
+6. CTAs should match intent level - don't push too hard too soon
+
+7. Deadline and urgency elements should support, not lead, the message
+
+8. Write as if speaking to ONE person who has a specific problem you can solve
+
+TARGET SEGMENT: ${segment.toUpperCase()}
+Focus: ${guidance.focus}
+Tone: ${guidance.tone}
+Primary CTA: ${guidance.cta}`,
+        },
+        {
+            role: "user",
+            content: `Create a 5-message follow-up sequence based on this webinar and offer:
+
+WEBINAR CONTENT:
+Title: ${deckContext.title}
+Main Promise: ${deckContext.mainPromise}
+
+Key Points Covered:
+${deckContext.keyPoints.map((p, i) => `${i + 1}. ${p}`).join("\n")}
+
+Pain Points Addressed:
+${deckContext.painPoints.map((p, i) => `${i + 1}. ${p}`).join("\n")}
+
+Solutions Presented:
+${deckContext.solutions.map((s, i) => `${i + 1}. ${s}`).join("\n")}
+
+OFFER DETAILS:
+${JSON.stringify(offerContext, null, 2)}
+
+SEQUENCE STRUCTURE:
+Day 0 (immediately after webinar):
+- Message 1: Email - Thank you + value echo + personalized question
+- Message 2: SMS - Short, friendly check-in with micro-ask
+
+Day 1 (24 hours later):
+- Message 3: Email - Story/case study that mirrors their challenge + one clear CTA
+
+Day 2 (48 hours later):
+- Message 4: Email - Offer recap + deadline reminder (T-1 day) + social proof
+
+Day 3 (72 hours later):
+- Message 5: Email - Mission/why you built this + final call + deadline urgency
+
+Return ONLY a JSON object with this structure:
+{
+  "sequence_name": "Descriptive name for this sequence",
+  "sequence_description": "1-2 sentence description",
+  "messages": [
+    {
+      "name": "Day 0 - Thank You Email",
+      "message_order": 1,
+      "channel": "email",
+      "send_delay_hours": 0,
+      "subject_line": "Subject with {{token}} personalization",
+      "body_content": "Full email body with {{tokens}} for personalization. Use natural, conversational language. Include specific CTAs.",
+      "tone_notes": "Delivery guidance for this message",
+      "estimated_read_time": "2 minutes"
+    },
+    {
+      "name": "Day 0 - SMS Check-in",
+      "message_order": 2,
+      "channel": "sms",
+      "send_delay_hours": 0,
+      "body_content": "Short SMS (under 160 chars) with {{tokens}}",
+      "tone_notes": "Casual, friendly"
+    },
+    {
+      "name": "Day 1 - Story + Value",
+      "message_order": 3,
+      "channel": "email",
+      "send_delay_hours": 24,
+      "subject_line": "Subject line...",
+      "body_content": "Email with micro-story (120-200 words) that reframes objection + clear CTA",
+      "tone_notes": "Storytelling, consultative",
+      "estimated_read_time": "3 minutes"
+    },
+    {
+      "name": "Day 2 - Offer Recap",
+      "message_order": 4,
+      "channel": "email",
+      "send_delay_hours": 48,
+      "subject_line": "Subject line...",
+      "body_content": "Email with offer breakdown + bonuses + guarantee + deadline (T-1)",
+      "tone_notes": "Clear, benefit-focused",
+      "estimated_read_time": "2 minutes"
+    },
+    {
+      "name": "Day 3 - Final Call",
+      "message_order": 5,
+      "channel": "email",
+      "send_delay_hours": 72,
+      "subject_line": "Subject line...",
+      "body_content": "Email with mission/purpose + mirrors their challenge + final CTA + deadline urgency",
+      "tone_notes": "Authentic, purposeful, urgent",
+      "estimated_read_time": "2 minutes"
+    }
+  ]
+}
+
+CRITICAL:
+- Use tokens extensively for personalization
+- First line of each email should reference {{challenge_notes}} or {{goal_notes}}
+- Include conditional logic hints in body_content (e.g., "If {{watch_pct}} >= 50, emphasize conversion; if < 50, encourage replay completion")
+- CTAs should use {{next_step}}, {{checkout_url}}, {{book_call_url}}, {{replay_link}}
+- Deadline references should include {{timezone}}
+- Write naturally - this should sound like a real person helping another real person`,
+        },
+    ];
+}

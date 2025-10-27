@@ -1,39 +1,42 @@
+/**
+ * Step 11: AI Follow-Up Engine
+ *
+ * Configure AI-powered post-webinar follow-up automation.
+ */
+
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
-import { BarChart3, TrendingUp, Users, DollarSign, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/components/ui/use-toast";
 import { logger } from "@/lib/client-logger";
-import { createClient } from "@/lib/supabase/client";
-
-interface Analytics {
-    registrations: number;
-    views: number;
-    conversions: number;
-    revenue: number;
-}
+import { Sparkles, Mail, BookOpen, Settings } from "lucide-react";
 
 export default function Step11Page({
     params,
 }: {
     params: Promise<{ projectId: string }>;
 }) {
-    const [projectId, setProjectId] = useState("");
-    const [project, setProject] = useState<any>(null);
-    const [analytics, setAnalytics] = useState<Analytics>({
-        registrations: 0,
-        views: 0,
-        conversions: 0,
-        revenue: 0,
-    });
-    const [publishing, setPublishing] = useState(false);
-    const [isPublished, setIsPublished] = useState(false);
-    const [registrationPage, setRegistrationPage] = useState<any>(null);
-    const [profile, setProfile] = useState<any>(null);
+    const router = useRouter();
     const { toast } = useToast();
+    const [projectId, setProjectId] = useState("");
+    const [followupEnabled, setFollowupEnabled] = useState(false);
+    const [agentConfig, setAgentConfig] = useState({
+        name: "Main Follow-Up Agent",
+        tone: "conversational",
+        personality: "helpful",
+        empathy_level: "moderate",
+        urgency_level: "gentle",
+    });
+    const [saving, setSaving] = useState(false);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -43,220 +46,310 @@ export default function Step11Page({
         resolveParams();
     }, [params]);
 
-    useEffect(() => {
-        const loadProject = async () => {
-            if (!projectId) return;
-            try {
-                const supabase = createClient();
-                const { data: projectData, error: projectError } = await supabase
-                    .from("funnel_projects")
-                    .select("*")
-                    .eq("id", projectId)
-                    .single();
+    const handleEnableFollowup = async (enabled: boolean) => {
+        setFollowupEnabled(enabled);
 
-                if (projectError) throw projectError;
-                setProject(projectData);
-            } catch (error) {
-                logger.error({ error }, "Failed to load project");
-            }
-        };
-        loadProject();
-    }, [projectId]);
+        if (enabled) {
+            toast({
+                title: "✨ AI Follow-Up Enabled",
+                description:
+                    "Configure your agent below to start automating follow-ups",
+            });
+        }
+    };
 
-    const handlePublish = async () => {
-        setPublishing(true);
+    const handleSaveConfig = async () => {
+        setSaving(true);
 
         try {
-            const supabase = createClient();
-
-            // Update project status
-            await supabase
-                .from("funnel_projects")
-                .update({ status: "active" })
-                .eq("id", projectId);
-
-            // Publish all pages
-            await Promise.all([
-                supabase
-                    .from("registration_pages")
-                    .update({ is_published: true })
-                    .eq("funnel_project_id", projectId),
-                supabase
-                    .from("watch_pages")
-                    .update({ is_published: true })
-                    .eq("funnel_project_id", projectId),
-                supabase
-                    .from("enrollment_pages")
-                    .update({ is_published: true })
-                    .eq("funnel_project_id", projectId),
-            ]);
-
-            logger.info({ projectId }, "Funnel published");
-
-            toast({
-                title: "Funnel Published!",
-                description: "Your funnel is now live and accepting leads.",
+            const response = await fetch("/api/followup/agent-configs", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    funnel_project_id: projectId,
+                    name: agentConfig.name,
+                    voice_config: {
+                        tone: agentConfig.tone,
+                        personality: agentConfig.personality,
+                        empathy_level: agentConfig.empathy_level,
+                        urgency_level: agentConfig.urgency_level,
+                    },
+                }),
             });
 
-            setIsPublished(true);
-        } catch (err) {
-            logger.error({ error: err }, "Failed to publish funnel");
+            const data = await response.json();
+
+            if (data.success) {
+                toast({
+                    title: "✅ Configuration Saved",
+                    description: "Your AI follow-up settings have been saved",
+                });
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to save agent config");
             toast({
-                title: "Publish Failed",
-                description: "Could not publish funnel",
+                title: "Error",
+                description: "Failed to save configuration",
                 variant: "destructive",
             });
         } finally {
-            setPublishing(false);
+            setSaving(false);
         }
     };
-
-    const copyPublicUrl = () => {
-        if (registrationPage && profile) {
-            const url = registrationPage.vanity_slug
-                ? `${window.location.origin}/${profile.username}/${registrationPage.vanity_slug}`
-                : `${window.location.origin}/p/${registrationPage.id}`;
-
-            navigator.clipboard.writeText(url);
-
-            toast({
-                title: "URL Copied!",
-                description: "Public funnel URL copied to clipboard",
-            });
-        }
-    };
-
-    const conversionRate =
-        analytics.views > 0
-            ? ((analytics.conversions / analytics.views) * 100).toFixed(2)
-            : "0.00";
-
-    if (!projectId) {
-        return (
-            <div className="flex h-screen items-center justify-center">
-                <div className="text-gray-500">Loading...</div>
-            </div>
-        );
-    }
 
     return (
         <StepLayout
+            stepTitle="AI Follow-Up Engine"
+            stepDescription="Automate post-webinar engagement"
             currentStep={11}
             projectId={projectId}
-            funnelName={project?.name}
-            stepTitle="Analytics & Performance"
-            stepDescription="Track your funnel's performance and optimize for conversions"
         >
-            <div className="space-y-8">
-                <div className="rounded-lg border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-8">
-                    <div className="mb-6 text-center">
-                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-                            <BarChart3 className="h-8 w-8 text-blue-600" />
+            <div className="space-y-6">
+                {/* Enable/Disable Section */}
+                <Card className="p-6">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <Sparkles className="h-6 w-6 text-blue-500" />
+                            <div>
+                                <h3 className="text-lg font-semibold">
+                                    Enable AI Follow-Up
+                                </h3>
+                                <p className="text-sm text-gray-600">
+                                    Automatically nurture prospects with personalized
+                                    sequences
+                                </p>
+                            </div>
                         </div>
-                        <h2 className="mb-3 text-2xl font-semibold text-gray-900">
-                            Funnel Analytics
-                        </h2>
-                        <p className="mx-auto max-w-lg text-gray-600">
-                            Monitor key metrics and optimize your funnel for better
-                            performance.
-                        </p>
+                        <Switch
+                            checked={followupEnabled}
+                            onCheckedChange={handleEnableFollowup}
+                        />
                     </div>
-                </div>
+                </Card>
 
-                {/* Key Metrics */}
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="mb-3 flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-gray-600">
-                                Registrations
+                {followupEnabled && (
+                    <>
+                        <Tabs defaultValue="agent" className="w-full">
+                            <TabsList className="grid w-full grid-cols-3">
+                                <TabsTrigger value="agent">
+                                    <Sparkles className="h-4 w-4 mr-2" />
+                                    Agent
+                                </TabsTrigger>
+                                <TabsTrigger value="sequences">
+                                    <Mail className="h-4 w-4 mr-2" />
+                                    Sequences
+                                </TabsTrigger>
+                                <TabsTrigger value="settings">
+                                    <Settings className="h-4 w-4 mr-2" />
+                                    Settings
+                                </TabsTrigger>
+                            </TabsList>
+
+                            {/* Agent Configuration */}
+                            <TabsContent value="agent" className="space-y-4 mt-4">
+                                <Card className="p-6">
+                                    <h3 className="text-lg font-semibold mb-4">
+                                        AI Agent Personality
+                                    </h3>
+
+                                    <div className="space-y-4">
+                                        <div>
+                                            <Label>Agent Name</Label>
+                                            <Input
+                                                value={agentConfig.name}
+                                                onChange={(e) =>
+                                                    setAgentConfig({
+                                                        ...agentConfig,
+                                                        name: e.target.value,
+                                                    })
+                                                }
+                                                placeholder="Main Follow-Up Agent"
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <Label>Tone</Label>
+                                                <select
+                                                    value={agentConfig.tone}
+                                                    onChange={(e) =>
+                                                        setAgentConfig({
+                                                            ...agentConfig,
+                                                            tone: e.target.value,
+                                                        })
+                                                    }
+                                                    className="w-full border rounded p-2"
+                                                >
+                                                    <option value="conversational">
+                                                        Conversational
+                                                    </option>
+                                                    <option value="professional">
+                                                        Professional
+                                                    </option>
+                                                    <option value="casual">
+                                                        Casual
+                                                    </option>
+                                                </select>
+                                            </div>
+
+                                            <div>
+                                                <Label>Personality</Label>
+                                                <select
+                                                    value={agentConfig.personality}
+                                                    onChange={(e) =>
+                                                        setAgentConfig({
+                                                            ...agentConfig,
+                                                            personality: e.target.value,
+                                                        })
+                                                    }
+                                                    className="w-full border rounded p-2"
+                                                >
+                                                    <option value="helpful">
+                                                        Helpful
+                                                    </option>
+                                                    <option value="friendly">
+                                                        Friendly
+                                                    </option>
+                                                    <option value="expert">
+                                                        Expert
+                                                    </option>
+                                                </select>
+                                            </div>
+                                        </div>
+
+                                        <Button
+                                            onClick={handleSaveConfig}
+                                            disabled={saving}
+                                        >
+                                            {saving
+                                                ? "Saving..."
+                                                : "Save Configuration"}
+                                        </Button>
+                                    </div>
+                                </Card>
+                            </TabsContent>
+
+                            {/* Sequences */}
+                            <TabsContent value="sequences" className="mt-4">
+                                <Card className="p-6">
+                                    <h3 className="text-lg font-semibold mb-4">
+                                        Message Sequences
+                                    </h3>
+                                    <div className="border rounded p-4 bg-gradient-to-r from-blue-50 to-purple-50">
+                                        <div className="flex justify-between items-start mb-3">
+                                            <div>
+                                                <h4 className="font-semibold">
+                                                    3-Day Discount Sequence
+                                                </h4>
+                                                <p className="text-sm text-gray-600">
+                                                    Default automated sequence
+                                                </p>
+                                            </div>
+                                            <Badge>Active</Badge>
+                                        </div>
+                                        <div className="text-sm space-y-1">
+                                            <div>📨 5 touches (4 Email + 1 SMS)</div>
+                                            <div>⏰ 72 hours duration</div>
+                                            <div>🎯 Targets: Sampler, Engaged, Hot</div>
+                                        </div>
+                                    </div>
+                                </Card>
+                            </TabsContent>
+
+                            {/* Settings */}
+                            <TabsContent value="settings" className="mt-4">
+                                <Card className="p-6">
+                                    <h3 className="text-lg font-semibold mb-4">
+                                        Follow-Up Settings
+                                    </h3>
+                                    <div className="space-y-4">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <div className="font-medium">
+                                                    Email Follow-Up
+                                                </div>
+                                                <div className="text-sm text-gray-600">
+                                                    Automated email sequences
+                                                </div>
+                                            </div>
+                                            <Switch defaultChecked={true} />
+                                        </div>
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <div className="font-medium">
+                                                    SMS Follow-Up
+                                                </div>
+                                                <div className="text-sm text-gray-600">
+                                                    High-intent SMS messages
+                                                </div>
+                                            </div>
+                                            <Switch defaultChecked={false} />
+                                        </div>
+                                        <div className="pt-4 border-t">
+                                            <div className="text-sm space-y-2">
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">
+                                                        CAN-SPAM Compliance:
+                                                    </span>
+                                                    <Badge variant="default">
+                                                        Enabled
+                                                    </Badge>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">
+                                                        Daily Email Limit:
+                                                    </span>
+                                                    <span className="font-medium">
+                                                        500
+                                                    </span>
+                                                </div>
+                                                <div className="flex justify-between">
+                                                    <span className="text-gray-600">
+                                                        Daily SMS Limit:
+                                                    </span>
+                                                    <span className="font-medium">
+                                                        100
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </Card>
+                            </TabsContent>
+                        </Tabs>
+
+                        {/* Features Highlight */}
+                        <Card className="p-6 bg-gradient-to-r from-green-50 to-blue-50">
+                            <h3 className="text-lg font-semibold mb-4">
+                                AI Follow-Up Features
                             </h3>
-                            <Users className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div className="text-3xl font-bold text-gray-900">
-                            {analytics.registrations.toLocaleString()}
-                        </div>
-                        <p className="mt-1 text-xs text-gray-500">
-                            Total sign-ups to date
-                        </p>
-                    </div>
-
-                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="mb-3 flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-gray-600">
-                                Video Views
-                            </h3>
-                            <TrendingUp className="h-5 w-5 text-purple-600" />
-                        </div>
-                        <div className="text-3xl font-bold text-gray-900">
-                            {analytics.views.toLocaleString()}
-                        </div>
-                        <p className="mt-1 text-xs text-gray-500">
-                            Presentation watches
-                        </p>
-                    </div>
-
-                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="mb-3 flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-gray-600">
-                                Conversions
-                            </h3>
-                            <Users className="h-5 w-5 text-green-600" />
-                        </div>
-                        <div className="text-3xl font-bold text-gray-900">
-                            {analytics.conversions.toLocaleString()}
-                        </div>
-                        <p className="mt-1 text-xs text-gray-500">
-                            {conversionRate}% conversion rate
-                        </p>
-                    </div>
-
-                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="mb-3 flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-gray-600">
-                                Revenue
-                            </h3>
-                            <DollarSign className="h-5 w-5 text-emerald-600" />
-                        </div>
-                        <div className="text-3xl font-bold text-gray-900">
-                            ${analytics.revenue.toLocaleString()}
-                        </div>
-                        <p className="mt-1 text-xs text-gray-500">Total generated</p>
-                    </div>
-                </div>
-
-                {isPublished && registrationPage && (
-                    <div>
-                        <p className="mb-2 text-sm font-medium text-gray-700">
-                            Public URL:
-                        </p>
-                        <div className="flex space-x-2">
-                            <Input
-                                value={
-                                    registrationPage.vanity_slug
-                                        ? `${window.location.origin}/${profile?.username}/${registrationPage.vanity_slug}`
-                                        : `${window.location.origin}/p/${registrationPage.id}`
-                                }
-                                readOnly
-                                className="flex-1"
-                            />
-                            <Button variant="outline" size="sm" onClick={copyPublicUrl}>
-                                <Copy className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </div>
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div>✨ 5-Segment Auto-Categorization</div>
+                                <div>💬 15+ Personalization Tokens</div>
+                                <div>🤖 AI Story Selection</div>
+                                <div>📧 Multi-Channel (Email + SMS)</div>
+                            </div>
+                        </Card>
+                    </>
                 )}
 
-                {/* Completion Message */}
-                <div className="rounded-lg border border-green-200 bg-green-50 p-8 text-center">
-                    <div className="mb-4 text-6xl">🎉</div>
-                    <h2 className="mb-3 text-2xl font-bold text-green-900">
-                        Congratulations! Your Funnel is Complete
-                    </h2>
-                    <p className="mx-auto max-w-2xl text-green-800">
-                        You've successfully created your complete webinar funnel with
-                        AI. All your pages are generated and ready to be published.
-                        Track your performance here and optimize for better conversions.
-                    </p>
+                {/* Navigation */}
+                <div className="flex justify-between pt-6">
+                    <Button
+                        variant="outline"
+                        onClick={() =>
+                            router.push(`/funnel-builder/${projectId}/step/10`)
+                        }
+                    >
+                        ← Back
+                    </Button>
+                    <Button
+                        onClick={() =>
+                            router.push(`/funnel-builder/${projectId}/step/12`)
+                        }
+                    >
+                        Continue to Analytics →
+                    </Button>
                 </div>
             </div>
         </StepLayout>

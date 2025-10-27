@@ -687,6 +687,7 @@ export default function Step11Page({
             stepDescription="Automate post-webinar engagement with AI-powered sequences"
             currentStep={11}
             projectId={projectId}
+            nextLabel="Continue to Analytics"
         >
             <div className="space-y-6">
                 {/* Enable/Disable Section */}
@@ -946,25 +947,6 @@ export default function Step11Page({
                         </Tabs>
                     </>
                 )}
-
-                {/* Navigation */}
-                <div className="flex justify-between pt-6">
-                    <Button
-                        variant="outline"
-                        onClick={() =>
-                            router.push(`/funnel-builder/${projectId}/step/10`)
-                        }
-                    >
-                        ← Back
-                    </Button>
-                    <Button
-                        onClick={() =>
-                            router.push(`/funnel-builder/${projectId}/step/12`)
-                        }
-                    >
-                        Continue to Analytics →
-                    </Button>
-                </div>
             </div>
         </StepLayout>
     );

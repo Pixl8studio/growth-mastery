@@ -23,8 +23,8 @@ enterprise-grade tooling.
 pnpm install
 
 # 2. Set up environment variables
-cp .env.example .env.local
-# Edit .env.local with your Supabase credentials
+cp env.example .env.local
+# Edit .env.local with your credentials
 
 # 3. Run database migrations (if using local Supabase)
 # supabase db push
@@ -34,6 +34,20 @@ pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) to view the application.
+
+### External Services Setup
+
+The application integrates with several external services:
+
+- **Supabase** - Database and authentication (required)
+- **Stripe Connect** - Payment processing with platform fees (required for payments)
+  - See [docs/STRIPE_SETUP.md](./docs/STRIPE_SETUP.md) for complete setup guide
+- **OpenAI** - AI content generation (optional)
+- **VAPI** - AI voice calls (optional)
+- **Gamma** - Presentation generation (optional)
+- **Cloudflare Stream** - Video hosting (optional)
+
+See `env.example` for all configuration options.
 
 ## Overview
 

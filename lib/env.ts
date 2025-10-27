@@ -57,7 +57,7 @@ const envSchema = z.object({
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().optional(),
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
     STRIPE_CONNECT_CLIENT_ID: z.string().optional(),
-    STRIPE_PLATFORM_FEE_PERCENT: z.coerce.number().default(10),
+    STRIPE_PLATFORM_FEE_PERCENT: z.coerce.number().default(20),
     STRIPE_PLATFORM_FEE_FIXED: z.coerce.number().default(50),
 
     // ===========================================

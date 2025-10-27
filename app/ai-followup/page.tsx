@@ -8,7 +8,6 @@
 import { getCurrentUserWithProfile } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
 import { AIFollowupDashboard } from "@/components/followup/ai-followup-dashboard";
 
 export const metadata = {
@@ -24,10 +23,10 @@ export default async function AIFollowupPage() {
     }
 
     return (
-        <div className="flex min-h-screen flex-col">
+        <div className="min-h-screen bg-gray-50">
             <Header />
 
-            <main className="flex-1 bg-gray-50">
+            <main>
                 <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
                     <div className="mb-8">
                         <h1 className="text-3xl font-bold text-gray-900">
@@ -42,8 +41,6 @@ export default async function AIFollowupPage() {
                     <AIFollowupDashboard userId={user.id} />
                 </div>
             </main>
-
-            <Footer />
         </div>
     );
 }

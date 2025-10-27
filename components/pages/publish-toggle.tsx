@@ -1,92 +1,57 @@
-"use client";
-
 /**
- * Publish toggle component for pages
- * Allows toggling published status with optimistic updates
+ * Toggle switch for publishing/unpublishing pages
  */
+
+"use client";
 
 import { useState } from "react";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/components/ui/use-toast";
+import type { PageListItem } from "@/types/pages";
+import { togglePagePublish } from "@/app/pages/actions";
+import { useRouter } from "next/navigation";
 import { logger } from "@/lib/client-logger";
 
 interface PublishToggleProps {
-    pageId: string;
-    pageType: "registration" | "watch" | "enrollment";
-    initialPublished: boolean;
-    onToggle?: (published: boolean) => void;
+    page: PageListItem;
 }
 
-export function PublishToggle({
-    pageId,
-    pageType,
-    initialPublished,
-    onToggle,
-}: PublishToggleProps) {
-    const [published, setPublished] = useState(initialPublished);
+export function PublishToggle({ page }: PublishToggleProps) {
+    const router = useRouter();
+    const [isPublished, setIsPublished] = useState(page.is_published);
     const [isLoading, setIsLoading] = useState(false);
-    const { toast } = useToast();
 
-    const handleToggle = async (newValue: boolean) => {
-        const previousValue = published;
-        setPublished(newValue);
+    const handleToggle = async (checked: boolean) => {
         setIsLoading(true);
+        setIsPublished(checked);
 
         try {
-            const response = await fetch(`/api/pages/${pageType}/${pageId}/publish`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ published: newValue }),
-            });
-
-            if (!response.ok) {
-                throw new Error("Failed to update publish status");
-            }
-
+            await togglePagePublish(page.type, page.id, checked);
             logger.info(
-                { pageId, pageType, published: newValue },
-                "Page publish status updated"
+                { pageId: page.id, isPublished: checked },
+                "Page publish status toggled"
             );
-
-            toast({
-                title: newValue ? "Page published" : "Page unpublished",
-                description: newValue
-                    ? "Your page is now live and visible to visitors"
-                    : "Your page is now hidden from visitors",
-            });
-
-            onToggle?.(newValue);
+            router.refresh();
         } catch (error) {
-            logger.error(
-                { error, pageId, pageType },
-                "Failed to toggle publish status"
-            );
-            setPublished(previousValue);
-            toast({
-                title: "Error",
-                description: "Failed to update publish status. Please try again.",
-                variant: "destructive",
-            });
+            logger.error({ error, pageId: page.id }, "Failed to toggle publish status");
+            // Revert on error
+            setIsPublished(!checked);
+            alert("Failed to update publish status. Please try again.");
         } finally {
             setIsLoading(false);
         }
     };
 
     return (
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center gap-2">
             <Switch
-                id={`publish-${pageId}`}
-                checked={published}
+                checked={isPublished}
                 onCheckedChange={handleToggle}
                 disabled={isLoading}
+                aria-label={isPublished ? "Unpublish page" : "Publish page"}
             />
-            <Label
-                htmlFor={`publish-${pageId}`}
-                className="text-sm font-medium text-gray-700"
-            >
-                {published ? "Published" : "Draft"}
-            </Label>
+            <span className="text-xs text-gray-500">
+                {isPublished ? "Live" : "Draft"}
+            </span>
         </div>
     );
 }

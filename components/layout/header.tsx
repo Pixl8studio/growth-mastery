@@ -44,6 +44,12 @@ export async function Header() {
                                 Funnels
                             </Link>
                             <Link
+                                href="/ai-followup"
+                                className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                            >
+                                AI Followup
+                            </Link>
+                            <Link
                                 href="/contacts"
                                 className="text-sm font-medium text-gray-700 hover:text-gray-900"
                             >

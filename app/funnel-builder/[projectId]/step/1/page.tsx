@@ -6,6 +6,7 @@ import { Phone, CheckCircle, Clock, MessageSquare } from "lucide-react";
 import { VapiCallWidget } from "@/components/funnel/vapi-call-widget";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
+import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 
 interface VapiTranscript {
     id: string;
@@ -33,6 +34,9 @@ export default function Step1Page({
     const [userId, setUserId] = useState("");
     const [transcripts, setTranscripts] = useState<VapiTranscript[]>([]);
     const [isLoadingTranscripts, setIsLoadingTranscripts] = useState(true);
+
+    // Load completion status
+    const { completedSteps, refreshCompletion } = useStepCompletion(projectId);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -129,6 +133,7 @@ export default function Step1Page({
             currentStep={1}
             projectId={projectId}
             funnelName={project?.name}
+            completedSteps={completedSteps}
             nextDisabled={!hasCompletedCall}
             nextLabel={
                 hasCompletedCall ? "Generate Deck Structure" : "Complete Call First"
@@ -195,7 +200,10 @@ export default function Step1Page({
                 <VapiCallWidget
                     projectId={projectId}
                     userId={userId}
-                    onCallComplete={loadTranscripts}
+                    onCallComplete={() => {
+                        loadTranscripts();
+                        refreshCompletion();
+                    }}
                 />
 
                 {/* Saved Calls List */}

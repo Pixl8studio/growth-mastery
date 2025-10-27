@@ -7,6 +7,7 @@ import { Sparkles, DollarSign, Trash2, Pencil } from "lucide-react";
 import { OfferEditor } from "@/components/funnel/offer-editor";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
+import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 
 interface Offer {
     id: string;
@@ -37,6 +38,9 @@ export default function Step2Page({
     const [editingName, setEditingName] = useState("");
     const [transcripts, setTranscripts] = useState<any[]>([]);
     const [selectedTranscript, setSelectedTranscript] = useState("");
+
+    // Load completion status
+    const { completedSteps } = useStepCompletion(projectId);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -201,6 +205,7 @@ export default function Step2Page({
             currentStep={2}
             projectId={projectId}
             funnelName={project?.name}
+            completedSteps={completedSteps}
             nextDisabled={!hasCompletedOffer}
             nextLabel={
                 hasCompletedOffer ? "Generate Deck Structure" : "Generate Offer First"

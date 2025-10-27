@@ -19,10 +19,32 @@ export default function IntegrationsSettingsPage() {
     const [webhookEnabled, setWebhookEnabled] = useState(false);
     const [webhookUrl, setWebhookUrl] = useState("");
     const [webhookSecret, setWebhookSecret] = useState("");
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+    // Store original values to detect changes
+    const [originalWebhookEnabled, setOriginalWebhookEnabled] = useState(false);
+    const [originalWebhookUrl, setOriginalWebhookUrl] = useState("");
+    const [originalWebhookSecret, setOriginalWebhookSecret] = useState("");
 
     useEffect(() => {
         loadIntegrations();
     }, []);
+
+    // Detect changes to warn user about unsaved changes
+    useEffect(() => {
+        const hasChanges =
+            webhookEnabled !== originalWebhookEnabled ||
+            webhookUrl !== originalWebhookUrl ||
+            webhookSecret !== originalWebhookSecret;
+        setHasUnsavedChanges(hasChanges);
+    }, [
+        webhookEnabled,
+        webhookUrl,
+        webhookSecret,
+        originalWebhookEnabled,
+        originalWebhookUrl,
+        originalWebhookSecret,
+    ]);
 
     const loadIntegrations = async () => {
         try {
@@ -42,9 +64,19 @@ export default function IntegrationsSettingsPage() {
 
             if (profileError) throw profileError;
 
-            setWebhookEnabled(profile.webhook_enabled || false);
-            setWebhookUrl(profile.crm_webhook_url || "");
-            setWebhookSecret(profile.webhook_secret || "");
+            const enabled = profile.webhook_enabled || false;
+            const url = profile.crm_webhook_url || "";
+            const secret = profile.webhook_secret || "";
+
+            setWebhookEnabled(enabled);
+            setWebhookUrl(url);
+            setWebhookSecret(secret);
+
+            // Store original values for change detection
+            setOriginalWebhookEnabled(enabled);
+            setOriginalWebhookUrl(url);
+            setOriginalWebhookSecret(secret);
+            setHasUnsavedChanges(false);
         } catch (err) {
             logger.error({ error: err }, "Failed to load integrations");
             setError("Failed to load integrations");
@@ -101,6 +133,12 @@ export default function IntegrationsSettingsPage() {
 
             if (updateError) throw updateError;
 
+            // Update original values to reflect saved state
+            setOriginalWebhookEnabled(webhookEnabled);
+            setOriginalWebhookUrl(webhookUrl);
+            setOriginalWebhookSecret(webhookSecret);
+            setHasUnsavedChanges(false);
+
             setSuccess("Webhook settings updated successfully!");
             logger.info({ userId: user.id }, "Webhook settings updated");
         } catch (err) {
@@ -117,22 +155,36 @@ export default function IntegrationsSettingsPage() {
         setSuccess(null);
 
         try {
-            if (!webhookUrl) {
-                setError("Please enter a webhook URL first");
-                setTesting(false);
-                return;
-            }
-
-            // First save the webhook settings
+            // Validate before testing
             if (!webhookEnabled) {
-                setError("Please enable the webhook first");
+                setError("Please enable the webhook before testing");
                 setTesting(false);
                 return;
             }
 
+            if (!webhookUrl) {
+                setError("Please enter a webhook URL before testing");
+                setTesting(false);
+                return;
+            }
+
+            // Validate URL format
+            try {
+                new URL(webhookUrl);
+            } catch {
+                setError("Invalid webhook URL format");
+                setTesting(false);
+                return;
+            }
+
+            // Send current form values for testing (even if unsaved)
             const response = await fetch("/api/user/webhook/test", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    webhookUrl,
+                    webhookSecret: webhookSecret || undefined,
+                }),
             });
 
             const data = await response.json();

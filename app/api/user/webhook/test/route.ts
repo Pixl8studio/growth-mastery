@@ -6,9 +6,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import { sendWebhook } from "@/lib/webhook-service";
+import { sendWebhookDirect } from "@/lib/webhook-service";
 
-export async function POST(_request: NextRequest) {
+export async function POST(request: NextRequest) {
     const requestLogger = logger.child({ handler: "test-webhook" });
 
     try {
@@ -24,6 +24,10 @@ export async function POST(_request: NextRequest) {
 
         requestLogger.info({ userId: user.id }, "Sending test webhook");
 
+        // Parse request body for test configuration
+        const body = await request.json().catch(() => ({}));
+        const { webhookUrl, webhookSecret } = body;
+
         // Build test payload
         const testPayload = {
             event: "webhook.test",
@@ -35,8 +39,11 @@ export async function POST(_request: NextRequest) {
             },
         };
 
-        // Send webhook
-        const result = await sendWebhook(user.id, testPayload);
+        // If webhook URL provided in request, use it for testing (even if not saved)
+        // Otherwise fall back to saved configuration
+        const result = webhookUrl
+            ? await sendWebhookDirect(webhookUrl, webhookSecret, testPayload, user.id)
+            : await sendWebhookDirect(null, null, testPayload, user.id);
 
         if (result.success) {
             requestLogger.info({ userId: user.id }, "Test webhook sent successfully");
@@ -46,11 +53,32 @@ export async function POST(_request: NextRequest) {
                 statusCode: result.statusCode,
             });
         } else {
-            requestLogger.warn({ userId: user.id }, "Test webhook failed");
+            // Configuration error (webhook not enabled or URL not set)
+            if (result.notConfigured) {
+                requestLogger.info(
+                    { userId: user.id },
+                    "Test webhook skipped - not configured"
+                );
+                return NextResponse.json(
+                    {
+                        success: false,
+                        error: result.error || "Webhook not configured",
+                    },
+                    { status: 400 }
+                );
+            }
+
+            // Delivery failure (network error, bad response, etc.)
+            requestLogger.warn(
+                { userId: user.id, error: result.error },
+                "Test webhook failed"
+            );
             return NextResponse.json(
                 {
                     success: false,
-                    error: "Webhook delivery failed. Check your webhook logs for details.",
+                    error:
+                        result.error ||
+                        "Webhook delivery failed. Check your webhook logs for details.",
                 },
                 { status: 500 }
             );

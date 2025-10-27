@@ -8,7 +8,6 @@ interface Step {
     number: number;
     title: string;
     description: string;
-    icon: string;
 }
 
 const STEPS: Step[] = [
@@ -16,36 +15,41 @@ const STEPS: Step[] = [
         number: 1,
         title: "AI Intake Call",
         description: "Voice conversation",
-        icon: "📞",
     },
-    { number: 2, title: "Craft Offer", description: "Pricing & features", icon: "💰" },
-    { number: 3, title: "Deck Structure", description: "55-slide outline", icon: "📊" },
-    { number: 4, title: "Gamma Decks", description: "Visual presentation", icon: "🎨" },
-    { number: 5, title: "Enrollment Page", description: "AI sales copy", icon: "📝" },
-    { number: 6, title: "Talk Track", description: "Video script", icon: "📖" },
-    { number: 7, title: "Upload Video", description: "Pitch recording", icon: "🎥" },
-    { number: 8, title: "Watch Page", description: "Video landing", icon: "▶️" },
-    { number: 9, title: "Registration", description: "Lead capture", icon: "📋" },
-    { number: 10, title: "Flow Setup", description: "Connect pages", icon: "🔗" },
-    { number: 11, title: "AI Follow-Up", description: "Smart automation", icon: "✨" },
-    { number: 12, title: "Analytics", description: "Track performance", icon: "📈" },
+    { number: 2, title: "Craft Offer", description: "Pricing & features" },
+    { number: 3, title: "Deck Structure", description: "55-slide outline" },
+    { number: 4, title: "Gamma Decks", description: "Visual presentation" },
+    { number: 5, title: "Enrollment Page", description: "AI sales copy" },
+    { number: 6, title: "Talk Track", description: "Video script" },
+    { number: 7, title: "Upload Video", description: "Pitch recording" },
+    { number: 8, title: "Watch Page", description: "Video landing" },
+    { number: 9, title: "Registration", description: "Lead capture" },
+    { number: 10, title: "Flow Setup", description: "Connect pages" },
+    { number: 11, title: "AI Follow-Up", description: "Smart automation" },
+    { number: 12, title: "Analytics", description: "Track performance" },
 ];
 
 interface StepperNavProps {
     projectId: string;
     currentStep: number;
+    completedSteps?: number[]; // Array of step numbers that have generated content
     className?: string;
 }
 
-export function StepperNav({ projectId, currentStep, className }: StepperNavProps) {
+export function StepperNav({
+    projectId,
+    currentStep,
+    completedSteps = [],
+    className,
+}: StepperNavProps) {
     const pathname = usePathname();
 
     return (
         <nav className={cn("space-y-2", className)}>
             {STEPS.map((step) => {
                 const isActive = step.number === currentStep;
-                const isCompleted = step.number < currentStep;
-                const isFuture = step.number > currentStep;
+                const isCompleted = completedSteps.includes(step.number);
+                const isFuture = !isCompleted && step.number !== currentStep;
                 const href = `/funnel-builder/${projectId}/step/${step.number}`;
                 const isCurrentPage = pathname === href;
 
@@ -54,7 +58,7 @@ export function StepperNav({ projectId, currentStep, className }: StepperNavProp
                         key={step.number}
                         href={href}
                         className={cn(
-                            "group flex items-center gap-4 rounded-lg border p-4 transition-all",
+                            "group block rounded-lg border px-4 py-5 transition-all",
                             {
                                 // Current page
                                 "border-blue-500 bg-blue-50 shadow-sm": isCurrentPage,
@@ -67,24 +71,8 @@ export function StepperNav({ projectId, currentStep, className }: StepperNavProp
                             }
                         )}
                     >
-                        {/* Step Number/Icon */}
-                        <div
-                            className={cn(
-                                "flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full text-xl",
-                                {
-                                    "bg-blue-500 text-white": isCurrentPage,
-                                    "bg-blue-100 text-blue-600":
-                                        isActive && !isCurrentPage,
-                                    "bg-green-100 text-green-600": isCompleted,
-                                    "bg-gray-100 text-gray-500": isFuture,
-                                }
-                            )}
-                        >
-                            {isCompleted ? "✓" : step.icon}
-                        </div>
-
                         {/* Step Info */}
-                        <div className="flex-1">
+                        <div className="space-y-2">
                             <div className="flex items-center gap-2">
                                 <span
                                     className={cn(
@@ -111,15 +99,12 @@ export function StepperNav({ projectId, currentStep, className }: StepperNavProp
                                     </span>
                                 )}
                             </div>
-                            <h3 className="mb-1 font-semibold text-gray-900">
+                            <h3 className="text-base font-semibold leading-snug text-gray-900">
                                 {step.title}
                             </h3>
-                            <p className="text-sm text-gray-600">{step.description}</p>
-                        </div>
-
-                        {/* Arrow for all steps */}
-                        <div className="flex-shrink-0 text-gray-400 transition-transform group-hover:translate-x-1">
-                            →
+                            <p className="text-sm leading-relaxed text-gray-600">
+                                {step.description}
+                            </p>
                         </div>
                     </Link>
                 );

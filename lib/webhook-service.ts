@@ -16,12 +16,145 @@ interface WebhookPayload {
 }
 
 /**
+ * Send webhook directly with explicit URL/secret or read from database
+ * Used for testing with unsaved configuration
+ */
+export async function sendWebhookDirect(
+    webhookUrl: string | null,
+    webhookSecret: string | null | undefined,
+    payload: WebhookPayload,
+    userId: string
+): Promise<{
+    success: boolean;
+    statusCode?: number;
+    error?: string;
+    notConfigured?: boolean;
+}> {
+    const requestLogger = logger.child({
+        handler: "send-webhook-direct",
+        userId,
+        event: payload.event,
+    });
+
+    try {
+        requestLogger.info("Sending webhook");
+
+        // If no URL provided, read from database
+        if (!webhookUrl) {
+            const supabase = await createClient();
+
+            const { data: profile, error: profileError } = await supabase
+                .from("user_profiles")
+                .select("webhook_enabled, crm_webhook_url, webhook_secret")
+                .eq("id", userId)
+                .single();
+
+            if (profileError || !profile) {
+                throw new Error("User profile not found");
+            }
+
+            if (!profile.webhook_enabled || !profile.crm_webhook_url) {
+                const errorMsg = !profile.webhook_enabled
+                    ? "Webhook is not enabled. Please enable it in your settings."
+                    : "Webhook URL is not configured. Please set your webhook URL in settings.";
+                requestLogger.info(errorMsg);
+                return { success: false, notConfigured: true, error: errorMsg };
+            }
+
+            webhookUrl = profile.crm_webhook_url;
+            webhookSecret = profile.webhook_secret;
+        }
+
+        // At this point webhookUrl is guaranteed to be set
+        if (!webhookUrl) {
+            throw new Error("Webhook URL not configured");
+        }
+
+        // Generate HMAC signature if secret is configured
+        const signature = webhookSecret
+            ? generateHmacSignature(JSON.stringify(payload), webhookSecret)
+            : undefined;
+
+        // Send webhook with retry logic
+        const result = await retry(
+            async () => {
+                const response = await fetch(webhookUrl!, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        ...(signature ? { "X-Webhook-Signature": signature } : {}),
+                        "User-Agent": "GenieAI/1.0",
+                    },
+                    body: JSON.stringify(payload),
+                    signal: AbortSignal.timeout(WEBHOOK_CONFIG.timeoutMs),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Webhook failed with status ${response.status}`);
+                }
+
+                return {
+                    success: true,
+                    statusCode: response.status,
+                    responseBody: await response.text(),
+                };
+            },
+            {
+                maxAttempts: WEBHOOK_CONFIG.maxRetries,
+                delayMs: WEBHOOK_CONFIG.retryDelayMs,
+                backoffMultiplier: WEBHOOK_CONFIG.retryBackoffMultiplier,
+            }
+        );
+
+        // Log successful delivery
+        await logWebhookDelivery({
+            userId,
+            eventType: payload.event,
+            payload,
+            webhookUrl: webhookUrl!,
+            statusCode: result.statusCode!,
+            success: true,
+            attemptNumber: 1,
+        });
+
+        requestLogger.info(
+            { statusCode: result.statusCode },
+            "Webhook sent successfully"
+        );
+
+        return { success: true, statusCode: result.statusCode };
+    } catch (error) {
+        requestLogger.error({ error }, "Failed to send webhook");
+
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+        // Log failed delivery
+        await logWebhookDelivery({
+            userId,
+            eventType: payload.event,
+            payload,
+            webhookUrl: webhookUrl || "",
+            success: false,
+            errorMessage,
+            attemptNumber: WEBHOOK_CONFIG.maxRetries,
+        });
+
+        return { success: false, error: errorMessage };
+    }
+}
+
+/**
  * Send webhook to user's CRM
  */
 export async function sendWebhook(
     userId: string,
     payload: WebhookPayload
-): Promise<{ success: boolean; statusCode?: number }> {
+): Promise<{
+    success: boolean;
+    statusCode?: number;
+    error?: string;
+    notConfigured?: boolean;
+}> {
     const requestLogger = logger.child({
         handler: "send-webhook",
         userId,
@@ -46,8 +179,11 @@ export async function sendWebhook(
 
         // Check if webhook is enabled
         if (!profile.webhook_enabled || !profile.crm_webhook_url) {
-            requestLogger.info("Webhook not enabled or URL not configured");
-            return { success: false };
+            const errorMsg = !profile.webhook_enabled
+                ? "Webhook is not enabled. Please enable it in your settings."
+                : "Webhook URL is not configured. Please set your webhook URL in settings.";
+            requestLogger.info(errorMsg);
+            return { success: false, notConfigured: true, error: errorMsg };
         }
 
         const webhookUrl = profile.crm_webhook_url;
@@ -109,6 +245,8 @@ export async function sendWebhook(
     } catch (error) {
         requestLogger.error({ error }, "Failed to send webhook");
 
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
         // Log failed delivery
         await logWebhookDelivery({
             userId,
@@ -116,11 +254,11 @@ export async function sendWebhook(
             payload,
             webhookUrl: "", // Will be filled if available
             success: false,
-            errorMessage: error instanceof Error ? error.message : "Unknown error",
+            errorMessage,
             attemptNumber: WEBHOOK_CONFIG.maxRetries,
         });
 
-        return { success: false };
+        return { success: false, error: errorMessage };
     }
 }
 

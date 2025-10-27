@@ -214,9 +214,9 @@ comprehensive error handling.
 
 **Platform Fee Structure:**
 
-- Percentage: 10% (configurable)
-- Fixed: $0.50 per transaction
-- Example: $997 sale = $99.70 + $0.50 = $100.20 platform fee, $896.80 to seller
+- Percentage: 20% (configurable via `STRIPE_PLATFORM_FEE_PERCENT`)
+- Fixed: $0.50 per transaction (configurable via `STRIPE_PLATFORM_FEE_FIXED`)
+- Example: $997 sale = $199.40 + $0.50 = $199.90 platform fee, $797.10 to seller
 
 ---
 

@@ -10,7 +10,7 @@ interface StepLayoutProps {
     currentStep: number;
     stepTitle?: string;
     stepDescription?: string;
-    completedSteps?: number[];
+    completedSteps?: number[]; // Steps that have generated content
     funnelName?: string;
     funnelId?: string;
     projectId: string;
@@ -69,7 +69,11 @@ export function StepLayout({
                         </p>
                     </Link>
 
-                    <StepperNav projectId={projectId} currentStep={currentStep} />
+                    <StepperNav
+                        projectId={projectId}
+                        currentStep={currentStep}
+                        completedSteps={completedSteps}
+                    />
                 </div>
             </div>
 

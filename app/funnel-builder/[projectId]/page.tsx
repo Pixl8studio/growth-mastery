@@ -20,6 +20,8 @@ import { StepperNav } from "@/components/funnel/stepper-nav";
 import { ProgressBar } from "@/components/funnel/progress-bar";
 import { formatDate } from "@/lib/utils";
 import { Header } from "@/components/layout/header";
+import { getStepCompletionStatus } from "@/app/funnel-builder/completion-utils";
+import { calculateCompletionPercentage } from "@/app/funnel-builder/completion-types";
 
 interface PageProps {
     params: Promise<{
@@ -43,6 +45,13 @@ export default async function FunnelProjectPage({ params }: PageProps) {
     if (error || !project) {
         notFound();
     }
+
+    // Get completion status
+    const completionStatus = await getStepCompletionStatus(projectId);
+    const completionPercentage = calculateCompletionPercentage(completionStatus);
+    const completedSteps = completionStatus
+        .filter((s) => s.isCompleted)
+        .map((s) => s.step);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -111,11 +120,29 @@ export default async function FunnelProjectPage({ params }: PageProps) {
                     <CardHeader>
                         <CardTitle>Progress</CardTitle>
                         <CardDescription>
-                            You're on step {project.current_step} of 12
+                            {completionPercentage}% complete • {completedSteps.length}{" "}
+                            of 11 steps done
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ProgressBar currentStep={project.current_step} />
+                        {/* Visual Progress Bar */}
+                        <div className="mb-6">
+                            <div className="mb-2 flex items-center justify-between text-sm">
+                                <span className="font-medium text-gray-700">
+                                    Funnel Completion
+                                </span>
+                                <span className="font-bold text-blue-600">
+                                    {completionPercentage}%
+                                </span>
+                            </div>
+                            <div className="h-3 w-full overflow-hidden rounded-full bg-gray-200">
+                                <div
+                                    className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
+                                    style={{ width: `${completionPercentage}%` }}
+                                />
+                            </div>
+                        </div>
+
                         <div className="mt-6">
                             <Link
                                 href={`/funnel-builder/${projectId}/step/${project.current_step}`}
@@ -140,6 +167,7 @@ export default async function FunnelProjectPage({ params }: PageProps) {
                         <StepperNav
                             projectId={projectId}
                             currentStep={project.current_step}
+                            completedSteps={completedSteps}
                         />
                     </CardContent>
                 </Card>

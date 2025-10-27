@@ -7,6 +7,7 @@ import { DeckStructureEditor } from "@/components/funnel/deck-structure-editor";
 import { Sparkles, FileText, Trash2, Pencil, Download } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
+import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 
 interface DeckStructure {
     id: string;
@@ -45,6 +46,9 @@ export default function Step3Page({
     const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
     const [editingDeckName, setEditingDeckName] = useState("");
     const [slideCount, setSlideCount] = useState<"5" | "55">("55");
+
+    // Load completion status
+    const { completedSteps } = useStepCompletion(projectId);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -297,6 +301,7 @@ export default function Step3Page({
             currentStep={3}
             projectId={projectId}
             funnelName={project?.name}
+            completedSteps={completedSteps}
             nextDisabled={!hasCompletedDeck}
             nextLabel={hasCompletedDeck ? "Create Gamma Deck" : "Generate Deck First"}
             stepTitle="Deck Structure"

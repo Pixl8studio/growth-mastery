@@ -70,7 +70,7 @@ export const VANITY_SLUG_CONFIG = {
 } as const;
 
 export const STRIPE_CONFIG = {
-    platformFeePercent: Number(process.env.STRIPE_PLATFORM_FEE_PERCENT) || 10,
+    platformFeePercent: Number(process.env.STRIPE_PLATFORM_FEE_PERCENT) || 20,
     platformFeeFixed: Number(process.env.STRIPE_PLATFORM_FEE_FIXED) || 50, // in cents
     currency: "USD",
 } as const;

@@ -20,11 +20,28 @@ export async function generateConnectUrl(
     try {
         requestLogger.info("Generating Stripe Connect URL");
 
+        // Validate required Stripe Connect credentials
+        if (
+            !env.STRIPE_CONNECT_CLIENT_ID ||
+            env.STRIPE_CONNECT_CLIENT_ID.includes("your_") ||
+            env.STRIPE_CONNECT_CLIENT_ID.includes("...")
+        ) {
+            const errorMessage =
+                "Stripe Connect is not configured correctly. " +
+                "STRIPE_CONNECT_CLIENT_ID must be set to your actual Client ID (starts with 'ca_'). " +
+                "Currently set to: " +
+                (env.STRIPE_CONNECT_CLIENT_ID || "(not set)") +
+                ". Get your Client ID from: Stripe Dashboard > Connect > Settings. " +
+                "See docs/STRIPE_SETUP.md for detailed setup instructions.";
+            requestLogger.error({}, errorMessage);
+            throw new Error(errorMessage);
+        }
+
         const baseUrl = env.NEXT_PUBLIC_APP_URL;
         const redirectUri = `${baseUrl}/api/stripe/callback`;
 
         const params = new URLSearchParams({
-            client_id: env.STRIPE_CONNECT_CLIENT_ID || "",
+            client_id: env.STRIPE_CONNECT_CLIENT_ID,
             state: userId, // We'll verify this on callback
             scope: "read_write",
             response_type: "code",
@@ -138,9 +155,16 @@ export async function disconnectStripe(
     try {
         requestLogger.info("Disconnecting Stripe account");
 
+        // Validate required Stripe Connect credentials
+        if (!env.STRIPE_CONNECT_CLIENT_ID) {
+            throw new Error(
+                "Stripe Connect is not configured. STRIPE_CONNECT_CLIENT_ID is required."
+            );
+        }
+
         // Deauthorize the account
         await stripe.oauth.deauthorize({
-            client_id: env.STRIPE_CONNECT_CLIENT_ID || "",
+            client_id: env.STRIPE_CONNECT_CLIENT_ID,
             stripe_user_id: accountId,
         });
 

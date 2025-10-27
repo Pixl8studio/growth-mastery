@@ -160,3 +160,4 @@ CREATE INDEX idx_followup_deliveries_tracking_covering
 
 COMMIT;
 
+

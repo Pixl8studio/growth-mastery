@@ -588,3 +588,4 @@ CREATE INDEX idx_followup_experiments_type ON public.followup_experiments(experi
 
 COMMIT;
 
+

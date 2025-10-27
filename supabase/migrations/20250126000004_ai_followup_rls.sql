@@ -347,3 +347,4 @@ GRANT EXECUTE ON FUNCTION public.get_sequence_performance TO authenticated;
 
 COMMIT;
 
+

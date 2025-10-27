@@ -333,7 +333,7 @@ export function MessageTemplateEditor({
 
         let preview = formData.body_content || "";
         Object.entries(sampleData).forEach(([key, value]) => {
-            preview = preview.replaceAll(`{${key}}`, value);
+            preview = preview.replaceAll(`{${key}}`, String(value));
         });
 
         return preview;

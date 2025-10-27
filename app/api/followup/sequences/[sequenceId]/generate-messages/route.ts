@@ -113,6 +113,24 @@ export async function POST(request: NextRequest, context: RouteContext) {
             },
         };
 
+        // Delete existing messages for this sequence before generating new ones
+        const { error: deleteError } = await supabase
+            .from("followup_messages")
+            .delete()
+            .eq("sequence_id", sequenceId);
+
+        if (deleteError) {
+            logger.error(
+                { error: deleteError, sequenceId },
+                "⚠️ Failed to delete existing messages (continuing anyway)"
+            );
+        } else {
+            logger.info(
+                { sequenceId },
+                "🗑️ Deleted existing messages before regeneration"
+            );
+        }
+
         const result = await generateDynamicSequence(sequenceId, generationContext);
 
         if (!result.success) {

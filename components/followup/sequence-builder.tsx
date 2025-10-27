@@ -702,8 +702,8 @@ export function SequenceBuilder({
                                 </div>
 
                                 <div className="flex gap-2">
-                                    {/* Generate Messages Button (shows if sequence has no messages) */}
-                                    {(sequence.message_count || 0) === 0 && (
+                                    {/* Generate or Regenerate Messages Button */}
+                                    {(sequence.message_count || 0) === 0 ? (
                                         <Button
                                             size="sm"
                                             onClick={() =>
@@ -735,19 +735,63 @@ export function SequenceBuilder({
                                                 </>
                                             )}
                                         </Button>
+                                    ) : (
+                                        <>
+                                            {(sequence.message_count || 0) !==
+                                                sequence.total_messages && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() => {
+                                                        if (
+                                                            confirm(
+                                                                `This will delete ${sequence.message_count || 0} existing messages and generate ${sequence.total_messages} new ones. Continue?`
+                                                            )
+                                                        ) {
+                                                            handleGenerateMessagesForSequence(
+                                                                sequence.id
+                                                            );
+                                                        }
+                                                    }}
+                                                    disabled={
+                                                        generatingMessagesFor ===
+                                                        sequence.id
+                                                    }
+                                                    className="flex items-center gap-1 text-orange-600 hover:text-orange-700"
+                                                >
+                                                    {generatingMessagesFor ===
+                                                    sequence.id ? (
+                                                        <>
+                                                            <span className="animate-spin">
+                                                                ⏳
+                                                            </span>
+                                                            Regenerating...
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Sparkles className="h-4 w-4" />
+                                                            Regenerate (
+                                                            {sequence.message_count ||
+                                                                0}{" "}
+                                                            → {sequence.total_messages})
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            )}
+                                            {onSelectSequence && (
+                                                <Button
+                                                    size="sm"
+                                                    onClick={() =>
+                                                        onSelectSequence(sequence.id)
+                                                    }
+                                                >
+                                                    <MessageSquare className="h-4 w-4 mr-1" />
+                                                    View Messages (
+                                                    {sequence.message_count})
+                                                </Button>
+                                            )}
+                                        </>
                                     )}
-                                    {onSelectSequence &&
-                                        (sequence.message_count || 0) > 0 && (
-                                            <Button
-                                                size="sm"
-                                                onClick={() =>
-                                                    onSelectSequence(sequence.id)
-                                                }
-                                            >
-                                                <MessageSquare className="h-4 w-4 mr-1" />
-                                                View Messages ({sequence.message_count})
-                                            </Button>
-                                        )}
                                     <Button
                                         variant="outline"
                                         size="sm"
@@ -771,7 +815,14 @@ export function SequenceBuilder({
                                 <div className="flex items-center gap-2">
                                     <MessageSquare className="h-4 w-4 text-gray-400" />
                                     <span className="text-gray-600">
+                                        {sequence.message_count || 0} of{" "}
                                         {sequence.total_messages} messages
+                                        {sequence.message_count !==
+                                            sequence.total_messages && (
+                                            <span className="text-orange-600 ml-1">
+                                                ⚠️
+                                            </span>
+                                        )}
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -792,6 +843,24 @@ export function SequenceBuilder({
                                     </Badge>
                                 </div>
                             </div>
+
+                            {/* Message Count Mismatch Warning */}
+                            {sequence.message_count !== sequence.total_messages &&
+                                (sequence.message_count || 0) > 0 && (
+                                    <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg text-sm">
+                                        <p className="text-orange-800 font-medium flex items-center gap-2">
+                                            <span>⚠️</span>
+                                            Message Count Mismatch
+                                        </p>
+                                        <p className="text-orange-700 mt-1">
+                                            This sequence has{" "}
+                                            {sequence.message_count || 0} generated
+                                            messages but is configured for{" "}
+                                            {sequence.total_messages}. Click
+                                            "Regenerate" to update to the correct count.
+                                        </p>
+                                    </div>
+                                )}
 
                             {/* Target Segments */}
                             <div className="flex gap-2 mt-4">

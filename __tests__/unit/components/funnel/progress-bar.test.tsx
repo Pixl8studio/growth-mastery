@@ -10,24 +10,24 @@ import { ProgressBar } from "@/components/funnel/progress-bar";
 describe("ProgressBar", () => {
     it("should render with current step", () => {
         render(<ProgressBar currentStep={5} />);
-        expect(screen.getByText(/Step 5 of 11/i)).toBeInTheDocument();
+        expect(screen.getByText(/Step 5 of 12/i)).toBeInTheDocument();
     });
 
     it("should calculate percentage correctly", () => {
         render(<ProgressBar currentStep={6} />);
-        // 6/11 = 54.5% -> rounds to 55%
-        expect(screen.getByText(/55%/i)).toBeInTheDocument();
+        // 6/12 = 50%
+        expect(screen.getByText(/50%/i)).toBeInTheDocument();
     });
 
     it("should show 100% on last step", () => {
-        render(<ProgressBar currentStep={11} />);
+        render(<ProgressBar currentStep={12} />);
         expect(screen.getByText(/100%/i)).toBeInTheDocument();
     });
 
-    it("should show 9% on first step", () => {
+    it("should show 8% on first step", () => {
         render(<ProgressBar currentStep={1} />);
-        // 1/11 = 9.09% -> rounds to 9%
-        expect(screen.getByText(/9%/i)).toBeInTheDocument();
+        // 1/12 = 8.33% -> rounds to 8%
+        expect(screen.getByText(/8%/i)).toBeInTheDocument();
     });
 
     it("should accept custom className", () => {

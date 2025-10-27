@@ -25,7 +25,7 @@ interface StepLayoutProps {
 
 const getNextStepHref = (currentStep: number, projectId: string) => {
     const nextStep = currentStep + 1;
-    if (nextStep > 11) return `/funnel-builder/${projectId}`;
+    if (nextStep > 12) return `/funnel-builder/${projectId}`;
     return `/funnel-builder/${projectId}/step/${nextStep}`;
 };
 
@@ -65,7 +65,7 @@ export function StepLayout({
                             {funnelName || "Funnel Builder"}
                         </h2>
                         <p className="text-sm text-gray-500">
-                            Step {currentStep} of 11
+                            Step {currentStep} of 12
                         </p>
                     </Link>
 
@@ -138,7 +138,7 @@ export function StepLayout({
                                 </button>
                             )}
 
-                            {currentStep < 11 ? (
+                            {currentStep < 12 ? (
                                 onNext ? (
                                     <button
                                         onClick={onNext}

@@ -333,3 +333,140 @@ export async function listStories(
 
     return { success: true, stories: data as StoryLibraryEntry[] };
 }
+
+/**
+ * Seed default stories for a user.
+ *
+ * Creates 5 generic objection-handling stories:
+ * - Price concern → ROI calculator story
+ * - Timing concern → 15-minute wedge story
+ * - Fit concern → Same-but-different case study
+ * - Self-belief → Micro-commitment story
+ * - Trust → Show-your-work transparency story
+ */
+export async function seedDefaultStories(
+    userId: string,
+    agentConfigId?: string
+): Promise<{ success: boolean; stories_created?: number; error?: string }> {
+    logger.info({ userId, agentConfigId }, "🌱 Seeding default stories");
+
+    const defaultStories: CreateStoryInput[] = [
+        {
+            title: "ROI Calculator Story - Price Objection",
+            story_type: "micro_story",
+            content: `You said {{challenge_notes}} and wondered if the investment makes sense. Here's how Lena, a {{niche}} coach, felt the same way.
+
+She started with one 15-minute block per day to install the offer assets. In week 2, she booked 5 paid calls. Her first client covered the entire program cost.
+
+The shift wasn't "can I afford it?"—it was "can I afford NOT to compound this?"
+
+Tiny step: pick your one 15-minute block this week.
+
+If you want the exact worksheet Lena used, I'll send it—or we can line up {{next_step}} and I'll walk you through it.`,
+            objection_category: "price",
+            business_niche: ["coaching", "consulting", "services"],
+            price_band: "mid",
+            persona_match: ["coach", "consultant", "service provider"],
+        },
+        {
+            title: "15-Minute Wedge - Time/Capacity Objection",
+            story_type: "micro_story",
+            content: `Most people think their niche is too different or they don't have time. Deon thought so too—he was running a B2B business with a tiny list and felt overwhelmed.
+
+We adjusted 2 steps in his approach, and his first 21-day cycle produced 8 qualified demos. He only needed 15 minutes per day.
+
+If time's the blocker, I'll show you the exact 10-step plan Deon used. Want me to text it back? Reply P for the plan, or C to book a 15-min setup call.`,
+            objection_category: "timing",
+            business_niche: ["B2B", "professional services", "agency"],
+            price_band: "high",
+            persona_match: ["business owner", "agency owner", "professional"],
+        },
+        {
+            title: "Same-But-Different - Fit/Edge Case Objection",
+            story_type: "case_study",
+            content: `Most {{niche}} professionals think their situation is too unique. That's actually what makes this work better.
+
+Sarah ran a {{niche}} practice and thought the framework wouldn't apply. But the 3 core principles work regardless of niche: attention, trust, and conversion.
+
+We made 2 small tweaks for her specific situation. Within 30 days, she had a predictable flow of qualified prospects.
+
+Your case being unique isn't a bug—it's a feature. Want me to map the two tweaks I'd make for you? Hit reply and let's talk specifics.`,
+            objection_category: "fit",
+            business_niche: ["any"],
+            price_band: "mid",
+            persona_match: ["professional", "specialist", "expert"],
+        },
+        {
+            title: "Micro-Commitment - Self-Belief Objection",
+            story_type: "micro_story",
+            content: `I hear you on {{challenge_notes}}. A lot of people feel that way before they start.
+
+The difference isn't talent or luck—it's having a system you can follow. Step-by-step. No guessing.
+
+Maria felt the same uncertainty. She committed to just the first week—nothing more. By day 5, she had clarity. By week 2, she had her first result.
+
+You don't need to believe you can do the whole thing. Just the next step. That's all that matters.
+
+Want to see what the first week looks like? I'll walk you through it: {{book_call_url}}`,
+            objection_category: "self_belief",
+            business_niche: ["any"],
+            price_band: "low",
+            persona_match: ["new", "beginner", "uncertain"],
+        },
+        {
+            title: "Show Your Work - Trust/Credibility Objection",
+            story_type: "proof_element",
+            content: `I understand the skepticism around {{challenge_notes}}. You've probably seen a lot of promises that didn't deliver.
+
+Here's what's different: I'm not asking you to believe me. I'm showing you the exact process.
+
+[Screenshot of the framework]
+[Link to case study with real numbers]
+[Timeline of implementation steps]
+
+This isn't theory. It's a documented system that 47 people have used successfully in the past 90 days.
+
+You can verify every claim. You can see the process before you commit. And you're protected by {{guarantee}}.
+
+Want to see inside before deciding? {{replay_link}}`,
+            objection_category: "trust",
+            business_niche: ["any"],
+            price_band: "high",
+            persona_match: ["skeptical", "analytical", "research-oriented"],
+        },
+    ];
+
+    let createdCount = 0;
+    const errors: string[] = [];
+
+    for (const storyData of defaultStories) {
+        const result = await createStory(userId, {
+            ...storyData,
+            agent_config_id: agentConfigId,
+        });
+
+        if (result.success) {
+            createdCount++;
+        } else {
+            errors.push(result.error || "Unknown error");
+        }
+    }
+
+    if (createdCount === 0) {
+        logger.error({ userId, errors }, "❌ Failed to seed any default stories");
+        return {
+            success: false,
+            error: `Failed to create stories: ${errors.join(", ")}`,
+        };
+    }
+
+    logger.info(
+        { userId, createdCount, totalAttempted: defaultStories.length },
+        "✅ Default stories seeded"
+    );
+
+    return {
+        success: true,
+        stories_created: createdCount,
+    };
+}

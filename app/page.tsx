@@ -82,7 +82,7 @@ export default async function HomePage() {
                                         <Zap className="h-6 w-6 text-green-600" />
                                     </div>
                                     <h3 className="mb-2 text-lg font-semibold text-gray-900">
-                                        11-Step Wizard
+                                        12-Step Wizard
                                     </h3>
                                     <p className="text-sm text-gray-600">
                                         Guided process from intake call to published

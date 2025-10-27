@@ -111,7 +111,7 @@ export default async function FunnelProjectPage({ params }: PageProps) {
                     <CardHeader>
                         <CardTitle>Progress</CardTitle>
                         <CardDescription>
-                            You're on step {project.current_step} of 11
+                            You're on step {project.current_step} of 12
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

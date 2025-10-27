@@ -10,6 +10,125 @@ import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import type { FollowupAgentConfig } from "@/types/followup";
 
+/**
+ * Get default configuration values based on config.md specification.
+ *
+ * These defaults create a professional, conversion-focused AI agent
+ * with proven segmentation rules and scoring formulas.
+ */
+export function getDefaultAgentConfigValues() {
+    return {
+        voice_config: {
+            tone: "warm_direct",
+            personality: "professional_personal",
+            reading_level: "grade8",
+            empathy_level: "moderate",
+            urgency_level: "supportive",
+            emoji_policy: "minimal",
+        },
+        outcome_goals: {
+            primary: "conversion",
+            secondary: ["engagement", "nurture"],
+            kpis: ["booking_rate", "purchase_rate", "reply_rate"],
+        },
+        segmentation_rules: {
+            no_show: {
+                watch_pct: [0, 0],
+                touch_count: 2,
+                cadence_hours: [0, 72],
+                tone: "gentle_reminder",
+                cta: "watch_replay",
+            },
+            skimmer: {
+                watch_pct: [1, 24],
+                touch_count: 3,
+                cadence_hours: [0, 24, 72],
+                tone: "curiosity_building",
+                cta: "key_moments",
+            },
+            sampler: {
+                watch_pct: [25, 49],
+                touch_count: 4,
+                cadence_hours: [0, 6, 24, 96],
+                tone: "value_reinforcement",
+                cta: "complete_watch",
+            },
+            engaged: {
+                watch_pct: [50, 74],
+                touch_count: 5,
+                cadence_hours: [0, 3, 24, 48, 72],
+                tone: "conversion_focused",
+                cta: "book_call",
+            },
+            hot: {
+                watch_pct: [75, 100],
+                touch_count: 5,
+                cadence_hours: [0, 1, 24, 48, 72],
+                tone: "urgency_driven",
+                cta: "claim_offer",
+            },
+        },
+        scoring_config: {
+            intent_formula: {
+                watch_pct_weight: 0.45,
+                offer_click_weight: 0.25,
+                questions_weight: 0.15,
+                replay_views_weight: 0.1,
+                email_clicked_weight: 0.05,
+            },
+            engagement_thresholds: {
+                hot: 60,
+                warm: 30,
+                cold: 0,
+            },
+            decay_window_days: 30,
+        },
+        objection_handling: {
+            price: {
+                reframe: "ROI-focused, show payback timeline",
+                story_type: "micro_story",
+            },
+            timing: {
+                reframe: "15-minute wedge, small commitment",
+                story_type: "micro_story",
+            },
+            fit: {
+                reframe: "Same-but-different, edge case as feature",
+                story_type: "case_study",
+            },
+            trust: {
+                reframe: "Show your work, transparent process",
+                story_type: "proof_element",
+            },
+            self_belief: {
+                reframe: "Micro-commitment, just the next step",
+                story_type: "micro_story",
+            },
+        },
+        channel_config: {
+            email: {
+                enabled: true,
+                daily_cap: 1,
+                send_time_optimization: true,
+                preferred_send_hour: 10,
+            },
+            sms: {
+                enabled: true,
+                daily_cap: 1,
+                high_intent_only: true,
+                min_intent_score: 50,
+            },
+        },
+        compliance_config: {
+            required_footer: true,
+            one_click_unsub: true,
+            quiet_hours_start: "21:00",
+            quiet_hours_end: "08:00",
+            respect_timezone: true,
+        },
+    };
+}
+
 export interface CreateAgentConfigInput {
     funnel_project_id: string;
     offer_id?: string;
@@ -47,6 +166,9 @@ export async function createAgentConfig(
         "🤖 Creating agent configuration"
     );
 
+    // Get smart defaults from config.md specification
+    const defaults = getDefaultAgentConfigValues();
+
     const { data, error } = await supabase
         .from("followup_agent_configs")
         .insert({
@@ -55,14 +177,23 @@ export async function createAgentConfig(
             offer_id: configData.offer_id || null,
             name: configData.name,
             description: configData.description || null,
-            voice_config: configData.voice_config || undefined,
-            knowledge_base: configData.knowledge_base || undefined,
-            outcome_goals: configData.outcome_goals || undefined,
-            segmentation_rules: configData.segmentation_rules || undefined,
-            objection_handling: configData.objection_handling || undefined,
-            scoring_config: configData.scoring_config || undefined,
-            channel_config: configData.channel_config || undefined,
-            compliance_config: configData.compliance_config || undefined,
+            voice_config: configData.voice_config || defaults.voice_config,
+            knowledge_base: configData.knowledge_base || {
+                business_context: [],
+                product_details: [],
+                common_objections: [],
+                proof_elements: [],
+                testimonials: [],
+            },
+            outcome_goals: configData.outcome_goals || defaults.outcome_goals,
+            segmentation_rules:
+                configData.segmentation_rules || defaults.segmentation_rules,
+            objection_handling:
+                configData.objection_handling || defaults.objection_handling,
+            scoring_config: configData.scoring_config || defaults.scoring_config,
+            channel_config: configData.channel_config || defaults.channel_config,
+            compliance_config:
+                configData.compliance_config || defaults.compliance_config,
         })
         .select()
         .single();
@@ -73,7 +204,7 @@ export async function createAgentConfig(
     }
 
     logger.info(
-        { configId: data.id, name: data.name },
+        { configId: data.id, name: data.name, usedDefaults: !configData.voice_config },
         "✅ Agent config created successfully"
     );
 

@@ -176,7 +176,7 @@ export default async function FunnelBuilderPage() {
                                                     Progress
                                                 </span>
                                                 <span className="font-medium text-blue-600">
-                                                    Step {project.current_step} of 11
+                                                    Step {project.current_step} of 12
                                                 </span>
                                             </div>
                                             <div className="flex items-center justify-between text-sm">
@@ -269,7 +269,7 @@ export default async function FunnelBuilderPage() {
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-center">
-                            11-Step Funnel Creation Process
+                            12-Step Funnel Creation Process
                         </CardTitle>
                     </CardHeader>
                     <CardContent>

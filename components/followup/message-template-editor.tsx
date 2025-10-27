@@ -362,6 +362,11 @@ export function MessageTemplateEditor({
         return seq?.name || "Unknown Sequence";
     };
 
+    // Get total message count for a sequence
+    const getSequenceMessageCount = (seqId: string) => {
+        return messages.filter((m) => m.sequence_id === seqId).length;
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -1055,8 +1060,16 @@ export function MessageTemplateEditor({
                             >
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-start gap-4 flex-1">
-                                        <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center font-semibold text-purple-600">
-                                            {message.message_order}
+                                        <div className="flex flex-col items-center gap-1">
+                                            <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center font-semibold text-purple-600">
+                                                {message.message_order}
+                                            </div>
+                                            <span className="text-xs text-gray-500 font-medium">
+                                                {message.message_order} of{" "}
+                                                {getSequenceMessageCount(
+                                                    message.sequence_id
+                                                )}
+                                            </span>
                                         </div>
 
                                         <div className="flex-1">

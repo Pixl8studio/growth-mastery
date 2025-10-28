@@ -46,7 +46,7 @@ export default async function FunnelBuilderPage() {
                 {/* Hero Section */}
                 <div className="mb-12 text-center">
                     <h1 className="mb-4 text-4xl font-bold text-gray-900">
-                        AI-Powered Pitch Video Funnels
+                        Create your AI-powered magnetic masterclass funnel
                     </h1>
                     <p className="mx-auto mb-8 max-w-2xl text-xl text-gray-600">
                         From conversation to conversion in under 45 minutes. Create
@@ -129,16 +129,10 @@ export default async function FunnelBuilderPage() {
 
                 {/* Projects List */}
                 <div className="mb-12">
-                    <div className="mb-6 flex items-center justify-between">
+                    <div className="mb-6">
                         <h2 className="text-2xl font-bold text-gray-900">
                             Your Funnels
                         </h2>
-                        <Link href="/funnel-builder/create">
-                            <Button>
-                                <Plus className="mr-2 h-4 w-4" />
-                                Create Funnel
-                            </Button>
-                        </Link>
                     </div>
 
                     {projects && projects.length > 0 ? (
@@ -151,7 +145,7 @@ export default async function FunnelBuilderPage() {
                             <Link href="/funnel-builder/create">
                                 <Card className="flex h-full cursor-pointer items-center justify-center border-2 border-dashed border-gray-300 transition-colors hover:border-gray-400 hover:bg-gray-50">
                                     <CardContent className="py-12 text-center">
-                                        <Plus className="mx-auto mb-4 h-12 w-12 text-gray-400" />
+                                        <Plus className="mx-auto mb-4 h-12 w-12 text-blue-600" />
                                         <h3 className="mb-2 text-lg font-medium text-gray-900">
                                             Create New Funnel
                                         </h3>

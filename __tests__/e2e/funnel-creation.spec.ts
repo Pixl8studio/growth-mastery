@@ -19,14 +19,22 @@ test.describe("Funnel Creation Flow", () => {
         // Should be on create page
         await expect(page).toHaveURL(/\/funnel-builder\/create/);
 
-        // Fill form
-        await page.fill('input[name="name"]', "Test Funnel Project");
-        await page.fill('textarea[name="description"]', "This is a test funnel");
-        await page.fill('input[name="targetAudience"]', "Entrepreneurs");
-        await page.fill('input[name="businessNiche"]', "Business Coaching");
+        // Verify only one input field (name) exists
+        const nameInput = page.locator('input[id="name"]');
+        await expect(nameInput).toBeVisible();
+
+        // Verify Create button is disabled when name is empty
+        const createButton = page.locator('button[type="submit"]');
+        await expect(createButton).toBeDisabled();
+
+        // Fill form with funnel name
+        await page.fill('input[id="name"]', "Test Funnel Project");
+
+        // Verify Create button is enabled when name is filled
+        await expect(createButton).toBeEnabled();
 
         // Submit
-        await page.click('button[type="submit"]');
+        await createButton.click();
 
         // Should redirect to step 1
         await expect(page).toHaveURL(/\/funnel-builder\/.*\/step\/1/, {

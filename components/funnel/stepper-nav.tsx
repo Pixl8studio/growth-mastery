@@ -13,8 +13,8 @@ interface Step {
 const STEPS: Step[] = [
     {
         number: 1,
-        title: "AI Intake Call",
-        description: "Voice conversation",
+        title: "Intake",
+        description: "Multiple input options",
     },
     { number: 2, title: "Craft Offer", description: "Pricing & features" },
     { number: 3, title: "Deck Structure", description: "55-slide outline" },

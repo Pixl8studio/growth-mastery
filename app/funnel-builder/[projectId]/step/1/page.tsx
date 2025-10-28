@@ -2,20 +2,39 @@
 
 import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
-import { Phone, CheckCircle, Clock, MessageSquare } from "lucide-react";
+import {
+    Phone,
+    Clock,
+    MessageSquare,
+    Upload,
+    FileText,
+    Globe,
+    Cloud,
+} from "lucide-react";
 import { VapiCallWidget } from "@/components/funnel/vapi-call-widget";
+import {
+    IntakeMethodSelector,
+    type IntakeMethod,
+} from "@/components/intake/intake-method-selector";
+import { PasteIntake } from "@/components/intake/paste-intake";
+import { UploadIntake } from "@/components/intake/upload-intake";
+import { ScrapeIntake } from "@/components/intake/scrape-intake";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 
-interface VapiTranscript {
+interface IntakeSession {
     id: string;
     call_id: string;
     transcript_text: string;
     call_duration: number;
     call_status: string;
     created_at: string;
-    extracted_data?: any;
+    extracted_data?: unknown;
+    intake_method: string;
+    session_name?: string;
+    file_urls?: string[];
+    scraped_url?: string;
 }
 
 interface FunnelProject {
@@ -32,8 +51,9 @@ export default function Step1Page({
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<FunnelProject | null>(null);
     const [userId, setUserId] = useState("");
-    const [transcripts, setTranscripts] = useState<VapiTranscript[]>([]);
-    const [isLoadingTranscripts, setIsLoadingTranscripts] = useState(true);
+    const [intakeSessions, setIntakeSessions] = useState<IntakeSession[]>([]);
+    const [isLoadingSessions, setIsLoadingSessions] = useState(true);
+    const [selectedMethod, setSelectedMethod] = useState<IntakeMethod | null>(null);
 
     // Load completion status
     const { completedSteps, refreshCompletion } = useStepCompletion(projectId);
@@ -70,16 +90,16 @@ export default function Step1Page({
         loadProject();
     }, [projectId]);
 
-    // Load transcripts
-    const loadTranscripts = async () => {
+    // Load intake sessions
+    const loadIntakeSessions = async () => {
         if (!projectId) return;
 
         try {
-            setIsLoadingTranscripts(true);
+            setIsLoadingSessions(true);
             const supabase = createClient();
 
-            // Get all transcripts for this project
-            const { data: transcriptData, error } = await supabase
+            // Get all intake sessions for this project
+            const { data: sessionData, error } = await supabase
                 .from("vapi_transcripts")
                 .select("*")
                 .eq("funnel_project_id", projectId)
@@ -87,22 +107,29 @@ export default function Step1Page({
 
             if (error) throw error;
 
-            logger.info({ count: transcriptData?.length || 0 }, "Loaded transcripts");
-            setTranscripts(transcriptData || []);
+            logger.info({ count: sessionData?.length || 0 }, "Loaded intake sessions");
+            setIntakeSessions(sessionData || []);
         } catch (error) {
-            logger.error({ error }, "Failed to load transcripts");
+            logger.error({ error }, "Failed to load intake sessions");
         } finally {
-            setIsLoadingTranscripts(false);
+            setIsLoadingSessions(false);
         }
     };
 
     useEffect(() => {
         if (projectId) {
-            loadTranscripts();
+            loadIntakeSessions();
         }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [projectId]);
 
-    const hasCompletedCall = transcripts.length > 0;
+    const hasCompletedIntake = intakeSessions.length > 0;
+
+    const handleIntakeComplete = () => {
+        setSelectedMethod(null); // Reset method selection
+        loadIntakeSessions();
+        refreshCompletion();
+    };
 
     const formatDuration = (seconds: number) => {
         const mins = Math.floor(seconds / 60);
@@ -128,151 +155,223 @@ export default function Step1Page({
         );
     }
 
+    const getMethodIcon = (method: string) => {
+        switch (method) {
+            case "voice":
+                return <Phone className="h-4 w-4" />;
+            case "upload":
+                return <Upload className="h-4 w-4" />;
+            case "paste":
+                return <FileText className="h-4 w-4" />;
+            case "scrape":
+                return <Globe className="h-4 w-4" />;
+            case "google_drive":
+                return <Cloud className="h-4 w-4" />;
+            default:
+                return <MessageSquare className="h-4 w-4" />;
+        }
+    };
+
+    const getMethodLabel = (method: string) => {
+        switch (method) {
+            case "voice":
+                return "Voice Call";
+            case "upload":
+                return "Document Upload";
+            case "paste":
+                return "Pasted Content";
+            case "scrape":
+                return "Web Scraping";
+            case "google_drive":
+                return "Google Drive";
+            default:
+                return "Unknown";
+        }
+    };
+
     return (
         <StepLayout
             currentStep={1}
             projectId={projectId}
             funnelName={project?.name}
             completedSteps={completedSteps}
-            nextDisabled={!hasCompletedCall}
+            nextDisabled={!hasCompletedIntake}
             nextLabel={
-                hasCompletedCall ? "Generate Deck Structure" : "Complete Call First"
+                hasCompletedIntake ? "Generate Deck Structure" : "Complete Intake First"
             }
-            stepTitle="AI Intake Call"
-            stepDescription="Have a natural conversation with our AI assistant about your business"
+            stepTitle="Intake"
+            stepDescription="Provide your business information through voice, documents, or other methods"
         >
             <div className="space-y-8">
-                {/* Instructions */}
-                {!hasCompletedCall && (
-                    <div className="rounded-lg border border-blue-100 bg-gradient-to-br from-blue-50 to-purple-50 p-8">
-                        <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-                                <Phone className="h-8 w-8 text-blue-600" />
-                            </div>
-                            <h2 className="mb-3 text-2xl font-semibold text-gray-900">
-                                Start Your AI Intake Call
-                            </h2>
-                            <p className="mx-auto max-w-lg text-gray-600">
-                                Have a 15-20 minute conversation about your business. AI
-                                will extract key insights to generate your complete
-                                funnel.
-                            </p>
-                        </div>
+                {/* Method Selector or Active Method Interface */}
+                {!selectedMethod ? (
+                    <IntakeMethodSelector
+                        onSelectMethod={setSelectedMethod}
+                        selectedMethod={selectedMethod || undefined}
+                    />
+                ) : (
+                    <div className="space-y-4">
+                        {/* Back Button */}
+                        <button
+                            onClick={() => setSelectedMethod(null)}
+                            className="text-sm text-blue-600 hover:text-blue-700"
+                        >
+                            ← Choose a different method
+                        </button>
 
-                        <div className="mb-6 rounded-lg bg-blue-50 p-6">
-                            <h3 className="mb-3 flex items-center text-lg font-semibold text-blue-900">
-                                <span className="mr-2">💡</span> How this works
-                            </h3>
-                            <ul className="space-y-2 text-blue-800">
-                                <li className="flex items-start">
-                                    <span className="mr-2">1.</span>
-                                    <span>
-                                        Click the <strong>"🎙️ Start Call"</strong>{" "}
-                                        button below
-                                    </span>
-                                </li>
-                                <li className="flex items-start">
-                                    <span className="mr-2">2.</span>
-                                    <span>
-                                        Have a natural conversation about your business
-                                        and offer
-                                    </span>
-                                </li>
-                                <li className="flex items-start">
-                                    <span className="mr-2">3.</span>
-                                    <span>
-                                        Watch the conversation appear in real-time
-                                    </span>
-                                </li>
-                                <li className="flex items-start">
-                                    <span className="mr-2">4.</span>
-                                    <span>
-                                        Your transcript is automatically saved for
-                                        funnel generation
-                                    </span>
-                                </li>
-                            </ul>
-                        </div>
+                        {/* Conditional Rendering Based on Selected Method */}
+                        {selectedMethod === "voice" && (
+                            <VapiCallWidget
+                                projectId={projectId}
+                                userId={userId}
+                                onCallComplete={handleIntakeComplete}
+                            />
+                        )}
+
+                        {selectedMethod === "paste" && (
+                            <PasteIntake
+                                projectId={projectId}
+                                userId={userId}
+                                onComplete={handleIntakeComplete}
+                            />
+                        )}
+
+                        {selectedMethod === "upload" && (
+                            <UploadIntake
+                                projectId={projectId}
+                                userId={userId}
+                                onComplete={handleIntakeComplete}
+                            />
+                        )}
+
+                        {selectedMethod === "scrape" && (
+                            <ScrapeIntake
+                                projectId={projectId}
+                                userId={userId}
+                                onComplete={handleIntakeComplete}
+                            />
+                        )}
+
+                        {selectedMethod === "google_drive" && (
+                            <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-8 text-center">
+                                <Cloud className="mx-auto mb-4 h-16 w-16 text-yellow-600" />
+                                <h3 className="mb-2 text-xl font-semibold text-gray-900">
+                                    Google Drive Integration Coming Soon
+                                </h3>
+                                <p className="mb-4 text-gray-600">
+                                    We're working on bringing Google Drive integration
+                                    to make it even easier to import your documents.
+                                    Check back soon!
+                                </p>
+                                <button
+                                    onClick={() => setSelectedMethod(null)}
+                                    className="text-sm text-blue-600 hover:text-blue-700"
+                                >
+                                    ← Choose a different method
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
 
-                {/* VAPI Widget */}
-                <VapiCallWidget
-                    projectId={projectId}
-                    userId={userId}
-                    onCallComplete={() => {
-                        loadTranscripts();
-                        refreshCompletion();
-                    }}
-                />
-
-                {/* Saved Calls List */}
-                {hasCompletedCall && (
+                {/* Intake Sessions List */}
+                {hasCompletedIntake && (
                     <div className="rounded-lg border border-gray-200 bg-white p-6">
                         <h3 className="mb-4 text-lg font-semibold text-gray-900">
-                            Your Intake Calls
+                            Your Intake Sessions
                         </h3>
 
-                        {isLoadingTranscripts ? (
+                        {isLoadingSessions ? (
                             <div className="py-8 text-center text-gray-500">
-                                Loading calls...
+                                Loading sessions...
                             </div>
-                        ) : transcripts.length === 0 ? (
+                        ) : intakeSessions.length === 0 ? (
                             <div className="py-8 text-center text-gray-500">
                                 <MessageSquare className="mx-auto mb-3 h-12 w-12 opacity-50" />
-                                <p>No calls yet. Start your first call above!</p>
+                                <p>
+                                    No intake sessions yet. Choose a method above to get
+                                    started!
+                                </p>
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {transcripts.map((transcript) => (
+                                {intakeSessions.map((session) => (
                                     <div
-                                        key={transcript.id}
+                                        key={session.id}
                                         className="rounded-lg border border-gray-200 bg-gray-50 p-4 transition-all hover:border-gray-300 hover:bg-gray-100"
                                     >
                                         <div className="mb-3 flex items-center justify-between">
                                             <div className="flex items-center space-x-3">
                                                 <div
                                                     className={`h-3 w-3 rounded-full ${
-                                                        transcript.call_status ===
+                                                        session.call_status ===
                                                         "completed"
                                                             ? "bg-green-500"
-                                                            : transcript.call_status ===
+                                                            : session.call_status ===
                                                                 "in_progress"
                                                               ? "bg-blue-500"
                                                               : "bg-red-500"
                                                     }`}
                                                 />
+                                                {getMethodIcon(
+                                                    session.intake_method || "voice"
+                                                )}
                                                 <span className="font-medium text-gray-900">
-                                                    {formatDate(transcript.created_at)}
+                                                    {session.session_name ||
+                                                        formatDate(session.created_at)}
                                                 </span>
                                             </div>
                                             <div className="flex items-center space-x-4 text-sm text-gray-600">
-                                                <div className="flex items-center space-x-1">
-                                                    <Clock className="h-4 w-4" />
-                                                    <span>
-                                                        {formatDuration(
-                                                            transcript.call_duration ||
-                                                                0
-                                                        )}
-                                                    </span>
-                                                </div>
-                                                <div className="flex items-center space-x-1">
-                                                    <CheckCircle className="h-4 w-4 text-green-600" />
-                                                    <span className="capitalize">
-                                                        {transcript.call_status}
-                                                    </span>
-                                                </div>
+                                                <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+                                                    {getMethodLabel(
+                                                        session.intake_method || "voice"
+                                                    )}
+                                                </span>
+                                                {session.intake_method === "voice" &&
+                                                    session.call_duration > 0 && (
+                                                        <div className="flex items-center space-x-1">
+                                                            <Clock className="h-4 w-4" />
+                                                            <span>
+                                                                {formatDuration(
+                                                                    session.call_duration
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                    )}
                                             </div>
                                         </div>
 
-                                        {transcript.transcript_text && (
+                                        {/* Additional Info Based on Method */}
+                                        {session.scraped_url && (
+                                            <p className="mb-2 text-xs text-gray-500">
+                                                Source: {session.scraped_url}
+                                            </p>
+                                        )}
+
+                                        {session.file_urls &&
+                                            session.file_urls.length > 0 && (
+                                                <p className="mb-2 text-xs text-gray-500">
+                                                    {session.file_urls.length}{" "}
+                                                    {session.file_urls.length === 1
+                                                        ? "file"
+                                                        : "files"}{" "}
+                                                    uploaded
+                                                </p>
+                                            )}
+
+                                        {session.transcript_text && (
                                             <div className="mt-3">
                                                 <details className="group">
                                                     <summary className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-700">
-                                                        View Transcript
+                                                        View Content
                                                     </summary>
                                                     <div className="mt-3 max-h-64 overflow-y-auto rounded bg-white p-3 text-sm text-gray-700">
-                                                        {transcript.transcript_text}
+                                                        {session.transcript_text.substring(
+                                                            0,
+                                                            500
+                                                        )}
+                                                        {session.transcript_text
+                                                            .length > 500 && "..."}
                                                     </div>
                                                 </details>
                                             </div>
@@ -287,10 +386,10 @@ export default function Step1Page({
                 {/* What's Next */}
                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-6">
                     <h3 className="mb-3 flex items-center text-sm font-semibold text-gray-900">
-                        <span className="mr-2">👉</span> After This Call
+                        <span className="mr-2">👉</span> After Intake
                     </h3>
                     <p className="mb-3 text-sm text-gray-600">
-                        Once you complete your intake call, the AI will:
+                        Once you complete your intake, the AI will:
                     </p>
                     <ul className="space-y-1 text-sm text-gray-600">
                         <li>• Extract key business insights from your conversation</li>

@@ -116,20 +116,8 @@ export default function Step12Page({
             stepDescription="Track your funnel's performance and optimize for conversions"
         >
             <div className="space-y-8">
-                <div className="rounded-lg border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-8">
+                <div className="rounded-lg border border-brand-100 bg-gradient-to-br from-brand-50 to-indigo-50 p-8">
                     <div className="mb-6 flex items-center justify-between">
-                        <div className="text-center flex-1">
-                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-                                <BarChart3 className="h-8 w-8 text-blue-600" />
-                            </div>
-                            <h2 className="mb-3 text-2xl font-semibold text-gray-900">
-                                Funnel Analytics
-                            </h2>
-                            <p className="mx-auto max-w-lg text-gray-600">
-                                Monitor key metrics and optimize your funnel for better
-                                performance.
-                            </p>
-                        </div>
                         <div className="flex flex-col items-end">
                             <label
                                 htmlFor="timeRange"

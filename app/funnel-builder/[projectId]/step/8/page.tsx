@@ -347,19 +347,6 @@ export default function Step8WatchPage({
                 {/* Create New Page Button */}
                 {!showCreateForm ? (
                     <div className="rounded-lg border border-cyan-100 bg-gradient-to-br from-cyan-50 to-blue-50 p-8">
-                        <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-cyan-100">
-                                <Video className="h-8 w-8 text-cyan-600" />
-                            </div>
-                            <h2 className="mb-3 text-2xl font-semibold text-gray-900">
-                                Create Watch Page
-                            </h2>
-                            <p className="mx-auto max-w-lg text-gray-600">
-                                Create an optimized video viewing experience that keeps
-                                viewers engaged using your deck content.
-                            </p>
-                        </div>
-
                         <div className="text-center">
                             <button
                                 onClick={() => setShowCreateForm(true)}

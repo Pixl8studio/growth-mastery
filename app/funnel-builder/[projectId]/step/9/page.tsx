@@ -312,19 +312,6 @@ export default function Step9RegistrationPage({
                 {/* Create New Page Button */}
                 {!showCreateForm ? (
                     <div className="rounded-lg border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-8">
-                        <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                                <FileText className="h-8 w-8 text-green-600" />
-                            </div>
-                            <h2 className="mb-3 text-2xl font-semibold text-gray-900">
-                                Create Registration Page
-                            </h2>
-                            <p className="mx-auto max-w-lg text-gray-600">
-                                Build a high-converting registration page that captures
-                                leads using content from your deck structure.
-                            </p>
-                        </div>
-
                         <div className="text-center">
                             <button
                                 onClick={() => setShowCreateForm(true)}

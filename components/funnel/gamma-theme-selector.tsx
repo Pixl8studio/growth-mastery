@@ -53,6 +53,9 @@ export default function GammaThemeSelector({
             <label className="mb-4 block text-base font-medium text-gray-700">
                 Choose Gamma Theme
             </label>
+            <p className="mb-4 text-sm text-gray-600">
+                Don't see a theme you love? You can change it later in Gamma.
+            </p>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {GAMMA_THEMES.map((theme) => (
                     <button

@@ -6,6 +6,7 @@ import { DependencyWarning } from "@/components/funnel/dependency-warning";
 import { Sparkles, MessageSquare, Trash2, Download } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
+import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 
 interface DeckStructure {
     id: string;
@@ -58,6 +59,9 @@ export default function Step6Page({
     >(null);
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
+
+    // Load completion status
+    const { completedSteps } = useStepCompletion(projectId);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -370,6 +374,7 @@ export default function Step6Page({
         <StepLayout
             currentStep={6}
             projectId={projectId}
+            completedSteps={completedSteps}
             funnelName={project?.name}
             nextDisabled={!hasCompletedTrack}
             nextLabel={hasCompletedTrack ? "Upload Video" : "Generate Talk Track First"}

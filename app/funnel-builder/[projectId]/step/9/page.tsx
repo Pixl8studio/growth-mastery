@@ -12,6 +12,7 @@ import { FileText, PlusCircle, Eye, Pencil, Trash2, X } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { generateRegistrationHTML } from "@/lib/generators/registration-page-generator";
+import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { Switch } from "@/components/ui/switch";
 
 interface DeckStructure {
@@ -50,6 +51,9 @@ export default function Step9RegistrationPage({
         headline: "",
         deckStructureId: "",
     });
+
+    // Load completion status
+    const { completedSteps } = useStepCompletion(projectId);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -292,6 +296,7 @@ export default function Step9RegistrationPage({
         <StepLayout
             currentStep={9}
             projectId={projectId}
+            completedSteps={completedSteps}
             funnelName={project?.name}
             nextDisabled={!hasRegistrationPage}
             nextLabel={hasRegistrationPage ? "Setup Your Flow" : "Create Page First"}

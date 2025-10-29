@@ -12,6 +12,7 @@ import { Video, PlusCircle, Eye, Pencil, Trash2, X } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { generateWatchPageHTML } from "@/lib/generators/watch-page-generator";
+import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { Switch } from "@/components/ui/switch";
 
 interface DeckStructure {
@@ -60,6 +61,9 @@ export default function Step8WatchPage({
         deckStructureId: "",
         videoId: "",
     });
+
+    // Load completion status
+    const { completedSteps } = useStepCompletion(projectId);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -319,6 +323,7 @@ export default function Step8WatchPage({
         <StepLayout
             currentStep={8}
             projectId={projectId}
+            completedSteps={completedSteps}
             funnelName={project?.name}
             nextDisabled={!hasWatchPage}
             nextLabel={hasWatchPage ? "Create Registration Page" : "Create Page First"}

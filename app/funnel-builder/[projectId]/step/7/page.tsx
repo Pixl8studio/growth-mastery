@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
+import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 
 interface PitchVideo {
     id: string;
@@ -49,6 +50,9 @@ export default function Step7Page({
     const [selectedDeckId, setSelectedDeckId] = useState("");
     const [talkTracks, setTalkTracks] = useState<TalkTrack[]>([]);
     const [selectedTalkTrack, setSelectedTalkTrack] = useState<TalkTrack | null>(null);
+
+    // Load completion status
+    const { completedSteps } = useStepCompletion(projectId);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -315,6 +319,7 @@ export default function Step7Page({
         <StepLayout
             currentStep={7}
             projectId={projectId}
+            completedSteps={completedSteps}
             funnelName={project?.name}
             nextDisabled={!hasVideo}
             nextLabel={hasVideo ? "Generate Watch Page" : "Upload Video First"}

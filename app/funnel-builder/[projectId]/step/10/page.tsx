@@ -6,6 +6,7 @@ import { DependencyWarning } from "@/components/funnel/dependency-warning";
 import { Link2, Check, AlertCircle, ArrowRight } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
+import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import {
     Tooltip,
     TooltipContent,
@@ -52,6 +53,9 @@ export default function Step10Page({
     });
     const [flow, setFlow] = useState<FunnelFlow | null>(null);
     const [isCreatingFlow, setIsCreatingFlow] = useState(false);
+
+    // Load completion status
+    const { completedSteps } = useStepCompletion(projectId);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -222,6 +226,7 @@ export default function Step10Page({
         <StepLayout
             currentStep={10}
             projectId={projectId}
+            completedSteps={completedSteps}
             funnelName={project?.name}
             nextDisabled={!allPagesCreated}
             nextLabel={

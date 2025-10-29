@@ -170,6 +170,45 @@ export default function Step7Page({
         loadData();
     }, [projectId]);
 
+    const pollVideoStatus = async (
+        videoId: string,
+        maxAttempts = 10
+    ): Promise<{ duration: number; thumbnailUrl: string }> => {
+        for (let i = 0; i < maxAttempts; i++) {
+            try {
+                logger.info(
+                    { videoId, attempt: i + 1, maxAttempts },
+                    "Polling video status"
+                );
+
+                const response = await fetch(`/api/cloudflare/video/${videoId}`);
+                const data = await response.json();
+
+                if (data.readyToStream) {
+                    logger.info(
+                        { videoId, duration: data.duration },
+                        "Video ready to stream"
+                    );
+                    return {
+                        duration: data.duration || 0,
+                        thumbnailUrl: data.thumbnail || "",
+                    };
+                }
+
+                // Wait 2 seconds before next poll
+                await new Promise((resolve) => setTimeout(resolve, 2000));
+            } catch (error) {
+                logger.error(
+                    { error, videoId, attempt: i + 1 },
+                    "Error polling video status"
+                );
+            }
+        }
+
+        logger.warn({ videoId }, "Video processing timeout - saving without metadata");
+        return { duration: 0, thumbnailUrl: "" };
+    };
+
     const handleUploadComplete = async (videoData: {
         videoId: string;
         url: string;
@@ -182,6 +221,10 @@ export default function Step7Page({
 
             if (!user) throw new Error("Not authenticated");
 
+            // Poll for video metadata (duration, thumbnail)
+            logger.info({ videoId: videoData.videoId }, "Polling for video metadata");
+            const videoMetadata = await pollVideoStatus(videoData.videoId);
+
             const { data, error } = await supabase
                 .from("pitch_videos")
                 .insert({
@@ -189,6 +232,10 @@ export default function Step7Page({
                     user_id: user.id,
                     video_url: videoData.url,
                     video_id: videoData.videoId,
+                    video_provider: "cloudflare",
+                    video_duration: videoMetadata.duration,
+                    thumbnail_url: videoMetadata.thumbnailUrl,
+                    processing_status: "ready",
                 })
                 .select()
                 .single();
@@ -199,7 +246,9 @@ export default function Step7Page({
             logger.info({ videoId: videoData.videoId }, "Video saved successfully");
         } catch (error) {
             logger.error({ error }, "Failed to save video");
-            alert("Failed to save video. Please try again.");
+            alert(
+                "Video uploaded but failed to save metadata. Please contact support."
+            );
         }
     };
 
@@ -273,6 +322,37 @@ export default function Step7Page({
             stepDescription="Record and upload your pitch video"
         >
             <div className="space-y-8">
+                {/* Recording Instructions */}
+                <div className="rounded-lg border border-blue-100 bg-blue-50 p-6">
+                    <h3 className="mb-3 text-lg font-semibold text-gray-900">
+                        🎬 How to Record Your Presentation
+                    </h3>
+                    <ol className="space-y-2 text-sm text-gray-700">
+                        <li className="flex items-start">
+                            <span className="mr-2">1️⃣</span>
+                            <span>Open a Zoom meeting alone</span>
+                        </li>
+                        <li className="flex items-start">
+                            <span className="mr-2">2️⃣</span>
+                            <span>
+                                Share your presentation deck (screen-share mode)
+                            </span>
+                        </li>
+                        <li className="flex items-start">
+                            <span className="mr-2">3️⃣</span>
+                            <span>Record to computer (local file)</span>
+                        </li>
+                        <li className="flex items-start">
+                            <span className="mr-2">4️⃣</span>
+                            <span>Speak through the AI-generated Talk Track</span>
+                        </li>
+                        <li className="flex items-start">
+                            <span className="mr-2">5️⃣</span>
+                            <span>Upload the finished MP4 here</span>
+                        </li>
+                    </ol>
+                </div>
+
                 {/* Recording Helper Section */}
                 {deckStructures.length > 0 && (
                     <div className="rounded-lg border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-6">

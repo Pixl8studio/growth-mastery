@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { StepLayout } from "@/components/funnel/step-layout";
+import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -71,6 +72,9 @@ export default function Step11Page({
     const [testModalOpen, setTestModalOpen] = useState(false);
     const [queuedCount, setQueuedCount] = useState(0);
     const [nextScheduledTime, setNextScheduledTime] = useState<string | null>(null);
+
+    // Load completion status
+    const { completedSteps } = useStepCompletion(projectId);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -887,6 +891,7 @@ export default function Step11Page({
                 stepDescription="Automate post-webinar engagement"
                 currentStep={11}
                 projectId={projectId}
+                completedSteps={completedSteps}
             >
                 <div className="flex items-center justify-center py-12">
                     <div className="text-center">
@@ -904,6 +909,7 @@ export default function Step11Page({
             stepDescription="Automate post-webinar engagement with AI-powered sequences"
             currentStep={11}
             projectId={projectId}
+            completedSteps={completedSteps}
             nextLabel="Continue to Analytics"
         >
             <div className="space-y-6">

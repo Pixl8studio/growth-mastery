@@ -21,6 +21,7 @@ import {
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { generateEnrollmentHTML } from "@/lib/generators/enrollment-page-generator";
+import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { useToast } from "@/components/ui/use-toast";
 import { ToastAction } from "@/components/ui/toast";
 import { Switch } from "@/components/ui/switch";
@@ -107,6 +108,9 @@ export default function Step5EnrollmentPage({
             | "premium-elegant"
             | "value-focused",
     });
+
+    // Load completion status
+    const { completedSteps } = useStepCompletion(projectId);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -475,6 +479,7 @@ export default function Step5EnrollmentPage({
         <StepLayout
             currentStep={5}
             projectId={projectId}
+            completedSteps={completedSteps}
             funnelName={project?.name}
             nextDisabled={!hasEnrollmentPage}
             nextLabel={hasEnrollmentPage ? "Create Talk Track" : "Create Page First"}

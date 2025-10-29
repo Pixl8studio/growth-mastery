@@ -5,6 +5,7 @@ import { StepLayout } from "@/components/funnel/step-layout";
 import { BarChart3, TrendingUp, Users, DollarSign } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
+import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 
 interface Analytics {
     registrations: number;
@@ -34,6 +35,9 @@ export default function Step12Page({
     });
     const [timeRange, setTimeRange] = useState("30");
     const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+
+    // Load completion status
+    const { completedSteps } = useStepCompletion(projectId);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -111,6 +115,7 @@ export default function Step12Page({
         <StepLayout
             currentStep={12}
             projectId={projectId}
+            completedSteps={completedSteps}
             funnelName={project?.name}
             stepTitle="Analytics & Performance"
             stepDescription="Track your funnel's performance and optimize for conversions"

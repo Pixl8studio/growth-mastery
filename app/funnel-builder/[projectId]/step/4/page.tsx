@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
+import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 
 interface DeckStructure {
     id: string;
@@ -60,6 +61,9 @@ export default function Step4Page({
         style: "professional",
         length: "full",
     });
+
+    // Load completion status
+    const { completedSteps } = useStepCompletion(projectId);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -247,6 +251,7 @@ export default function Step4Page({
         <StepLayout
             currentStep={4}
             projectId={projectId}
+            completedSteps={completedSteps}
             funnelName={project?.name}
             nextDisabled={!hasCompletedGammaDeck}
             nextLabel={

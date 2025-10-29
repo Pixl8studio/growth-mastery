@@ -29,6 +29,7 @@ const envSchema = z.object({
     // OpenAI Configuration
     // ===========================================
     OPENAI_API_KEY: z.string().optional(),
+    OPENAI_ASSISTANT_ID: z.string().optional(),
 
     // ===========================================
     // VAPI Configuration

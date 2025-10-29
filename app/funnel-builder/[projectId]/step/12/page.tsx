@@ -2,10 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
-import { BarChart3, TrendingUp, Users, DollarSign, Copy } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/components/ui/use-toast";
+import { BarChart3, TrendingUp, Users, DollarSign } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 
@@ -14,6 +11,9 @@ interface Analytics {
     views: number;
     conversions: number;
     revenue: number;
+    watchRate?: number;
+    enrollmentRate?: number;
+    revenuePerRegistrant?: number;
 }
 
 export default function Step12Page({
@@ -22,18 +22,18 @@ export default function Step12Page({
     params: Promise<{ projectId: string }>;
 }) {
     const [projectId, setProjectId] = useState("");
-    const [project, setProject] = useState<any>(null);
+    const [project, setProject] = useState<{ name?: string } | null>(null);
     const [analytics, setAnalytics] = useState<Analytics>({
         registrations: 0,
         views: 0,
         conversions: 0,
         revenue: 0,
+        watchRate: 0,
+        enrollmentRate: 0,
+        revenuePerRegistrant: 0,
     });
-    const [publishing, setPublishing] = useState(false);
-    const [isPublished, setIsPublished] = useState(false);
-    const [registrationPage, setRegistrationPage] = useState<any>(null);
-    const [profile, setProfile] = useState<any>(null);
-    const { toast } = useToast();
+    const [timeRange, setTimeRange] = useState("30");
+    const [loadingAnalytics, setLoadingAnalytics] = useState(true);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -63,73 +63,41 @@ export default function Step12Page({
         loadProject();
     }, [projectId]);
 
-    const handlePublish = async () => {
-        setPublishing(true);
+    useEffect(() => {
+        const loadAnalytics = async () => {
+            if (!projectId) return;
 
-        try {
-            const supabase = createClient();
+            setLoadingAnalytics(true);
+            try {
+                const response = await fetch(
+                    `/api/analytics/funnel?project_id=${projectId}&time_range=${timeRange}`
+                );
+                const data = await response.json();
 
-            // Update project status
-            await supabase
-                .from("funnel_projects")
-                .update({ status: "active" })
-                .eq("id", projectId);
+                if (response.ok) {
+                    setAnalytics({
+                        registrations: data.registrations,
+                        views: data.views,
+                        conversions: data.enrollments,
+                        revenue: data.revenue,
+                        watchRate: data.watchRate,
+                        enrollmentRate: data.enrollmentRate,
+                        revenuePerRegistrant: data.revenuePerRegistrant,
+                    });
+                } else {
+                    logger.error({ error: data.error }, "Failed to load analytics");
+                }
+            } catch (error) {
+                logger.error({ error }, "Failed to load analytics");
+            } finally {
+                setLoadingAnalytics(false);
+            }
+        };
 
-            // Publish all pages
-            await Promise.all([
-                supabase
-                    .from("registration_pages")
-                    .update({ is_published: true })
-                    .eq("funnel_project_id", projectId),
-                supabase
-                    .from("watch_pages")
-                    .update({ is_published: true })
-                    .eq("funnel_project_id", projectId),
-                supabase
-                    .from("enrollment_pages")
-                    .update({ is_published: true })
-                    .eq("funnel_project_id", projectId),
-            ]);
+        loadAnalytics();
+    }, [projectId, timeRange]);
 
-            logger.info({ projectId }, "Funnel published");
-
-            toast({
-                title: "Funnel Published!",
-                description: "Your funnel is now live and accepting leads.",
-            });
-
-            setIsPublished(true);
-        } catch (err) {
-            logger.error({ error: err }, "Failed to publish funnel");
-            toast({
-                title: "Publish Failed",
-                description: "Could not publish funnel",
-                variant: "destructive",
-            });
-        } finally {
-            setPublishing(false);
-        }
-    };
-
-    const copyPublicUrl = () => {
-        if (registrationPage && profile) {
-            const url = registrationPage.vanity_slug
-                ? `${window.location.origin}/${profile.username}/${registrationPage.vanity_slug}`
-                : `${window.location.origin}/p/${registrationPage.id}`;
-
-            navigator.clipboard.writeText(url);
-
-            toast({
-                title: "URL Copied!",
-                description: "Public funnel URL copied to clipboard",
-            });
-        }
-    };
-
-    const conversionRate =
-        analytics.views > 0
-            ? ((analytics.conversions / analytics.views) * 100).toFixed(2)
-            : "0.00";
+    const conversionRate = analytics.enrollmentRate?.toFixed(2) || "0.00";
 
     if (!projectId) {
         return (
@@ -149,101 +117,150 @@ export default function Step12Page({
         >
             <div className="space-y-8">
                 <div className="rounded-lg border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-8">
-                    <div className="mb-6 text-center">
-                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-                            <BarChart3 className="h-8 w-8 text-blue-600" />
+                    <div className="mb-6 flex items-center justify-between">
+                        <div className="text-center flex-1">
+                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
+                                <BarChart3 className="h-8 w-8 text-blue-600" />
+                            </div>
+                            <h2 className="mb-3 text-2xl font-semibold text-gray-900">
+                                Funnel Analytics
+                            </h2>
+                            <p className="mx-auto max-w-lg text-gray-600">
+                                Monitor key metrics and optimize your funnel for better
+                                performance.
+                            </p>
                         </div>
-                        <h2 className="mb-3 text-2xl font-semibold text-gray-900">
-                            Funnel Analytics
-                        </h2>
-                        <p className="mx-auto max-w-lg text-gray-600">
-                            Monitor key metrics and optimize your funnel for better
-                            performance.
-                        </p>
+                        <div className="flex flex-col items-end">
+                            <label
+                                htmlFor="timeRange"
+                                className="text-sm font-medium text-gray-700 mb-2"
+                            >
+                                Time Range
+                            </label>
+                            <select
+                                id="timeRange"
+                                value={timeRange}
+                                onChange={(e) => setTimeRange(e.target.value)}
+                                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                                <option value="7">Last 7 days</option>
+                                <option value="30">Last 30 days</option>
+                                <option value="90">Last 90 days</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
-                {/* Key Metrics */}
-                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="mb-3 flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-gray-600">
-                                Registrations
-                            </h3>
-                            <Users className="h-5 w-5 text-blue-600" />
-                        </div>
-                        <div className="text-3xl font-bold text-gray-900">
-                            {analytics.registrations.toLocaleString()}
-                        </div>
-                        <p className="mt-1 text-xs text-gray-500">
-                            Total sign-ups to date
-                        </p>
+                {loadingAnalytics && (
+                    <div className="flex items-center justify-center py-12">
+                        <div className="text-gray-500">Loading analytics...</div>
                     </div>
+                )}
 
-                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="mb-3 flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-gray-600">
-                                Video Views
-                            </h3>
-                            <TrendingUp className="h-5 w-5 text-purple-600" />
-                        </div>
-                        <div className="text-3xl font-bold text-gray-900">
-                            {analytics.views.toLocaleString()}
-                        </div>
-                        <p className="mt-1 text-xs text-gray-500">
-                            Presentation watches
-                        </p>
-                    </div>
+                {!loadingAnalytics && (
+                    <>
+                        {/* Key Metrics */}
+                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                                <div className="mb-3 flex items-center justify-between">
+                                    <h3 className="text-sm font-medium text-gray-600">
+                                        Registrations
+                                    </h3>
+                                    <Users className="h-5 w-5 text-blue-600" />
+                                </div>
+                                <div className="text-3xl font-bold text-gray-900">
+                                    {analytics.registrations.toLocaleString()}
+                                </div>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Total sign-ups to date
+                                </p>
+                            </div>
 
-                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="mb-3 flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-gray-600">
-                                Conversions
-                            </h3>
-                            <Users className="h-5 w-5 text-green-600" />
-                        </div>
-                        <div className="text-3xl font-bold text-gray-900">
-                            {analytics.conversions.toLocaleString()}
-                        </div>
-                        <p className="mt-1 text-xs text-gray-500">
-                            {conversionRate}% conversion rate
-                        </p>
-                    </div>
+                            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                                <div className="mb-3 flex items-center justify-between">
+                                    <h3 className="text-sm font-medium text-gray-600">
+                                        Video Views
+                                    </h3>
+                                    <TrendingUp className="h-5 w-5 text-purple-600" />
+                                </div>
+                                <div className="text-3xl font-bold text-gray-900">
+                                    {analytics.views.toLocaleString()}
+                                </div>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Presentation watches
+                                </p>
+                            </div>
 
-                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                        <div className="mb-3 flex items-center justify-between">
-                            <h3 className="text-sm font-medium text-gray-600">
-                                Revenue
-                            </h3>
-                            <DollarSign className="h-5 w-5 text-emerald-600" />
-                        </div>
-                        <div className="text-3xl font-bold text-gray-900">
-                            ${analytics.revenue.toLocaleString()}
-                        </div>
-                        <p className="mt-1 text-xs text-gray-500">Total generated</p>
-                    </div>
-                </div>
+                            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                                <div className="mb-3 flex items-center justify-between">
+                                    <h3 className="text-sm font-medium text-gray-600">
+                                        Conversions
+                                    </h3>
+                                    <Users className="h-5 w-5 text-green-600" />
+                                </div>
+                                <div className="text-3xl font-bold text-gray-900">
+                                    {analytics.conversions.toLocaleString()}
+                                </div>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    {conversionRate}% conversion rate
+                                </p>
+                            </div>
 
-                {isPublished && registrationPage && (
-                    <div>
-                        <p className="mb-2 text-sm font-medium text-gray-700">
-                            Public URL:
-                        </p>
-                        <div className="flex space-x-2">
-                            <Input
-                                value={
-                                    registrationPage.vanity_slug
-                                        ? `${window.location.origin}/${profile?.username}/${registrationPage.vanity_slug}`
-                                        : `${window.location.origin}/p/${registrationPage.id}`
-                                }
-                                readOnly
-                                className="flex-1"
-                            />
-                            <Button variant="outline" size="sm" onClick={copyPublicUrl}>
-                                <Copy className="h-4 w-4" />
-                            </Button>
+                            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                                <div className="mb-3 flex items-center justify-between">
+                                    <h3 className="text-sm font-medium text-gray-600">
+                                        Revenue
+                                    </h3>
+                                    <DollarSign className="h-5 w-5 text-emerald-600" />
+                                </div>
+                                <div className="text-3xl font-bold text-gray-900">
+                                    ${analytics.revenue.toLocaleString()}
+                                </div>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Total generated
+                                </p>
+                            </div>
                         </div>
-                    </div>
+
+                        {/* Additional Metrics Row */}
+                        <div className="grid gap-6 sm:grid-cols-3">
+                            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                                <h3 className="text-sm font-medium text-gray-600 mb-2">
+                                    Watch Rate
+                                </h3>
+                                <div className="text-3xl font-bold text-gray-900">
+                                    {analytics.watchRate?.toFixed(1)}%
+                                </div>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Percentage of registrants who watched video
+                                </p>
+                            </div>
+
+                            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                                <h3 className="text-sm font-medium text-gray-600 mb-2">
+                                    Enrollment Rate
+                                </h3>
+                                <div className="text-3xl font-bold text-gray-900">
+                                    {analytics.enrollmentRate?.toFixed(1)}%
+                                </div>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Percentage of viewers who viewed enrollment page
+                                </p>
+                            </div>
+
+                            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                                <h3 className="text-sm font-medium text-gray-600 mb-2">
+                                    Revenue Per Registrant
+                                </h3>
+                                <div className="text-3xl font-bold text-gray-900">
+                                    ${analytics.revenuePerRegistrant?.toFixed(2)}
+                                </div>
+                                <p className="mt-1 text-xs text-gray-500">
+                                    Average revenue generated per sign-up
+                                </p>
+                            </div>
+                        </div>
+                    </>
                 )}
 
                 {/* Completion Message */}

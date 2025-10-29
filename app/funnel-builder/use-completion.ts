@@ -6,6 +6,7 @@
 import { useEffect, useState } from "react";
 import { getStepCompletionStatus } from "./completion-utils";
 import { logger } from "@/lib/client-logger";
+import { createClient } from "@/lib/supabase/client";
 
 export function useStepCompletion(projectId: string) {
     const [completedSteps, setCompletedSteps] = useState<number[]>([]);
@@ -32,6 +33,36 @@ export function useStepCompletion(projectId: string) {
 
     useEffect(() => {
         loadCompletion();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [projectId]);
+
+    // Real-time subscription to completion updates
+    useEffect(() => {
+        if (!projectId) return;
+
+        const supabase = createClient();
+
+        // Subscribe to changes in relevant tables
+        const channel = supabase
+            .channel("completion-updates")
+            .on(
+                "postgres_changes",
+                {
+                    event: "*",
+                    schema: "public",
+                    filter: `funnel_project_id=eq.${projectId}`,
+                },
+                () => {
+                    logger.info({ projectId }, "Completion status changed, refreshing");
+                    loadCompletion();
+                }
+            )
+            .subscribe();
+
+        return () => {
+            supabase.removeChannel(channel);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [projectId]);
 
     return { completedSteps, isLoading, refreshCompletion: loadCompletion };

@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
 import { DeckStructureEditor } from "@/components/funnel/deck-structure-editor";
-import { Sparkles, FileText, Trash2, Pencil, Download } from "lucide-react";
+import { Sparkles, FileText, Trash2, Pencil, Download, Copy } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
@@ -22,6 +22,9 @@ interface DeckStructure {
     }>;
     version: number;
     created_at: string;
+    presentation_type?: "webinar" | "vsl" | "sales_page";
+    template_type?: string;
+    sections?: any;
 }
 
 interface VapiTranscript {
@@ -46,6 +49,9 @@ export default function Step3Page({
     const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
     const [editingDeckName, setEditingDeckName] = useState("");
     const [slideCount, setSlideCount] = useState<"5" | "55">("55");
+    const [presentationType, setPresentationType] = useState<
+        "webinar" | "vsl" | "sales_page"
+    >("webinar");
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
@@ -126,7 +132,7 @@ export default function Step3Page({
 
                 const transformed = (deckData || []).map((deck: any) => ({
                     id: deck.id,
-                    title: deck.metadata?.title || "Untitled Deck",
+                    title: deck.metadata?.title || "Untitled Presentation",
                     slideCount: Array.isArray(deck.slides)
                         ? deck.slides.length
                         : deck.total_slides || 55,
@@ -134,6 +140,9 @@ export default function Step3Page({
                     slides: deck.slides || [],
                     version: 1,
                     created_at: deck.created_at,
+                    presentation_type: deck.presentation_type || "webinar",
+                    template_type: deck.template_type,
+                    sections: deck.sections,
                 }));
                 setDeckStructures(transformed);
             } catch (error) {
@@ -173,6 +182,7 @@ export default function Step3Page({
                     projectId,
                     transcriptId: selectedTranscript,
                     slideCount,
+                    presentationType,
                 }),
             });
 
@@ -186,12 +196,16 @@ export default function Step3Page({
             const result = await response.json();
             const newDeck: DeckStructure = {
                 id: result.deckStructure.id,
-                title: result.deckStructure.title || "Deck Structure",
+                title: result.deckStructure.title || "Presentation Structure",
                 slideCount: result.deckStructure.slides?.length || 55,
                 status: "completed",
                 slides: result.deckStructure.slides || [],
                 version: 1,
                 created_at: result.deckStructure.created_at,
+                presentation_type:
+                    result.deckStructure.presentation_type || presentationType,
+                template_type: result.deckStructure.template_type,
+                sections: result.deckStructure.sections,
             };
 
             setDeckStructures((prev) => [newDeck, ...prev]);
@@ -226,7 +240,7 @@ export default function Step3Page({
     };
 
     const handleDeleteDeck = async (deckId: string) => {
-        if (!confirm("Delete this deck?")) return;
+        if (!confirm("Delete this presentation structure?")) return;
 
         try {
             const supabase = createClient();
@@ -242,7 +256,68 @@ export default function Step3Page({
                 }
             }
         } catch (error) {
-            logger.error({ error }, "Failed to delete deck");
+            logger.error({ error }, "Failed to delete presentation structure");
+        }
+    };
+
+    const handleDuplicateDeck = async (deck: DeckStructure) => {
+        try {
+            const supabase = createClient();
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+            if (!user) throw new Error("Not authenticated");
+
+            const duplicatedMetadata = {
+                title: `${deck.title} (Copy)`,
+            };
+
+            const { data: newDeck, error } = await supabase
+                .from("deck_structures")
+                .insert({
+                    funnel_project_id: projectId,
+                    user_id: user.id,
+                    template_type: deck.template_type,
+                    total_slides: deck.slideCount,
+                    slides: deck.slides,
+                    sections: deck.sections || {},
+                    metadata: duplicatedMetadata,
+                    presentation_type: deck.presentation_type || "webinar",
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            // Refresh deck list
+            const { data: deckData } = await supabase
+                .from("deck_structures")
+                .select("*")
+                .eq("funnel_project_id", projectId)
+                .order("created_at", { ascending: false });
+
+            if (deckData) {
+                const transformed = deckData.map((d: any) => ({
+                    id: d.id,
+                    title: d.metadata?.title || "Untitled Presentation",
+                    slideCount: Array.isArray(d.slides)
+                        ? d.slides.length
+                        : d.total_slides || 55,
+                    status: "completed" as const,
+                    slides: d.slides || [],
+                    version: 1,
+                    created_at: d.created_at,
+                    presentation_type: d.presentation_type || "webinar",
+                    template_type: d.template_type,
+                    sections: d.sections,
+                }));
+                setDeckStructures(transformed);
+            }
+
+            logger.info({ deckId: newDeck.id }, "Presentation structure duplicated");
+        } catch (error) {
+            logger.error({ error }, "Failed to duplicate presentation structure");
+            alert("Failed to duplicate. Please try again.");
         }
     };
 
@@ -282,7 +357,7 @@ export default function Step3Page({
                 setEditingDeckName("");
             }
         } catch (error) {
-            logger.error({ error }, "Failed to update deck name");
+            logger.error({ error }, "Failed to update presentation name");
         }
     };
 
@@ -303,15 +378,17 @@ export default function Step3Page({
             funnelName={project?.name}
             completedSteps={completedSteps}
             nextDisabled={!hasCompletedDeck}
-            nextLabel={hasCompletedDeck ? "Create Gamma Deck" : "Generate Deck First"}
-            stepTitle="Deck Structure"
-            stepDescription="AI generates your 55-slide presentation outline"
+            nextLabel={
+                hasCompletedDeck ? "Create Gamma Deck" : "Generate Structure First"
+            }
+            stepTitle="Presentation Structure"
+            stepDescription="AI generates your presentation outline"
         >
             <div className="space-y-8">
                 {/* Dependency Warning */}
                 {transcripts.length === 0 && (
                     <DependencyWarning
-                        message="You need to complete your AI intake call first to generate a deck structure."
+                        message="You need to complete your AI intake call first to generate a presentation structure."
                         requiredStep={1}
                         requiredStepName="AI Intake Call"
                         projectId={projectId}
@@ -326,16 +403,65 @@ export default function Step3Page({
                                 <Sparkles className="h-8 w-8 text-blue-600" />
                             </div>
                             <h2 className="mb-3 text-2xl font-semibold text-gray-900">
-                                Generate Your Deck Structure
+                                Generate Your Presentation Structure
                             </h2>
                             <p className="mx-auto max-w-lg text-gray-600">
                                 AI will analyze your intake call and create a compelling
-                                55-slide structure using the proven Hook → Problem →
+                                presentation structure using the proven Hook → Problem →
                                 Agitate → Solution → Offer → Close framework.
                             </p>
                         </div>
 
                         <div className="mx-auto mb-6 max-w-md space-y-4">
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                    Presentation Type
+                                </label>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <button
+                                        onClick={() => setPresentationType("webinar")}
+                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
+                                            presentationType === "webinar"
+                                                ? "border-blue-500 bg-blue-50 text-blue-900"
+                                                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                                        }`}
+                                    >
+                                        <div className="font-semibold">Webinar</div>
+                                        <div className="text-xs text-gray-600">
+                                            Full 55-slide framework
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={() => setPresentationType("vsl")}
+                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
+                                            presentationType === "vsl"
+                                                ? "border-blue-500 bg-blue-50 text-blue-900"
+                                                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                                        }`}
+                                    >
+                                        <div className="font-semibold">VSL</div>
+                                        <div className="text-xs text-gray-600">
+                                            5-10 slide short script
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={() =>
+                                            setPresentationType("sales_page")
+                                        }
+                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
+                                            presentationType === "sales_page"
+                                                ? "border-blue-500 bg-blue-50 text-blue-900"
+                                                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                                        }`}
+                                    >
+                                        <div className="font-semibold">Sales Page</div>
+                                        <div className="text-xs text-gray-600">
+                                            Pitch video script
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-gray-700">
                                     Select Intake Call Source
@@ -432,7 +558,7 @@ export default function Step3Page({
                                 <Sparkles className="h-6 w-6" />
                                 {!selectedTranscript
                                     ? "Select Call First"
-                                    : "Generate Deck Structure"}
+                                    : "Generate Presentation Structure"}
                             </button>
 
                             <div className="mt-4 space-y-1 text-sm text-gray-500">
@@ -443,8 +569,12 @@ export default function Step3Page({
                                         : "~3-5 minutes"}
                                 </p>
                                 <p>
-                                    📊 Creates {slideCount} slides using Magnetic
-                                    Masterclass Framework
+                                    📊 Creates {slideCount} slides using{" "}
+                                    {presentationType === "webinar"
+                                        ? "Magnetic Masterclass Framework"
+                                        : presentationType === "vsl"
+                                          ? "VSL Framework"
+                                          : "Sales Page Pitch Framework"}
                                 </p>
                             </div>
                         </div>
@@ -456,11 +586,17 @@ export default function Step3Page({
                                 <Sparkles className="h-6 w-6 text-blue-600" />
                             </div>
                             <h3 className="mb-2 text-xl font-semibold text-blue-900">
-                                Generating Your Deck Structure
+                                Generating Presentation Outline...
                             </h3>
                             <p className="text-blue-700">
-                                AI is analyzing your intake call and creating slides...
+                                AI is analyzing your intake call and creating your
+                                structure
                             </p>
+                        </div>
+
+                        <div className="mx-auto mb-4 max-w-md rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                            ⚠ Please do not close this page while your outline is
+                            generating.
                         </div>
 
                         <div className="mx-auto max-w-md">
@@ -482,12 +618,12 @@ export default function Step3Page({
                     </div>
                 )}
 
-                {/* Generated Deck Structures */}
+                {/* Generated Presentation Structures */}
                 <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
                     <div className="border-b border-gray-200 p-6">
                         <div className="flex items-center justify-between">
                             <h3 className="text-xl font-semibold text-gray-900">
-                                Your Deck Structures
+                                Your Presentation Structures
                             </h3>
                             <span className="text-sm text-gray-500">
                                 {deckStructures.length} created
@@ -500,8 +636,8 @@ export default function Step3Page({
                             <div className="py-12 text-center text-gray-500">
                                 <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
                                 <p>
-                                    No deck structures yet. Generate your first one
-                                    above!
+                                    No presentation structures yet. Generate your first
+                                    one above!
                                 </p>
                             </div>
                         ) : (
@@ -509,9 +645,13 @@ export default function Step3Page({
                                 {deckStructures.map((deck) => (
                                     <div
                                         key={deck.id}
-                                        className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-blue-300 hover:shadow-md"
+                                        onClick={() => handleViewDeck(deck)}
+                                        className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-blue-400 hover:shadow-md"
                                     >
-                                        <div className="flex items-start justify-between">
+                                        <div
+                                            className="flex items-start justify-between"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
                                             <div className="flex-1">
                                                 <div className="mb-2 flex items-center gap-3">
                                                     {editingDeckId === deck.id ? (
@@ -566,15 +706,24 @@ export default function Step3Page({
                                                         </div>
                                                     ) : (
                                                         <>
-                                                            <h4 className="text-lg font-semibold text-gray-900">
+                                                            <h4
+                                                                className="cursor-pointer text-lg font-semibold text-gray-900 hover:text-blue-600"
+                                                                onDoubleClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    startEditingName(
+                                                                        deck
+                                                                    );
+                                                                }}
+                                                            >
                                                                 {deck.title}
                                                             </h4>
                                                             <button
-                                                                onClick={() =>
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
                                                                     startEditingName(
                                                                         deck
-                                                                    )
-                                                                }
+                                                                    );
+                                                                }}
                                                                 className="rounded p-1 text-blue-600 hover:bg-blue-50"
                                                             >
                                                                 <Pencil className="h-4 w-4" />
@@ -598,24 +747,41 @@ export default function Step3Page({
 
                                             <div className="flex items-center gap-2">
                                                 <button
-                                                    onClick={() => handleViewDeck(deck)}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleViewDeck(deck);
+                                                    }}
                                                     className="rounded p-2 text-blue-600 hover:bg-blue-50"
                                                 >
                                                     View
                                                 </button>
                                                 <button
-                                                    onClick={() =>
-                                                        handleDownloadDeck(deck)
-                                                    }
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDownloadDeck(deck);
+                                                    }}
                                                     className="rounded p-2 text-gray-600 hover:bg-gray-50"
+                                                    title="Download JSON"
                                                 >
                                                     <Download className="h-4 w-4" />
                                                 </button>
                                                 <button
-                                                    onClick={() =>
-                                                        handleDeleteDeck(deck.id)
-                                                    }
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDuplicateDeck(deck);
+                                                    }}
+                                                    className="rounded p-2 text-gray-600 hover:bg-gray-50"
+                                                    title="Duplicate"
+                                                >
+                                                    <Copy className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteDeck(deck.id);
+                                                    }}
                                                     className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                    title="Delete"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
@@ -673,7 +839,7 @@ export default function Step3Page({
                                                         id: deck.id,
                                                         title:
                                                             deck.metadata?.title ||
-                                                            "Untitled Deck",
+                                                            "Untitled Presentation",
                                                         slideCount: Array.isArray(
                                                             deck.slides
                                                         )
@@ -683,6 +849,12 @@ export default function Step3Page({
                                                         slides: deck.slides || [],
                                                         version: 1,
                                                         created_at: deck.created_at,
+                                                        presentation_type:
+                                                            deck.presentation_type ||
+                                                            "webinar",
+                                                        template_type:
+                                                            deck.template_type,
+                                                        sections: deck.sections,
                                                     })
                                                 );
                                                 setDeckStructures(transformed);

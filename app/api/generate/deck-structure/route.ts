@@ -1,7 +1,10 @@
 /**
- * Deck Structure Generation API
- * Generates presentation structure using Magnetic Masterclass Framework
- * Supports 5-slide test mode or full 55-slide deck
+ * Presentation Structure Generation API
+ * Generates presentation structure using various frameworks:
+ * - Webinar: Magnetic Masterclass Framework (55 slides)
+ * - VSL: Video Sales Letter Framework (5-10 slides)
+ * - Sales Page: Pitch Video Framework
+ * Supports 5-slide test mode or full deck
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -23,6 +26,10 @@ const generateDeckStructureSchema = z.object({
     transcriptId: z.string().uuid("Invalid transcript ID"),
     projectId: z.string().uuid("Invalid project ID"),
     slideCount: z.enum(["5", "55"]).optional().default("55"),
+    presentationType: z
+        .enum(["webinar", "vsl", "sales_page"])
+        .optional()
+        .default("webinar"),
 });
 
 interface SlideChunk {
@@ -55,14 +62,16 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { transcriptId, projectId, slideCount } = validationResult.data;
+        const { transcriptId, projectId, slideCount, presentationType } =
+            validationResult.data;
         const isTestMode = slideCount === "5";
 
-        log.info("Generating deck structure with framework", {
+        log.info("Generating presentation structure", {
             userId: user.id,
             transcriptId,
             projectId,
             slideCount,
+            presentationType,
             isTestMode,
         });
 
@@ -78,17 +87,31 @@ export async function POST(request: NextRequest) {
             throw new ValidationError("Transcript not found");
         }
 
-        // Load Magnetic Masterclass Framework template
-        const frameworkPath = path.join(
-            process.cwd(),
-            "templates",
-            "2.1 Magnetic Masterclass Framework - 55 Slides.md"
-        );
+        // Load framework template based on presentation type
+        let frameworkPath: string;
+
+        if (presentationType === "vsl") {
+            frameworkPath = path.join(process.cwd(), "templates", "vsl-framework.md");
+        } else if (presentationType === "sales_page") {
+            frameworkPath = path.join(
+                process.cwd(),
+                "templates",
+                "sales-page-pitch-framework.md"
+            );
+        } else {
+            // Default to webinar (Magnetic Masterclass)
+            frameworkPath = path.join(
+                process.cwd(),
+                "templates",
+                "2.1 Magnetic Masterclass Framework - 55 Slides.md"
+            );
+        }
 
         let frameworkContent: string;
         try {
             frameworkContent = fs.readFileSync(frameworkPath, "utf8");
             log.info("✅ Framework loaded", {
+                presentationType,
                 frameworkLength: frameworkContent.length,
             });
         } catch (error) {
@@ -157,20 +180,27 @@ export async function POST(request: NextRequest) {
         }
 
         // Save to database
-        const deckTitle = `${isTestMode ? "Test Deck" : "Magnetic Masterclass"} - ${new Date().toLocaleDateString()}`;
+        const frameworkNames = {
+            webinar: "Magnetic Masterclass",
+            vsl: "VSL",
+            sales_page: "Sales Page Pitch",
+        };
+
+        const deckTitle = `${isTestMode ? "Test" : frameworkNames[presentationType]} - ${new Date().toLocaleDateString()}`;
 
         const { data: savedDeck, error: saveError } = await supabase
             .from("deck_structures")
             .insert({
                 funnel_project_id: projectId,
                 user_id: user.id,
-                template_type: isTestMode ? "5_slide_test" : "55_slide_masterclass",
+                template_type: isTestMode ? "5_slide_test" : `${presentationType}_full`,
                 total_slides: generatedSlides.length,
                 slides: generatedSlides,
                 sections: {}, // Can be populated later if needed
+                presentation_type: presentationType,
                 metadata: {
                     title: deckTitle,
-                    framework: "Magnetic Masterclass",
+                    framework: frameworkNames[presentationType],
                     generatedAt: new Date().toISOString(),
                     slideCount: generatedSlides.length,
                     mode: isTestMode ? "test" : "full",
@@ -184,9 +214,10 @@ export async function POST(request: NextRequest) {
             throw new Error("Failed to save deck to database");
         }
 
-        log.info("✅ Deck structure generated and saved", {
+        log.info("✅ Presentation structure generated and saved", {
             deckId: savedDeck.id,
             slideCount: generatedSlides.length,
+            presentationType,
         });
 
         return NextResponse.json({
@@ -196,6 +227,8 @@ export async function POST(request: NextRequest) {
                 title: deckTitle,
                 slides: savedDeck.slides,
                 template_type: savedDeck.template_type,
+                presentation_type: savedDeck.presentation_type,
+                sections: savedDeck.sections,
                 metadata: savedDeck.metadata,
                 created_at: savedDeck.created_at,
             },

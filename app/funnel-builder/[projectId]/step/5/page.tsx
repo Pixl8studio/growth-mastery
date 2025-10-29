@@ -300,9 +300,9 @@ export default function Step5EnrollmentPage({
                 {/* Dependency Warnings */}
                 {!hasDeckStructure && (
                     <DependencyWarning
-                        message="You need to create a deck structure first."
+                        message="You need to create a presentation structure first."
                         requiredStep={3}
-                        requiredStepName="Deck Structure"
+                        requiredStepName="Presentation Structure"
                         projectId={projectId}
                     />
                 )}
@@ -407,7 +407,7 @@ export default function Step5EnrollmentPage({
 
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-gray-700">
-                                    Deck Structure
+                                    Presentation Structure
                                 </label>
                                 <select
                                     value={formData.deckStructureId}
@@ -422,12 +422,12 @@ export default function Step5EnrollmentPage({
                                     {deckStructures.map((deck) => (
                                         <option key={deck.id} value={deck.id}>
                                             {deck.metadata?.title ||
-                                                `Deck ${deck.total_slides} slides`}
+                                                `Presentation ${deck.total_slides} slides`}
                                         </option>
                                     ))}
                                 </select>
                                 <p className="mt-1 text-sm text-gray-500">
-                                    Testimonials and content from this deck
+                                    Testimonials and content from this presentation
                                 </p>
                             </div>
 

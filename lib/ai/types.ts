@@ -25,6 +25,8 @@ export interface DeckStructure {
 }
 
 // Offer types
+export type OfferPathway = "book_call" | "direct_purchase";
+
 export interface OfferGeneration {
     name: string;
     tagline: string;
@@ -33,6 +35,12 @@ export interface OfferGeneration {
     features: string[];
     bonuses: string[];
     guarantee: string;
+    // 7 P's Framework
+    promise: string;
+    person: string;
+    process: string;
+    purpose: string;
+    pathway: OfferPathway;
 }
 
 // Sales copy types

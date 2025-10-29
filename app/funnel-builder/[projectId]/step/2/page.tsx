@@ -20,6 +20,14 @@ interface Offer {
         bonuses?: string[];
         guarantee?: string;
     };
+    // 7 P's Framework
+    promise?: string;
+    person?: string;
+    process?: string;
+    purpose?: string;
+    pathway?: "book_call" | "direct_purchase";
+    max_features?: number;
+    max_bonuses?: number;
     created_at: string;
 }
 
@@ -38,6 +46,8 @@ export default function Step2Page({
     const [editingName, setEditingName] = useState("");
     const [transcripts, setTranscripts] = useState<any[]>([]);
     const [selectedTranscript, setSelectedTranscript] = useState("");
+    const [alternatives, setAlternatives] = useState<any[]>([]);
+    const [loadingAlternatives, setLoadingAlternatives] = useState(false);
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
@@ -138,6 +148,11 @@ export default function Step2Page({
             setOffers((prev) => [result.offer, ...prev]);
             setGenerationProgress(100);
 
+            // Load alternatives for the newly created offer
+            if (result.offer?.id) {
+                loadAlternatives(result.offer.id);
+            }
+
             setTimeout(() => {
                 setIsGenerating(false);
                 setGenerationProgress(0);
@@ -147,6 +162,62 @@ export default function Step2Page({
             setIsGenerating(false);
             setGenerationProgress(0);
             alert("Failed to generate offer. Please try again.");
+        }
+    };
+
+    const loadAlternatives = async (baseOfferId: string) => {
+        setLoadingAlternatives(true);
+        try {
+            const response = await fetch("/api/generate/offer-alternatives", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ baseOfferId, projectId }),
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                setAlternatives(result.alternatives || []);
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to load alternative offers");
+        } finally {
+            setLoadingAlternatives(false);
+        }
+    };
+
+    const handleUseAlternative = async (alternative: any) => {
+        try {
+            const supabase = createClient();
+            const { data: savedOffer, error } = await supabase
+                .from("offers")
+                .insert({
+                    funnel_project_id: projectId,
+                    user_id: project?.user_id,
+                    name: alternative.name,
+                    tagline: alternative.tagline,
+                    price: alternative.price,
+                    currency: alternative.currency,
+                    features: alternative.features,
+                    bonuses: alternative.bonuses,
+                    guarantee: alternative.guarantee,
+                    promise: alternative.promise,
+                    person: alternative.person,
+                    process: alternative.process,
+                    purpose: alternative.purpose,
+                    pathway: alternative.pathway,
+                    max_features: 6,
+                    max_bonuses: 5,
+                })
+                .select()
+                .single();
+
+            if (!error && savedOffer) {
+                setOffers((prev) => [savedOffer, ...prev]);
+                setAlternatives([]);
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to use alternative offer");
+            alert("Failed to create offer. Please try again.");
         }
     };
 
@@ -210,8 +281,8 @@ export default function Step2Page({
             nextLabel={
                 hasCompletedOffer ? "Generate Deck Structure" : "Generate Offer First"
             }
-            stepTitle="Craft Your Offer"
-            stepDescription="AI generates compelling pricing and irresistible features"
+            stepTitle="Define Offer"
+            stepDescription="AI intelligently analyzes your intake to create optimized offers with the proven 7 P's framework"
         >
             <div className="space-y-8">
                 {/* Dependency Warning */}
@@ -332,6 +403,88 @@ export default function Step2Page({
                                 />
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {/* AI Suggested Offers - Alternative Variations */}
+                {alternatives.length > 0 && (
+                    <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-indigo-50 p-6">
+                        <div className="mb-6">
+                            <h3 className="mb-2 text-xl font-semibold text-gray-900">
+                                🎯 AI Suggested Offer Variations
+                            </h3>
+                            <p className="text-gray-600">
+                                Explore these strategic alternatives optimized for
+                                different market positions
+                            </p>
+                        </div>
+
+                        <div className="grid gap-4 md:grid-cols-3">
+                            {alternatives.map((alt: any, idx: number) => (
+                                <div
+                                    key={idx}
+                                    className="rounded-lg border border-purple-200 bg-white p-5 shadow-sm transition-all hover:shadow-md"
+                                >
+                                    <div className="mb-3">
+                                        <div className="mb-1 inline-block rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700">
+                                            {alt.type === "value" && "💰 Value-Focused"}
+                                            {alt.type === "premium" && "👑 Premium"}
+                                            {alt.type === "scale" &&
+                                                "📈 Scale-Optimized"}
+                                        </div>
+                                    </div>
+
+                                    <h4 className="mb-2 text-lg font-semibold text-gray-900">
+                                        {alt.name}
+                                    </h4>
+
+                                    <div className="mb-3 text-2xl font-bold text-purple-600">
+                                        ${alt.price}
+                                    </div>
+
+                                    <div className="mb-3 space-y-1 text-sm text-gray-600">
+                                        <div>
+                                            📦 {alt.features?.length || 0} features
+                                        </div>
+                                        <div>🎁 {alt.bonuses?.length || 0} bonuses</div>
+                                        <div className="flex items-center gap-1">
+                                            <span>
+                                                {alt.pathway === "book_call"
+                                                    ? "📞"
+                                                    : "🛒"}
+                                            </span>
+                                            <span>
+                                                {alt.pathway === "book_call"
+                                                    ? "Book Call"
+                                                    : "Direct Purchase"}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    {alt.keyDifference && (
+                                        <p className="mb-4 text-sm italic text-gray-600">
+                                            "{alt.keyDifference}"
+                                        </p>
+                                    )}
+
+                                    <button
+                                        onClick={() => handleUseAlternative(alt)}
+                                        className="w-full rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-700"
+                                    >
+                                        Use This Offer
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+
+                        {loadingAlternatives && (
+                            <div className="py-8 text-center">
+                                <div className="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-4 border-purple-200 border-t-purple-600"></div>
+                                <p className="text-sm text-purple-600">
+                                    Generating alternative offers...
+                                </p>
+                            </div>
+                        )}
                     </div>
                 )}
 

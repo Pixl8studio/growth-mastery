@@ -13,7 +13,7 @@ export const FUNNEL_CONFIG = {
     totalSteps: 12,
     stepNames: [
         "AI Intake Call",
-        "Craft Offer",
+        "Define Offer",
         "Deck Structure",
         "Gamma Presentation",
         "Enrollment Page",

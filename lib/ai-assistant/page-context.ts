@@ -23,7 +23,8 @@ export interface PageAction {
     id: string;
     label: string;
     description: string;
-    handler: (...args: unknown[]) => Promise<void> | void;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    handler: (params?: any) => Promise<void> | void;
     parameters?: Array<{
         name: string;
         type: string;

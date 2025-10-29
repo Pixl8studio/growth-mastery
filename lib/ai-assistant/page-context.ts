@@ -23,7 +23,7 @@ export interface PageAction {
     id: string;
     label: string;
     description: string;
-    handler: (...args: any[]) => Promise<void> | void;
+    handler: (...args: unknown[]) => Promise<void> | void;
     parameters?: Array<{
         name: string;
         type: string;
@@ -40,7 +40,7 @@ export interface PageContext {
     description: string;
 
     // Current state
-    currentData?: Record<string, any>;
+    currentData?: Record<string, unknown>;
     step?: number;
     totalSteps?: number;
 
@@ -60,7 +60,7 @@ export interface PageContext {
         projectName?: string;
         offerId?: string;
         sequenceId?: string;
-        [key: string]: any;
+        [key: string]: unknown;
     };
 
     // Help information
@@ -73,7 +73,7 @@ interface PageContextStore {
     setContext: (context: PageContext) => void;
     updateContext: (partial: Partial<PageContext>) => void;
     clearContext: () => void;
-    updateFormField: (formId: string, fieldId: string, value: any) => void;
+    updateFormField: (formId: string, fieldId: string, value: unknown) => void;
     getFormattedContext: () => string;
 }
 

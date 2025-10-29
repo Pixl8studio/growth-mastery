@@ -62,7 +62,12 @@ export async function POST(request: NextRequest) {
             .limit(10);
 
         // Load offers if project specified
-        let offers: any[] = [];
+        let offers: Array<{
+            id: string;
+            name: string;
+            price?: number | null;
+            description?: string | null;
+        }> = [];
         if (projectId) {
             const { data: offersData } = await supabase
                 .from("offers")

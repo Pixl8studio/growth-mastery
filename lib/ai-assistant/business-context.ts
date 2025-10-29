@@ -115,7 +115,12 @@ export async function loadBusinessContext(
         }
 
         // Load offers for current project
-        let offers: any[] = [];
+        let offers: Array<{
+            id: string;
+            name: string;
+            price?: number | null;
+            description?: string | null;
+        }> = [];
         if (projectId) {
             const { data: offersData } = await supabase
                 .from("offers")

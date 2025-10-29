@@ -13,14 +13,9 @@ import {
     Sparkles,
     ChevronDown,
     ChevronUp,
-    CheckCircle2,
-    Circle,
     ArrowRight,
     Zap,
     HelpCircle,
-    FileText,
-    Rocket,
-    Target,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -47,13 +42,6 @@ interface Message {
     }>;
 }
 
-interface FunnelStep {
-    step: number;
-    name: string;
-    path: string;
-    completed: boolean;
-}
-
 const FUNNEL_STEPS: Array<{ step: number; name: string; path: string }> = [
     { step: 1, name: "AI Intake", path: "/step/1" },
     { step: 2, name: "Define Offer", path: "/step/2" },
@@ -72,7 +60,6 @@ const FUNNEL_STEPS: Array<{ step: number; name: string; path: string }> = [
 export function AdvancedAIAssistant() {
     const [isOpen, setIsOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(true);
-    const [showProgress, setShowProgress] = useState(true);
     const [threadId, setThreadId] = useState<string | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");

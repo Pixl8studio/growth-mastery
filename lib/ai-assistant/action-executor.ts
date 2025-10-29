@@ -8,13 +8,13 @@ import { logger } from "@/lib/client-logger";
 
 export interface ActionRequest {
     actionId: string;
-    parameters?: Record<string, any>;
+    parameters?: Record<string, unknown>;
 }
 
 export interface ActionResult {
     success: boolean;
     message?: string;
-    data?: any;
+    data?: unknown;
     error?: string;
 }
 
@@ -23,7 +23,7 @@ export interface ActionResult {
  */
 export async function executePageAction(
     actionId: string,
-    parameters?: Record<string, any>
+    parameters?: Record<string, unknown>
 ): Promise<ActionResult> {
     try {
         const context = usePageContext.getState().context;
@@ -72,7 +72,7 @@ export async function executePageAction(
 export async function fillFormField(
     formId: string,
     fieldId: string,
-    value: any
+    value: unknown
 ): Promise<ActionResult> {
     try {
         const { context, updateFormField } = usePageContext.getState();
@@ -149,7 +149,7 @@ export async function fillFormField(
  */
 export async function fillMultipleFields(
     formId: string,
-    fields: Array<{ fieldId: string; value: any }>
+    fields: Array<{ fieldId: string; value: unknown }>
 ): Promise<ActionResult> {
     try {
         const results = await Promise.all(

@@ -34,6 +34,9 @@ import { SequenceBuilder } from "@/components/followup/sequence-builder";
 import { MessageTemplateEditor } from "@/components/followup/message-template-editor";
 import { StoryLibrary } from "@/components/followup/story-library";
 import { AnalyticsDashboard } from "@/components/followup/analytics-dashboard";
+import { OnboardingBanner } from "@/components/followup/onboarding-banner";
+import { SenderSetupTab } from "@/components/followup/sender-setup-tab";
+import { TestMessageModal } from "@/components/followup/test-message-modal";
 
 export default function Step11Page({
     params,
@@ -65,6 +68,9 @@ export default function Step11Page({
         },
     });
     const [selectedSequenceId, setSelectedSequenceId] = useState<string | null>(null);
+    const [testModalOpen, setTestModalOpen] = useState(false);
+    const [queuedCount, setQueuedCount] = useState(0);
+    const [nextScheduledTime, setNextScheduledTime] = useState<string | null>(null);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -175,6 +181,43 @@ export default function Step11Page({
                         },
                     });
                 }
+
+                // Load queued deliveries count
+                if (agentConfig?.id) {
+                    const { count: queuedDeliveries } = await supabase
+                        .from("followup_deliveries")
+                        .select("*", { count: "exact", head: true })
+                        .eq("delivery_status", "pending");
+
+                    setQueuedCount(queuedDeliveries || 0);
+
+                    // Get next scheduled delivery
+                    const { data: nextDelivery } = await supabase
+                        .from("followup_deliveries")
+                        .select("scheduled_send_at")
+                        .eq("delivery_status", "pending")
+                        .order("scheduled_send_at", { ascending: true })
+                        .limit(1)
+                        .single();
+
+                    if (nextDelivery) {
+                        const nextTime = new Date(nextDelivery.scheduled_send_at);
+                        const now = new Date();
+                        const diffMs = nextTime.getTime() - now.getTime();
+                        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                        const diffMins = Math.floor(
+                            (diffMs % (1000 * 60 * 60)) / (1000 * 60)
+                        );
+
+                        if (diffHours > 0) {
+                            setNextScheduledTime(`in ${diffHours}h ${diffMins}m`);
+                        } else if (diffMins > 0) {
+                            setNextScheduledTime(`in ${diffMins}m`);
+                        } else {
+                            setNextScheduledTime("now");
+                        }
+                    }
+                }
             } catch (error) {
                 logger.error({ error }, "Failed to load follow-up data");
             } finally {
@@ -232,6 +275,17 @@ export default function Step11Page({
     }, [selectedSequenceId, sequences, agentConfig?.id]);
 
     const handleEnableFollowup = async (enabled: boolean) => {
+        // Check if sender domain is verified before enabling
+        if (enabled && !agentConfig?.sender_verified) {
+            toast({
+                title: "Domain Not Verified",
+                description:
+                    "Please verify your sender domain in the Sender Setup tab first.",
+                variant: "destructive",
+            });
+            return;
+        }
+
         setFollowupEnabled(enabled);
 
         if (enabled && !agentConfig) {
@@ -853,6 +907,13 @@ export default function Step11Page({
             nextLabel="Continue to Analytics"
         >
             <div className="space-y-6">
+                {/* Onboarding Banner - shows for first-time users */}
+                <OnboardingBanner
+                    senderVerified={agentConfig?.sender_verified || false}
+                    hasSequences={sequences.length > 0}
+                    hasMessages={messages.length > 0}
+                />
+
                 {/* Enable/Disable Section */}
                 <Card className="p-6 bg-gradient-to-r from-purple-50 to-blue-50">
                     <div className="flex items-center justify-between">
@@ -871,11 +932,28 @@ export default function Step11Page({
                         <Switch
                             checked={followupEnabled}
                             onCheckedChange={handleEnableFollowup}
+                            disabled={!agentConfig?.sender_verified}
                         />
                     </div>
 
+                    {/* Warning if domain not verified */}
+                    {!agentConfig?.sender_verified && (
+                        <div className="mt-4 bg-amber-50 border-2 border-amber-200 rounded-lg p-4">
+                            <p className="text-sm text-amber-800">
+                                ⚠️ Please verify your sender domain in the{" "}
+                                <button
+                                    onClick={() => setActiveTab("sender")}
+                                    className="font-semibold underline hover:text-amber-900"
+                                >
+                                    Sender Setup
+                                </button>{" "}
+                                tab before enabling follow-up automation.
+                            </p>
+                        </div>
+                    )}
+
                     {followupEnabled && (
-                        <div className="mt-6 grid grid-cols-4 gap-4 text-sm">
+                        <div className="mt-6 grid grid-cols-5 gap-4 text-sm">
                             <div className="text-center p-3 bg-white rounded-lg">
                                 <div className="text-2xl font-bold text-purple-600">
                                     {sequences.length}
@@ -889,16 +967,30 @@ export default function Step11Page({
                                 <div className="text-gray-600">Templates</div>
                             </div>
                             <div className="text-center p-3 bg-white rounded-lg">
-                                <div className="text-2xl font-bold text-green-600">
-                                    {stories.length}
+                                <div className="text-xl font-bold">
+                                    {agentConfig?.sender_verified ? (
+                                        <span className="text-green-600">
+                                            ✅ Verified
+                                        </span>
+                                    ) : (
+                                        <span className="text-amber-600">
+                                            ⚠️ Pending
+                                        </span>
+                                    )}
                                 </div>
-                                <div className="text-gray-600">Stories</div>
+                                <div className="text-gray-600">Domain</div>
                             </div>
                             <div className="text-center p-3 bg-white rounded-lg">
                                 <div className="text-2xl font-bold text-orange-600">
-                                    {analytics.overall?.totalSent ?? 0}
+                                    {queuedCount}
                                 </div>
-                                <div className="text-gray-600">Sent</div>
+                                <div className="text-gray-600">Queued</div>
+                            </div>
+                            <div className="text-center p-3 bg-white rounded-lg">
+                                <div className="text-sm font-bold text-indigo-600">
+                                    {nextScheduledTime || "None"}
+                                </div>
+                                <div className="text-gray-600">Next Send</div>
                             </div>
                         </div>
                     )}
@@ -911,13 +1003,17 @@ export default function Step11Page({
                             onValueChange={setActiveTab}
                             className="w-full"
                         >
-                            <TabsList className="grid w-full grid-cols-6">
+                            <TabsList className="grid w-full grid-cols-7">
                                 <TabsTrigger value="agent">
                                     <Sparkles className="h-4 w-4 mr-2" />
                                     Agent
                                 </TabsTrigger>
-                                <TabsTrigger value="sequences">
+                                <TabsTrigger value="sender">
                                     <Mail className="h-4 w-4 mr-2" />
+                                    Sender
+                                </TabsTrigger>
+                                <TabsTrigger value="sequences">
+                                    <Target className="h-4 w-4 mr-2" />
                                     Sequences
                                 </TabsTrigger>
                                 <TabsTrigger value="messages">
@@ -943,6 +1039,36 @@ export default function Step11Page({
                                 <AgentConfigForm
                                     config={agentConfig}
                                     onSave={handleSaveAgentConfig}
+                                />
+                            </TabsContent>
+
+                            {/* Sender Setup Tab */}
+                            <TabsContent value="sender" className="mt-6">
+                                <SenderSetupTab
+                                    agentConfigId={agentConfig?.id}
+                                    currentSenderName={agentConfig?.sender_name}
+                                    currentSenderEmail={agentConfig?.sender_email}
+                                    currentSMSSenderId={agentConfig?.sms_sender_id}
+                                    domainVerificationStatus={
+                                        agentConfig?.domain_verification_status
+                                    }
+                                    dnsRecords={agentConfig?.sendgrid_dns_records || []}
+                                    onUpdate={async () => {
+                                        // Reload data after sender updates
+                                        if (!projectId) return;
+                                        const configRes = await fetch(
+                                            `/api/followup/agent-configs?funnel_project_id=${projectId}`
+                                        );
+                                        if (configRes.ok) {
+                                            const configData = await configRes.json();
+                                            if (
+                                                configData.configs &&
+                                                configData.configs.length > 0
+                                            ) {
+                                                setAgentConfig(configData.configs[0]);
+                                            }
+                                        }
+                                    }}
                                 />
                             </TabsContent>
 
@@ -1111,6 +1237,30 @@ export default function Step11Page({
                     </>
                 )}
             </div>
+
+            {/* Test Message to Self Floating Button */}
+            {followupEnabled && agentConfig?.id && (
+                <>
+                    <div className="fixed bottom-8 right-8 z-50">
+                        <Button
+                            onClick={() => setTestModalOpen(true)}
+                            size="lg"
+                            className="shadow-2xl hover:shadow-3xl transition-shadow"
+                        >
+                            <MessageSquare className="mr-2 h-5 w-5" />
+                            Test Message to Self
+                        </Button>
+                    </div>
+
+                    {/* Test Message Modal */}
+                    <TestMessageModal
+                        open={testModalOpen}
+                        onClose={() => setTestModalOpen(false)}
+                        agentConfigId={agentConfig.id}
+                        userEmail={agentConfig.sender_email || undefined}
+                    />
+                </>
+            )}
         </StepLayout>
     );
 }

@@ -145,6 +145,24 @@ export default function Step9RegistrationPage({
             );
             if (!deckStructure) throw new Error("Deck structure not found");
 
+            // Fetch intake data (Step 1)
+            const { data: intakeData } = await supabase
+                .from("vapi_transcripts")
+                .select("extracted_data, transcript_text")
+                .eq("funnel_project_id", projectId)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .single();
+
+            // Fetch offer data (Step 2)
+            const { data: offerData } = await supabase
+                .from("offers")
+                .select("*")
+                .eq("funnel_project_id", projectId)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .single();
+
             // Get theme from project or use defaults
             const theme = project?.settings?.theme || {
                 primary: "#2563eb",
@@ -153,12 +171,14 @@ export default function Step9RegistrationPage({
                 text: "#1f2937",
             };
 
-            // Generate HTML using the generator
+            // Generate HTML using the generator with all available data
             const htmlContent = generateRegistrationHTML({
                 projectId,
                 deckStructure,
                 headline: formData.headline,
                 theme,
+                intakeData: intakeData?.extracted_data || null,
+                offerData: offerData || null,
             });
 
             // Extract subheadline from deck
@@ -211,6 +231,30 @@ export default function Step9RegistrationPage({
         // Open preview (without edit mode)
         const previewUrl = `/funnel-builder/${projectId}/pages/registration/${pageId}`;
         window.open(previewUrl, "_blank");
+    };
+
+    const handleTogglePublish = async (pageId: string, currentStatus: boolean) => {
+        try {
+            const supabase = createClient();
+            const { error } = await supabase
+                .from("registration_pages")
+                .update({ is_published: !currentStatus })
+                .eq("id", pageId);
+
+            if (!error) {
+                setRegistrationPages((prev) =>
+                    prev.map((p) =>
+                        p.id === pageId ? { ...p, is_published: !currentStatus } : p
+                    )
+                );
+                logger.info(
+                    { pageId, newStatus: !currentStatus },
+                    "Registration page publish status updated"
+                );
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to update publish status");
+        }
     };
 
     const handleDelete = async (pageId: string) => {
@@ -445,6 +489,29 @@ export default function Step9RegistrationPage({
                                             </div>
 
                                             <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={() =>
+                                                        handleTogglePublish(
+                                                            page.id,
+                                                            page.is_published
+                                                        )
+                                                    }
+                                                    className={`rounded px-3 py-1 text-sm font-medium ${
+                                                        page.is_published
+                                                            ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                                                    }`}
+                                                    title={
+                                                        page.is_published
+                                                            ? "Unpublish"
+                                                            : "Publish"
+                                                    }
+                                                >
+                                                    {page.is_published
+                                                        ? "Published"
+                                                        : "Publish"}
+                                                </button>
+
                                                 <button
                                                     onClick={() =>
                                                         handlePreview(page.id)

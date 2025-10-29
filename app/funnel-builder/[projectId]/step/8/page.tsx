@@ -12,6 +12,7 @@ import { Video, PlusCircle, Eye, Pencil, Trash2, X } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { generateWatchPageHTML } from "@/lib/generators/watch-page-generator";
+import { Switch } from "@/components/ui/switch";
 
 interface DeckStructure {
     id: string;
@@ -264,6 +265,40 @@ export default function Step8WatchPage({
             }
         } catch (error) {
             logger.error({ error }, "Failed to delete watch page");
+        }
+    };
+
+    const handlePublishToggle = async (pageId: string, currentStatus: boolean) => {
+        try {
+            const supabase = createClient();
+            const newStatus = !currentStatus;
+
+            const { error } = await supabase
+                .from("watch_pages")
+                .update({ is_published: newStatus })
+                .eq("id", pageId);
+
+            if (error) throw error;
+
+            setWatchPages((prev) =>
+                prev.map((p) =>
+                    p.id === pageId ? { ...p, is_published: newStatus } : p
+                )
+            );
+
+            logger.info(
+                { pageId, isPublished: newStatus },
+                "Watch page publish status updated"
+            );
+
+            alert(
+                newStatus
+                    ? "Page published successfully!"
+                    : "Page unpublished successfully!"
+            );
+        } catch (error) {
+            logger.error({ error }, "Failed to update publish status");
+            alert("Failed to update publish status. Please try again.");
         }
     };
 

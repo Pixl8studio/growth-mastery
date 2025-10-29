@@ -44,9 +44,21 @@ export async function POST(request: NextRequest) {
             videoId,
         });
     } catch (error) {
-        requestLogger.error({ error }, "Failed to generate upload URL");
+        requestLogger.error(
+            {
+                error,
+                hasAccountId: !!process.env.CLOUDFLARE_ACCOUNT_ID,
+                hasApiToken: !!process.env.CLOUDFLARE_STREAM_API_TOKEN,
+            },
+            "Failed to generate upload URL"
+        );
         return NextResponse.json(
-            { error: "Failed to generate upload URL" },
+            {
+                error:
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to generate upload URL",
+            },
             { status: 500 }
         );
     }

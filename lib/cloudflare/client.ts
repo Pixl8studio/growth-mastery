@@ -30,7 +30,9 @@ export async function generateUploadUrl(metadata?: {
         const apiToken = env.CLOUDFLARE_STREAM_API_TOKEN;
 
         if (!accountId || !apiToken) {
-            throw new Error("Cloudflare credentials not configured");
+            throw new Error(
+                "Cloudflare credentials not configured. Check CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_STREAM_API_TOKEN environment variables."
+            );
         }
 
         const response = await fetch(
@@ -50,8 +52,16 @@ export async function generateUploadUrl(metadata?: {
         );
 
         if (!response.ok) {
-            const error = await response.text();
-            throw new Error(`Cloudflare API error: ${error}`);
+            const errorText = await response.text();
+            requestLogger.error(
+                {
+                    status: response.status,
+                    statusText: response.statusText,
+                    errorText,
+                },
+                "Cloudflare API error"
+            );
+            throw new Error(`Cloudflare API error (${response.status}): ${errorText}`);
         }
 
         const data: CloudflareApiResponse<{ uploadURL: string; uid: string }> =

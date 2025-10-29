@@ -14,7 +14,6 @@ import { generateSlug } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
     Card,
     CardContent,
@@ -28,9 +27,6 @@ export default function CreateFunnelPage() {
     const router = useRouter();
 
     const [name, setName] = useState("");
-    const [description, setDescription] = useState("");
-    const [targetAudience, setTargetAudience] = useState("");
-    const [businessNiche, setBusinessNiche] = useState("");
     const [isCreating, setIsCreating] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -79,9 +75,6 @@ export default function CreateFunnelPage() {
                     user_email: user.email!,
                     name,
                     slug,
-                    description: description || null,
-                    target_audience: targetAudience || null,
-                    business_niche: businessNiche || null,
                     status: "draft",
                     current_step: 1,
                 })
@@ -127,15 +120,15 @@ export default function CreateFunnelPage() {
                         Create New Funnel
                     </h1>
                     <p className="text-gray-600">
-                        Let's gather some basic information to get started
+                        Give your funnel a name and let's get started
                     </p>
                 </div>
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Funnel Details</CardTitle>
+                        <CardTitle>Create Your Funnel</CardTitle>
                         <CardDescription>
-                            Tell us about your business and target audience
+                            Give your funnel a name to get started
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
@@ -147,7 +140,7 @@ export default function CreateFunnelPage() {
 
                         <form onSubmit={handleCreate} className="space-y-6">
                             <div>
-                                <Label htmlFor="name">Funnel Name *</Label>
+                                <Label htmlFor="name">Funnel Name</Label>
                                 <Input
                                     id="name"
                                     type="text"
@@ -156,46 +149,11 @@ export default function CreateFunnelPage() {
                                     onChange={(e) => setName(e.target.value)}
                                     placeholder="e.g., Pitch Deck Mastery Program"
                                     className="mt-1"
+                                    autoFocus
                                 />
                                 <p className="mt-1 text-xs text-gray-500">
-                                    Give your funnel a descriptive name
+                                    Choose a name that describes your offer
                                 </p>
-                            </div>
-
-                            <div>
-                                <Label htmlFor="description">Description</Label>
-                                <Textarea
-                                    id="description"
-                                    value={description}
-                                    onChange={(e) => setDescription(e.target.value)}
-                                    placeholder="Brief description of your offer..."
-                                    className="mt-1"
-                                    rows={3}
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="targetAudience">Target Audience</Label>
-                                <Input
-                                    id="targetAudience"
-                                    type="text"
-                                    value={targetAudience}
-                                    onChange={(e) => setTargetAudience(e.target.value)}
-                                    placeholder="e.g., Entrepreneurs, Coaches, Consultants"
-                                    className="mt-1"
-                                />
-                            </div>
-
-                            <div>
-                                <Label htmlFor="businessNiche">Business Niche</Label>
-                                <Input
-                                    id="businessNiche"
-                                    type="text"
-                                    value={businessNiche}
-                                    onChange={(e) => setBusinessNiche(e.target.value)}
-                                    placeholder="e.g., Marketing, Sales Training, Business Coaching"
-                                    className="mt-1"
-                                />
                             </div>
 
                             <div className="flex justify-end space-x-3">

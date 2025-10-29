@@ -23,6 +23,7 @@ import { createClient } from "@/lib/supabase/client";
 import { generateEnrollmentHTML } from "@/lib/generators/enrollment-page-generator";
 import { useToast } from "@/components/ui/use-toast";
 import { ToastAction } from "@/components/ui/toast";
+import { Switch } from "@/components/ui/switch";
 import {
     Tooltip,
     TooltipContent,
@@ -416,6 +417,47 @@ export default function Step5EnrollmentPage({
         }
     };
 
+    const handlePublishToggle = async (pageId: string, currentStatus: boolean) => {
+        try {
+            const supabase = createClient();
+            const newStatus = !currentStatus;
+
+            const { error } = await supabase
+                .from("enrollment_pages")
+                .update({ is_published: newStatus })
+                .eq("id", pageId);
+
+            if (error) throw error;
+
+            setEnrollmentPages((prev) =>
+                prev.map((p) =>
+                    p.id === pageId ? { ...p, is_published: newStatus } : p
+                )
+            );
+
+            logger.info(
+                { pageId, isPublished: newStatus },
+                "Enrollment page publish status updated"
+            );
+
+            toast({
+                title: newStatus ? "Page Published" : "Page Unpublished",
+                description: newStatus
+                    ? "Your enrollment page is now live and visible to the public"
+                    : "Your enrollment page is now in draft mode",
+            });
+        } catch (error: any) {
+            logger.error({ error }, "Failed to update publish status");
+            toast({
+                variant: "destructive",
+                title: "Update Failed",
+                description:
+                    error?.message ||
+                    "Could not update publish status. Please try again.",
+            });
+        }
+    };
+
     const hasDeckStructure = deckStructures.length > 0;
     const hasOffer = offers.length > 0;
     const hasEnrollmentPage = enrollmentPages.length > 0;
@@ -727,34 +769,55 @@ export default function Step5EnrollmentPage({
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() =>
-                                                        handlePreview(page.id)
-                                                    }
-                                                    className="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                                                    title="Preview"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </button>
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-gray-600">
+                                                        {page.is_published
+                                                            ? "Live"
+                                                            : "Draft"}
+                                                    </span>
+                                                    <Switch
+                                                        checked={page.is_published}
+                                                        onCheckedChange={() =>
+                                                            handlePublishToggle(
+                                                                page.id,
+                                                                page.is_published
+                                                            )
+                                                        }
+                                                    />
+                                                </div>
 
-                                                <button
-                                                    onClick={() => handleEdit(page.id)}
-                                                    className="rounded p-2 text-purple-600 hover:bg-purple-50"
-                                                    title="Edit with Visual Editor"
-                                                >
-                                                    <Pencil className="h-4 w-4" />
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() =>
+                                                            handlePreview(page.id)
+                                                        }
+                                                        className="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                                        title="Preview"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </button>
 
-                                                <button
-                                                    onClick={() =>
-                                                        handleDelete(page.id)
-                                                    }
-                                                    className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                    <button
+                                                        onClick={() =>
+                                                            handleEdit(page.id)
+                                                        }
+                                                        className="rounded p-2 text-purple-600 hover:bg-purple-50"
+                                                        title="Edit with Visual Editor"
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() =>
+                                                            handleDelete(page.id)
+                                                        }
+                                                        className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

@@ -235,8 +235,126 @@ export default function Step11Page({
         setFollowupEnabled(enabled);
 
         if (enabled && !agentConfig) {
-            // Create default agent config
+            // Create default agent config with auto-populated knowledge base
             try {
+                const supabase = createClient();
+
+                // Fetch intake data for business context
+                const { data: intakeData } = await supabase
+                    .from("vapi_transcripts")
+                    .select("extracted_data, transcript_text")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false })
+                    .limit(1)
+                    .single();
+
+                // Fetch offer data for product details
+                const { data: offerData } = await supabase
+                    .from("offers")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false })
+                    .limit(1)
+                    .single();
+
+                // Build knowledge base from intake and offer data
+                const knowledgeBase: any = {
+                    brand_voice: "",
+                    product_knowledge: "",
+                    objection_responses: "",
+                    blacklist_topics: "",
+                };
+
+                // Populate from intake data
+                if (intakeData?.extracted_data) {
+                    const extracted = intakeData.extracted_data as any;
+                    const businessContext = [];
+
+                    if (extracted.businessName) {
+                        businessContext.push(`Business: ${extracted.businessName}`);
+                    }
+                    if (extracted.industry) {
+                        businessContext.push(`Industry: ${extracted.industry}`);
+                    }
+                    if (extracted.targetAudience) {
+                        businessContext.push(
+                            `Target Audience: ${extracted.targetAudience}`
+                        );
+                    }
+                    if (extracted.mainProblem) {
+                        businessContext.push(
+                            `Main Challenge: ${extracted.mainProblem}`
+                        );
+                    }
+                    if (extracted.desiredOutcome) {
+                        businessContext.push(
+                            `Desired Outcome: ${extracted.desiredOutcome}`
+                        );
+                    }
+
+                    knowledgeBase.brand_voice = businessContext.join("\n");
+                }
+
+                // Populate from offer data
+                if (offerData) {
+                    const productDetails = [];
+
+                    productDetails.push(`Product: ${offerData.name}`);
+                    if (offerData.tagline) {
+                        productDetails.push(`Tagline: ${offerData.tagline}`);
+                    }
+                    if (offerData.promise) {
+                        productDetails.push(`Promise: ${offerData.promise}`);
+                    }
+                    if (offerData.description) {
+                        productDetails.push(`Description: ${offerData.description}`);
+                    }
+                    if (offerData.price) {
+                        productDetails.push(
+                            `Price: ${offerData.currency || "USD"} ${offerData.price}`
+                        );
+                    }
+
+                    // Add features if available
+                    if (offerData.features && Array.isArray(offerData.features)) {
+                        productDetails.push("\nKey Features:");
+                        offerData.features.forEach((feature: any) => {
+                            const featureText =
+                                typeof feature === "string"
+                                    ? feature
+                                    : feature.title || "";
+                            if (featureText) {
+                                productDetails.push(`- ${featureText}`);
+                            }
+                        });
+                    }
+
+                    // Add guarantee if available
+                    if (offerData.guarantee) {
+                        productDetails.push(`\nGuarantee: ${offerData.guarantee}`);
+                    }
+
+                    knowledgeBase.product_knowledge = productDetails.join("\n");
+
+                    // Add basic objection responses based on offer
+                    const objections = [];
+                    objections.push(
+                        "Price: Focus on the value and transformation, not just the cost. " +
+                            (offerData.promise
+                                ? `Highlight: ${offerData.promise}`
+                                : "Emphasize ROI and long-term benefits.")
+                    );
+                    objections.push(
+                        "Timing: Acknowledge their concerns while emphasizing why now is the best time to start."
+                    );
+                    if (offerData.guarantee) {
+                        objections.push(
+                            `Trust: We offer ${offerData.guarantee} to remove all risk from your decision.`
+                        );
+                    }
+                    knowledgeBase.objection_responses = objections.join("\n\n");
+                }
+
                 const response = await fetch("/api/followup/agent-configs", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -249,20 +367,65 @@ export default function Step11Page({
                             empathy_level: "moderate",
                             urgency_level: "gentle",
                         },
+                        knowledge_base: knowledgeBase,
                     }),
                 });
 
                 const data = await response.json();
                 if (data.success) {
                     setAgentConfig(data.config);
-                    toast({
-                        title: "✨ AI Follow-Up Enabled",
-                        description:
-                            "Configure your agent to start automating follow-ups",
-                    });
+
+                    // Create default post-webinar sequence via API
+                    try {
+                        const defaultSequenceResponse = await fetch(
+                            "/api/followup/sequences/create-default",
+                            {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    agent_config_id: data.config.id,
+                                    offer_data: offerData,
+                                    intake_data: intakeData?.extracted_data || null,
+                                }),
+                            }
+                        );
+
+                        const sequenceData = await defaultSequenceResponse.json();
+
+                        toast({
+                            title: "✨ AI Follow-Up Enabled",
+                            description: sequenceData.success
+                                ? "Agent configured with your business context, offer details, and default sequence"
+                                : "Agent configured - you can add sequences manually",
+                        });
+
+                        logger.info(
+                            {
+                                hasIntake: !!intakeData,
+                                hasOffer: !!offerData,
+                                sequenceCreated: sequenceData.success,
+                            },
+                            "Created agent with auto-populated knowledge base"
+                        );
+                    } catch (seqError) {
+                        logger.error(
+                            { error: seqError },
+                            "Failed to create default sequence, but agent config succeeded"
+                        );
+                        toast({
+                            title: "✨ AI Follow-Up Enabled",
+                            description:
+                                "Agent configured with your business context and offer details",
+                        });
+                    }
                 }
             } catch (error) {
                 logger.error({ error }, "Failed to create agent config");
+                toast({
+                    title: "Error",
+                    description: "Failed to enable AI follow-up. Please try again.",
+                    variant: "destructive",
+                });
             }
         }
     };

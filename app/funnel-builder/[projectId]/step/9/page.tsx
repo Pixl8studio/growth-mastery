@@ -12,6 +12,7 @@ import { FileText, PlusCircle, Eye, Pencil, Trash2, X } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { generateRegistrationHTML } from "@/lib/generators/registration-page-generator";
+import { Switch } from "@/components/ui/switch";
 
 interface DeckStructure {
     id: string;
@@ -145,6 +146,24 @@ export default function Step9RegistrationPage({
             );
             if (!deckStructure) throw new Error("Deck structure not found");
 
+            // Fetch intake data (Step 1)
+            const { data: intakeData } = await supabase
+                .from("vapi_transcripts")
+                .select("extracted_data, transcript_text")
+                .eq("funnel_project_id", projectId)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .single();
+
+            // Fetch offer data (Step 2)
+            const { data: offerData } = await supabase
+                .from("offers")
+                .select("*")
+                .eq("funnel_project_id", projectId)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .single();
+
             // Get theme from project or use defaults
             const theme = project?.settings?.theme || {
                 primary: "#2563eb",
@@ -153,12 +172,14 @@ export default function Step9RegistrationPage({
                 text: "#1f2937",
             };
 
-            // Generate HTML using the generator
+            // Generate HTML using the generator with all available data
             const htmlContent = generateRegistrationHTML({
                 projectId,
                 deckStructure,
                 headline: formData.headline,
                 theme,
+                intakeData: intakeData?.extracted_data || null,
+                offerData: offerData || null,
             });
 
             // Extract subheadline from deck
@@ -211,6 +232,30 @@ export default function Step9RegistrationPage({
         // Open preview (without edit mode)
         const previewUrl = `/funnel-builder/${projectId}/pages/registration/${pageId}`;
         window.open(previewUrl, "_blank");
+    };
+
+    const handleTogglePublish = async (pageId: string, currentStatus: boolean) => {
+        try {
+            const supabase = createClient();
+            const { error } = await supabase
+                .from("registration_pages")
+                .update({ is_published: !currentStatus })
+                .eq("id", pageId);
+
+            if (!error) {
+                setRegistrationPages((prev) =>
+                    prev.map((p) =>
+                        p.id === pageId ? { ...p, is_published: !currentStatus } : p
+                    )
+                );
+                logger.info(
+                    { pageId, newStatus: !currentStatus },
+                    "Registration page publish status updated"
+                );
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to update publish status");
+        }
     };
 
     const handleDelete = async (pageId: string) => {
@@ -444,34 +489,55 @@ export default function Step9RegistrationPage({
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() =>
-                                                        handlePreview(page.id)
-                                                    }
-                                                    className="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                                                    title="Preview"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </button>
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-gray-600">
+                                                        {page.is_published
+                                                            ? "Live"
+                                                            : "Draft"}
+                                                    </span>
+                                                    <Switch
+                                                        checked={page.is_published}
+                                                        onCheckedChange={() =>
+                                                            handleTogglePublish(
+                                                                page.id,
+                                                                page.is_published
+                                                            )
+                                                        }
+                                                    />
+                                                </div>
 
-                                                <button
-                                                    onClick={() => handleEdit(page.id)}
-                                                    className="rounded p-2 text-green-600 hover:bg-green-50"
-                                                    title="Edit with Visual Editor"
-                                                >
-                                                    <Pencil className="h-4 w-4" />
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() =>
+                                                            handlePreview(page.id)
+                                                        }
+                                                        className="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                                        title="Preview"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </button>
 
-                                                <button
-                                                    onClick={() =>
-                                                        handleDelete(page.id)
-                                                    }
-                                                    className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                    <button
+                                                        onClick={() =>
+                                                            handleEdit(page.id)
+                                                        }
+                                                        className="rounded p-2 text-green-600 hover:bg-green-50"
+                                                        title="Edit with Visual Editor"
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() =>
+                                                            handleDelete(page.id)
+                                                        }
+                                                        className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

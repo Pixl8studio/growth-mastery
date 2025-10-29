@@ -26,7 +26,7 @@ interface AgentConfig {
         urgency_level: string;
     };
     knowledge_base: Record<string, unknown>;
-    scoring_rules: {
+    scoring_config: {
         watch_weight?: number;
         offer_click_weight?: number;
         email_engagement_weight?: number;
@@ -59,10 +59,10 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                               objection_responses: "",
                               blacklist_topics: "",
                           },
-                scoring_rules:
-                    typeof config.scoring_rules === "object" &&
-                    config.scoring_rules !== null
-                        ? config.scoring_rules
+                scoring_config:
+                    typeof config.scoring_config === "object" &&
+                    config.scoring_config !== null
+                        ? config.scoring_config
                         : {
                               watch_weight: 45,
                               offer_click_weight: 25,
@@ -89,7 +89,7 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                 objection_responses: "",
                 blacklist_topics: "",
             },
-            scoring_rules: {
+            scoring_config: {
                 watch_weight: 45,
                 offer_click_weight: 25,
                 email_engagement_weight: 5,
@@ -117,10 +117,10 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                               objection_responses: "",
                               blacklist_topics: "",
                           },
-                scoring_rules:
-                    typeof config.scoring_rules === "object" &&
-                    config.scoring_rules !== null
-                        ? config.scoring_rules
+                scoring_config:
+                    typeof config.scoring_config === "object" &&
+                    config.scoring_config !== null
+                        ? config.scoring_config
                         : {
                               watch_weight: 45,
                               offer_click_weight: 25,
@@ -147,7 +147,7 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
             </div>
 
             <Tabs defaultValue="voice" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="voice">
                         <Brain className="h-4 w-4 mr-2" />
                         Voice
@@ -160,6 +160,7 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                         <Target className="h-4 w-4 mr-2" />
                         Scoring
                     </TabsTrigger>
+                    <TabsTrigger value="sender">📧 Sender</TabsTrigger>
                     <TabsTrigger value="preview">
                         <Sparkles className="h-4 w-4 mr-2" />
                         Preview
@@ -373,7 +374,7 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                     </div>
                 </TabsContent>
 
-                {/* Scoring Rules */}
+                {/* Scoring Configuration */}
                 <TabsContent value="scoring" className="space-y-4 mt-4">
                     <p className="text-sm text-gray-600 mb-4">
                         Configure how prospect intent scores are calculated and
@@ -386,12 +387,12 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                             type="number"
                             min="0"
                             max="100"
-                            value={formData.scoring_rules?.watch_weight ?? 45}
+                            value={formData.scoring_config?.watch_weight ?? 45}
                             onChange={(e) =>
                                 setFormData({
                                     ...formData,
-                                    scoring_rules: {
-                                        ...formData.scoring_rules,
+                                    scoring_config: {
+                                        ...formData.scoring_config,
                                         watch_weight: parseInt(e.target.value) || 0,
                                     },
                                 })
@@ -408,12 +409,12 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                             type="number"
                             min="0"
                             max="100"
-                            value={formData.scoring_rules?.offer_click_weight ?? 25}
+                            value={formData.scoring_config?.offer_click_weight ?? 25}
                             onChange={(e) =>
                                 setFormData({
                                     ...formData,
-                                    scoring_rules: {
-                                        ...formData.scoring_rules,
+                                    scoring_config: {
+                                        ...formData.scoring_config,
                                         offer_click_weight:
                                             parseInt(e.target.value) || 0,
                                     },
@@ -431,12 +432,14 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                             type="number"
                             min="0"
                             max="100"
-                            value={formData.scoring_rules?.email_engagement_weight ?? 5}
+                            value={
+                                formData.scoring_config?.email_engagement_weight ?? 5
+                            }
                             onChange={(e) =>
                                 setFormData({
                                     ...formData,
-                                    scoring_rules: {
-                                        ...formData.scoring_rules,
+                                    scoring_config: {
+                                        ...formData.scoring_config,
                                         email_engagement_weight:
                                             parseInt(e.target.value) || 0,
                                     },
@@ -454,12 +457,12 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                             type="number"
                             min="0"
                             max="100"
-                            value={formData.scoring_rules?.reply_weight ?? 15}
+                            value={formData.scoring_config?.reply_weight ?? 15}
                             onChange={(e) =>
                                 setFormData({
                                     ...formData,
-                                    scoring_rules: {
-                                        ...formData.scoring_rules,
+                                    scoring_config: {
+                                        ...formData.scoring_config,
                                         reply_weight: parseInt(e.target.value) || 0,
                                     },
                                 })
@@ -479,12 +482,12 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                     type="number"
                                     min="0"
                                     max="100"
-                                    value={formData.scoring_rules?.hot_threshold ?? 75}
+                                    value={formData.scoring_config?.hot_threshold ?? 75}
                                     onChange={(e) =>
                                         setFormData({
                                             ...formData,
-                                            scoring_rules: {
-                                                ...formData.scoring_rules,
+                                            scoring_config: {
+                                                ...formData.scoring_config,
                                                 hot_threshold:
                                                     parseInt(e.target.value) || 0,
                                             },
@@ -500,13 +503,13 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                     min="0"
                                     max="100"
                                     value={
-                                        formData.scoring_rules?.engaged_threshold ?? 50
+                                        formData.scoring_config?.engaged_threshold ?? 50
                                     }
                                     onChange={(e) =>
                                         setFormData({
                                             ...formData,
-                                            scoring_rules: {
-                                                ...formData.scoring_rules,
+                                            scoring_config: {
+                                                ...formData.scoring_config,
                                                 engaged_threshold:
                                                     parseInt(e.target.value) || 0,
                                             },
@@ -522,13 +525,13 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                     min="0"
                                     max="100"
                                     value={
-                                        formData.scoring_rules?.sampler_threshold ?? 25
+                                        formData.scoring_config?.sampler_threshold ?? 25
                                     }
                                     onChange={(e) =>
                                         setFormData({
                                             ...formData,
-                                            scoring_rules: {
-                                                ...formData.scoring_rules,
+                                            scoring_config: {
+                                                ...formData.scoring_config,
                                                 sampler_threshold:
                                                     parseInt(e.target.value) || 0,
                                             },
@@ -544,13 +547,13 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                     min="0"
                                     max="100"
                                     value={
-                                        formData.scoring_rules?.skimmer_threshold ?? 1
+                                        formData.scoring_config?.skimmer_threshold ?? 1
                                     }
                                     onChange={(e) =>
                                         setFormData({
                                             ...formData,
-                                            scoring_rules: {
-                                                ...formData.scoring_rules,
+                                            scoring_config: {
+                                                ...formData.scoring_config,
                                                 skimmer_threshold:
                                                     parseInt(e.target.value) || 0,
                                             },
@@ -560,6 +563,158 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                 />
                             </div>
                         </div>
+                    </div>
+                </TabsContent>
+
+                {/* Sender Configuration */}
+                <TabsContent value="sender" className="space-y-4 mt-4">
+                    <p className="text-sm text-gray-600 mb-4">
+                        Configure sender identity and Twilio SMS integration for
+                        follow-up messages.
+                    </p>
+
+                    <div className="space-y-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <h4 className="font-semibold text-blue-900 flex items-center gap-2">
+                            📧 Email Sender Identity
+                        </h4>
+
+                        <div>
+                            <Label>From Name</Label>
+                            <Input
+                                type="text"
+                                placeholder="Your Name or Company"
+                                className="mt-2"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                The name that appears in the "From" field of emails
+                            </p>
+                        </div>
+
+                        <div>
+                            <Label>From Email</Label>
+                            <Input
+                                type="email"
+                                placeholder="noreply@yourdomain.com"
+                                className="mt-2"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Must be a verified domain.{" "}
+                                <a href="#" className="text-blue-600 hover:underline">
+                                    Learn about DNS setup →
+                                </a>
+                            </p>
+                        </div>
+
+                        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
+                            <p className="text-sm text-yellow-800">
+                                ⚠️ <strong>Domain Verification Required:</strong> Before
+                                sending emails, you need to verify your domain by adding
+                                SPF, DKIM, and DMARC records to your DNS settings.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="space-y-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                        <h4 className="font-semibold text-purple-900 flex items-center gap-2">
+                            📱 Twilio SMS Configuration
+                        </h4>
+
+                        <div>
+                            <Label>Twilio Account SID</Label>
+                            <Input
+                                type="text"
+                                placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                                className="mt-2 font-mono text-sm"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Find this in your{" "}
+                                <a
+                                    href="https://console.twilio.com"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-purple-600 hover:underline"
+                                >
+                                    Twilio Console
+                                </a>
+                            </p>
+                        </div>
+
+                        <div>
+                            <Label>Twilio Auth Token</Label>
+                            <Input
+                                type="password"
+                                placeholder="••••••••••••••••••••••••••••••••"
+                                className="mt-2 font-mono text-sm"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Keep this secret - never share your auth token
+                            </p>
+                        </div>
+
+                        <div>
+                            <Label>Twilio Phone Number</Label>
+                            <Input
+                                type="tel"
+                                placeholder="+1 234 567 8900"
+                                className="mt-2"
+                            />
+                            <p className="text-xs text-gray-500 mt-1">
+                                Your Twilio phone number in E.164 format (e.g.,
+                                +12345678900)
+                            </p>
+                        </div>
+
+                        <Button variant="outline" className="w-full">
+                            Test Connection
+                        </Button>
+
+                        <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+                            <p className="text-sm text-blue-800">
+                                💡 <strong>Don't have Twilio yet?</strong> Sign up at{" "}
+                                <a
+                                    href="https://www.twilio.com/try-twilio"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-blue-600 hover:underline"
+                                >
+                                    twilio.com
+                                </a>{" "}
+                                to get started with SMS messaging.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
+                        <h4 className="font-semibold text-gray-900 mb-3">
+                            📋 Quick Setup Checklist
+                        </h4>
+                        <ul className="space-y-2 text-sm text-gray-700">
+                            <li className="flex items-start gap-2">
+                                <span className="text-green-600 mt-0.5">□</span>
+                                <span>
+                                    Configure email sender identity (name & email)
+                                </span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <span className="text-green-600 mt-0.5">□</span>
+                                <span>
+                                    Verify your email domain with SPF/DKIM/DMARC records
+                                </span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <span className="text-green-600 mt-0.5">□</span>
+                                <span>
+                                    Add Twilio credentials (Account SID, Auth Token,
+                                    Phone Number)
+                                </span>
+                            </li>
+                            <li className="flex items-start gap-2">
+                                <span className="text-green-600 mt-0.5">□</span>
+                                <span>
+                                    Test connection to verify credentials work correctly
+                                </span>
+                            </li>
+                        </ul>
                     </div>
                 </TabsContent>
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import { Check } from "lucide-react";
 
 interface Step {
     number: number;
@@ -73,30 +74,41 @@ export function StepperNav({
                     >
                         {/* Step Info */}
                         <div className="space-y-2">
-                            <div className="flex items-center gap-2">
-                                <span
-                                    className={cn(
-                                        "text-xs font-medium uppercase tracking-wider",
-                                        {
-                                            "text-blue-600": isCurrentPage || isActive,
-                                            "text-green-600": isCompleted && !isActive,
-                                            "text-gray-500": isFuture,
-                                            "text-gray-600":
-                                                !isActive && !isCompleted && !isFuture,
-                                        }
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <span
+                                        className={cn(
+                                            "text-xs font-medium uppercase tracking-wider",
+                                            {
+                                                "text-blue-600":
+                                                    isCurrentPage || isActive,
+                                                "text-green-600":
+                                                    isCompleted && !isActive,
+                                                "text-gray-500": isFuture,
+                                                "text-gray-600":
+                                                    !isActive &&
+                                                    !isCompleted &&
+                                                    !isFuture,
+                                            }
+                                        )}
+                                    >
+                                        Step {step.number}
+                                    </span>
+                                    {isCurrentPage && (
+                                        <span className="rounded-full bg-blue-500 px-2 py-0.5 text-xs font-medium text-white">
+                                            Current
+                                        </span>
                                     )}
-                                >
-                                    Step {step.number}
-                                </span>
-                                {isCurrentPage && (
-                                    <span className="rounded-full bg-blue-500 px-2 py-0.5 text-xs font-medium text-white">
-                                        Current
-                                    </span>
-                                )}
-                                {isCompleted && !isCurrentPage && (
-                                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                                        Complete
-                                    </span>
+                                    {isCompleted && !isCurrentPage && (
+                                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                                            Complete
+                                        </span>
+                                    )}
+                                </div>
+                                {isCompleted && (
+                                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500">
+                                        <Check className="h-4 w-4 text-white" />
+                                    </div>
                                 )}
                             </div>
                             <h3 className="text-base font-semibold leading-snug text-gray-900">

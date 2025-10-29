@@ -62,11 +62,33 @@ const envSchema = z.object({
     STRIPE_PLATFORM_FEE_FIXED: z.coerce.number().default(50),
 
     // ===========================================
-    // Gmail OAuth Configuration
+    // Social Media Integrations
+    // ===========================================
+    FACEBOOK_APP_ID: z.string().optional(),
+    FACEBOOK_APP_SECRET: z.string().optional(),
+    INSTAGRAM_CLIENT_ID: z.string().optional(),
+    INSTAGRAM_CLIENT_SECRET: z.string().optional(),
+    TWITTER_CLIENT_ID: z.string().optional(),
+    TWITTER_CLIENT_SECRET: z.string().optional(),
+
+    // ===========================================
+    // Google OAuth (Gmail & Calendar)
     // ===========================================
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_CLIENT_SECRET: z.string().optional(),
     GMAIL_REDIRECT_URI: z.string().optional(),
+
+    // ===========================================
+    // Integration Encryption
+    // ===========================================
+    INTEGRATION_ENCRYPTION_KEY: z.string().optional(),
+
+    // ===========================================
+    // Vercel Domains API
+    // ===========================================
+    VERCEL_TOKEN: z.string().optional(),
+    VERCEL_PROJECT_ID: z.string().optional(),
+    VERCEL_TEAM_ID: z.string().optional(),
 
     // ===========================================
     // Optional: Observability & Monitoring

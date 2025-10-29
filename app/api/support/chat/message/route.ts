@@ -26,13 +26,49 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { threadId, message, contextPage } = await request.json();
+        const { threadId, message, contextPage, pageContext, businessContext } =
+            await request.json();
 
         // Send user message
         await sendMessage(threadId, message);
 
-        // Run assistant
-        const runId = await runAssistant(threadId, contextPage);
+        // Build comprehensive context for assistant
+        let contextInstructions = `User is currently on: ${contextPage}`;
+
+        // Add page context if provided
+        if (pageContext) {
+            contextInstructions += `\n\n=== PAGE CONTEXT ===\n${pageContext}`;
+        }
+
+        // Add business context if provided
+        if (businessContext) {
+            contextInstructions += `\n\n${businessContext}`;
+        }
+
+        contextInstructions += `\n\n=== INSTRUCTIONS ===
+You are Genie AI, a helpful assistant for the Genie funnel builder platform.
+
+CAPABILITIES:
+1. Answer questions about the current page and process
+2. Help users fill in forms by asking for information conversationally
+3. Provide guidance on funnel building steps
+4. Access user's business data to provide personalized help
+5. Suggest actions and next steps
+
+FORM FILLING:
+When helping users fill in forms, ask for information naturally in conversation.
+As they provide information, suggest which fields to fill.
+Use this format to indicate field fills: [FILL:formId:fieldId:value]
+
+ACTIONS:
+You can trigger actions using: [ACTION:actionId:param1:param2]
+Available actions are listed in the page context above.
+
+Be conversational, helpful, and proactive. If you see the user is on a form page,
+offer to help them fill it in by asking relevant questions about their business.`;
+
+        // Run assistant with enhanced context
+        const runId = await runAssistant(threadId, contextInstructions);
 
         // Poll for completion (with timeout)
         let attempts = 0;

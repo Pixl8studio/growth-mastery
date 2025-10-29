@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
-import { HelpWidget } from "@/components/support/help-widget";
+import { AdvancedAIAssistant } from "@/components/support/advanced-ai-assistant";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -18,7 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <body className={inter.className}>
                 {children}
                 <Toaster />
-                <HelpWidget />
+                <AdvancedAIAssistant />
             </body>
         </html>
     );

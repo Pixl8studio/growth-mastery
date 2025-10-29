@@ -13,10 +13,13 @@ import {
     Pencil,
     Check,
     X,
+    FileDown,
+    FileText,
 } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
+import { useToast } from "@/components/ui/use-toast";
 
 interface DeckStructure {
     id: string;
@@ -61,6 +64,8 @@ export default function Step4Page({
         style: "professional",
         length: "full",
     });
+
+    const { toast } = useToast();
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
@@ -205,6 +210,96 @@ export default function Step4Page({
             }
         } catch (error) {
             logger.error({ error }, "Failed to delete Gamma deck");
+        }
+    };
+
+    const handleExportPDF = async (deck: GammaDeck) => {
+        try {
+            logger.info({ deckId: deck.id }, "Opening deck for PDF export");
+
+            if (!deck.deck_url) {
+                toast({
+                    title: "❌ Deck URL not available",
+                    description: "This deck doesn't have a valid URL",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            window.open(deck.deck_url, "_blank", "noopener,noreferrer");
+
+            setTimeout(() => {
+                toast({
+                    title: "📄 Exporting to PDF",
+                    description: (
+                        <div className="space-y-2 text-sm">
+                            <p className="font-medium">Deck opened in Gamma!</p>
+                            <ol className="ml-4 list-decimal space-y-1">
+                                <li>Click the 'Share' button (top right)</li>
+                                <li>Select 'Export'</li>
+                                <li>Choose 'PDF'</li>
+                                <li>Your PDF will download automatically</li>
+                            </ol>
+                        </div>
+                    ),
+                    duration: 10000,
+                });
+            }, 1000);
+        } catch (error) {
+            logger.error(
+                { error, deckId: deck.id },
+                "Failed to open deck for PDF export"
+            );
+            toast({
+                title: "❌ Export failed",
+                description: "Failed to open deck. Please try again.",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleExportGoogleSlides = async (deck: GammaDeck) => {
+        try {
+            logger.info({ deckId: deck.id }, "Opening deck for Google Slides export");
+
+            if (!deck.deck_url) {
+                toast({
+                    title: "❌ Deck URL not available",
+                    description: "This deck doesn't have a valid URL",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            window.open(deck.deck_url, "_blank", "noopener,noreferrer");
+
+            setTimeout(() => {
+                toast({
+                    title: "📊 Exporting to Google Slides",
+                    description: (
+                        <div className="space-y-2 text-sm">
+                            <p className="font-medium">Deck opened in Gamma!</p>
+                            <ol className="ml-4 list-decimal space-y-1">
+                                <li>Click the 'Share' button (top right)</li>
+                                <li>Select 'Export'</li>
+                                <li>Choose 'Google Slides'</li>
+                                <li>The deck will open in your Google account</li>
+                            </ol>
+                        </div>
+                    ),
+                    duration: 10000,
+                });
+            }, 1000);
+        } catch (error) {
+            logger.error(
+                { error, deckId: deck.id },
+                "Failed to open deck for Google Slides export"
+            );
+            toast({
+                title: "❌ Export failed",
+                description: "Failed to open deck. Please try again.",
+                variant: "destructive",
+            });
         }
     };
 
@@ -541,20 +636,46 @@ export default function Step4Page({
 
                                             <div className="flex items-center gap-2">
                                                 {deck.deck_url && (
-                                                    <a
-                                                        href={deck.deck_url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="rounded p-2 text-purple-600 hover:bg-purple-50"
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                    </a>
+                                                    <>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleExportPDF(deck);
+                                                            }}
+                                                            className="rounded p-2 text-blue-600 hover:bg-blue-50"
+                                                            title="Export to PDF"
+                                                        >
+                                                            <FileDown className="h-4 w-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleExportGoogleSlides(
+                                                                    deck
+                                                                );
+                                                            }}
+                                                            className="rounded p-2 text-green-600 hover:bg-green-50"
+                                                            title="Export to Google Slides"
+                                                        >
+                                                            <FileText className="h-4 w-4" />
+                                                        </button>
+                                                        <a
+                                                            href={deck.deck_url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="rounded p-2 text-purple-600 hover:bg-purple-50"
+                                                            title="Open in Gamma"
+                                                        >
+                                                            <Eye className="h-4 w-4" />
+                                                        </a>
+                                                    </>
                                                 )}
                                                 <button
                                                     onClick={() =>
                                                         handleDeleteDeck(deck.id)
                                                     }
                                                     className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                    title="Delete deck"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>

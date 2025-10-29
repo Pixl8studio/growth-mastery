@@ -3,15 +3,7 @@
 import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import {
-    Sparkles,
-    MessageSquare,
-    Trash2,
-    Download,
-    Pencil,
-    Check,
-    X,
-} from "lucide-react";
+import { Sparkles, MessageSquare, Trash2, Download } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 
@@ -60,6 +52,12 @@ export default function Step6Page({
     const [deckStructureMap, setDeckStructureMap] = useState<
         Map<string, DeckStructureForDisplay>
     >(new Map());
+    const [activeJobId, setActiveJobId] = useState<string | null>(null);
+    const [jobStatus, setJobStatus] = useState<
+        "pending" | "processing" | "completed" | "failed" | null
+    >(null);
+    const [showToast, setShowToast] = useState(false);
+    const [toastMessage, setToastMessage] = useState("");
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -148,18 +146,99 @@ export default function Step6Page({
         loadData();
     }, [projectId]);
 
+    // Check for active jobs on page load (resume if user navigated away)
+    useEffect(() => {
+        const checkForActiveJobs = async () => {
+            if (!projectId) return;
+
+            const supabase = createClient();
+            const { data: jobs } = await supabase
+                .from("talk_track_jobs")
+                .select("id, status, progress")
+                .eq("funnel_project_id", projectId)
+                .in("status", ["pending", "processing"])
+                .order("created_at", { ascending: false })
+                .limit(1);
+
+            if (jobs && jobs.length > 0) {
+                setActiveJobId(jobs[0].id);
+                setJobStatus(jobs[0].status);
+                setGenerationProgress(jobs[0].progress);
+                setIsGenerating(true);
+            }
+        };
+
+        checkForActiveJobs();
+    }, [projectId]);
+
+    // Poll job status while generation is active
+    useEffect(() => {
+        if (!activeJobId) return;
+
+        const pollInterval = setInterval(async () => {
+            try {
+                const response = await fetch(
+                    `/api/generate/talk-track/status/${activeJobId}`
+                );
+                const { job } = await response.json();
+
+                setJobStatus(job.status);
+                setGenerationProgress(job.progress);
+
+                if (job.status === "completed") {
+                    clearInterval(pollInterval);
+
+                    // Refresh talk tracks list
+                    const supabase = createClient();
+                    const { data: tracksResult } = await supabase
+                        .from("talk_tracks")
+                        .select("*")
+                        .eq("funnel_project_id", projectId)
+                        .order("created_at", { ascending: false });
+
+                    if (tracksResult) {
+                        setTalkTracks(tracksResult);
+                    }
+
+                    // Show success toast
+                    setToastMessage("Talk Track saved successfully!");
+                    setShowToast(true);
+                    setTimeout(() => setShowToast(false), 3000);
+
+                    // Reset state
+                    setActiveJobId(null);
+                    setIsGenerating(false);
+                    setGenerationProgress(0);
+                } else if (job.status === "failed") {
+                    clearInterval(pollInterval);
+
+                    // Show error toast
+                    setToastMessage(
+                        `Generation failed: ${job.error_message || "Unknown error"}`
+                    );
+                    setShowToast(true);
+                    setTimeout(() => setShowToast(false), 5000);
+
+                    // Reset state
+                    setActiveJobId(null);
+                    setIsGenerating(false);
+                    setGenerationProgress(0);
+                }
+            } catch (error) {
+                logger.error({ error }, "Failed to poll job status");
+            }
+        }, 3000); // Poll every 3 seconds
+
+        return () => clearInterval(pollInterval);
+    }, [activeJobId, projectId]);
+
     const handleGenerate = async () => {
         if (!selectedDeckId) {
             alert("Please select a deck structure first");
             return;
         }
 
-        setIsGenerating(true);
-        setGenerationProgress(0);
-
         try {
-            setGenerationProgress(10);
-
             const response = await fetch("/api/generate/talk-track", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -169,29 +248,24 @@ export default function Step6Page({
                 }),
             });
 
-            setGenerationProgress(90);
-
             if (!response.ok) {
                 const errorData = await response.json();
-                throw new Error(errorData.error || "Failed to generate talk track");
+                throw new Error(errorData.error || "Failed to start generation");
             }
 
-            const result = await response.json();
-            setTalkTracks((prev) => [result.talkTrack, ...prev]);
-            setGenerationProgress(100);
+            const { jobId } = await response.json();
 
-            setTimeout(() => {
-                setIsGenerating(false);
-                setGenerationProgress(0);
-            }, 1000);
-        } catch (error) {
-            logger.error({ error }, "Failed to generate talk track");
-            setIsGenerating(false);
+            // Start polling
+            setActiveJobId(jobId);
+            setJobStatus("pending");
             setGenerationProgress(0);
+            setIsGenerating(true);
+        } catch (error) {
+            logger.error({ error }, "Failed to start talk track generation");
             alert(
                 error instanceof Error
                     ? error.message
-                    : "Failed to generate talk track. Please try again."
+                    : "Failed to start generation. Please try again."
             );
         }
     };
@@ -303,6 +377,28 @@ export default function Step6Page({
             stepDescription="AI generates a slide-by-slide presentation script (2-4 sentences per slide)"
         >
             <div className="space-y-8">
+                {/* Toast Notification */}
+                {showToast && (
+                    <div className="fixed right-4 top-4 z-50 rounded-lg border-2 border-green-300 bg-green-50 p-4 shadow-lg">
+                        <p className="font-medium text-green-900">{toastMessage}</p>
+                    </div>
+                )}
+
+                {/* Warning Banner for Active Generation */}
+                {(jobStatus === "pending" || jobStatus === "processing") && (
+                    <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4">
+                        <p className="font-medium text-amber-900">
+                            ⚠️ Generating Talk Track – This may take 2–5 minutes. You
+                            can navigate freely; we'll notify you when it's ready.
+                        </p>
+                        {generationProgress > 0 && (
+                            <p className="mt-2 text-sm text-amber-700">
+                                Progress: {generationProgress}% complete
+                            </p>
+                        )}
+                    </div>
+                )}
+
                 {deckStructures.length === 0 && (
                     <DependencyWarning
                         message="You need to create a deck structure first to generate a talk track."

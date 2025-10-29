@@ -2,7 +2,7 @@
 
 import { ReactNode } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, LayoutDashboard } from "lucide-react";
 import { StepperNav } from "./stepper-nav";
 
 interface StepLayoutProps {
@@ -60,14 +60,24 @@ export function StepLayout({
             {/* Step Navigation Sidebar */}
             <div className="fixed left-0 top-0 h-screen w-64 overflow-y-auto border-r border-gray-200 bg-white">
                 <div className="p-6">
-                    <Link href={`/funnel-builder/${projectId}`} className="mb-6 block">
+                    {/* Back to Dashboard Button */}
+                    <Link
+                        href={`/funnel-builder/${projectId}`}
+                        className="mb-6 flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:border-gray-300"
+                    >
+                        <LayoutDashboard className="h-4 w-4" />
+                        <span>Back to Dashboard</span>
+                    </Link>
+
+                    {/* Funnel Info */}
+                    <div className="mb-6">
                         <h2 className="truncate text-lg font-semibold text-gray-900">
                             {funnelName || "Funnel Builder"}
                         </h2>
                         <p className="text-sm text-gray-500">
                             Step {currentStep} of 12
                         </p>
-                    </Link>
+                    </div>
 
                     <StepperNav
                         projectId={projectId}

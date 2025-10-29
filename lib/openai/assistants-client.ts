@@ -31,12 +31,10 @@ export async function sendMessage(threadId: string, content: string) {
 /**
  * Run the assistant on a thread with optional context
  */
-export async function runAssistant(threadId: string, contextPage?: string) {
+export async function runAssistant(threadId: string, additionalInstructions?: string) {
     const run = await openai.beta.threads.runs.create(threadId, {
         assistant_id: env.OPENAI_ASSISTANT_ID!,
-        additional_instructions: contextPage
-            ? `User is currently on: ${contextPage}. Provide contextual help for this page.`
-            : undefined,
+        additional_instructions: additionalInstructions,
     });
     return run.id;
 }

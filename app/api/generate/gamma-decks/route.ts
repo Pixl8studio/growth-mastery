@@ -349,7 +349,7 @@ function buildGammaRequest(
             style: "professional, modern, business-focused",
         },
         cardOptions: {
-            dimensions: "fluid",
+            dimensions: "16:9",
         },
     };
 }

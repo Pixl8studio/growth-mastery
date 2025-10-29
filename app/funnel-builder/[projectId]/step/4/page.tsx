@@ -228,6 +228,13 @@ export default function Step4Page({
 
     const hasCompletedGammaDeck = gammaDecks.some((d) => d.status === "completed");
 
+    const getGenerationSubstatus = (progress: number): string => {
+        if (progress <= 30) return "Analyzing content structure...";
+        if (progress <= 60) return "Generating slide designs...";
+        if (progress <= 90) return "Adding visual elements...";
+        return "Finalizing presentation...";
+    };
+
     if (!projectId) {
         return (
             <div className="flex h-screen items-center justify-center">
@@ -245,7 +252,7 @@ export default function Step4Page({
             nextLabel={
                 hasCompletedGammaDeck ? "Create Enrollment Page" : "Generate Deck First"
             }
-            stepTitle="Gamma Presentation"
+            stepTitle="Create Presentation"
             stepDescription="Generate beautiful slides with Gamma AI"
         >
             <div className="space-y-8">
@@ -267,7 +274,7 @@ export default function Step4Page({
                                 <Rocket className="h-8 w-8 text-purple-600" />
                             </div>
                             <h2 className="mb-3 text-2xl font-semibold text-gray-900">
-                                Generate Gamma Presentation
+                                Create Presentation
                             </h2>
                             <p className="mx-auto max-w-lg text-gray-600">
                                 Transform your deck structure into a stunning visual
@@ -336,7 +343,7 @@ export default function Step4Page({
                             >
                                 <Rocket className="h-6 w-6" />
                                 {selectedDeckId
-                                    ? "Generate Gamma Deck"
+                                    ? "Generate Presentation"
                                     : "Select Deck Structure First"}
                             </button>
 
@@ -353,10 +360,13 @@ export default function Step4Page({
                                 <Rocket className="h-6 w-6 text-purple-600" />
                             </div>
                             <h3 className="mb-2 text-xl font-semibold text-purple-900">
-                                Generating Gamma Presentation
+                                Creating Your Presentation
                             </h3>
                             <p className="text-purple-700">
-                                AI is creating your beautiful slides...
+                                Generation time ≈ 2-3 minutes
+                            </p>
+                            <p className="mt-2 text-sm text-purple-600">
+                                {getGenerationSubstatus(generationProgress)}
                             </p>
                         </div>
 
@@ -384,7 +394,7 @@ export default function Step4Page({
                     <div className="border-b border-gray-200 p-6">
                         <div className="flex items-center justify-between">
                             <h3 className="text-xl font-semibold text-gray-900">
-                                Your Gamma Presentations
+                                Your Presentations
                             </h3>
                             <span className="text-sm text-gray-500">
                                 {gammaDecks.length} created
@@ -406,7 +416,27 @@ export default function Step4Page({
                                 {gammaDecks.map((deck) => (
                                     <div
                                         key={deck.id}
-                                        className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md"
+                                        onClick={(e) => {
+                                            if (
+                                                deck.deck_url &&
+                                                !(e.target as HTMLElement).closest(
+                                                    "button"
+                                                ) &&
+                                                !(e.target as HTMLElement).closest(
+                                                    "input"
+                                                ) &&
+                                                !(e.target as HTMLElement).closest("a")
+                                            ) {
+                                                window.open(
+                                                    deck.deck_url,
+                                                    "_blank",
+                                                    "noopener,noreferrer"
+                                                );
+                                            }
+                                        }}
+                                        className={`rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md ${
+                                            deck.deck_url ? "cursor-pointer" : ""
+                                        }`}
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">

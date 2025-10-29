@@ -275,6 +275,51 @@ async function sendSMSDelivery(
 // ===========================================
 
 /**
+ * Check if scheduled time falls within quiet hours.
+ *
+ * Quiet hours: 22:00 - 07:00 in prospect's local timezone.
+ */
+export function isWithinQuietHours(
+    scheduledTime: Date,
+    timezone: string,
+    quietHoursStart: string = "22:00",
+    quietHoursEnd: string = "07:00"
+): boolean {
+    try {
+        // Parse quiet hours
+        const [startHour, startMin] = quietHoursStart.split(":").map(Number);
+        const [endHour, endMin] = quietHoursEnd.split(":").map(Number);
+
+        // Convert to prospect's timezone
+        const localTime = new Date(
+            scheduledTime.toLocaleString("en-US", { timeZone: timezone })
+        );
+
+        const hour = localTime.getHours();
+        const minute = localTime.getMinutes();
+        const timeInMinutes = hour * 60 + minute;
+
+        const startTimeInMinutes = startHour * 60 + startMin;
+        const endTimeInMinutes = endHour * 60 + endMin;
+
+        // Handle overnight quiet hours (22:00 - 07:00)
+        if (startTimeInMinutes > endTimeInMinutes) {
+            return (
+                timeInMinutes >= startTimeInMinutes || timeInMinutes < endTimeInMinutes
+            );
+        } else {
+            return (
+                timeInMinutes >= startTimeInMinutes && timeInMinutes < endTimeInMinutes
+            );
+        }
+    } catch (error) {
+        logger.error({ error, timezone }, "❌ Error checking quiet hours");
+        // Default to safe: treat as quiet hours if timezone conversion fails
+        return true;
+    }
+}
+
+/**
  * Check if delivery is compliant and allowed to send.
  */
 function checkSendCompliance(
@@ -285,6 +330,22 @@ function checkSendCompliance(
     const consentState = prospect.consent_state as string;
     if (consentState === "opted_out" || consentState === "complained") {
         return { allowed: false, reason: "Prospect has opted out" };
+    }
+
+    // Check quiet hours if timezone available
+    if (prospect.timezone) {
+        const scheduledTime = new Date(delivery.scheduled_send_at);
+        const inQuietHours = isWithinQuietHours(
+            scheduledTime,
+            prospect.timezone as string
+        );
+
+        if (inQuietHours) {
+            return {
+                allowed: false,
+                reason: "Within quiet hours (22:00-07:00 local time)",
+            };
+        }
     }
 
     // Check if already converted
@@ -342,4 +403,107 @@ function enhanceMessageWithLinks(
     }
 
     return enhanced;
+}
+
+/**
+ * Create parallel email + SMS deliveries for a message.
+ *
+ * Creates two delivery records (email and SMS) scheduled for the same time.
+ * Both send simultaneously if channels are enabled.
+ */
+export async function createParallelDeliveries(params: {
+    prospectId: string;
+    messageId: string;
+    scheduledSendAt: Date;
+    personalizedSubject: string | null;
+    personalizedBody: string;
+    personalizedCTA: Record<string, unknown> | null;
+}): Promise<{
+    success: boolean;
+    emailDeliveryId?: string;
+    smsDeliveryId?: string;
+    error?: string;
+}> {
+    const supabase = await createClient();
+
+    logger.info(
+        { prospectId: params.prospectId, messageId: params.messageId },
+        "📮 Creating parallel email + SMS deliveries"
+    );
+
+    try {
+        // Create email delivery
+        const { data: emailDelivery, error: emailError } = await supabase
+            .from("followup_deliveries")
+            .insert({
+                prospect_id: params.prospectId,
+                message_id: params.messageId,
+                channel: "email",
+                personalized_subject: params.personalizedSubject,
+                personalized_body: params.personalizedBody,
+                personalized_cta: params.personalizedCTA,
+                scheduled_send_at: params.scheduledSendAt.toISOString(),
+                delivery_status: "pending",
+            })
+            .select()
+            .single();
+
+        if (emailError) {
+            logger.error({ error: emailError }, "❌ Failed to create email delivery");
+            return { success: false, error: emailError.message };
+        }
+
+        // Create SMS delivery
+        // Shorten body for SMS (max 320 chars)
+        const smsBody = params.personalizedBody
+            .replace(/<[^>]*>/g, "") // Strip HTML tags
+            .substring(0, 320);
+
+        const { data: smsDelivery, error: smsError } = await supabase
+            .from("followup_deliveries")
+            .insert({
+                prospect_id: params.prospectId,
+                message_id: params.messageId,
+                channel: "sms",
+                personalized_subject: null, // SMS has no subject
+                personalized_body: smsBody,
+                personalized_cta: params.personalizedCTA,
+                scheduled_send_at: params.scheduledSendAt.toISOString(),
+                delivery_status: "pending",
+            })
+            .select()
+            .single();
+
+        if (smsError) {
+            logger.warn(
+                { error: smsError },
+                "⚠️  Failed to create SMS delivery (email still scheduled)"
+            );
+            // Don't fail completely - email was created
+            return {
+                success: true,
+                emailDeliveryId: emailDelivery.id,
+            };
+        }
+
+        logger.info(
+            {
+                emailDeliveryId: emailDelivery.id,
+                smsDeliveryId: smsDelivery.id,
+            },
+            "✅ Parallel deliveries created"
+        );
+
+        return {
+            success: true,
+            emailDeliveryId: emailDelivery.id,
+            smsDeliveryId: smsDelivery.id,
+        };
+    } catch (error) {
+        logger.error({ error }, "❌ Error creating parallel deliveries");
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+        };
+    }
 }

@@ -68,8 +68,12 @@ export async function POST(request: NextRequest) {
             segmentation_rules: body.segmentation_rules,
             objection_handling: body.objection_handling,
             scoring_config: body.scoring_config,
+            scoring_rules: body.scoring_rules,
             channel_config: body.channel_config,
             compliance_config: body.compliance_config,
+            sender_name: body.sender_name,
+            sender_email: body.sender_email,
+            sms_sender_id: body.sms_sender_id,
         };
 
         // Create the agent config

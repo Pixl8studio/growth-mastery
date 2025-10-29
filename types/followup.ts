@@ -130,6 +130,24 @@ export interface ComplianceConfig {
     quiet_hours_end: string;
 }
 
+export interface ScoringRules {
+    watch_weight: number;
+    offer_click_weight: number;
+    email_engagement_weight: number;
+    reply_weight: number;
+    hot_threshold: number;
+    engaged_threshold: number;
+    sampler_threshold: number;
+    skimmer_threshold: number;
+}
+
+export interface SendGridDNSRecord {
+    type: string;
+    host: string;
+    value: string;
+    valid: boolean;
+}
+
 export interface FollowupAgentConfig {
     id: string;
     user_id: string;
@@ -143,10 +161,19 @@ export interface FollowupAgentConfig {
     segmentation_rules: SegmentationRules;
     objection_handling: ObjectionHandling;
     scoring_config: ScoringConfig;
+    scoring_rules: ScoringRules;
     crm_field_mappings: Record<string, unknown>;
     channel_config: ChannelConfig;
     ab_test_config: ABTestConfig;
     compliance_config: ComplianceConfig;
+    sender_name: string | null;
+    sender_email: string | null;
+    sender_domain: string | null;
+    sender_verified: boolean;
+    sms_sender_id: string | null;
+    sendgrid_domain_id: string | null;
+    sendgrid_dns_records: SendGridDNSRecord[];
+    domain_verification_status: "not_started" | "pending" | "verified" | "failed";
     is_active: boolean;
     automation_enabled: boolean;
     created_at: string;

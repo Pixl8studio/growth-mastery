@@ -268,9 +268,9 @@ async function countRecentTouches(
 
     const cutoffTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000).toISOString();
 
-    const { data, error } = await supabase
+    const { count, error } = await supabase
         .from("followup_deliveries")
-        .select("id", { count: "exact", head: true })
+        .select("*", { count: "exact", head: true })
         .eq("prospect_id", prospectId)
         .eq("channel", channel)
         .in("delivery_status", ["sent", "delivered", "opened"])
@@ -281,7 +281,7 @@ async function countRecentTouches(
         return 0;
     }
 
-    return data || 0;
+    return count || 0;
 }
 
 /**

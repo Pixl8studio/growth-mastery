@@ -92,7 +92,7 @@ async function extractIntakeInsights(funnelProjectId: string): Promise<{
         ) {
             // Extract sentence containing these keywords
             const sentences = text.split(/[.!?]+/);
-            sentences.forEach((sentence) => {
+            sentences.forEach((sentence: string) => {
                 if (
                     sentence.includes("challenge") ||
                     sentence.includes("problem") ||

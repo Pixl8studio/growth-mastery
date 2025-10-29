@@ -13,7 +13,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CheckCircle2, AlertCircle, Copy, ExternalLink, Loader2 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { logger } from "@/lib/client-logger";
@@ -213,49 +212,57 @@ export function SenderSetupTab({
     const renderVerificationBanner = () => {
         if (localStatus === "verified") {
             return (
-                <Alert className="bg-green-50 border-green-200">
-                    <CheckCircle2 className="h-4 w-4 text-green-600" />
-                    <AlertDescription className="text-green-800">
-                        <strong>Domain Verified</strong> - Your domain is authenticated
-                        and ready to send emails. All systems go! ✅
-                    </AlertDescription>
-                </Alert>
+                <Card className="bg-green-50 border-2 border-green-200 p-4">
+                    <div className="flex items-start gap-3">
+                        <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
+                        <div className="text-sm text-green-800">
+                            <strong>Domain Verified</strong> - Your domain is
+                            authenticated and ready to send emails. All systems go! ✅
+                        </div>
+                    </div>
+                </Card>
             );
         }
 
         if (localStatus === "pending") {
             return (
-                <Alert className="bg-amber-50 border-amber-200">
-                    <AlertCircle className="h-4 w-4 text-amber-600" />
-                    <AlertDescription className="text-amber-800">
-                        <strong>Verification Pending</strong> - Please add the DNS
-                        records below to your domain provider. DNS propagation can take
-                        up to 48 hours.
-                    </AlertDescription>
-                </Alert>
+                <Card className="bg-amber-50 border-2 border-amber-200 p-4">
+                    <div className="flex items-start gap-3">
+                        <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
+                        <div className="text-sm text-amber-800">
+                            <strong>Verification Pending</strong> - Please add the DNS
+                            records below to your domain provider. DNS propagation can
+                            take up to 48 hours.
+                        </div>
+                    </div>
+                </Card>
             );
         }
 
         if (localStatus === "failed") {
             return (
-                <Alert variant="destructive">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>
-                        <strong>Verification Failed</strong> - Could not verify your
-                        domain. Check DNS records and try again.
-                    </AlertDescription>
-                </Alert>
+                <Card className="bg-red-50 border-2 border-red-200 p-4">
+                    <div className="flex items-start gap-3">
+                        <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+                        <div className="text-sm text-red-800">
+                            <strong>Verification Failed</strong> - Could not verify your
+                            domain. Check DNS records and try again.
+                        </div>
+                    </div>
+                </Card>
             );
         }
 
         return (
-            <Alert className="bg-blue-50 border-blue-200">
-                <AlertCircle className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-blue-800">
-                    <strong>Domain Not Verified</strong> - Configure your sender email
-                    below and verify your domain to enable email sending.
-                </AlertDescription>
-            </Alert>
+            <Card className="bg-blue-50 border-2 border-blue-200 p-4">
+                <div className="flex items-start gap-3">
+                    <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <div className="text-sm text-blue-800">
+                        <strong>Domain Not Verified</strong> - Configure your sender
+                        email below and verify your domain to enable email sending.
+                    </div>
+                </div>
+            </Card>
         );
     };
 

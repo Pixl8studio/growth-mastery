@@ -1,3 +1,5 @@
+BEGIN;
+
 -- Create storage bucket for intake files
 INSERT INTO
   storage.buckets (id, name, public)
@@ -47,3 +49,5 @@ CREATE POLICY "Users can delete their intake files" ON storage.objects FOR DELET
       user_id = auth.uid ()
   )
 );
+
+COMMIT;

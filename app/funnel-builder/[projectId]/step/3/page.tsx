@@ -397,21 +397,7 @@ export default function Step3Page({
 
                 {/* Generation Interface */}
                 {!isGenerating ? (
-                    <div className="rounded-lg border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-8">
-                        <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-                                <Sparkles className="h-8 w-8 text-blue-600" />
-                            </div>
-                            <h2 className="mb-3 text-2xl font-semibold text-gray-900">
-                                Generate Your Presentation Structure
-                            </h2>
-                            <p className="mx-auto max-w-lg text-gray-600">
-                                AI will analyze your intake call and create a compelling
-                                presentation structure using the proven Hook → Problem →
-                                Agitate → Solution → Offer → Close framework.
-                            </p>
-                        </div>
-
+                    <div className="rounded-lg border border-brand-100 bg-gradient-to-br from-brand-50 to-indigo-50 p-8">
                         <div className="mx-auto mb-6 max-w-md space-y-4">
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -422,7 +408,7 @@ export default function Step3Page({
                                         onClick={() => setPresentationType("webinar")}
                                         className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
                                             presentationType === "webinar"
-                                                ? "border-blue-500 bg-blue-50 text-blue-900"
+                                                ? "border-brand-500 bg-brand-50 text-brand-900"
                                                 : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
                                         }`}
                                     >
@@ -435,7 +421,7 @@ export default function Step3Page({
                                         onClick={() => setPresentationType("vsl")}
                                         className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
                                             presentationType === "vsl"
-                                                ? "border-blue-500 bg-blue-50 text-blue-900"
+                                                ? "border-brand-500 bg-brand-50 text-brand-900"
                                                 : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
                                         }`}
                                     >
@@ -450,7 +436,7 @@ export default function Step3Page({
                                         }
                                         className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
                                             presentationType === "sales_page"
-                                                ? "border-blue-500 bg-blue-50 text-blue-900"
+                                                ? "border-brand-500 bg-brand-50 text-brand-900"
                                                 : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
                                         }`}
                                     >
@@ -472,7 +458,7 @@ export default function Step3Page({
                                         setSelectedTranscript(e.target.value)
                                     }
                                     disabled={transcripts.length === 0}
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-brand-500 focus:ring-2 focus:ring-brand-500 disabled:cursor-not-allowed disabled:bg-gray-100"
                                 >
                                     {transcripts.length === 0 ? (
                                         <option value="">
@@ -514,7 +500,7 @@ export default function Step3Page({
                                         onClick={() => setSlideCount("5")}
                                         className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
                                             slideCount === "5"
-                                                ? "border-blue-500 bg-blue-50 text-blue-900"
+                                                ? "border-brand-500 bg-brand-50 text-brand-900"
                                                 : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
                                         }`}
                                     >
@@ -527,7 +513,7 @@ export default function Step3Page({
                                         onClick={() => setSlideCount("55")}
                                         className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
                                             slideCount === "55"
-                                                ? "border-blue-500 bg-blue-50 text-blue-900"
+                                                ? "border-brand-500 bg-brand-50 text-brand-900"
                                                 : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
                                         }`}
                                     >
@@ -551,14 +537,14 @@ export default function Step3Page({
                                 disabled={!selectedTranscript}
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
                                     selectedTranscript
-                                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                                        ? "bg-brand-500 text-white hover:bg-brand-600"
                                         : "cursor-not-allowed bg-gray-300 text-gray-500"
                                 }`}
                             >
                                 <Sparkles className="h-6 w-6" />
                                 {!selectedTranscript
                                     ? "Select Call First"
-                                    : "Generate Presentation Structure"}
+                                    : "Generate Deck Structure"}
                             </button>
 
                             <div className="mt-4 space-y-1 text-sm text-gray-500">

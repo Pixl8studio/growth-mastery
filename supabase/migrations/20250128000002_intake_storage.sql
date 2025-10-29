@@ -1,3 +1,5 @@
+BEGIN;
+
 -- Create storage bucket for intake files
 INSERT INTO storage.buckets (id, name, public)
 VALUES ('intake-files', 'intake-files', true)
@@ -35,4 +37,6 @@ USING (
         SELECT id::text FROM funnel_projects WHERE user_id = auth.uid()
     )
 );
+
+COMMIT;
 

@@ -409,21 +409,7 @@ export default function Step6Page({
                 )}
 
                 {!isGenerating ? (
-                    <div className="rounded-lg border border-indigo-100 bg-gradient-to-br from-indigo-50 to-blue-50 p-8">
-                        <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100">
-                                <MessageSquare className="h-8 w-8 text-indigo-600" />
-                            </div>
-                            <h2 className="mb-3 text-2xl font-semibold text-gray-900">
-                                Generate Talk Track Script
-                            </h2>
-                            <p className="mx-auto max-w-lg text-gray-600">
-                                AI will create a slide-by-slide script with 2-4
-                                sentences per slide, perfect for your presentation
-                                video.
-                            </p>
-                        </div>
-
+                    <div className="rounded-lg border border-brand-100 bg-gradient-to-br from-brand-50 to-purple-50 p-8">
                         {/* Deck Structure Selector */}
                         <div className="mx-auto mb-6 max-w-md">
                             <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -433,7 +419,7 @@ export default function Step6Page({
                                 value={selectedDeckId}
                                 onChange={(e) => setSelectedDeckId(e.target.value)}
                                 disabled={deckStructures.length === 0}
-                                className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+                                className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-brand-500 focus:ring-2 focus:ring-brand-500 disabled:cursor-not-allowed disabled:bg-gray-100"
                             >
                                 {deckStructures.length === 0 ? (
                                     <option value="">
@@ -468,7 +454,7 @@ export default function Step6Page({
                                 }
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
                                     selectedDeckId && deckStructures.length > 0
-                                        ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                                        ? "bg-brand-500 text-white hover:bg-brand-600"
                                         : "cursor-not-allowed bg-gray-300 text-gray-500"
                                 }`}
                             >

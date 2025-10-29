@@ -44,9 +44,17 @@ export function StepperNav({
     className,
 }: StepperNavProps) {
     const pathname = usePathname();
+    const completionPercentage = Math.round((completedSteps.length / 12) * 100);
 
     return (
         <nav className={cn("space-y-2", className)}>
+            {/* Completion Percentage */}
+            <div className="mb-4 text-right">
+                <span className="text-sm font-medium text-gray-600">
+                    {completionPercentage}% Complete
+                </span>
+            </div>
+
             {STEPS.map((step) => {
                 const isActive = step.number === currentStep;
                 const isCompleted = completedSteps.includes(step.number);

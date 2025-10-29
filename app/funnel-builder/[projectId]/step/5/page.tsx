@@ -503,20 +503,6 @@ export default function Step5EnrollmentPage({
                 {/* Create New Page Button */}
                 {!showCreateForm ? (
                     <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-indigo-50 p-8">
-                        <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-purple-100">
-                                <ShoppingCart className="h-8 w-8 text-purple-600" />
-                            </div>
-                            <h2 className="mb-3 text-2xl font-semibold text-gray-900">
-                                Create Enrollment Page
-                            </h2>
-                            <p className="mx-auto max-w-lg text-gray-600">
-                                Build a high-converting sales page that transforms
-                                viewers into customers using your offer and deck
-                                content.
-                            </p>
-                        </div>
-
                         <div className="text-center">
                             <button
                                 onClick={() => setShowCreateForm(true)}
@@ -529,7 +515,7 @@ export default function Step5EnrollmentPage({
                             >
                                 <PlusCircle className="h-6 w-6" />
                                 {canCreatePage
-                                    ? "Create New Enrollment Page"
+                                    ? "Generate Enrollment Page"
                                     : "Complete Prerequisites First"}
                             </button>
                         </div>
@@ -733,7 +719,8 @@ export default function Step5EnrollmentPage({
                                 {enrollmentPages.map((page) => (
                                     <div
                                         key={page.id}
-                                        className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md"
+                                        onClick={() => handleEdit(page.id)}
+                                        className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md"
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
@@ -787,7 +774,10 @@ export default function Step5EnrollmentPage({
                                                     />
                                                 </div>
 
-                                                <div className="flex items-center gap-2">
+                                                <div
+                                                    className="flex items-center gap-2"
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
                                                     <button
                                                         onClick={() =>
                                                             handlePreview(page.id)

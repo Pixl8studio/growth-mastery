@@ -362,20 +362,6 @@ export default function Step7Page({
                 )}
 
                 <div className="rounded-lg border border-red-100 bg-gradient-to-br from-red-50 to-orange-50 p-8">
-                    <div className="mb-6 text-center">
-                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-                            <Video className="h-8 w-8 text-red-600" />
-                        </div>
-                        <h2 className="mb-3 text-2xl font-semibold text-gray-900">
-                            Upload Your Presentation Video
-                        </h2>
-                        <p className="mx-auto max-w-lg text-gray-600">
-                            Record your pitch using the talk track script, then upload
-                            the video here. It will be hosted securely on Cloudflare
-                            Stream.
-                        </p>
-                    </div>
-
                     <VideoUploader
                         projectId={projectId}
                         onUploadComplete={handleUploadComplete}

@@ -247,19 +247,6 @@ export default function Step10Page({
                 )}
 
                 <div className="rounded-lg border border-slate-100 bg-gradient-to-br from-slate-50 to-gray-50 p-8">
-                    <div className="mb-6 text-center">
-                        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100">
-                            <Link2 className="h-8 w-8 text-slate-600" />
-                        </div>
-                        <h2 className="mb-3 text-2xl font-semibold text-gray-900">
-                            Funnel Flow Setup
-                        </h2>
-                        <p className="mx-auto max-w-lg text-gray-600">
-                            Connect your pages to create a seamless user journey through
-                            your funnel.
-                        </p>
-                    </div>
-
                     <TooltipProvider>
                         <div className="mx-auto max-w-2xl space-y-4">
                             {/* Registration Page */}

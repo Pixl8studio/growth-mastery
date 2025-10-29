@@ -269,20 +269,6 @@ export default function Step4Page({
                 {/* Generation Interface */}
                 {!isGenerating ? (
                     <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-pink-50 p-6">
-                        <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-purple-100">
-                                <Rocket className="h-8 w-8 text-purple-600" />
-                            </div>
-                            <h2 className="mb-3 text-2xl font-semibold text-gray-900">
-                                Create Presentation
-                            </h2>
-                            <p className="mx-auto max-w-lg text-gray-600">
-                                Transform your deck structure into a stunning visual
-                                presentation using Gamma AI's advanced design
-                                capabilities.
-                            </p>
-                        </div>
-
                         <div className="mb-6 space-y-6">
                             <div className="mx-auto max-w-md">
                                 <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -343,7 +329,7 @@ export default function Step4Page({
                             >
                                 <Rocket className="h-6 w-6" />
                                 {selectedDeckId
-                                    ? "Generate Presentation"
+                                    ? "Generate Gamma Deck"
                                     : "Select Deck Structure First"}
                             </button>
 

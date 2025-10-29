@@ -8,6 +8,7 @@ import { OfferEditor } from "@/components/funnel/offer-editor";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
+import { useToast } from "@/components/ui/use-toast";
 
 interface Offer {
     id: string;
@@ -36,6 +37,7 @@ export default function Step2Page({
 }: {
     params: Promise<{ projectId: string }>;
 }) {
+    const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -161,7 +163,12 @@ export default function Step2Page({
             logger.error({ error }, "Failed to generate offer");
             setIsGenerating(false);
             setGenerationProgress(0);
-            alert("Failed to generate offer. Please try again.");
+            toast({
+                variant: "destructive",
+                title: "Something went wrong",
+                description:
+                    "Failed to generate offer. Please retry or contact support if the issue persists.",
+            });
         }
     };
 
@@ -217,7 +224,12 @@ export default function Step2Page({
             }
         } catch (error) {
             logger.error({ error }, "Failed to use alternative offer");
-            alert("Failed to create offer. Please try again.");
+            toast({
+                variant: "destructive",
+                title: "Something went wrong",
+                description:
+                    "Failed to create offer. Please retry or contact support if the issue persists.",
+            });
         }
     };
 
@@ -298,20 +310,6 @@ export default function Step2Page({
                 {/* Generation Interface */}
                 {!isGenerating ? (
                     <div className="rounded-lg border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-8">
-                        <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                                <DollarSign className="h-8 w-8 text-green-600" />
-                            </div>
-                            <h2 className="mb-3 text-2xl font-semibold text-gray-900">
-                                Generate Your Offer
-                            </h2>
-                            <p className="mx-auto max-w-lg text-gray-600">
-                                AI will analyze your intake call to create an
-                                irresistible offer with optimal pricing, features,
-                                bonuses, and guarantee.
-                            </p>
-                        </div>
-
                         <div className="mx-auto mb-6 max-w-md">
                             <label className="mb-2 block text-sm font-medium text-gray-700">
                                 Select Intake Call Source
@@ -357,13 +355,13 @@ export default function Step2Page({
                                 disabled={!selectedTranscript}
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
                                     selectedTranscript
-                                        ? "bg-green-600 text-white hover:bg-green-700"
+                                        ? "bg-brand-500 text-white hover:bg-brand-600"
                                         : "cursor-not-allowed bg-gray-300 text-gray-500"
                                 }`}
                             >
                                 <Sparkles className="h-6 w-6" />
                                 {selectedTranscript
-                                    ? "Generate AI Offer"
+                                    ? "Generate Offer"
                                     : "Select Call First"}
                             </button>
 

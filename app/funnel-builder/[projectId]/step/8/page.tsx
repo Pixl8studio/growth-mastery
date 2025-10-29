@@ -549,34 +549,55 @@ export default function Step8WatchPage({
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() =>
-                                                        handlePreview(page.id)
-                                                    }
-                                                    className="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                                                    title="Preview"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </button>
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-gray-600">
+                                                        {page.is_published
+                                                            ? "Live"
+                                                            : "Draft"}
+                                                    </span>
+                                                    <Switch
+                                                        checked={page.is_published}
+                                                        onCheckedChange={() =>
+                                                            handlePublishToggle(
+                                                                page.id,
+                                                                page.is_published
+                                                            )
+                                                        }
+                                                    />
+                                                </div>
 
-                                                <button
-                                                    onClick={() => handleEdit(page.id)}
-                                                    className="rounded p-2 text-cyan-600 hover:bg-cyan-50"
-                                                    title="Edit with Visual Editor"
-                                                >
-                                                    <Pencil className="h-4 w-4" />
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() =>
+                                                            handlePreview(page.id)
+                                                        }
+                                                        className="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                                        title="Preview"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </button>
 
-                                                <button
-                                                    onClick={() =>
-                                                        handleDelete(page.id)
-                                                    }
-                                                    className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                    <button
+                                                        onClick={() =>
+                                                            handleEdit(page.id)
+                                                        }
+                                                        className="rounded p-2 text-cyan-600 hover:bg-cyan-50"
+                                                        title="Edit with Visual Editor"
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() =>
+                                                            handleDelete(page.id)
+                                                        }
+                                                        className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

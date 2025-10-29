@@ -12,6 +12,7 @@ import { FileText, PlusCircle, Eye, Pencil, Trash2, X } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { generateRegistrationHTML } from "@/lib/generators/registration-page-generator";
+import { Switch } from "@/components/ui/switch";
 
 interface DeckStructure {
     id: string;
@@ -488,57 +489,55 @@ export default function Step9RegistrationPage({
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={() =>
-                                                        handleTogglePublish(
-                                                            page.id,
-                                                            page.is_published
-                                                        )
-                                                    }
-                                                    className={`rounded px-3 py-1 text-sm font-medium ${
-                                                        page.is_published
-                                                            ? "bg-green-100 text-green-700 hover:bg-green-200"
-                                                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                                                    }`}
-                                                    title={
-                                                        page.is_published
-                                                            ? "Unpublish"
-                                                            : "Publish"
-                                                    }
-                                                >
-                                                    {page.is_published
-                                                        ? "Published"
-                                                        : "Publish"}
-                                                </button>
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-gray-600">
+                                                        {page.is_published
+                                                            ? "Live"
+                                                            : "Draft"}
+                                                    </span>
+                                                    <Switch
+                                                        checked={page.is_published}
+                                                        onCheckedChange={() =>
+                                                            handleTogglePublish(
+                                                                page.id,
+                                                                page.is_published
+                                                            )
+                                                        }
+                                                    />
+                                                </div>
 
-                                                <button
-                                                    onClick={() =>
-                                                        handlePreview(page.id)
-                                                    }
-                                                    className="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                                                    title="Preview"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() =>
+                                                            handlePreview(page.id)
+                                                        }
+                                                        className="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                                        title="Preview"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </button>
 
-                                                <button
-                                                    onClick={() => handleEdit(page.id)}
-                                                    className="rounded p-2 text-green-600 hover:bg-green-50"
-                                                    title="Edit with Visual Editor"
-                                                >
-                                                    <Pencil className="h-4 w-4" />
-                                                </button>
+                                                    <button
+                                                        onClick={() =>
+                                                            handleEdit(page.id)
+                                                        }
+                                                        className="rounded p-2 text-green-600 hover:bg-green-50"
+                                                        title="Edit with Visual Editor"
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </button>
 
-                                                <button
-                                                    onClick={() =>
-                                                        handleDelete(page.id)
-                                                    }
-                                                    className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                    <button
+                                                        onClick={() =>
+                                                            handleDelete(page.id)
+                                                        }
+                                                        className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

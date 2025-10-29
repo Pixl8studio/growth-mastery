@@ -3,14 +3,33 @@
 import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import { Link2, Check, AlertCircle } from "lucide-react";
+import { Link2, Check, AlertCircle, ArrowRight } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface FlowSetup {
     hasWatchPage: boolean;
     hasEnrollmentPage: boolean;
     hasRegistrationPage: boolean;
+    watchPagePublished: boolean;
+    enrollmentPagePublished: boolean;
+    registrationPagePublished: boolean;
+    watchPageId: string | null;
+    enrollmentPageId: string | null;
+    registrationPageId: string | null;
+}
+
+interface FunnelFlow {
+    id: string;
+    flow_name: string;
+    status: string;
+    created_at: string;
 }
 
 export default function Step10Page({
@@ -24,7 +43,15 @@ export default function Step10Page({
         hasWatchPage: false,
         hasEnrollmentPage: false,
         hasRegistrationPage: false,
+        watchPagePublished: false,
+        enrollmentPagePublished: false,
+        registrationPagePublished: false,
+        watchPageId: null,
+        enrollmentPageId: null,
+        registrationPageId: null,
     });
+    const [flow, setFlow] = useState<FunnelFlow | null>(null);
+    const [isCreatingFlow, setIsCreatingFlow] = useState(false);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -59,31 +86,51 @@ export default function Step10Page({
             if (!projectId) return;
             try {
                 const supabase = createClient();
-                const [watchResult, enrollmentResult, registrationResult] =
+                const [watchResult, enrollmentResult, registrationResult, flowResult] =
                     await Promise.all([
                         supabase
                             .from("watch_pages")
-                            .select("id, html_content")
+                            .select("id, is_published")
                             .eq("funnel_project_id", projectId)
-                            .not("html_content", "is", null),
+                            .limit(1)
+                            .single(),
                         supabase
                             .from("enrollment_pages")
-                            .select("id, html_content")
+                            .select("id, is_published")
                             .eq("funnel_project_id", projectId)
-                            .not("html_content", "is", null),
+                            .limit(1)
+                            .single(),
                         supabase
                             .from("registration_pages")
-                            .select("id, html_content")
+                            .select("id, is_published")
                             .eq("funnel_project_id", projectId)
-                            .not("html_content", "is", null),
+                            .limit(1)
+                            .single(),
+                        supabase
+                            .from("funnel_flows")
+                            .select("*")
+                            .eq("funnel_project_id", projectId)
+                            .limit(1)
+                            .single(),
                     ]);
 
-                // Count pages that have content (draft or published)
                 setFlowSetup({
-                    hasWatchPage: (watchResult.data?.length || 0) > 0,
-                    hasEnrollmentPage: (enrollmentResult.data?.length || 0) > 0,
-                    hasRegistrationPage: (registrationResult.data?.length || 0) > 0,
+                    hasWatchPage: !!watchResult.data,
+                    hasEnrollmentPage: !!enrollmentResult.data,
+                    hasRegistrationPage: !!registrationResult.data,
+                    watchPagePublished: watchResult.data?.is_published || false,
+                    enrollmentPagePublished:
+                        enrollmentResult.data?.is_published || false,
+                    registrationPagePublished:
+                        registrationResult.data?.is_published || false,
+                    watchPageId: watchResult.data?.id || null,
+                    enrollmentPageId: enrollmentResult.data?.id || null,
+                    registrationPageId: registrationResult.data?.id || null,
                 });
+
+                if (flowResult.data) {
+                    setFlow(flowResult.data);
+                }
             } catch (error) {
                 logger.error({ error }, "Failed to load flow setup");
             }
@@ -91,10 +138,77 @@ export default function Step10Page({
         loadFlowSetup();
     }, [projectId]);
 
+    // Auto-create flow when all pages are published
+    useEffect(() => {
+        const createFlowIfReady = async () => {
+            if (!projectId || !project || flow || isCreatingFlow) return;
+
+            const allPagesPublished =
+                flowSetup.watchPagePublished &&
+                flowSetup.enrollmentPagePublished &&
+                flowSetup.registrationPagePublished;
+
+            if (!allPagesPublished) return;
+
+            setIsCreatingFlow(true);
+            try {
+                const supabase = createClient();
+                const { data: user } = await supabase.auth.getUser();
+
+                if (!user.user) {
+                    logger.error({}, "No user found when creating flow");
+                    return;
+                }
+
+                const { data: newFlow, error } = await supabase
+                    .from("funnel_flows")
+                    .insert({
+                        funnel_project_id: projectId,
+                        user_id: user.user.id,
+                        flow_name: project.name || "Main Flow",
+                        registration_page_id: flowSetup.registrationPageId,
+                        watch_page_id: flowSetup.watchPageId,
+                        enrollment_page_id: flowSetup.enrollmentPageId,
+                        status: "connected",
+                        is_active: true,
+                    })
+                    .select()
+                    .single();
+
+                if (error) throw error;
+
+                setFlow(newFlow);
+                logger.info({ flowId: newFlow.id }, "Funnel flow auto-created");
+            } catch (error) {
+                logger.error({ error }, "Failed to auto-create flow");
+            } finally {
+                setIsCreatingFlow(false);
+            }
+        };
+
+        createFlowIfReady();
+    }, [projectId, project, flowSetup, flow, isCreatingFlow]);
+
     const allPagesCreated =
         flowSetup.hasWatchPage &&
         flowSetup.hasEnrollmentPage &&
         flowSetup.hasRegistrationPage;
+
+    const allPagesPublished =
+        flowSetup.watchPagePublished &&
+        flowSetup.enrollmentPagePublished &&
+        flowSetup.registrationPagePublished;
+
+    const missingPages = [];
+    if (!flowSetup.hasRegistrationPage) {
+        missingPages.push({ name: "Registration Page", step: 9 });
+    }
+    if (!flowSetup.hasWatchPage) {
+        missingPages.push({ name: "Watch Page", step: 8 });
+    }
+    if (!flowSetup.hasEnrollmentPage) {
+        missingPages.push({ name: "Enrollment Page", step: 5 });
+    }
 
     if (!projectId) {
         return (
@@ -110,18 +224,26 @@ export default function Step10Page({
             projectId={projectId}
             funnelName={project?.name}
             nextDisabled={!allPagesCreated}
-            nextLabel={allPagesCreated ? "View Analytics" : "Complete All Pages First"}
+            nextLabel={
+                allPagesCreated ? "Configure AI Follow-Up" : "Complete All Pages First"
+            }
             stepTitle="Flow Setup"
             stepDescription="Connect your funnel pages together"
         >
             <div className="space-y-8">
-                {!allPagesCreated && (
-                    <DependencyWarning
-                        message="Complete all previous steps to setup your funnel flow."
-                        requiredStep={9}
-                        requiredStepName="Registration Page"
-                        projectId={projectId}
-                    />
+                {/* Dependency Warnings */}
+                {missingPages.length > 0 && (
+                    <div className="space-y-3">
+                        {missingPages.map((page) => (
+                            <DependencyWarning
+                                key={page.step}
+                                message={`You need to create a ${page.name} (Step ${page.step})`}
+                                requiredStep={page.step}
+                                requiredStepName={page.name}
+                                projectId={projectId}
+                            />
+                        ))}
+                    </div>
                 )}
 
                 <div className="rounded-lg border border-slate-100 bg-gradient-to-br from-slate-50 to-gray-50 p-8">
@@ -138,204 +260,209 @@ export default function Step10Page({
                         </p>
                     </div>
 
-                    <div className="mx-auto max-w-2xl space-y-4">
-                        {/* Registration Page */}
-                        <div
-                            className={`rounded-lg border p-6 ${
-                                flowSetup.hasRegistrationPage
-                                    ? "border-green-200 bg-green-50"
-                                    : "border-gray-200 bg-white"
-                            }`}
-                        >
-                            <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                    <h3 className="mb-2 text-lg font-semibold text-gray-900">
-                                        1. Registration Page
-                                    </h3>
-                                    <p className="text-sm text-gray-600">
-                                        Lead capture page where prospects sign up for
-                                        your webinar
+                    <TooltipProvider>
+                        <div className="mx-auto max-w-2xl space-y-4">
+                            {/* Registration Page */}
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div
+                                        className={`cursor-help rounded-lg border p-6 transition-all ${
+                                            flowSetup.hasRegistrationPage
+                                                ? flowSetup.registrationPagePublished
+                                                    ? "border-green-300 bg-green-50"
+                                                    : "border-yellow-300 bg-yellow-50"
+                                                : "border-gray-200 bg-white"
+                                        }`}
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <h3 className="mb-2 text-lg font-semibold text-gray-900">
+                                                    1. Registration Page
+                                                </h3>
+                                                <p className="text-sm text-gray-600">
+                                                    Lead capture page where prospects
+                                                    sign up for your webinar
+                                                </p>
+                                            </div>
+                                            {flowSetup.hasRegistrationPage ? (
+                                                flowSetup.registrationPagePublished ? (
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <Check className="h-6 w-6 text-green-600" />
+                                                        <span className="text-xs font-medium text-green-700">
+                                                            Live
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <Check className="h-6 w-6 text-yellow-600" />
+                                                        <span className="text-xs font-medium text-yellow-700">
+                                                            Draft
+                                                        </span>
+                                                    </div>
+                                                )
+                                            ) : (
+                                                <AlertCircle className="h-6 w-6 text-gray-400" />
+                                            )}
+                                        </div>
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p className="max-w-xs">
+                                        Captures leads and collects contact information
                                     </p>
-                                </div>
-                                {flowSetup.hasRegistrationPage ? (
-                                    <Check className="h-6 w-6 text-green-600" />
-                                ) : (
-                                    <AlertCircle className="h-6 w-6 text-gray-400" />
-                                )}
+                                </TooltipContent>
+                            </Tooltip>
+
+                            <div className="flex justify-center">
+                                <ArrowRight className="h-8 w-8 rotate-90 text-gray-300" />
                             </div>
-                        </div>
 
-                        <div className="flex justify-center">
-                            <div className="h-8 w-0.5 bg-gray-300"></div>
-                        </div>
-
-                        {/* Watch Page */}
-                        <div
-                            className={`rounded-lg border p-6 ${
-                                flowSetup.hasWatchPage
-                                    ? "border-green-200 bg-green-50"
-                                    : "border-gray-200 bg-white"
-                            }`}
-                        >
-                            <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                    <h3 className="mb-2 text-lg font-semibold text-gray-900">
-                                        2. Watch Page
-                                    </h3>
-                                    <p className="text-sm text-gray-600">
-                                        Video landing page where prospects watch your
-                                        presentation
+                            {/* Watch Page */}
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div
+                                        className={`cursor-help rounded-lg border p-6 transition-all ${
+                                            flowSetup.hasWatchPage
+                                                ? flowSetup.watchPagePublished
+                                                    ? "border-green-300 bg-green-50"
+                                                    : "border-yellow-300 bg-yellow-50"
+                                                : "border-gray-200 bg-white"
+                                        }`}
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <h3 className="mb-2 text-lg font-semibold text-gray-900">
+                                                    2. Watch Page
+                                                </h3>
+                                                <p className="text-sm text-gray-600">
+                                                    Video landing page where prospects
+                                                    watch your presentation
+                                                </p>
+                                            </div>
+                                            {flowSetup.hasWatchPage ? (
+                                                flowSetup.watchPagePublished ? (
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <Check className="h-6 w-6 text-green-600" />
+                                                        <span className="text-xs font-medium text-green-700">
+                                                            Live
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <Check className="h-6 w-6 text-yellow-600" />
+                                                        <span className="text-xs font-medium text-yellow-700">
+                                                            Draft
+                                                        </span>
+                                                    </div>
+                                                )
+                                            ) : (
+                                                <AlertCircle className="h-6 w-6 text-gray-400" />
+                                            )}
+                                        </div>
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p className="max-w-xs">
+                                        Presents video training and builds value
                                     </p>
-                                </div>
-                                {flowSetup.hasWatchPage ? (
-                                    <Check className="h-6 w-6 text-green-600" />
-                                ) : (
-                                    <AlertCircle className="h-6 w-6 text-gray-400" />
-                                )}
+                                </TooltipContent>
+                            </Tooltip>
+
+                            <div className="flex justify-center">
+                                <ArrowRight className="h-8 w-8 rotate-90 text-gray-300" />
                             </div>
-                        </div>
 
-                        <div className="flex justify-center">
-                            <div className="h-8 w-0.5 bg-gray-300"></div>
-                        </div>
-
-                        {/* Enrollment Page */}
-                        <div
-                            className={`rounded-lg border p-6 ${
-                                flowSetup.hasEnrollmentPage
-                                    ? "border-green-200 bg-green-50"
-                                    : "border-gray-200 bg-white"
-                            }`}
-                        >
-                            <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                    <h3 className="mb-2 text-lg font-semibold text-gray-900">
-                                        3. Enrollment Page
-                                    </h3>
-                                    <p className="text-sm text-gray-600">
-                                        Sales page where prospects purchase your offer
+                            {/* Enrollment Page */}
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div
+                                        className={`cursor-help rounded-lg border p-6 transition-all ${
+                                            flowSetup.hasEnrollmentPage
+                                                ? flowSetup.enrollmentPagePublished
+                                                    ? "border-green-300 bg-green-50"
+                                                    : "border-yellow-300 bg-yellow-50"
+                                                : "border-gray-200 bg-white"
+                                        }`}
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <h3 className="mb-2 text-lg font-semibold text-gray-900">
+                                                    3. Enrollment Page
+                                                </h3>
+                                                <p className="text-sm text-gray-600">
+                                                    Sales page where prospects purchase
+                                                    your offer
+                                                </p>
+                                            </div>
+                                            {flowSetup.hasEnrollmentPage ? (
+                                                flowSetup.enrollmentPagePublished ? (
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <Check className="h-6 w-6 text-green-600" />
+                                                        <span className="text-xs font-medium text-green-700">
+                                                            Live
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex flex-col items-center gap-1">
+                                                        <Check className="h-6 w-6 text-yellow-600" />
+                                                        <span className="text-xs font-medium text-yellow-700">
+                                                            Draft
+                                                        </span>
+                                                    </div>
+                                                )
+                                            ) : (
+                                                <AlertCircle className="h-6 w-6 text-gray-400" />
+                                            )}
+                                        </div>
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p className="max-w-xs">
+                                        Converts viewers into customers
                                     </p>
-                                </div>
-                                {flowSetup.hasEnrollmentPage ? (
-                                    <Check className="h-6 w-6 text-green-600" />
-                                ) : (
-                                    <AlertCircle className="h-6 w-6 text-gray-400" />
-                                )}
-                            </div>
+                                </TooltipContent>
+                            </Tooltip>
                         </div>
-                    </div>
+                    </TooltipProvider>
 
+                    {/* Flow Status Messages */}
                     {allPagesCreated && (
-                        <div className="mt-8 space-y-6">
-                            {/* Success Message */}
-                            <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center">
-                                <Check className="mx-auto mb-3 h-12 w-12 text-green-600" />
-                                <h3 className="mb-2 text-xl font-semibold text-green-900">
-                                    Funnel Flow Complete!
-                                </h3>
-                                <p className="text-green-800">
-                                    All pages are created and ready. Your funnel flow is
-                                    live.
-                                </p>
-                            </div>
-
-                            {/* Connection Map */}
-                            <div className="rounded-lg border border-blue-100 bg-white p-8">
-                                <h3 className="mb-6 text-center text-lg font-semibold text-gray-900">
-                                    Your Funnel Flow
-                                </h3>
-
-                                <div className="mx-auto flex max-w-3xl items-center justify-between">
-                                    {/* Registration */}
-                                    <div className="flex-1 text-center">
-                                        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-blue-100">
-                                            <span className="text-2xl">📝</span>
-                                        </div>
-                                        <h4 className="mb-1 font-semibold text-gray-900">
-                                            Registration
-                                        </h4>
-                                        <p className="text-xs text-gray-600">
-                                            Lead Capture
-                                        </p>
-                                    </div>
-
-                                    {/* Arrow */}
-                                    <div className="flex flex-col items-center px-4">
-                                        <div className="text-2xl text-gray-400">→</div>
-                                    </div>
-
-                                    {/* Watch */}
-                                    <div className="flex-1 text-center">
-                                        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-purple-100">
-                                            <span className="text-2xl">▶️</span>
-                                        </div>
-                                        <h4 className="mb-1 font-semibold text-gray-900">
-                                            Watch Page
-                                        </h4>
-                                        <p className="text-xs text-gray-600">
-                                            Video Training
-                                        </p>
-                                    </div>
-
-                                    {/* Arrow */}
-                                    <div className="flex flex-col items-center px-4">
-                                        <div className="text-2xl text-gray-400">→</div>
-                                    </div>
-
-                                    {/* Enrollment */}
-                                    <div className="flex-1 text-center">
-                                        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                                            <span className="text-2xl">💰</span>
-                                        </div>
-                                        <h4 className="mb-1 font-semibold text-gray-900">
-                                            Enrollment
-                                        </h4>
-                                        <p className="text-xs text-gray-600">
-                                            Sales Page
-                                        </p>
-                                    </div>
+                        <div className="mt-8">
+                            {flow ? (
+                                <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center">
+                                    <Check className="mx-auto mb-3 h-12 w-12 text-green-600" />
+                                    <h3 className="mb-2 text-xl font-semibold text-green-900">
+                                        Funnel Flow Connected!
+                                    </h3>
+                                    <p className="text-green-800">
+                                        Your funnel flow has been created with status:{" "}
+                                        {flow.status}. All pages are linked and ready
+                                        for automation.
+                                    </p>
                                 </div>
-
-                                <div className="mt-8 space-y-2 rounded-lg bg-gray-50 p-4">
-                                    <h4 className="mb-3 font-semibold text-gray-900">
-                                        How Your Funnel Works:
-                                    </h4>
-                                    <div className="space-y-3 text-sm text-gray-700">
-                                        <div className="flex items-start gap-3">
-                                            <span className="text-blue-600">1.</span>
-                                            <p>
-                                                Prospects register on your{" "}
-                                                <strong>Registration Page</strong> and
-                                                enter the funnel
-                                            </p>
-                                        </div>
-                                        <div className="flex items-start gap-3">
-                                            <span className="text-purple-600">2.</span>
-                                            <p>
-                                                They're directed to the{" "}
-                                                <strong>Watch Page</strong> to view your
-                                                training video
-                                            </p>
-                                        </div>
-                                        <div className="flex items-start gap-3">
-                                            <span className="text-green-600">3.</span>
-                                            <p>
-                                                After watching, they visit the{" "}
-                                                <strong>Enrollment Page</strong> to
-                                                purchase your offer
-                                            </p>
-                                        </div>
-                                        <div className="flex items-start gap-3">
-                                            <span className="text-orange-600">4.</span>
-                                            <p>
-                                                Throughout the journey,{" "}
-                                                <strong>AI Follow-Up</strong> (Step 11)
-                                                nurtures them based on engagement
-                                            </p>
-                                        </div>
-                                    </div>
+                            ) : allPagesPublished ? (
+                                <div className="rounded-lg border border-blue-200 bg-blue-50 p-6 text-center">
+                                    <div className="mx-auto mb-3 h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"></div>
+                                    <h3 className="mb-2 text-xl font-semibold text-blue-900">
+                                        Creating Your Flow...
+                                    </h3>
+                                    <p className="text-blue-800">
+                                        Connecting your pages automatically.
+                                    </p>
                                 </div>
-                            </div>
+                            ) : (
+                                <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6 text-center">
+                                    <AlertCircle className="mx-auto mb-3 h-12 w-12 text-yellow-600" />
+                                    <h3 className="mb-2 text-xl font-semibold text-yellow-900">
+                                        Publish All Pages to Connect Flow
+                                    </h3>
+                                    <p className="text-yellow-800">
+                                        Return to Steps 5, 8, and 9 to publish your
+                                        pages. Once all pages are published, your funnel
+                                        flow will be created automatically.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

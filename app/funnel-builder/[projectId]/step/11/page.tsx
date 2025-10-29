@@ -375,18 +375,49 @@ export default function Step11Page({
                 if (data.success) {
                     setAgentConfig(data.config);
 
-                    // Create default post-webinar sequence
-                    await createDefaultSequence(data.config.id, offerData, intakeData);
+                    // Create default post-webinar sequence via API
+                    try {
+                        const defaultSequenceResponse = await fetch(
+                            "/api/followup/sequences/create-default",
+                            {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    agent_config_id: data.config.id,
+                                    offer_data: offerData,
+                                    intake_data: intakeData?.extracted_data || null,
+                                }),
+                            }
+                        );
 
-                    toast({
-                        title: "✨ AI Follow-Up Enabled",
-                        description:
-                            "Agent configured with your business context, offer details, and default sequence",
-                    });
-                    logger.info(
-                        { hasIntake: !!intakeData, hasOffer: !!offerData },
-                        "Created agent with auto-populated knowledge base and default sequence"
-                    );
+                        const sequenceData = await defaultSequenceResponse.json();
+
+                        toast({
+                            title: "✨ AI Follow-Up Enabled",
+                            description: sequenceData.success
+                                ? "Agent configured with your business context, offer details, and default sequence"
+                                : "Agent configured - you can add sequences manually",
+                        });
+
+                        logger.info(
+                            {
+                                hasIntake: !!intakeData,
+                                hasOffer: !!offerData,
+                                sequenceCreated: sequenceData.success,
+                            },
+                            "Created agent with auto-populated knowledge base"
+                        );
+                    } catch (seqError) {
+                        logger.error(
+                            { error: seqError },
+                            "Failed to create default sequence, but agent config succeeded"
+                        );
+                        toast({
+                            title: "✨ AI Follow-Up Enabled",
+                            description:
+                                "Agent configured with your business context and offer details",
+                        });
+                    }
                 }
             } catch (error) {
                 logger.error({ error }, "Failed to create agent config");
@@ -396,117 +427,6 @@ export default function Step11Page({
                     variant: "destructive",
                 });
             }
-        }
-    };
-
-    const createDefaultSequence = async (
-        agentConfigId: string,
-        offerData: any,
-        intakeData: any
-    ) => {
-        try {
-            // Import sequence helper
-            const { generateDefaultSequenceMessages, getMessageTiming } = await import(
-                "@/lib/followup/sequence-service"
-            );
-
-            // Create the sequence first
-            const sequenceResponse = await fetch("/api/followup/sequences", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    agent_config_id: agentConfigId,
-                    name: "Post-Webinar Follow-Up Sequence",
-                    description: "Automated follow-up sequence for webinar attendees",
-                    sequence_type: "3_day_discount",
-                    trigger_event: "webinar_end",
-                    trigger_delay_hours: 0,
-                    deadline_hours: 72,
-                    total_messages: 5,
-                    target_segments: [
-                        "no_show",
-                        "skimmer",
-                        "sampler",
-                        "engaged",
-                        "hot",
-                    ],
-                }),
-            });
-
-            const sequenceData = await sequenceResponse.json();
-            if (!sequenceData.success) {
-                throw new Error("Failed to create sequence");
-            }
-
-            const sequenceId = sequenceData.sequence.id;
-
-            // Generate messages for each segment
-            const messages = generateDefaultSequenceMessages(offerData, intakeData);
-            const segments = [
-                "no_show",
-                "skimmer",
-                "sampler",
-                "engaged",
-                "hot",
-            ] as const;
-
-            // Create messages for each segment
-            for (const segment of segments) {
-                const messageContent = messages[segment];
-                const timings = getMessageTiming(segment);
-
-                // Create message in database
-                await fetch("/api/followup/messages", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        sequence_id: sequenceId,
-                        name: `${segment.charAt(0).toUpperCase() + segment.slice(1)} Message`,
-                        message_order: 1,
-                        channel: "email",
-                        send_delay_hours: timings[0] || 24,
-                        subject_line: messageContent.subject,
-                        body_content: messageContent.body,
-                        personalization_rules: {
-                            [segment]: {
-                                tone:
-                                    segment === "hot"
-                                        ? "urgency_driven"
-                                        : segment === "engaged"
-                                          ? "conversion_focused"
-                                          : segment === "sampler"
-                                            ? "value_reinforcement"
-                                            : segment === "skimmer"
-                                              ? "curiosity_building"
-                                              : "gentle_reminder",
-                                cta:
-                                    segment === "hot" || segment === "engaged"
-                                        ? "book_call"
-                                        : segment === "sampler"
-                                          ? "complete_watch"
-                                          : "watch_replay",
-                            },
-                        },
-                        primary_cta: {
-                            text:
-                                segment === "hot" || segment === "engaged"
-                                    ? "Book Your Call"
-                                    : segment === "sampler"
-                                      ? "Complete Training"
-                                      : "Watch Replay",
-                            url: "{replay_link}",
-                            tracking_enabled: true,
-                        },
-                    }),
-                });
-            }
-
-            logger.info(
-                { sequenceId, messageCount: segments.length },
-                "Created default sequence with segment-specific messages"
-            );
-        } catch (error) {
-            logger.error({ error }, "Failed to create default sequence");
         }
     };
 

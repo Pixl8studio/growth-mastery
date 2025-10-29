@@ -45,7 +45,7 @@ export async function runAssistant(threadId: string, contextPage?: string) {
  * Get the status of a run
  */
 export async function getRunStatus(threadId: string, runId: string) {
-    return await openai.beta.threads.runs.retrieve(threadId, runId);
+    return await openai.beta.threads.runs.retrieve(runId, { thread_id: threadId });
 }
 
 /**

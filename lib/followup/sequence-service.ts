@@ -588,3 +588,358 @@ export async function deleteMessage(messageId: string) {
         };
     }
 }
+
+/**
+ * Create 3 default sequences with pre-built templates.
+ *
+ * Auto-creates sequences on agent activation:
+ * 1. Post-Webinar Follow-Up (3-day deadline)
+ * 2. Reactivation Sequence
+ * 3. Abandoned Registration Sequence
+ */
+export async function createDefaultSequences(
+    agentConfigId: string,
+    offerId?: string
+): Promise<{
+    success: boolean;
+    sequences?: any[];
+    message_count?: number;
+    error?: string;
+}> {
+    logger.info({ agentConfigId, offerId }, "📋 Creating default sequences");
+
+    try {
+        const supabase = await createClient();
+
+        // Fetch offer and intake data for personalization
+        let offerData: OfferData | null = null;
+        let intakeData: IntakeData | null = null;
+
+        if (offerId) {
+            const { data: offer } = await supabase
+                .from("offers")
+                .select("name, tagline, promise, price, currency")
+                .eq("id", offerId)
+                .single();
+
+            if (offer) {
+                offerData = offer;
+            }
+        }
+
+        // Get funnel project ID from agent config
+        const { data: config } = await supabase
+            .from("followup_agent_configs")
+            .select("funnel_project_id")
+            .eq("id", agentConfigId)
+            .single();
+
+        if (config?.funnel_project_id) {
+            const { data: project } = await supabase
+                .from("funnel_projects")
+                .select("target_audience, desired_outcome, main_problem")
+                .eq("id", config.funnel_project_id)
+                .single();
+
+            if (project) {
+                intakeData = {
+                    targetAudience: project.target_audience,
+                    desiredOutcome: project.desired_outcome,
+                    mainProblem: project.main_problem,
+                };
+            }
+        }
+
+        const messageTemplates = generateDefaultSequenceMessages(offerData, intakeData);
+        const createdSequences: any[] = [];
+        let totalMessages = 0;
+
+        // 1. Post-Webinar Follow-Up Sequence (3-day discount)
+        const postWebinarResult = await createSequence(agentConfigId, {
+            name: "Post-Webinar Follow-Up (3-Day Offer)",
+            description:
+                "Automated follow-up sequence after webinar ends. Segments prospects by engagement and delivers tailored messaging over 72 hours with deadline urgency.",
+            sequence_type: "3_day_discount",
+            trigger_event: "webinar_end",
+            trigger_delay_hours: 0,
+            deadline_hours: 72,
+            total_messages: 5,
+            target_segments: ["no_show", "skimmer", "sampler", "engaged", "hot"],
+            requires_manual_approval: true,
+            is_automated: false,
+        });
+
+        if (postWebinarResult.success && postWebinarResult.sequence) {
+            createdSequences.push(postWebinarResult.sequence);
+
+            // Create segment-specific messages
+            const segments: Array<
+                "no_show" | "skimmer" | "sampler" | "engaged" | "hot"
+            > = ["no_show", "skimmer", "sampler", "engaged", "hot"];
+
+            for (const segment of segments) {
+                const template = messageTemplates[segment];
+                const timings = getMessageTiming(segment);
+
+                for (let i = 0; i < timings.length; i++) {
+                    const messageResult = await createMessage(
+                        postWebinarResult.sequence.id,
+                        {
+                            name: `Message ${i + 1} - ${segment}`,
+                            message_order: i + 1,
+                            channel: "email",
+                            send_delay_hours: timings[i],
+                            subject_line: template.subject,
+                            body_content: template.body,
+                            personalization_rules: {
+                                [segment]: {
+                                    tone:
+                                        segment === "hot"
+                                            ? "urgency_driven"
+                                            : "conversion_focused",
+                                    cta:
+                                        segment === "no_show"
+                                            ? "watch_replay"
+                                            : "claim_offer",
+                                },
+                            },
+                            primary_cta: {
+                                text:
+                                    segment === "no_show"
+                                        ? "Watch Replay"
+                                        : "Get Started",
+                                url: "{offer_link}",
+                                tracking_enabled: true,
+                            },
+                        }
+                    );
+
+                    if (messageResult.success) {
+                        totalMessages++;
+                    }
+                }
+            }
+        }
+
+        // 2. Reactivation Sequence
+        const reactivationResult = await createSequence(agentConfigId, {
+            name: "Reactivation Sequence",
+            description:
+                "Re-engages prospects who haven't interacted in 7+ days. Gentle reminder of value with FOMO elements.",
+            sequence_type: "reengagement",
+            trigger_event: "no_engagement_7_days",
+            trigger_delay_hours: 168, // 7 days
+            deadline_hours: 120, // 5 days
+            total_messages: 3,
+            target_segments: ["skimmer", "sampler", "engaged"],
+            requires_manual_approval: true,
+            is_automated: false,
+        });
+
+        if (reactivationResult.success && reactivationResult.sequence) {
+            createdSequences.push(reactivationResult.sequence);
+
+            const reactivationMessages = [
+                {
+                    order: 1,
+                    delay: 0,
+                    subject: "Quick check-in...",
+                    body: `Hey {first_name},
+
+I noticed you watched the training but haven't taken the next step yet.
+
+Just checking in - do you have any questions about ${offerData?.name || "the program"}?
+
+Sometimes people hesitate because they're not sure if it's right for them, or they need clarity on implementation.
+
+That's totally normal. Happy to jump on a quick call to discuss your specific situation.
+
+No pressure - just want to make sure you have what you need to make an informed decision.
+
+👉 Book a 15-min clarity call: {booking_link}
+
+Best,
+{sender_name}`,
+                },
+                {
+                    order: 2,
+                    delay: 48,
+                    subject: "Don't let this opportunity slip away",
+                    body: `{first_name},
+
+I haven't heard back from you, so I wanted to reach out one more time.
+
+The training showed you WHAT to do.
+
+${offerData?.name || "The program"} shows you exactly HOW to do it.
+
+And right now, you're in a unique position - you have the knowledge and the opportunity to act on it.
+
+But windows close. Momentum fades. Life gets in the way.
+
+If you're serious about ${intakeData?.desiredOutcome || "getting results"}, now is the time.
+
+👉 Let's make this happen: {offer_link}
+
+{sender_name}
+
+P.S. Still not sure? Hit reply with your biggest question or concern. I'll respond personally.`,
+                },
+                {
+                    order: 3,
+                    delay: 120,
+                    subject: "Final reminder (then I'll stop bugging you! 😊)",
+                    body: `Hi {first_name},
+
+This is my last message - I promise!
+
+I genuinely believe ${offerData?.name || "this program"} can help you, but I also respect that timing might not be right.
+
+So here's my final offer:
+
+If you want to move forward, I'm here. The door is open.
+
+If not, no worries at all. I hope the training gave you valuable insights you can apply.
+
+Either way, I wish you all the success in ${intakeData?.desiredOutcome || "reaching your goals"}.
+
+👉 Ready to join? {offer_link}
+
+All the best,
+{sender_name}`,
+                },
+            ];
+
+            for (const msg of reactivationMessages) {
+                const messageResult = await createMessage(
+                    reactivationResult.sequence.id,
+                    {
+                        name: `Reactivation ${msg.order}`,
+                        message_order: msg.order,
+                        channel: "email",
+                        send_delay_hours: msg.delay,
+                        subject_line: msg.subject,
+                        body_content: msg.body,
+                        primary_cta: {
+                            text: "Take Action",
+                            url: "{offer_link}",
+                            tracking_enabled: true,
+                        },
+                    }
+                );
+
+                if (messageResult.success) {
+                    totalMessages++;
+                }
+            }
+        }
+
+        // 3. Abandoned Registration Sequence
+        const abandonedResult = await createSequence(agentConfigId, {
+            name: "Abandoned Registration",
+            description:
+                "Follows up with registrants who started but didn't complete registration. Gentle reminder over 24 hours.",
+            sequence_type: "nurture",
+            trigger_event: "registration_incomplete",
+            trigger_delay_hours: 2,
+            deadline_hours: 24,
+            total_messages: 2,
+            target_segments: ["no_show"],
+            requires_manual_approval: true,
+            is_automated: false,
+        });
+
+        if (abandonedResult.success && abandonedResult.sequence) {
+            createdSequences.push(abandonedResult.sequence);
+
+            const abandonedMessages = [
+                {
+                    order: 1,
+                    delay: 2,
+                    subject: "Finish your registration?",
+                    body: `Hi {first_name},
+
+I noticed you started registering for the training but didn't quite finish.
+
+No worries - it happens! Maybe you got distracted or needed to check your calendar.
+
+The training is coming up soon, and I don't want you to miss out.
+
+It only takes 30 seconds to complete your registration:
+
+👉 Finish registering: {registration_link}
+
+Looking forward to seeing you there!
+
+{sender_name}`,
+                },
+                {
+                    order: 2,
+                    delay: 24,
+                    subject: "Last chance to join the training",
+                    body: `{first_name},
+
+The training starts soon and spots are filling up fast.
+
+You showed interest by starting registration - don't let this opportunity pass you by.
+
+In just 60 minutes, you'll learn:
+
+✅ How to ${intakeData?.desiredOutcome || "achieve your goals"}
+✅ The biggest mistakes to avoid
+✅ A proven step-by-step framework
+
+This is specifically for ${intakeData?.targetAudience || "people like you"}.
+
+👉 Secure your spot now: {registration_link}
+
+See you soon!
+{sender_name}
+
+P.S. If you can't make it live, register anyway and I'll send you the replay.`,
+                },
+            ];
+
+            for (const msg of abandonedMessages) {
+                const messageResult = await createMessage(abandonedResult.sequence.id, {
+                    name: `Abandoned Registration ${msg.order}`,
+                    message_order: msg.order,
+                    channel: "email",
+                    send_delay_hours: msg.delay,
+                    subject_line: msg.subject,
+                    body_content: msg.body,
+                    primary_cta: {
+                        text: "Complete Registration",
+                        url: "{registration_link}",
+                        tracking_enabled: true,
+                    },
+                });
+
+                if (messageResult.success) {
+                    totalMessages++;
+                }
+            }
+        }
+
+        logger.info(
+            {
+                agentConfigId,
+                sequenceCount: createdSequences.length,
+                messageCount: totalMessages,
+            },
+            "✅ Default sequences created successfully"
+        );
+
+        return {
+            success: true,
+            sequences: createdSequences,
+            message_count: totalMessages,
+        };
+    } catch (error) {
+        logger.error({ error, agentConfigId }, "❌ Error creating default sequences");
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+        };
+    }
+}

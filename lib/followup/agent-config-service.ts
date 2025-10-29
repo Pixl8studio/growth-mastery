@@ -140,8 +140,12 @@ export interface CreateAgentConfigInput {
     segmentation_rules?: Record<string, unknown>;
     objection_handling?: Record<string, unknown>;
     scoring_config?: Record<string, unknown>;
+    scoring_rules?: Record<string, unknown>;
     channel_config?: Record<string, unknown>;
     compliance_config?: Record<string, unknown>;
+    sender_name?: string;
+    sender_email?: string;
+    sms_sender_id?: string;
 }
 
 /**
@@ -191,9 +195,23 @@ export async function createAgentConfig(
             objection_handling:
                 configData.objection_handling || defaults.objection_handling,
             scoring_config: configData.scoring_config || defaults.scoring_config,
+            scoring_rules: configData.scoring_rules || {
+                watch_weight: 45,
+                offer_click_weight: 25,
+                email_engagement_weight: 5,
+                reply_weight: 15,
+                hot_threshold: 75,
+                engaged_threshold: 50,
+                sampler_threshold: 25,
+                skimmer_threshold: 1,
+            },
             channel_config: configData.channel_config || defaults.channel_config,
             compliance_config:
                 configData.compliance_config || defaults.compliance_config,
+            sender_name: configData.sender_name || null,
+            sender_email: configData.sender_email || null,
+            sms_sender_id: configData.sms_sender_id || null,
+            domain_verification_status: "not_started",
         })
         .select()
         .single();

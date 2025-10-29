@@ -16,7 +16,7 @@ const STEPS: Step[] = [
         title: "Intake",
         description: "Multiple input options",
     },
-    { number: 2, title: "Craft Offer", description: "Pricing & features" },
+    { number: 2, title: "Define Offer", description: "7 P's framework" },
     { number: 3, title: "Deck Structure", description: "55-slide outline" },
     { number: 4, title: "Gamma Decks", description: "Visual presentation" },
     { number: 5, title: "Enrollment Page", description: "AI sales copy" },

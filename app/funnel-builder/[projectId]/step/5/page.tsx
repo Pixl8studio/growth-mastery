@@ -310,7 +310,7 @@ export default function Step5EnrollmentPage({
                     <DependencyWarning
                         message="You need to create an offer first."
                         requiredStep={2}
-                        requiredStepName="Craft Offer"
+                        requiredStepName="Define Offer"
                         projectId={projectId}
                     />
                 )}

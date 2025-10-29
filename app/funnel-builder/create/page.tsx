@@ -187,7 +187,8 @@ export default function CreateFunnelPage() {
                             </li>
                             <li className="flex items-start">
                                 <span className="mr-2 font-bold text-blue-600">2.</span>
-                                Craft Offer - AI generates your pricing and features
+                                Define Offer - AI analyzes intake to create optimized
+                                offers with 7 P's framework
                             </li>
                             <li className="flex items-start">
                                 <span className="mr-2 font-bold text-blue-600">3.</span>

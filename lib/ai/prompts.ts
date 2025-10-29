@@ -57,7 +57,7 @@ Distribute slides across sections logically (hook: 5-10, problem: 8-12, agitate:
 }
 
 /**
- * 2. Generate offer details from transcript
+ * 2. Generate offer details from transcript using the 7 P's Framework
  */
 export function createOfferGenerationPrompt(
     transcriptData: TranscriptData
@@ -65,22 +65,54 @@ export function createOfferGenerationPrompt(
     return [
         {
             role: "system",
-            content: `You are a master offer strategist who creates irresistible offers with high perceived value.
+            content: `You are a master offer strategist who creates irresistible offers using the proven 7 P's Framework.
 
-Create a compelling offer with:
-- Clear, benefit-driven name (not generic, specific to the transformation)
-- Powerful tagline that captures the core promise
-- Specific price point that feels like a steal for the value
-- 5-7 key features/deliverables (focus on benefits, not just features)
-- 3-5 bonuses that add urgency and value
-- Strong guarantee that removes all risk
-- Clear value proposition
+THE 7 P's FRAMEWORK:
 
-Make the offer feel premium but accessible. Focus on transformation, not just features. Use emotional language.`,
+1. PRICE - The strategic investment point that makes your offer feel like a no-brainer
+   - Deliver significantly more perceived value than cost
+   - Price reflects transformation and results, not just time/deliverables
+   - The cost of NOT solving the problem should outweigh the price
+
+2. PROMISE - The clear, compelling, measurable outcome the client truly desires
+   - Specific and emotionally resonant
+   - Tied to tangible results
+   - The transformation they are investing in
+
+3. PERSON - The narrowly defined ideal client actively experiencing the problem
+   - Clarity is crucial - the more precise, the more magnetic
+   - Speak to one type of person with one core problem
+   - They must be ready to take action
+
+4. PROCESS - The unique method, system, or framework that delivers the outcome
+   - Your step-by-step path to results
+   - Builds confidence and trust
+   - Differentiates from competitors
+
+5. PURPOSE - The deeper "why" behind the offer
+   - The mission or belief fueling the work
+   - Resonates on a human level
+   - Connects emotionally and attracts aligned clients
+
+6. PATHWAY - The purchase path after engagement
+   - BOOK_CALL: For offers $2,000+ (high-ticket, needs trust, complex)
+     * Lower conversion (1-5% of total leads) but higher close rate on calls (20-50%)
+     * High operational load with sales calls
+   - DIRECT_PURCHASE: For offers under $2,000 (self-serve)
+     * 1.5-10% conversion from engagement to purchase
+     * Low operational load, fully automated
+     * Best for mature offers and warm audiences
+
+7. PROOF (Credibility/Guarantee) - Risk reversal and credibility
+   - Strong guarantee that removes all risk
+   - Builds trust and confidence
+   - Specific, not generic
+
+Create offers with 3-6 features and 3-5 bonuses. Make the offer feel premium but accessible.`,
         },
         {
             role: "user",
-            content: `Based on this business information, create a compelling offer:
+            content: `Based on this business information, create a compelling offer using the 7 P's Framework:
 
 TRANSCRIPT:
 ${transcriptData.transcript_text}
@@ -89,26 +121,34 @@ ${transcriptData.extracted_data ? `KEY INFO:\n${JSON.stringify(transcriptData.ex
 
 Return ONLY a JSON object with this structure:
 {
-  "name": "Offer name (benefit-focused, not generic)",
+  "name": "Offer name (benefit-focused, transformation-driven)",
   "tagline": "One-line value proposition that creates desire",
   "price": 997,
   "currency": "USD",
+  "promise": "The specific, measurable transformation outcome they will achieve (2-3 sentences)",
+  "person": "Detailed description of the ideal client who needs this most (2-3 sentences)",
+  "process": "Your unique method/system/framework for delivering results (2-3 sentences)",
+  "purpose": "The deeper 'why' behind this offer that resonates emotionally (2-3 sentences)",
+  "pathway": "book_call or direct_purchase (based on price: >= $2000 = book_call, < $2000 = direct_purchase)",
   "features": [
     "Feature 1 with clear benefit and transformation",
     "Feature 2 with transformation promise",
     "Feature 3 with specific outcome",
-    "Feature 4 with measurable result",
-    "Feature 5 with unique differentiator",
-    "Feature 6 (optional)",
-    "Feature 7 (optional)"
+    "Feature 4 (optional)",
+    "Feature 5 (optional)",
+    "Feature 6 (optional)"
   ],
   "bonuses": [
     "Bonus 1 with value ($XXX value)",
     "Bonus 2 with urgency element",
-    "Bonus 3 with exclusivity"
+    "Bonus 3 with exclusivity",
+    "Bonus 4 (optional)",
+    "Bonus 5 (optional)"
   ],
   "guarantee": "Full risk reversal guarantee statement (specific, not generic)"
-}`,
+}
+
+CRITICAL: Include 3-6 features and 3-5 bonuses. Set pathway based on price tier.`,
         },
     ];
 }

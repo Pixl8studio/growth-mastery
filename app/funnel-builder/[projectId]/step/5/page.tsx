@@ -8,10 +8,27 @@
 import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import { ShoppingCart, PlusCircle, Eye, Pencil, Trash2, X } from "lucide-react";
+import {
+    ShoppingCart,
+    PlusCircle,
+    Eye,
+    Pencil,
+    Trash2,
+    X,
+    Loader2,
+    HelpCircle,
+} from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { generateEnrollmentHTML } from "@/lib/generators/enrollment-page-generator";
+import { useToast } from "@/components/ui/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DeckStructure {
     id: string;
@@ -46,20 +63,42 @@ interface EnrollmentPage {
     created_at: string;
 }
 
+const TEMPLATE_OPTIONS = [
+    {
+        value: "urgency-convert",
+        label: "Urgency Convert",
+        description:
+            "High-energy sales page with countdown timers and scarcity messaging. Best for time-sensitive offers and launches.",
+    },
+    {
+        value: "premium-elegant",
+        label: "Premium Elegant",
+        description:
+            "Sophisticated design with refined styling. Ideal for high-ticket offers and luxury positioning.",
+    },
+    {
+        value: "value-focused",
+        label: "Value Focused",
+        description:
+            "Emphasizes benefits and ROI. Perfect for educational products and value-driven buyers.",
+    },
+] as const;
+
 export default function Step5EnrollmentPage({
     params,
 }: {
     params: Promise<{ projectId: string }>;
 }) {
+    const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
     const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
     const [offers, setOffers] = useState<Offer[]>([]);
     const [enrollmentPages, setEnrollmentPages] = useState<EnrollmentPage[]>([]);
     const [isCreating, setIsCreating] = useState(false);
+    const [creationProgress, setCreationProgress] = useState("");
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [formData, setFormData] = useState({
-        headline: "",
         deckStructureId: "",
         offerId: "",
         templateType: "urgency-convert" as
@@ -157,18 +196,17 @@ export default function Step5EnrollmentPage({
     }, [projectId]);
 
     const handleCreate = async () => {
-        if (
-            !formData.headline.trim() ||
-            !formData.deckStructureId ||
-            !formData.offerId
-        ) {
-            alert(
-                "Please provide a headline, select a deck structure, and select an offer"
-            );
+        if (!formData.deckStructureId || !formData.offerId) {
+            toast({
+                variant: "destructive",
+                title: "Missing Information",
+                description: "Please select both a deck structure and an offer",
+            });
             return;
         }
 
         setIsCreating(true);
+        setCreationProgress("Initializing...");
 
         try {
             const supabase = createClient();
@@ -185,7 +223,29 @@ export default function Step5EnrollmentPage({
             );
             const offer = offers.find((o) => o.id === formData.offerId);
 
-            if (!deckStructure || !offer) throw new Error("Deck or offer not found");
+            if (!deckStructure || !offer) {
+                throw new Error("Deck or offer not found");
+            }
+
+            // Log creation attempt to funnel_flows
+            await supabase.from("funnel_flows").insert({
+                funnel_project_id: projectId,
+                user_id: user.id,
+                step_number: 5,
+                action: "create_enrollment_page_attempt",
+                metadata: {
+                    offer_id: offer.id,
+                    deck_structure_id: deckStructure.id,
+                    template_type: formData.templateType,
+                },
+            });
+
+            // Auto-generate headline and subheadline from offer
+            const autoHeadline = offer.name;
+            const autoSubheadline =
+                offer.tagline ||
+                offer.description ||
+                "Transform your business with our proven system";
 
             // Get theme from project or use defaults
             const theme = project?.settings?.theme || {
@@ -194,6 +254,8 @@ export default function Step5EnrollmentPage({
                 background: "#ffffff",
                 text: "#1f2937",
             };
+
+            setCreationProgress("Generating page content...");
 
             // Generate HTML using the generator
             const htmlContent = generateEnrollmentHTML({
@@ -204,6 +266,8 @@ export default function Step5EnrollmentPage({
                 templateType: formData.templateType,
             });
 
+            setCreationProgress("Saving to database...");
+
             // Create enrollment page
             const { data: newPage, error: createError } = await supabase
                 .from("enrollment_pages")
@@ -211,8 +275,8 @@ export default function Step5EnrollmentPage({
                     funnel_project_id: projectId,
                     user_id: user.id,
                     offer_id: offer.id,
-                    headline: formData.headline,
-                    subheadline: offer.tagline || offer.description || "",
+                    headline: autoHeadline,
+                    subheadline: autoSubheadline,
                     html_content: htmlContent,
                     theme,
                     is_published: false,
@@ -223,24 +287,92 @@ export default function Step5EnrollmentPage({
 
             if (createError) throw createError;
 
+            // Log success to funnel_flows
+            await supabase.from("funnel_flows").insert({
+                funnel_project_id: projectId,
+                user_id: user.id,
+                step_number: 5,
+                action: "create_enrollment_page_success",
+                metadata: {
+                    page_id: newPage.id,
+                    offer_id: offer.id,
+                },
+            });
+
+            setCreationProgress("Complete!");
+
             // Add to list
             setEnrollmentPages((prev) => [newPage, ...prev]);
 
             // Reset form
             setFormData({
-                headline: "",
                 deckStructureId: deckStructures[0]?.id || "",
                 offerId: offers[0]?.id || "",
                 templateType: "urgency-convert",
             });
             setShowCreateForm(false);
 
-            logger.info({ pageId: newPage.id }, "Enrollment page created");
-        } catch (error) {
-            logger.error({ error }, "Failed to create enrollment page");
-            alert("Failed to create page. Please try again.");
+            logger.info({ pageId: newPage.id }, "✅ Enrollment page created");
+
+            // Show success toast with action
+            toast({
+                title: "Success! 🎉",
+                description: "Enrollment page created successfully",
+                action: (
+                    <ToastAction
+                        altText="Preview page"
+                        onClick={() => handlePreview(newPage.id)}
+                    >
+                        Preview
+                    </ToastAction>
+                ),
+            });
+        } catch (error: any) {
+            const supabase = createClient();
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+
+            // Log error details
+            logger.error(
+                {
+                    error,
+                    errorMessage: error?.message,
+                    errorCode: error?.code,
+                    errorDetails: error?.details,
+                    errorHint: error?.hint,
+                    formData,
+                    projectId,
+                },
+                "❌ Failed to create enrollment page"
+            );
+
+            // Log failure to funnel_flows
+            if (user) {
+                await supabase.from("funnel_flows").insert({
+                    funnel_project_id: projectId,
+                    user_id: user.id,
+                    step_number: 5,
+                    action: "create_enrollment_page_error",
+                    metadata: {
+                        error_message: error?.message,
+                        error_code: error?.code,
+                        error_details: error?.details,
+                    },
+                });
+            }
+
+            // Show error toast
+            toast({
+                variant: "destructive",
+                title: "Failed to create page",
+                description:
+                    error?.message ||
+                    "An error occurred. Please try again or contact support.",
+            });
         } finally {
             setIsCreating(false);
+            setCreationProgress("");
         }
     };
 
@@ -264,12 +396,23 @@ export default function Step5EnrollmentPage({
                 .delete()
                 .eq("id", pageId);
 
-            if (!error) {
-                setEnrollmentPages((prev) => prev.filter((p) => p.id !== pageId));
-                logger.info({ pageId }, "Enrollment page deleted");
-            }
-        } catch (error) {
+            if (error) throw error;
+
+            setEnrollmentPages((prev) => prev.filter((p) => p.id !== pageId));
+            logger.info({ pageId }, "Enrollment page deleted");
+
+            toast({
+                title: "Page Deleted",
+                description: "Enrollment page has been removed",
+            });
+        } catch (error: any) {
             logger.error({ error }, "Failed to delete enrollment page");
+            toast({
+                variant: "destructive",
+                title: "Delete Failed",
+                description:
+                    error?.message || "Could not delete the page. Please try again.",
+            });
         }
     };
 
@@ -350,139 +493,174 @@ export default function Step5EnrollmentPage({
                         </div>
                     </div>
                 ) : (
-                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                    <div className="rounded-lg border border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50 p-8 shadow-sm">
                         <div className="mb-6 flex items-center justify-between">
                             <h3 className="text-xl font-semibold text-gray-900">
                                 Create Enrollment Page
                             </h3>
                             <button
                                 onClick={() => setShowCreateForm(false)}
-                                className="text-gray-500 hover:text-gray-700"
+                                disabled={isCreating}
+                                className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
                             >
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-gray-700">
-                                    Page Headline
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.headline}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            headline: e.target.value,
-                                        })
-                                    }
-                                    placeholder="e.g., Enroll in AI Sales Mastery Program"
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                />
-                            </div>
+                        <TooltipProvider>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                                        Offer
+                                    </label>
+                                    <select
+                                        value={formData.offerId}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                offerId: e.target.value,
+                                            })
+                                        }
+                                        disabled={isCreating}
+                                        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {offers.map((offer) => (
+                                            <option key={offer.id} value={offer.id}>
+                                                {offer.name} - {offer.currency}{" "}
+                                                {offer.price.toLocaleString()}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="mt-1 text-sm text-gray-500">
+                                        Page headline will be automatically generated
+                                        from offer name
+                                    </p>
+                                </div>
 
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-gray-700">
-                                    Offer
-                                </label>
-                                <select
-                                    value={formData.offerId}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            offerId: e.target.value,
-                                        })
-                                    }
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                >
-                                    {offers.map((offer) => (
-                                        <option key={offer.id} value={offer.id}>
-                                            {offer.name} - {offer.currency}{" "}
-                                            {offer.price.toLocaleString()}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
+                                <div>
+                                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                                        Presentation Structure
+                                    </label>
+                                    <select
+                                        value={formData.deckStructureId}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                deckStructureId: e.target.value,
+                                            })
+                                        }
+                                        disabled={isCreating}
+                                        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {deckStructures.map((deck) => (
+                                            <option key={deck.id} value={deck.id}>
+                                                {deck.metadata?.title ||
+                                                    `Presentation ${deck.total_slides} slides`}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="mt-1 text-sm text-gray-500">
+                                        AI-generated testimonials from presentation
+                                        content
+                                    </p>
+                                </div>
 
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-gray-700">
-                                    Presentation Structure
-                                </label>
-                                <select
-                                    value={formData.deckStructureId}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            deckStructureId: e.target.value,
-                                        })
-                                    }
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                >
-                                    {deckStructures.map((deck) => (
-                                        <option key={deck.id} value={deck.id}>
-                                            {deck.metadata?.title ||
-                                                `Presentation ${deck.total_slides} slides`}
-                                        </option>
-                                    ))}
-                                </select>
-                                <p className="mt-1 text-sm text-gray-500">
-                                    Testimonials and content from this presentation
-                                </p>
-                            </div>
+                                <div>
+                                    <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                                        Template Style
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                                            </TooltipTrigger>
+                                            <TooltipContent className="max-w-xs">
+                                                <p className="text-sm">
+                                                    Choose a template that matches your
+                                                    offer positioning and target
+                                                    audience
+                                                </p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </label>
+                                    <div className="space-y-3">
+                                        {TEMPLATE_OPTIONS.map((template) => (
+                                            <div key={template.value}>
+                                                <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 bg-white p-4 hover:border-purple-300 hover:bg-purple-50">
+                                                    <input
+                                                        type="radio"
+                                                        name="templateType"
+                                                        value={template.value}
+                                                        checked={
+                                                            formData.templateType ===
+                                                            template.value
+                                                        }
+                                                        onChange={(e) =>
+                                                            setFormData({
+                                                                ...formData,
+                                                                templateType: e.target
+                                                                    .value as any,
+                                                            })
+                                                        }
+                                                        disabled={isCreating}
+                                                        className="mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500"
+                                                    />
+                                                    <div className="flex-1">
+                                                        <div className="font-medium text-gray-900">
+                                                            {template.label}
+                                                        </div>
+                                                        <p className="mt-1 text-sm text-gray-600">
+                                                            {template.description}
+                                                        </p>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
 
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-gray-700">
-                                    Template Style
-                                </label>
-                                <select
-                                    value={formData.templateType}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            templateType: e.target.value as any,
-                                        })
-                                    }
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                >
-                                    <option value="urgency-convert">
-                                        Urgency Convert (High-pressure sales)
-                                    </option>
-                                    <option value="premium-elegant">
-                                        Premium Elegant (High-ticket positioning)
-                                    </option>
-                                    <option value="value-focused">
-                                        Value Focused (Education/coaching)
-                                    </option>
-                                </select>
-                            </div>
+                                {creationProgress && (
+                                    <div className="rounded-lg bg-purple-100 p-4">
+                                        <div className="flex items-center gap-3">
+                                            <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                                            <span className="text-sm font-medium text-purple-900">
+                                                {creationProgress}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
 
-                            <div className="flex justify-end gap-3">
-                                <button
-                                    onClick={() => setShowCreateForm(false)}
-                                    className="rounded-lg border border-gray-300 px-6 py-2 font-medium text-gray-700 hover:bg-gray-50"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleCreate}
-                                    disabled={
-                                        !formData.headline.trim() ||
-                                        !formData.offerId ||
-                                        isCreating
-                                    }
-                                    className={`rounded-lg px-6 py-2 font-semibold ${
-                                        formData.headline.trim() &&
-                                        formData.offerId &&
-                                        !isCreating
-                                            ? "bg-purple-600 text-white hover:bg-purple-700"
-                                            : "cursor-not-allowed bg-gray-300 text-gray-500"
-                                    }`}
-                                >
-                                    {isCreating ? "Creating..." : "Create Page"}
-                                </button>
+                                <div className="flex justify-end gap-3 pt-2">
+                                    <button
+                                        onClick={() => setShowCreateForm(false)}
+                                        disabled={isCreating}
+                                        className="rounded-lg border border-gray-300 bg-white px-6 py-2 font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleCreate}
+                                        disabled={
+                                            !formData.offerId ||
+                                            !formData.deckStructureId ||
+                                            isCreating
+                                        }
+                                        className={`flex items-center gap-2 rounded-lg px-6 py-2 font-semibold ${
+                                            formData.offerId &&
+                                            formData.deckStructureId &&
+                                            !isCreating
+                                                ? "bg-purple-600 text-white hover:bg-purple-700"
+                                                : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                        }`}
+                                    >
+                                        {isCreating && (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        )}
+                                        {isCreating
+                                            ? creationProgress || "Creating..."
+                                            : "Create Enrollment Page"}
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        </TooltipProvider>
                     </div>
                 )}
 

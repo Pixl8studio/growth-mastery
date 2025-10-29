@@ -239,9 +239,29 @@ export class SendGridEmailProvider implements EmailProvider {
 /**
  * Get configured email provider.
  *
- * Returns appropriate provider based on environment configuration.
+ * Returns appropriate provider based on agent configuration and environment.
+ * Priority: Gmail (if connected) > SendGrid (if API key set) > Console (dev mode)
  */
-export function getEmailProvider(): EmailProvider {
+export async function getEmailProvider(agentConfigId?: string): Promise<EmailProvider> {
+    // If agent config provided, check for Gmail connection
+    if (agentConfigId) {
+        const { createClient } = await import("@/lib/supabase/server");
+        const supabase = await createClient();
+
+        const { data: config } = await supabase
+            .from("followup_agent_configs")
+            .select("email_provider_type, gmail_user_email")
+            .eq("id", agentConfigId)
+            .single();
+
+        if (config?.email_provider_type === "gmail" && config.gmail_user_email) {
+            logger.info({ agentConfigId }, "📧 Using Gmail email provider");
+            const { GmailEmailProvider } = await import("./gmail-provider");
+            return new GmailEmailProvider(agentConfigId);
+        }
+    }
+
+    // Fall back to SendGrid or Console
     const sendgridKey = process.env.SENDGRID_API_KEY;
 
     if (sendgridKey) {

@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
             "📧 Email webhook received"
         );
 
-        const emailProvider = getEmailProvider();
+        const emailProvider = await getEmailProvider();
 
         // Verify webhook signature
         if (!emailProvider.verifyWebhook(body, signature)) {

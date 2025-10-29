@@ -137,7 +137,16 @@ async function sendEmailDelivery(
     enhancedBody: string
 ): Promise<{ success: boolean; error?: string }> {
     const supabase = await createClient();
-    const emailProvider = getEmailProvider();
+
+    // Get agentConfigId from delivery
+    const { data: deliveryData } = await supabase
+        .from("followup_deliveries")
+        .select("followup_queues(agent_config_id)")
+        .eq("id", deliveryId)
+        .single();
+
+    const agentConfigId = (deliveryData?.followup_queues as any)?.agent_config_id;
+    const emailProvider = await getEmailProvider(agentConfigId);
 
     logger.info(
         {

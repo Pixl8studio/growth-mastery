@@ -138,7 +138,7 @@ This is a test message. Unsubscribe functionality will work in production messag
                 throw new ValidationError("Recipient email is required");
             }
 
-            const emailProvider = getEmailProvider();
+            const emailProvider = await getEmailProvider(body.agent_config_id);
             const fromEmail =
                 config.sender_email ||
                 process.env.FOLLOWUP_FROM_EMAIL ||

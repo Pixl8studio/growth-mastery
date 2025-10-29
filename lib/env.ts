@@ -62,6 +62,13 @@ const envSchema = z.object({
     STRIPE_PLATFORM_FEE_FIXED: z.coerce.number().default(50),
 
     // ===========================================
+    // Gmail OAuth Configuration
+    // ===========================================
+    GOOGLE_CLIENT_ID: z.string().optional(),
+    GOOGLE_CLIENT_SECRET: z.string().optional(),
+    GMAIL_REDIRECT_URI: z.string().optional(),
+
+    // ===========================================
     // Optional: Observability & Monitoring
     // ===========================================
     SENTRY_DSN: z.string().optional(),

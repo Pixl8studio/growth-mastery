@@ -13,7 +13,7 @@ const FACEBOOK_TOKEN_URL = "https://graph.facebook.com/v18.0/oauth/access_token"
 
 export function getFacebookAuthUrl(projectId: string, redirectUri: string): string {
     const params = new URLSearchParams({
-        client_id: env.FACEBOOK_APP_ID,
+        client_id: env.FACEBOOK_APP_ID!,
         redirect_uri: redirectUri,
         state: projectId,
         scope: "pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish",
@@ -28,8 +28,8 @@ export async function exchangeCodeForToken(
     redirectUri: string
 ): Promise<OAuthTokenResponse> {
     const params = new URLSearchParams({
-        client_id: env.FACEBOOK_APP_ID,
-        client_secret: env.FACEBOOK_APP_SECRET,
+        client_id: env.FACEBOOK_APP_ID!,
+        client_secret: env.FACEBOOK_APP_SECRET!,
         redirect_uri: redirectUri,
         code,
     });
@@ -78,8 +78,8 @@ export async function getLongLivedToken(
 ): Promise<OAuthTokenResponse> {
     const params = new URLSearchParams({
         grant_type: "fb_exchange_token",
-        client_id: env.FACEBOOK_APP_ID,
-        client_secret: env.FACEBOOK_APP_SECRET,
+        client_id: env.FACEBOOK_APP_ID!,
+        client_secret: env.FACEBOOK_APP_SECRET!,
         fb_exchange_token: shortLivedToken,
     });
 

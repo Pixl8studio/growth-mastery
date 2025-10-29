@@ -69,7 +69,7 @@ export function ContextAwareHelpWidget() {
                 const pageName = context.pageName || "this page";
                 const hasProject = businessContext.currentProject?.name;
 
-                if (hasProject) {
+                if (hasProject && businessContext.currentProject) {
                     welcomeMessage += `\n\nI can see you're working on **${businessContext.currentProject.name}** on ${pageName}. `;
                 } else {
                     welcomeMessage += `\n\nI can see you're on ${pageName}. `;
@@ -162,8 +162,8 @@ export function ContextAwareHelpWidget() {
                 for (const intent of actionIntents) {
                     if (intent.actionId === "fill_field" && intent.parameters) {
                         await fillFormField(
-                            intent.parameters.formId,
-                            intent.parameters.fieldId,
+                            String(intent.parameters.formId),
+                            String(intent.parameters.fieldId),
                             intent.parameters.value
                         );
                     } else {

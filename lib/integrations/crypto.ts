@@ -15,7 +15,7 @@ const KEY_LENGTH = 32;
 
 function getKey(salt: Buffer): Buffer {
     return crypto.pbkdf2Sync(
-        env.INTEGRATION_ENCRYPTION_KEY,
+        env.INTEGRATION_ENCRYPTION_KEY!,
         salt,
         100000,
         KEY_LENGTH,

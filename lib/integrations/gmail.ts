@@ -14,7 +14,7 @@ const GMAIL_API_URL = "https://www.googleapis.com/gmail/v1/users/me";
 
 export function getGmailAuthUrl(projectId: string, redirectUri: string): string {
     const params = new URLSearchParams({
-        client_id: env.GOOGLE_CLIENT_ID,
+        client_id: env.GOOGLE_CLIENT_ID!,
         redirect_uri: redirectUri,
         response_type: "code",
         scope: "https://www.googleapis.com/auth/gmail.send https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile",
@@ -37,8 +37,8 @@ export async function exchangeCodeForToken(
         },
         body: new URLSearchParams({
             code,
-            client_id: env.GOOGLE_CLIENT_ID,
-            client_secret: env.GOOGLE_CLIENT_SECRET,
+            client_id: env.GOOGLE_CLIENT_ID!,
+            client_secret: env.GOOGLE_CLIENT_SECRET!,
             redirect_uri: redirectUri,
             grant_type: "authorization_code",
         }),
@@ -64,8 +64,8 @@ export async function refreshAccessToken(
         },
         body: new URLSearchParams({
             refresh_token: refreshToken,
-            client_id: env.GOOGLE_CLIENT_ID,
-            client_secret: env.GOOGLE_CLIENT_SECRET,
+            client_id: env.GOOGLE_CLIENT_ID!,
+            client_secret: env.GOOGLE_CLIENT_SECRET!,
             grant_type: "refresh_token",
         }),
     });

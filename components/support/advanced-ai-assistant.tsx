@@ -115,7 +115,7 @@ export function AdvancedAIAssistant() {
                 const pageName = context.pageName || "this page";
                 const hasProject = businessContext.currentProject?.name;
 
-                if (hasProject) {
+                if (hasProject && businessContext.currentProject) {
                     welcomeMessage += `I can see you're working on **${businessContext.currentProject.name}** `;
                     if (currentStep > 0) {
                         welcomeMessage += `at **Step ${currentStep}: ${FUNNEL_STEPS[currentStep - 1]?.name}**.\n\n`;
@@ -221,8 +221,8 @@ export function AdvancedAIAssistant() {
                 for (const intent of actionIntents) {
                     if (intent.actionId === "fill_field" && intent.parameters) {
                         await fillFormField(
-                            intent.parameters.formId,
-                            intent.parameters.fieldId,
+                            String(intent.parameters.formId),
+                            String(intent.parameters.fieldId),
                             intent.parameters.value
                         );
                     } else {

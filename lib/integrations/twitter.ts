@@ -19,7 +19,7 @@ export function getTwitterAuthUrl(
 ): string {
     const params = new URLSearchParams({
         response_type: "code",
-        client_id: env.TWITTER_CLIENT_ID,
+        client_id: env.TWITTER_CLIENT_ID!,
         redirect_uri: redirectUri,
         scope: "tweet.read tweet.write users.read offline.access",
         state: projectId,

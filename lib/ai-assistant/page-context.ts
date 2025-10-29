@@ -12,7 +12,7 @@ export interface FormField {
     name: string;
     type: string;
     label: string;
-    value?: string | number | boolean;
+    value?: string | number | boolean | null;
     required?: boolean;
     options?: Array<{ label: string; value: string }>;
     placeholder?: string;
@@ -103,7 +103,12 @@ export const usePageContext = create<PageContextStore>((set, get) => ({
                 return {
                     ...form,
                     fields: form.fields.map((field) =>
-                        field.id === fieldId ? { ...field, value } : field
+                        field.id === fieldId
+                            ? {
+                                  ...field,
+                                  value: value as string | number | boolean | null,
+                              }
+                            : field
                     ),
                 };
             });

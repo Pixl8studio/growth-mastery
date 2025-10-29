@@ -118,8 +118,8 @@ export async function loadBusinessContext(
         let offers: Array<{
             id: string;
             name: string;
-            price?: number | null;
-            description?: string | null;
+            price?: number;
+            description?: string;
         }> = [];
         if (projectId) {
             const { data: offersData } = await supabase
@@ -132,8 +132,8 @@ export async function loadBusinessContext(
                 offers = offersData.map((o) => ({
                     id: o.id,
                     name: o.name,
-                    price: o.price || undefined,
-                    description: o.description || undefined,
+                    price: o.price ?? undefined,
+                    description: o.description ?? undefined,
                 }));
             }
         }

@@ -74,7 +74,7 @@ export function HorizontalProgress({
                 <div className="absolute left-0 right-0 top-6 h-0.5 bg-gray-200" />
 
                 {/* Steps Grid */}
-                <div className="relative grid grid-cols-12 gap-2">
+                <div className="relative flex justify-between gap-2">
                     {STEPS.map((step, index) => {
                         const isCompleted = completedSteps.includes(step.number);
                         const isActive = step.number === currentStep;

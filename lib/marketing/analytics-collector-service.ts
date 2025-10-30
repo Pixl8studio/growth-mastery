@@ -26,11 +26,13 @@ export async function recordOptIn(
         const supabase = await createClient();
 
         // Get or create analytics record
-        let { data: analytics, error: fetchError } = await supabase
+        const { data: fetchedAnalytics, error: fetchError } = await supabase
             .from("marketing_analytics")
             .select("*")
             .eq("post_variant_id", postVariantId)
             .single();
+
+        let analytics = fetchedAnalytics;
 
         if (fetchError || !analytics) {
             // Create new analytics record

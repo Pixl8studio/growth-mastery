@@ -74,6 +74,11 @@ export async function POST(request: NextRequest) {
             profile = newProfile;
         }
 
+        // TypeScript null check - profile is guaranteed to exist here
+        if (!profile) {
+            throw new Error("Profile not found or created");
+        }
+
         // Create a brief for imported content
         const { data: brief, error: briefError } = await supabase
             .from("marketing_content_briefs")

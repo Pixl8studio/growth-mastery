@@ -155,10 +155,10 @@ export function StoryAngleSelector({
                         </div>
 
                         {/* Emotional Tone (if available) */}
-                        {angle.emotional_tone && (
+                        {(angle as any).emotional_tone && (
                             <div className="mt-3 pt-3 border-t">
                                 <div className="flex flex-wrap gap-1">
-                                    {angle.emotional_tone.split(",").map((tone, i) => (
+                                    {(angle as any).emotional_tone.split(",").map((tone: string, i: number) => (
                                         <span
                                             key={i}
                                             className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded"

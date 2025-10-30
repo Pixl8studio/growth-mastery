@@ -215,7 +215,7 @@ export function MediaLibraryModal({
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <label>
+                        <label className="cursor-pointer">
                             <input
                                 type="file"
                                 multiple
@@ -223,10 +223,10 @@ export function MediaLibraryModal({
                                 onChange={handleUpload}
                                 className="hidden"
                             />
-                            <Button as="span" variant="outline" size="sm">
+                            <span className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-9 px-3">
                                 <Upload className="h-4 w-4 mr-2" />
                                 Upload
-                            </Button>
+                            </span>
                         </label>
                         <button
                             onClick={onClose}
@@ -256,7 +256,7 @@ export function MediaLibraryModal({
                                 <p className="text-gray-600 mb-4">
                                     Upload images and videos to use in your posts
                                 </p>
-                                <label>
+                                <label className="cursor-pointer">
                                     <input
                                         type="file"
                                         multiple
@@ -264,10 +264,10 @@ export function MediaLibraryModal({
                                         onChange={handleUpload}
                                         className="hidden"
                                     />
-                                    <Button as="span">
+                                    <span className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 bg-primary text-primary-foreground hover:bg-primary/90 h-10 px-4 py-2">
                                         <Upload className="h-4 w-4 mr-2" />
                                         Upload Media
-                                    </Button>
+                                    </span>
                                 </label>
                             </div>
                         </div>

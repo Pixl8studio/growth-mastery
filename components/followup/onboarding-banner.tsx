@@ -46,8 +46,7 @@ export function OnboardingBanner({
         {
             id: "verify",
             title: "Configure Email Sender",
-            description:
-                "Connect Gmail or configure SendGrid for email sending",
+            description: "Connect Gmail or configure SendGrid for email sending",
             completed: senderVerified,
         },
         {

@@ -158,14 +158,16 @@ export function StoryAngleSelector({
                         {(angle as any).emotional_tone && (
                             <div className="mt-3 pt-3 border-t">
                                 <div className="flex flex-wrap gap-1">
-                                    {(angle as any).emotional_tone.split(",").map((tone: string, i: number) => (
-                                        <span
-                                            key={i}
-                                            className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded"
-                                        >
-                                            {tone.trim()}
-                                        </span>
-                                    ))}
+                                    {(angle as any).emotional_tone
+                                        .split(",")
+                                        .map((tone: string, i: number) => (
+                                            <span
+                                                key={i}
+                                                className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded"
+                                            >
+                                                {tone.trim()}
+                                            </span>
+                                        ))}
                                 </div>
                             </div>
                         )}

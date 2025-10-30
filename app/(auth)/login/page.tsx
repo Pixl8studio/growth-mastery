@@ -60,15 +60,15 @@ function LoginForm() {
     return (
         <div>
             <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
-                <p className="mt-1 text-sm text-gray-600">
+                <h2 className="text-2xl font-bold text-foreground">Welcome back</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
                     Sign in to continue building your funnels
                 </p>
             </div>
 
             {error && (
-                <div className="mb-4 rounded-md bg-red-50 p-3">
-                    <p className="text-sm text-red-800">{error}</p>
+                <div className="mb-4 rounded-md bg-destructive/10 p-3 border border-destructive/20">
+                    <p className="text-sm text-destructive">{error}</p>
                 </div>
             )}
 
@@ -76,7 +76,7 @@ function LoginForm() {
                 <div>
                     <label
                         htmlFor="email"
-                        className="block text-sm font-medium text-gray-700"
+                        className="block text-sm font-medium text-foreground"
                     >
                         Email address
                     </label>
@@ -88,7 +88,7 @@ function LoginForm() {
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-soft placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                         placeholder="you@example.com"
                     />
                 </div>
@@ -97,13 +97,13 @@ function LoginForm() {
                     <div className="flex items-center justify-between">
                         <label
                             htmlFor="password"
-                            className="block text-sm font-medium text-gray-700"
+                            className="block text-sm font-medium text-foreground"
                         >
                             Password
                         </label>
                         <Link
                             href="/reset-password"
-                            className="text-sm text-blue-600 hover:text-blue-500"
+                            className="text-sm text-primary hover:text-primary/80 transition-smooth"
                         >
                             Forgot password?
                         </Link>
@@ -116,7 +116,7 @@ function LoginForm() {
                         required
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
-                        className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-soft placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                         placeholder="••••••••"
                     />
                 </div>
@@ -124,7 +124,7 @@ function LoginForm() {
                 <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    className="w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-soft hover:bg-primary/90 hover:shadow-float transition-smooth focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                     {isLoading ? "Signing in..." : "Sign in"}
                 </button>
@@ -133,11 +133,11 @@ function LoginForm() {
             <div className="mt-6">
                 <div className="relative">
                     <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-300"></div>
+                        <div className="w-full border-t border-border"></div>
                     </div>
                     <div className="relative flex justify-center text-sm">
-                        <span className="bg-white px-2 text-gray-500">
-                            New to Genie AI?
+                        <span className="bg-background px-2 text-muted-foreground">
+                            New to GrowthMastery.ai?
                         </span>
                     </div>
                 </div>
@@ -145,7 +145,7 @@ function LoginForm() {
                 <div className="mt-6">
                     <Link
                         href="/signup"
-                        className="flex w-full justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                        className="flex w-full justify-center rounded-md border-2 border-primary bg-background px-4 py-2 text-sm font-semibold text-primary shadow-soft hover:bg-primary hover:text-primary-foreground transition-smooth focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                     >
                         Create an account
                     </Link>

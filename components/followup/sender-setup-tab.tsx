@@ -95,7 +95,6 @@ export function SenderSetupTab({
         }
     };
 
-
     const handleConnectGmail = async () => {
         setConnectingGmail(true);
 
@@ -196,7 +195,6 @@ export function SenderSetupTab({
             setDisconnectingGmail(false);
         }
     };
-
 
     return (
         <div className="space-y-6">

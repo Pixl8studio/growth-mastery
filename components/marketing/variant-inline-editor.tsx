@@ -480,7 +480,12 @@ export function VariantInlineEditor({
                                     <select
                                         value={approvalStatus}
                                         onChange={(e) =>
-                                            setApprovalStatus(e.target.value as "pending" | "approved" | "rejected")
+                                            setApprovalStatus(
+                                                e.target.value as
+                                                    | "pending"
+                                                    | "approved"
+                                                    | "rejected"
+                                            )
                                         }
                                         className="w-full rounded-md border border-gray-300 px-3 py-2"
                                     >

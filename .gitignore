@@ -57,4 +57,6 @@ prisma/dev.db-journal
 
 # AI coding config (using parent repo's config)
 ai-coding-config/
-docs/launch-genius-engine-main/
+
+# Reference design files (local files only, never commit)
+docs/reference-design/

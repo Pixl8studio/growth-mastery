@@ -277,7 +277,9 @@ export default function Step12Page({
                                     <div className="text-2xl font-bold text-blue-600">
                                         {stats.postsThisMonth}
                                     </div>
-                                    <div className="text-gray-600">Posts This Month</div>
+                                    <div className="text-gray-600">
+                                        Posts This Month
+                                    </div>
                                 </div>
                                 <div className="text-center p-3 bg-white rounded-lg">
                                     <div className="text-2xl font-bold text-green-600">

@@ -204,12 +204,12 @@ export function MediaLibraryModal({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75">
-            <div className="bg-white rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
+            <div className="bg-card rounded-lg w-full max-w-4xl max-h-[90vh] flex flex-col">
                 {/* Header */}
                 <div className="p-6 border-b flex items-center justify-between">
                     <div>
                         <h2 className="text-2xl font-bold">Media Library</h2>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-muted-foreground">
                             {selectedItems.length > 0 &&
                                 `${selectedItems.length} selected`}
                         </p>
@@ -230,7 +230,7 @@ export function MediaLibraryModal({
                         </label>
                         <button
                             onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600"
+                            className="text-muted-foreground hover:text-muted-foreground"
                         >
                             <X className="h-6 w-6" />
                         </button>
@@ -243,17 +243,19 @@ export function MediaLibraryModal({
                         <div className="flex items-center justify-center h-64">
                             <div className="text-center">
                                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4" />
-                                <p className="text-gray-600">Loading media...</p>
+                                <p className="text-muted-foreground">
+                                    Loading media...
+                                </p>
                             </div>
                         </div>
                     ) : mediaItems.length === 0 ? (
                         <div className="flex items-center justify-center h-64">
                             <div className="text-center">
                                 <ImageIcon className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                                <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                                <h3 className="text-lg font-semibold text-foreground mb-2">
                                     No Media Yet
                                 </h3>
-                                <p className="text-gray-600 mb-4">
+                                <p className="text-muted-foreground mb-4">
                                     Upload images and videos to use in your posts
                                 </p>
                                 <label className="cursor-pointer">
@@ -278,8 +280,8 @@ export function MediaLibraryModal({
                                     key={item.id}
                                     className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${
                                         selectedItems.includes(item.url)
-                                            ? "border-blue-500"
-                                            : "border-gray-200 hover:border-gray-300"
+                                            ? "border-primary"
+                                            : "border-border hover:border-border"
                                     }`}
                                 >
                                     {/* Media Display */}
@@ -301,7 +303,7 @@ export function MediaLibraryModal({
                                     {/* Selection Indicator */}
                                     {selectedItems.includes(item.url) && (
                                         <div className="absolute top-2 right-2">
-                                            <CheckCircle2 className="h-6 w-6 text-blue-500 bg-white rounded-full" />
+                                            <CheckCircle2 className="h-6 w-6 text-primary-foreground0 bg-card rounded-full" />
                                         </div>
                                     )}
 
@@ -315,7 +317,7 @@ export function MediaLibraryModal({
                                                         item.alt_text || ""
                                                     );
                                                 }}
-                                                className="text-white hover:text-blue-300"
+                                                className="text-white hover:text-primary/30"
                                             >
                                                 <Edit2 className="h-4 w-4" />
                                             </button>

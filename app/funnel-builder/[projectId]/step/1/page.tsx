@@ -150,7 +150,7 @@ export default function Step1Page({
     if (!projectId || !userId) {
         return (
             <div className="flex h-screen items-center justify-center">
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-muted-foreground">Loading...</div>
             </div>
         );
     }
@@ -214,7 +214,7 @@ export default function Step1Page({
                         {/* Back Button */}
                         <button
                             onClick={() => setSelectedMethod(null)}
-                            className="text-sm text-blue-600 hover:text-blue-700"
+                            className="text-sm text-primary hover:text-primary"
                         >
                             ← Choose a different method
                         </button>
@@ -255,17 +255,17 @@ export default function Step1Page({
                         {selectedMethod === "google_drive" && (
                             <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-8 text-center">
                                 <Cloud className="mx-auto mb-4 h-16 w-16 text-yellow-600" />
-                                <h3 className="mb-2 text-xl font-semibold text-gray-900">
+                                <h3 className="mb-2 text-xl font-semibold text-foreground">
                                     Google Drive Integration Coming Soon
                                 </h3>
-                                <p className="mb-4 text-gray-600">
+                                <p className="mb-4 text-muted-foreground">
                                     We're working on bringing Google Drive integration
                                     to make it even easier to import your documents.
                                     Check back soon!
                                 </p>
                                 <button
                                     onClick={() => setSelectedMethod(null)}
-                                    className="text-sm text-blue-600 hover:text-blue-700"
+                                    className="text-sm text-primary hover:text-primary"
                                 >
                                     ← Choose a different method
                                 </button>
@@ -276,17 +276,17 @@ export default function Step1Page({
 
                 {/* Intake Sessions List */}
                 {hasCompletedIntake && (
-                    <div className="rounded-lg border border-gray-200 bg-white p-6">
-                        <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                    <div className="rounded-lg border border-border bg-card p-6">
+                        <h3 className="mb-4 text-lg font-semibold text-foreground">
                             Your Intake Sessions
                         </h3>
 
                         {isLoadingSessions ? (
-                            <div className="py-8 text-center text-gray-500">
+                            <div className="py-8 text-center text-muted-foreground">
                                 Loading sessions...
                             </div>
                         ) : intakeSessions.length === 0 ? (
-                            <div className="py-8 text-center text-gray-500">
+                            <div className="py-8 text-center text-muted-foreground">
                                 <MessageSquare className="mx-auto mb-3 h-12 w-12 opacity-50" />
                                 <p>
                                     No intake sessions yet. Choose a method above to get
@@ -298,7 +298,7 @@ export default function Step1Page({
                                 {intakeSessions.map((session) => (
                                     <div
                                         key={session.id}
-                                        className="rounded-lg border border-gray-200 bg-gray-50 p-4 transition-all hover:border-gray-300 hover:bg-gray-100"
+                                        className="rounded-lg border border-border bg-muted/50 p-4 transition-all hover:border-border hover:bg-muted"
                                     >
                                         <div className="mb-3 flex items-center justify-between">
                                             <div className="flex items-center space-x-3">
@@ -309,20 +309,20 @@ export default function Step1Page({
                                                             ? "bg-green-500"
                                                             : session.call_status ===
                                                                 "in_progress"
-                                                              ? "bg-blue-500"
+                                                              ? "bg-primary/50"
                                                               : "bg-red-500"
                                                     }`}
                                                 />
                                                 {getMethodIcon(
                                                     session.intake_method || "voice"
                                                 )}
-                                                <span className="font-medium text-gray-900">
+                                                <span className="font-medium text-foreground">
                                                     {session.session_name ||
                                                         formatDate(session.created_at)}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center space-x-4 text-sm text-gray-600">
-                                                <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-700">
+                                            <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                                                <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
                                                     {getMethodLabel(
                                                         session.intake_method || "voice"
                                                     )}
@@ -343,14 +343,14 @@ export default function Step1Page({
 
                                         {/* Additional Info Based on Method */}
                                         {session.scraped_url && (
-                                            <p className="mb-2 text-xs text-gray-500">
+                                            <p className="mb-2 text-xs text-muted-foreground">
                                                 Source: {session.scraped_url}
                                             </p>
                                         )}
 
                                         {session.file_urls &&
                                             session.file_urls.length > 0 && (
-                                                <p className="mb-2 text-xs text-gray-500">
+                                                <p className="mb-2 text-xs text-muted-foreground">
                                                     {session.file_urls.length}{" "}
                                                     {session.file_urls.length === 1
                                                         ? "file"
@@ -362,10 +362,10 @@ export default function Step1Page({
                                         {session.transcript_text && (
                                             <div className="mt-3">
                                                 <details className="group">
-                                                    <summary className="cursor-pointer text-sm font-medium text-blue-600 hover:text-blue-700">
+                                                    <summary className="cursor-pointer text-sm font-medium text-primary hover:text-primary">
                                                         View Content
                                                     </summary>
-                                                    <div className="mt-3 max-h-64 overflow-y-auto rounded bg-white p-3 text-sm text-gray-700">
+                                                    <div className="mt-3 max-h-64 overflow-y-auto rounded bg-card p-3 text-sm text-foreground">
                                                         {session.transcript_text.substring(
                                                             0,
                                                             500
@@ -384,14 +384,14 @@ export default function Step1Page({
                 )}
 
                 {/* What's Next */}
-                <div className="rounded-lg border border-gray-200 bg-gray-50 p-6">
-                    <h3 className="mb-3 flex items-center text-sm font-semibold text-gray-900">
+                <div className="rounded-lg border border-border bg-muted/50 p-6">
+                    <h3 className="mb-3 flex items-center text-sm font-semibold text-foreground">
                         <span className="mr-2">👉</span> After Intake
                     </h3>
-                    <p className="mb-3 text-sm text-gray-600">
+                    <p className="mb-3 text-sm text-muted-foreground">
                         Once you complete your intake, the AI will:
                     </p>
-                    <ul className="space-y-1 text-sm text-gray-600">
+                    <ul className="space-y-1 text-sm text-muted-foreground">
                         <li>• Extract key business insights from your conversation</li>
                         <li>• Identify your target audience and pain points</li>
                         <li>• Understand your offer and value proposition</li>

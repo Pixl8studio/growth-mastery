@@ -884,7 +884,9 @@ export default function Step11Page({
                 <div className="flex items-center justify-center py-12">
                     <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4" />
-                        <p className="text-gray-600">Loading follow-up engine...</p>
+                        <p className="text-muted-foreground">
+                            Loading follow-up engine...
+                        </p>
                     </div>
                 </div>
             </StepLayout>
@@ -902,7 +904,7 @@ export default function Step11Page({
         >
             <div className="space-y-6">
                 {/* Enable/Disable Section */}
-                <Card className="p-6 bg-gradient-to-r from-purple-50 to-blue-50">
+                <Card className="p-6 bg-gradient-to-r from-purple-50 to-primary/5">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <Sparkles className="h-6 w-6 text-purple-500" />
@@ -910,7 +912,7 @@ export default function Step11Page({
                                 <h3 className="text-lg font-semibold">
                                     Enable AI Follow-Up
                                 </h3>
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm text-muted-foreground">
                                     Automatically nurture prospects with personalized,
                                     AI-powered sequences
                                 </p>
@@ -925,29 +927,35 @@ export default function Step11Page({
                     {followupEnabled && (
                         <>
                             <div className="mt-6 grid grid-cols-4 gap-4 text-sm">
-                                <div className="text-center p-3 bg-white rounded-lg">
+                                <div className="text-center p-3 bg-card rounded-lg">
                                     <div className="text-2xl font-bold text-purple-600">
                                         {sequences.length}
                                     </div>
-                                    <div className="text-gray-600">Sequences</div>
+                                    <div className="text-muted-foreground">
+                                        Sequences
+                                    </div>
                                 </div>
-                                <div className="text-center p-3 bg-white rounded-lg">
-                                    <div className="text-2xl font-bold text-blue-600">
+                                <div className="text-center p-3 bg-card rounded-lg">
+                                    <div className="text-2xl font-bold text-primary">
                                         {messages.length}
                                     </div>
-                                    <div className="text-gray-600">Templates</div>
+                                    <div className="text-muted-foreground">
+                                        Templates
+                                    </div>
                                 </div>
-                                <div className="text-center p-3 bg-white rounded-lg">
+                                <div className="text-center p-3 bg-card rounded-lg">
                                     <div className="text-2xl font-bold text-orange-600">
                                         {queuedCount}
                                     </div>
-                                    <div className="text-gray-600">Queued</div>
+                                    <div className="text-muted-foreground">Queued</div>
                                 </div>
-                                <div className="text-center p-3 bg-white rounded-lg">
-                                    <div className="text-sm font-bold text-indigo-600">
+                                <div className="text-center p-3 bg-card rounded-lg">
+                                    <div className="text-sm font-bold text-primary">
                                         {nextScheduledTime || "None"}
                                     </div>
-                                    <div className="text-gray-600">Next Send</div>
+                                    <div className="text-muted-foreground">
+                                        Next Send
+                                    </div>
                                 </div>
                             </div>
 
@@ -1057,8 +1065,8 @@ export default function Step11Page({
                                 />
 
                                 {sequences.length > 0 && (
-                                    <Card className="mt-4 p-4 bg-blue-50 border-blue-200">
-                                        <p className="text-sm text-blue-900">
+                                    <Card className="mt-4 p-4 bg-primary/5 border-primary/20">
+                                        <p className="text-sm text-primary">
                                             💡 <strong>Tip:</strong> Click "View
                                             Messages" on any sequence or go to the
                                             Messages tab to view and edit all message
@@ -1110,7 +1118,7 @@ export default function Step11Page({
                                                     <div className="font-medium">
                                                         Email Follow-Up
                                                     </div>
-                                                    <div className="text-sm text-gray-600">
+                                                    <div className="text-sm text-muted-foreground">
                                                         Automated email sequences
                                                     </div>
                                                 </div>
@@ -1121,7 +1129,7 @@ export default function Step11Page({
                                                     <div className="font-medium">
                                                         SMS Follow-Up
                                                     </div>
-                                                    <div className="text-sm text-gray-600">
+                                                    <div className="text-sm text-muted-foreground">
                                                         High-intent SMS messages
                                                     </div>
                                                 </div>
@@ -1133,7 +1141,7 @@ export default function Step11Page({
                                                 </h4>
                                                 <div className="space-y-2 text-sm">
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-600">
+                                                        <span className="text-muted-foreground">
                                                             CAN-SPAM Compliance:
                                                         </span>
                                                         <span className="font-medium text-green-600">
@@ -1141,7 +1149,7 @@ export default function Step11Page({
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-600">
+                                                        <span className="text-muted-foreground">
                                                             Daily Email Limit:
                                                         </span>
                                                         <span className="font-medium">
@@ -1149,7 +1157,7 @@ export default function Step11Page({
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-600">
+                                                        <span className="text-muted-foreground">
                                                             Daily SMS Limit:
                                                         </span>
                                                         <span className="font-medium">
@@ -1157,7 +1165,7 @@ export default function Step11Page({
                                                         </span>
                                                     </div>
                                                     <div className="flex justify-between">
-                                                        <span className="text-gray-600">
+                                                        <span className="text-muted-foreground">
                                                             Opt-out Link:
                                                         </span>
                                                         <span className="font-medium text-green-600">
@@ -1169,7 +1177,7 @@ export default function Step11Page({
                                         </div>
                                     </Card>
 
-                                    <Card className="p-6 bg-gradient-to-r from-green-50 to-blue-50">
+                                    <Card className="p-6 bg-gradient-to-r from-green-50 to-primary/5">
                                         <h3 className="text-lg font-semibold mb-4">
                                             System Features
                                         </h3>
@@ -1181,7 +1189,7 @@ export default function Step11Page({
                                                 </span>
                                             </div>
                                             <div className="flex items-center gap-2">
-                                                <Sparkles className="h-4 w-4 text-blue-600" />
+                                                <Sparkles className="h-4 w-4 text-primary" />
                                                 <span>15+ Personalization Tokens</span>
                                             </div>
                                             <div className="flex items-center gap-2">

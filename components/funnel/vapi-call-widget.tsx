@@ -499,8 +499,10 @@ export function VapiCallWidget({
         return (
             <div className="flex items-center justify-center py-12">
                 <div className="text-center">
-                    <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
-                    <p className="mt-4 text-gray-600">Loading voice assistant...</p>
+                    <div className="mx-auto h-12 w-12 animate-spin rounded-full border-b-2 border-primary"></div>
+                    <p className="mt-4 text-muted-foreground">
+                        Loading voice assistant...
+                    </p>
                 </div>
             </div>
         );
@@ -520,8 +522,8 @@ export function VapiCallWidget({
     }
 
     return (
-        <div className="mt-8 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-            <h3 className="mb-4 text-xl font-semibold text-gray-900">
+        <div className="mt-8 rounded-xl border border-border bg-card p-6 shadow-soft">
+            <h3 className="mb-4 text-xl font-semibold text-foreground">
                 Voice Conversation
             </h3>
 
@@ -533,7 +535,7 @@ export function VapiCallWidget({
             )}
 
             {/* Call Controls */}
-            <div className="mb-4 flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-4">
+            <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-muted/50 p-4">
                 <div className="flex items-center gap-4">
                     <span
                         className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${
@@ -541,7 +543,7 @@ export function VapiCallWidget({
                                 ? "bg-green-100 text-green-800"
                                 : isConnecting
                                   ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-gray-100 text-gray-800"
+                                  : "bg-muted text-foreground"
                         }`}
                     >
                         {isCallActive
@@ -552,7 +554,7 @@ export function VapiCallWidget({
                     </span>
                     {isCallActive && (
                         <>
-                            <span className="font-mono text-lg text-blue-600">
+                            <span className="font-mono text-lg text-primary">
                                 {formatDuration(callDuration)}
                             </span>
                             {(currentCallId || callStartTimestampRef.current) && (
@@ -579,10 +581,10 @@ export function VapiCallWidget({
             {/* Messages Display */}
             <div
                 ref={messagesContainerRef}
-                className="h-96 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-4 scroll-smooth"
+                className="h-96 overflow-y-auto rounded-lg border border-border bg-muted/50 p-4 scroll-smooth"
             >
                 {messages.length === 0 ? (
-                    <div className="mt-20 text-center text-gray-500">
+                    <div className="mt-20 text-center text-muted-foreground">
                         <svg
                             className="mx-auto h-12 w-12 text-gray-300"
                             fill="none"
@@ -610,10 +612,10 @@ export function VapiCallWidget({
                                 <div
                                     className={`max-w-md rounded-lg px-4 py-2 ${
                                         message.role === "user"
-                                            ? "bg-blue-600 text-white"
+                                            ? "bg-primary text-white"
                                             : message.role === "system"
-                                              ? "bg-gray-200 text-sm text-gray-700"
-                                              : "bg-gray-100 text-gray-900"
+                                              ? "bg-gray-200 text-sm text-foreground"
+                                              : "bg-muted text-foreground"
                                     }`}
                                 >
                                     <p className="whitespace-pre-wrap">
@@ -622,8 +624,8 @@ export function VapiCallWidget({
                                     <p
                                         className={`mt-1 text-xs ${
                                             message.role === "user"
-                                                ? "text-blue-200"
-                                                : "text-gray-500"
+                                                ? "text-primary/20"
+                                                : "text-muted-foreground"
                                         }`}
                                     >
                                         {message.timestamp.toLocaleTimeString()}
@@ -635,17 +637,17 @@ export function VapiCallWidget({
                         {/* AI Thinking */}
                         {isAIThinking && (
                             <div className="flex justify-start">
-                                <div className="max-w-md rounded-lg bg-gray-100 px-4 py-2 text-gray-900">
+                                <div className="max-w-md rounded-lg bg-muted px-4 py-2 text-foreground">
                                     <div className="flex items-center space-x-1">
                                         <span>AI is thinking</span>
                                         <div className="flex space-x-1">
-                                            <div className="h-1 w-1 animate-bounce rounded-full bg-gray-500"></div>
+                                            <div className="h-1 w-1 animate-bounce rounded-full bg-muted/500"></div>
                                             <div
-                                                className="h-1 w-1 animate-bounce rounded-full bg-gray-500"
+                                                className="h-1 w-1 animate-bounce rounded-full bg-muted/500"
                                                 style={{ animationDelay: "0.1s" }}
                                             ></div>
                                             <div
-                                                className="h-1 w-1 animate-bounce rounded-full bg-gray-500"
+                                                className="h-1 w-1 animate-bounce rounded-full bg-muted/500"
                                                 style={{ animationDelay: "0.2s" }}
                                             ></div>
                                         </div>

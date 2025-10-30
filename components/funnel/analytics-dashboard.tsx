@@ -76,8 +76,8 @@ export function FunnelAnalyticsDashboard({ projectId }: FunnelAnalyticsDashboard
         return (
             <div className="flex items-center justify-center py-12">
                 <div className="text-center">
-                    <BarChart3 className="mx-auto h-12 w-12 text-gray-400 animate-pulse" />
-                    <p className="mt-4 text-gray-500">Loading analytics...</p>
+                    <BarChart3 className="mx-auto h-12 w-12 text-muted-foreground animate-pulse" />
+                    <p className="mt-4 text-muted-foreground">Loading analytics...</p>
                 </div>
             </div>
         );
@@ -87,14 +87,14 @@ export function FunnelAnalyticsDashboard({ projectId }: FunnelAnalyticsDashboard
         <div className="space-y-6">
             {/* Time Range Selector */}
             <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-sm text-gray-600">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <BarChart3 className="h-4 w-4" />
                     <span>Performance Metrics</span>
                 </div>
                 <select
                     value={timeRange}
                     onChange={(e) => setTimeRange(e.target.value)}
-                    className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="rounded-lg border border-border bg-card px-4 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                     <option value="7">Last 7 days</option>
                     <option value="30">Last 30 days</option>
@@ -106,80 +106,84 @@ export function FunnelAnalyticsDashboard({ projectId }: FunnelAnalyticsDashboard
             {/* Primary Metrics Grid */}
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                 {/* Registrations */}
-                <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-blue-50 to-white p-6 shadow-sm transition-shadow hover:shadow-md">
+                <div className="rounded-lg border border-border bg-gradient-to-br from-primary/5 to-white p-6 shadow-sm transition-shadow hover:shadow-md">
                     <div className="mb-3 flex items-center justify-between">
-                        <h3 className="text-sm font-medium text-gray-600">
+                        <h3 className="text-sm font-medium text-muted-foreground">
                             Registrations
                         </h3>
-                        <Users className="h-5 w-5 text-blue-600" />
+                        <Users className="h-5 w-5 text-primary" />
                     </div>
-                    <div className="text-3xl font-bold text-gray-900">
+                    <div className="text-3xl font-bold text-foreground">
                         {analytics.registrations.toLocaleString()}
                     </div>
-                    <p className="mt-2 text-xs text-gray-500">Total sign-ups</p>
+                    <p className="mt-2 text-xs text-muted-foreground">Total sign-ups</p>
                 </div>
 
                 {/* Video Views */}
-                <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-purple-50 to-white p-6 shadow-sm transition-shadow hover:shadow-md">
+                <div className="rounded-lg border border-border bg-gradient-to-br from-purple-50 to-white p-6 shadow-sm transition-shadow hover:shadow-md">
                     <div className="mb-3 flex items-center justify-between">
-                        <h3 className="text-sm font-medium text-gray-600">
+                        <h3 className="text-sm font-medium text-muted-foreground">
                             Video Views
                         </h3>
                         <Video className="h-5 w-5 text-purple-600" />
                     </div>
-                    <div className="text-3xl font-bold text-gray-900">
+                    <div className="text-3xl font-bold text-foreground">
                         {analytics.views.toLocaleString()}
                     </div>
-                    <p className="mt-2 text-xs text-gray-500">
+                    <p className="mt-2 text-xs text-muted-foreground">
                         {analytics.watchRate?.toFixed(1)}% watch rate
                     </p>
                 </div>
 
                 {/* Conversions */}
-                <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-green-50 to-white p-6 shadow-sm transition-shadow hover:shadow-md">
+                <div className="rounded-lg border border-border bg-gradient-to-br from-green-50 to-white p-6 shadow-sm transition-shadow hover:shadow-md">
                     <div className="mb-3 flex items-center justify-between">
-                        <h3 className="text-sm font-medium text-gray-600">
+                        <h3 className="text-sm font-medium text-muted-foreground">
                             Conversions
                         </h3>
                         <Target className="h-5 w-5 text-green-600" />
                     </div>
-                    <div className="text-3xl font-bold text-gray-900">
+                    <div className="text-3xl font-bold text-foreground">
                         {analytics.conversions.toLocaleString()}
                     </div>
-                    <p className="mt-2 text-xs text-gray-500">
+                    <p className="mt-2 text-xs text-muted-foreground">
                         {conversionRate}% conversion rate
                     </p>
                 </div>
 
                 {/* Revenue */}
-                <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm transition-shadow hover:shadow-md">
+                <div className="rounded-lg border border-border bg-gradient-to-br from-emerald-50 to-white p-6 shadow-sm transition-shadow hover:shadow-md">
                     <div className="mb-3 flex items-center justify-between">
-                        <h3 className="text-sm font-medium text-gray-600">Revenue</h3>
+                        <h3 className="text-sm font-medium text-muted-foreground">
+                            Revenue
+                        </h3>
                         <DollarSign className="h-5 w-5 text-emerald-600" />
                     </div>
-                    <div className="text-3xl font-bold text-gray-900">
+                    <div className="text-3xl font-bold text-foreground">
                         ${analytics.revenue.toLocaleString()}
                     </div>
-                    <p className="mt-2 text-xs text-gray-500">Total generated</p>
+                    <p className="mt-2 text-xs text-muted-foreground">
+                        Total generated
+                    </p>
                 </div>
             </div>
 
             {/* Secondary Metrics */}
             <div className="grid gap-6 sm:grid-cols-3">
                 {/* Watch Rate */}
-                <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
                     <div className="mb-2 flex items-center gap-2">
                         <div className="rounded-full bg-purple-100 p-2">
                             <TrendingUp className="h-4 w-4 text-purple-600" />
                         </div>
-                        <h3 className="text-sm font-medium text-gray-600">
+                        <h3 className="text-sm font-medium text-muted-foreground">
                             Watch Rate
                         </h3>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900">
+                    <div className="text-2xl font-bold text-foreground">
                         {analytics.watchRate?.toFixed(1)}%
                     </div>
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                         Registrants who watched video
                     </p>
                     <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-200">
@@ -191,19 +195,19 @@ export function FunnelAnalyticsDashboard({ projectId }: FunnelAnalyticsDashboard
                 </div>
 
                 {/* Enrollment Rate */}
-                <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
                     <div className="mb-2 flex items-center gap-2">
                         <div className="rounded-full bg-green-100 p-2">
                             <Target className="h-4 w-4 text-green-600" />
                         </div>
-                        <h3 className="text-sm font-medium text-gray-600">
+                        <h3 className="text-sm font-medium text-muted-foreground">
                             Enrollment Rate
                         </h3>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900">
+                    <div className="text-2xl font-bold text-foreground">
                         {analytics.enrollmentRate?.toFixed(1)}%
                     </div>
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                         Viewers who viewed enrollment
                     </p>
                     <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-gray-200">
@@ -215,37 +219,37 @@ export function FunnelAnalyticsDashboard({ projectId }: FunnelAnalyticsDashboard
                 </div>
 
                 {/* Revenue Per Registrant */}
-                <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
                     <div className="mb-2 flex items-center gap-2">
                         <div className="rounded-full bg-emerald-100 p-2">
                             <DollarSign className="h-4 w-4 text-emerald-600" />
                         </div>
-                        <h3 className="text-sm font-medium text-gray-600">
+                        <h3 className="text-sm font-medium text-muted-foreground">
                             Rev per Registrant
                         </h3>
                     </div>
-                    <div className="text-2xl font-bold text-gray-900">
+                    <div className="text-2xl font-bold text-foreground">
                         ${analytics.revenuePerRegistrant?.toFixed(2)}
                     </div>
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                         Average revenue per sign-up
                     </p>
                 </div>
             </div>
 
             {/* Funnel Visualization */}
-            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                <h3 className="mb-4 text-sm font-semibold text-gray-900">
+            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+                <h3 className="mb-4 text-sm font-semibold text-foreground">
                     Conversion Funnel
                 </h3>
                 <div className="space-y-3">
                     {/* Registrations */}
                     <div className="flex items-center gap-4">
-                        <div className="w-32 text-sm font-medium text-gray-700">
+                        <div className="w-32 text-sm font-medium text-foreground">
                             Registrations
                         </div>
                         <div className="flex-1">
-                            <div className="flex h-10 items-center rounded-lg bg-blue-500 px-4 text-white shadow-sm">
+                            <div className="flex h-10 items-center rounded-lg bg-primary/50 px-4 text-white shadow-soft">
                                 <span className="text-sm font-medium">
                                     {analytics.registrations.toLocaleString()} (100%)
                                 </span>
@@ -255,7 +259,7 @@ export function FunnelAnalyticsDashboard({ projectId }: FunnelAnalyticsDashboard
 
                     {/* Video Views */}
                     <div className="flex items-center gap-4">
-                        <div className="w-32 text-sm font-medium text-gray-700">
+                        <div className="w-32 text-sm font-medium text-foreground">
                             Watched Video
                         </div>
                         <div className="flex-1">
@@ -275,7 +279,7 @@ export function FunnelAnalyticsDashboard({ projectId }: FunnelAnalyticsDashboard
 
                     {/* Conversions */}
                     <div className="flex items-center gap-4">
-                        <div className="w-32 text-sm font-medium text-gray-700">
+                        <div className="w-32 text-sm font-medium text-foreground">
                             Converted
                         </div>
                         <div className="flex-1">
@@ -297,12 +301,12 @@ export function FunnelAnalyticsDashboard({ projectId }: FunnelAnalyticsDashboard
 
             {/* Empty State */}
             {analytics.registrations === 0 && (
-                <div className="rounded-lg border border-blue-200 bg-blue-50 p-8 text-center">
-                    <BarChart3 className="mx-auto h-12 w-12 text-blue-400" />
-                    <h3 className="mt-4 text-lg font-semibold text-blue-900">
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-8 text-center">
+                    <BarChart3 className="mx-auto h-12 w-12 text-primary/40" />
+                    <h3 className="mt-4 text-lg font-semibold text-primary">
                         No Data Yet
                     </h3>
-                    <p className="mt-2 text-sm text-blue-700">
+                    <p className="mt-2 text-sm text-primary">
                         Complete your funnel setup and start driving traffic to see
                         analytics here. Once visitors start registering, you'll see
                         comprehensive metrics and conversion data.

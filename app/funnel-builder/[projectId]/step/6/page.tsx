@@ -365,7 +365,7 @@ export default function Step6Page({
     if (!projectId) {
         return (
             <div className="flex h-screen items-center justify-center">
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-muted-foreground">Loading...</div>
             </div>
         );
     }
@@ -384,7 +384,7 @@ export default function Step6Page({
             <div className="space-y-8">
                 {/* Toast Notification */}
                 {showToast && (
-                    <div className="fixed right-4 top-4 z-50 rounded-lg border-2 border-green-300 bg-green-50 p-4 shadow-lg">
+                    <div className="fixed right-4 top-4 z-50 rounded-lg border-2 border-green-300 bg-green-50 p-4 shadow-float">
                         <p className="font-medium text-green-900">{toastMessage}</p>
                     </div>
                 )}
@@ -417,14 +417,14 @@ export default function Step6Page({
                     <div className="rounded-lg border border-brand-100 bg-gradient-to-br from-brand-50 to-purple-50 p-8">
                         {/* Deck Structure Selector */}
                         <div className="mx-auto mb-6 max-w-md">
-                            <label className="mb-2 block text-sm font-medium text-gray-700">
+                            <label className="mb-2 block text-sm font-medium text-foreground">
                                 Select Deck Structure
                             </label>
                             <select
                                 value={selectedDeckId}
                                 onChange={(e) => setSelectedDeckId(e.target.value)}
                                 disabled={deckStructures.length === 0}
-                                className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-brand-500 focus:ring-2 focus:ring-brand-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+                                className="w-full rounded-lg border border-border px-4 py-3 focus:border-brand-500 focus:ring-2 focus:ring-brand-500 disabled:cursor-not-allowed disabled:bg-muted"
                             >
                                 {deckStructures.length === 0 ? (
                                     <option value="">
@@ -460,7 +460,7 @@ export default function Step6Page({
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
                                     selectedDeckId && deckStructures.length > 0
                                         ? "bg-brand-500 text-white hover:bg-brand-600"
-                                        : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                        : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                 }`}
                             >
                                 <Sparkles className="h-6 w-6" />
@@ -471,7 +471,7 @@ export default function Step6Page({
                                       : "Generate Talk Track"}
                             </button>
 
-                            <div className="mt-4 space-y-1 text-sm text-gray-500">
+                            <div className="mt-4 space-y-1 text-sm text-muted-foreground">
                                 <p>⚡ Generation time: ~30-60 seconds</p>
                                 <p>🎤 2-4 sentences per slide</p>
                                 <p>📊 Includes timing and delivery notes</p>
@@ -479,31 +479,31 @@ export default function Step6Page({
                         </div>
                     </div>
                 ) : (
-                    <div className="rounded-lg border border-indigo-200 bg-indigo-50 p-6">
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-6">
                         <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-indigo-100">
-                                <Sparkles className="h-6 w-6 text-indigo-600" />
+                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-primary/10">
+                                <Sparkles className="h-6 w-6 text-primary" />
                             </div>
-                            <h3 className="mb-2 text-xl font-semibold text-indigo-900">
+                            <h3 className="mb-2 text-xl font-semibold text-primary">
                                 Generating Talk Track
                             </h3>
-                            <p className="text-indigo-700">
+                            <p className="text-primary">
                                 AI is creating your presentation script...
                             </p>
                         </div>
 
                         <div className="mx-auto max-w-md">
                             <div className="mb-2 flex items-center justify-between">
-                                <span className="text-sm font-medium text-indigo-700">
+                                <span className="text-sm font-medium text-primary">
                                     Progress
                                 </span>
-                                <span className="text-sm text-indigo-600">
+                                <span className="text-sm text-primary">
                                     {generationProgress}%
                                 </span>
                             </div>
-                            <div className="h-3 w-full rounded-full bg-indigo-200">
+                            <div className="h-3 w-full rounded-full bg-primary/20">
                                 <div
-                                    className="h-3 rounded-full bg-indigo-600 transition-all duration-500 ease-out"
+                                    className="h-3 rounded-full bg-primary transition-all duration-500 ease-out"
                                     style={{ width: `${generationProgress}%` }}
                                 />
                             </div>
@@ -511,13 +511,13 @@ export default function Step6Page({
                     </div>
                 )}
 
-                <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-                    <div className="border-b border-gray-200 p-6">
+                <div className="rounded-lg border border-border bg-card shadow-soft">
+                    <div className="border-b border-border p-6">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-semibold text-gray-900">
+                            <h3 className="text-xl font-semibold text-foreground">
                                 Your Talk Tracks
                             </h3>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-muted-foreground">
                                 {talkTracks.length} created
                             </span>
                         </div>
@@ -525,7 +525,7 @@ export default function Step6Page({
 
                     <div className="p-6">
                         {talkTracks.length === 0 ? (
-                            <div className="py-12 text-center text-gray-500">
+                            <div className="py-12 text-center text-muted-foreground">
                                 <MessageSquare className="mx-auto mb-4 h-12 w-12 opacity-50" />
                                 <p>
                                     No talk tracks yet. Generate your first one above!
@@ -537,14 +537,14 @@ export default function Step6Page({
                                     <div
                                         key={track.id}
                                         onClick={() => setSelectedTrack(track)}
-                                        className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-indigo-300 hover:shadow-md"
+                                        className="cursor-pointer rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-primary/30 hover:shadow-md"
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
-                                                <h4 className="mb-2 text-lg font-semibold text-gray-900">
+                                                <h4 className="mb-2 text-lg font-semibold text-foreground">
                                                     Talk Track Script
                                                 </h4>
-                                                <div className="mb-2 flex items-center gap-4 text-sm text-gray-600">
+                                                <div className="mb-2 flex items-center gap-4 text-sm text-muted-foreground">
                                                     {track.deck_structure_id &&
                                                     deckStructureMap.get(
                                                         track.deck_structure_id
@@ -602,7 +602,7 @@ export default function Step6Page({
                                                         e.stopPropagation();
                                                         handleDownload(track);
                                                     }}
-                                                    className="rounded p-2 text-indigo-600 hover:bg-indigo-50"
+                                                    className="rounded p-2 text-primary hover:bg-primary/5"
                                                 >
                                                     <Download className="h-4 w-4" />
                                                 </button>
@@ -611,7 +611,7 @@ export default function Step6Page({
                                                         e.stopPropagation();
                                                         handleDelete(track.id);
                                                     }}
-                                                    className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                    className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
@@ -628,18 +628,18 @@ export default function Step6Page({
             {/* Talk Track Viewer/Editor Modal */}
             {selectedTrack && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-                    <div className="flex h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-white shadow-2xl">
-                        <div className="flex-shrink-0 rounded-t-lg border-b border-gray-200 bg-gray-50 p-6">
+                    <div className="flex h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-card shadow-2xl">
+                        <div className="flex-shrink-0 rounded-t-lg border-b border-border bg-muted/50 p-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <h2 className="text-2xl font-bold text-gray-900">
+                                    <h2 className="text-2xl font-bold text-foreground">
                                         Talk Track Script
                                     </h2>
                                     {selectedTrack.deck_structure_id &&
                                         deckStructureMap.get(
                                             selectedTrack.deck_structure_id
                                         ) && (
-                                            <p className="mt-1 text-sm text-gray-600">
+                                            <p className="mt-1 text-sm text-muted-foreground">
                                                 {
                                                     deckStructureMap.get(
                                                         selectedTrack.deck_structure_id
@@ -671,13 +671,13 @@ export default function Step6Page({
                                         <>
                                             <button
                                                 onClick={handleSaveTrack}
-                                                className="rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                                                className="rounded bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
                                             >
                                                 Save
                                             </button>
                                             <button
                                                 onClick={handleCancelEdit}
-                                                className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                                className="rounded border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
                                             >
                                                 Cancel
                                             </button>
@@ -685,7 +685,7 @@ export default function Step6Page({
                                     ) : (
                                         <button
                                             onClick={handleEditTrack}
-                                            className="rounded border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                                            className="rounded border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
                                         >
                                             Edit
                                         </button>
@@ -695,7 +695,7 @@ export default function Step6Page({
                                             setSelectedTrack(null);
                                             setIsEditingTrack(false);
                                         }}
-                                        className="text-2xl font-bold text-gray-400 hover:text-gray-600"
+                                        className="text-2xl font-bold text-muted-foreground hover:text-muted-foreground"
                                     >
                                         ×
                                     </button>
@@ -708,13 +708,13 @@ export default function Step6Page({
                                 <textarea
                                     value={editedContent}
                                     onChange={(e) => setEditedContent(e.target.value)}
-                                    className="h-full w-full resize-none border-none p-6 font-mono text-sm leading-relaxed text-gray-900 focus:ring-0"
+                                    className="h-full w-full resize-none border-none p-6 font-mono text-sm leading-relaxed text-foreground focus:ring-0"
                                     placeholder="Edit your talk track here..."
                                 />
                             ) : (
                                 <div className="h-full overflow-y-scroll p-6">
                                     <div className="prose max-w-none">
-                                        <pre className="whitespace-pre-wrap rounded-lg bg-gray-50 p-4 text-sm">
+                                        <pre className="whitespace-pre-wrap rounded-lg bg-muted/50 p-4 text-sm">
                                             {selectedTrack.content}
                                         </pre>
                                     </div>

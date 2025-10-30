@@ -127,9 +127,9 @@ export function FunnelPagesView({ projectId, username }: FunnelPagesViewProps) {
 
     if (pages.length === 0) {
         return (
-            <div className="rounded-lg border border-gray-200 bg-white p-12 text-center">
-                <h3 className="text-lg font-semibold text-gray-900">No Pages Yet</h3>
-                <p className="mt-2 text-sm text-gray-600">
+            <div className="rounded-lg border border-border bg-card p-12 text-center">
+                <h3 className="text-lg font-semibold text-foreground">No Pages Yet</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
                     Complete the funnel builder steps to create your pages.
                 </p>
             </div>
@@ -141,12 +141,12 @@ export function FunnelPagesView({ projectId, username }: FunnelPagesViewProps) {
             {pages.map((page) => (
                 <div
                     key={page.id}
-                    className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
+                    className="rounded-lg border border-border bg-card p-6 shadow-sm transition-shadow hover:shadow-md"
                 >
                     <div className="flex items-start justify-between">
                         <div className="flex-1">
                             <div className="flex items-center gap-3">
-                                <h3 className="text-lg font-semibold text-gray-900">
+                                <h3 className="text-lg font-semibold text-foreground">
                                     {page.headline}
                                 </h3>
                                 <Badge
@@ -164,13 +164,13 @@ export function FunnelPagesView({ projectId, username }: FunnelPagesViewProps) {
                                           : "Registration"}
                                 </Badge>
                             </div>
-                            <div className="mt-2 flex items-center gap-4 text-sm text-gray-500">
+                            <div className="mt-2 flex items-center gap-4 text-sm text-muted-foreground">
                                 <span>
                                     Created{" "}
                                     {new Date(page.created_at).toLocaleDateString()}
                                 </span>
                                 {page.vanity_slug && (
-                                    <span className="text-blue-600">
+                                    <span className="text-primary">
                                         /{username}/{page.vanity_slug}
                                     </span>
                                 )}

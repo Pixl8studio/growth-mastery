@@ -99,7 +99,7 @@ export function SequenceManager({ funnelProjectId, offerId }: SequenceManagerPro
         <Card className="p-6">
             <div className="mb-6">
                 <h2 className="text-2xl font-bold">AI Follow-Up Sequences</h2>
-                <p className="text-gray-600 mt-1">
+                <p className="text-muted-foreground mt-1">
                     Automatically generate personalized message sequences based on your
                     deck and offer
                 </p>
@@ -107,12 +107,12 @@ export function SequenceManager({ funnelProjectId, offerId }: SequenceManagerPro
 
             {!generatedSequence && (
                 <div className="space-y-4">
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
+                    <div className="border-2 border-dashed border-border rounded-lg p-8 text-center">
                         <div className="max-w-md mx-auto">
                             <h3 className="text-lg font-semibold mb-2">
                                 Generate Your First Sequence
                             </h3>
-                            <p className="text-gray-600 mb-6">
+                            <p className="text-muted-foreground mb-6">
                                 Our AI will analyze your webinar deck and offer to
                                 create a professional 3-day follow-up sequence with
                                 personalized messages.
@@ -214,14 +214,14 @@ export function SequenceManager({ funnelProjectId, offerId }: SequenceManagerPro
                                 <h3 className="font-semibold">
                                     3-Day Discount Sequence
                                 </h3>
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm text-muted-foreground">
                                     {generatedSequence.message_count} touches over 72
                                     hours
                                 </p>
                             </div>
                             <Badge>Active</Badge>
                         </div>
-                        <div className="text-sm text-gray-600 mt-3 space-y-1">
+                        <div className="text-sm text-muted-foreground mt-3 space-y-1">
                             <div>📨 4 emails + 1 SMS</div>
                             <div>
                                 🎯 Adapts to: No-Show, Skimmer, Sampler, Engaged, Hot
@@ -233,11 +233,9 @@ export function SequenceManager({ funnelProjectId, offerId }: SequenceManagerPro
                         </div>
                     </div>
 
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <p className="text-blue-800 font-semibold">
-                            What Happens Next?
-                        </p>
-                        <ul className="text-blue-700 text-sm mt-2 space-y-1 list-disc list-inside">
+                    <div className="bg-primary/5 border border-primary/20 rounded-lg p-4">
+                        <p className="text-primary font-semibold">What Happens Next?</p>
+                        <ul className="text-primary text-sm mt-2 space-y-1 list-disc list-inside">
                             <li>
                                 Messages will automatically personalize for each
                                 prospect

@@ -168,7 +168,7 @@ export function BriefTemplateLibrary({
             {/* Header */}
             <div>
                 <h2 className="text-2xl font-bold mb-2">Brief Templates</h2>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                     Start with a pre-made template or use one you've saved
                 </p>
             </div>
@@ -176,7 +176,7 @@ export function BriefTemplateLibrary({
             {/* Search and Filters */}
             <div className="flex gap-3">
                 <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -213,7 +213,7 @@ export function BriefTemplateLibrary({
                 <div className="flex items-center justify-center py-12">
                     <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4" />
-                        <p className="text-gray-600">Loading templates...</p>
+                        <p className="text-muted-foreground">Loading templates...</p>
                     </div>
                 </div>
             ) : (
@@ -284,11 +284,11 @@ export function BriefTemplateLibrary({
                     {/* Empty State */}
                     {filteredTemplates.length === 0 && !loading && (
                         <Card className="p-12 text-center border-dashed">
-                            <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                            <h3 className="text-lg font-semibold text-foreground mb-2">
                                 No Templates Found
                             </h3>
-                            <p className="text-gray-600 text-sm">
+                            <p className="text-muted-foreground text-sm">
                                 {searchTerm
                                     ? "Try a different search term"
                                     : "Create your first brief and save it as a template"}
@@ -318,7 +318,7 @@ function TemplateCard({
         <Card className="p-4 hover:shadow-lg transition-shadow">
             <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-2">
-                    <FileText className="h-5 w-5 text-blue-500" />
+                    <FileText className="h-5 w-5 text-primary-foreground0" />
                     {template.is_default && (
                         <span className="px-2 py-0.5 bg-purple-100 text-purple-700 text-xs rounded">
                             Default
@@ -327,7 +327,7 @@ function TemplateCard({
                 </div>
                 <button
                     onClick={onToggleFavorite}
-                    className="text-gray-400 hover:text-yellow-500 transition-colors"
+                    className="text-muted-foreground hover:text-yellow-500 transition-smooth"
                 >
                     <Star
                         className={`h-5 w-5 ${template.is_favorite ? "fill-yellow-500 text-yellow-500" : ""}`}
@@ -336,7 +336,7 @@ function TemplateCard({
             </div>
 
             <h4 className="font-semibold mb-2">{template.name}</h4>
-            <p className="text-sm text-gray-600 mb-4 line-clamp-2">
+            <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
                 {template.description}
             </p>
 

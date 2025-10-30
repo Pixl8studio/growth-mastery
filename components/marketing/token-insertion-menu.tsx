@@ -113,13 +113,13 @@ export function TokenInsertionMenu({
 
                     {/* Dropdown Menu */}
                     <div
-                        className={`absolute z-50 w-96 bg-white rounded-lg shadow-2xl border border-gray-200 ${
+                        className={`absolute z-50 w-96 bg-card rounded-lg shadow-2xl border border-border ${
                             position === "below" ? "top-full mt-2" : "bottom-full mb-2"
                         } left-0`}
                     >
                         <div className="p-3 border-b">
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                 <Input
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
@@ -140,7 +140,7 @@ export function TokenInsertionMenu({
 
                                 return (
                                     <div key={category} className="mb-3">
-                                        <div className="px-2 py-1 text-xs font-semibold text-gray-500 uppercase">
+                                        <div className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase">
                                             {category}
                                         </div>
                                         <div className="space-y-1">
@@ -150,18 +150,18 @@ export function TokenInsertionMenu({
                                                     onClick={() =>
                                                         handleInsert(token.token)
                                                     }
-                                                    className="w-full text-left px-3 py-2 rounded hover:bg-blue-50 transition-colors group"
+                                                    className="w-full text-left px-3 py-2 rounded hover:bg-primary/5 transition-colors group"
                                                 >
                                                     <div className="flex items-start justify-between">
                                                         <div className="flex-1">
-                                                            <div className="font-mono text-sm text-blue-600 group-hover:text-blue-700">
+                                                            <div className="font-mono text-sm text-primary group-hover:text-primary">
                                                                 {token.token}
                                                             </div>
-                                                            <div className="text-xs text-gray-600">
+                                                            <div className="text-xs text-muted-foreground">
                                                                 {token.description}
                                                             </div>
                                                         </div>
-                                                        <Code className="h-4 w-4 text-gray-400 mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                                        <Code className="h-4 w-4 text-muted-foreground mt-1 opacity-0 group-hover:opacity-100 transition-opacity" />
                                                     </div>
                                                 </button>
                                             ))}
@@ -171,15 +171,15 @@ export function TokenInsertionMenu({
                             })}
 
                             {filteredTokens.length === 0 && (
-                                <div className="text-center py-8 text-gray-500">
+                                <div className="text-center py-8 text-muted-foreground">
                                     <Code className="h-8 w-8 mx-auto mb-2 opacity-30" />
                                     <p className="text-sm">No tokens found</p>
                                 </div>
                             )}
                         </div>
 
-                        <div className="p-3 border-t bg-gray-50 rounded-b-lg">
-                            <p className="text-xs text-gray-600">
+                        <div className="p-3 border-t bg-muted/50 rounded-b-lg">
+                            <p className="text-xs text-muted-foreground">
                                 💡 <strong>Tip:</strong> Tokens are replaced with actual
                                 values when content is published
                             </p>

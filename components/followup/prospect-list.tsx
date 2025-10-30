@@ -66,7 +66,7 @@ export function ProspectList({ funnelProjectId }: { funnelProjectId: string }) {
             <div className="mb-4 flex gap-2">
                 <button
                     onClick={() => setSelectedSegment("all")}
-                    className={`px-3 py-1 rounded ${selectedSegment === "all" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+                    className={`px-3 py-1 rounded ${selectedSegment === "all" ? "bg-primary/50 text-white" : "bg-gray-200"}`}
                 >
                     All
                 </button>
@@ -74,7 +74,7 @@ export function ProspectList({ funnelProjectId }: { funnelProjectId: string }) {
                     <button
                         key={seg}
                         onClick={() => setSelectedSegment(seg)}
-                        className={`px-3 py-1 rounded capitalize ${selectedSegment === seg ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+                        className={`px-3 py-1 rounded capitalize ${selectedSegment === seg ? "bg-primary/50 text-white" : "bg-gray-200"}`}
                     >
                         {seg.replace("_", " ")}
                     </button>
@@ -83,7 +83,7 @@ export function ProspectList({ funnelProjectId }: { funnelProjectId: string }) {
 
             <div className="space-y-2">
                 {prospects.length === 0 ? (
-                    <div className="text-center text-gray-500 py-8">
+                    <div className="text-center text-muted-foreground py-8">
                         No prospects found for this segment
                     </div>
                 ) : (
@@ -96,17 +96,21 @@ export function ProspectList({ funnelProjectId }: { funnelProjectId: string }) {
                                 <div className="font-medium">
                                     {prospect.first_name || prospect.email}
                                 </div>
-                                <div className="text-sm text-gray-600">
+                                <div className="text-sm text-muted-foreground">
                                     {prospect.email}
                                 </div>
                             </div>
                             <div className="flex gap-4 items-center">
                                 <div className="text-sm">
-                                    <span className="text-gray-600">Watch:</span>{" "}
+                                    <span className="text-muted-foreground">
+                                        Watch:
+                                    </span>{" "}
                                     {prospect.watch_percentage}%
                                 </div>
                                 <div className="text-sm">
-                                    <span className="text-gray-600">Score:</span>{" "}
+                                    <span className="text-muted-foreground">
+                                        Score:
+                                    </span>{" "}
                                     {prospect.intent_score}
                                 </div>
                                 <Badge

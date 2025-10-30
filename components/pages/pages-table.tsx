@@ -29,12 +29,12 @@ export function PagesTable({ pages, username }: PagesTableProps) {
 
     if (pages.length === 0) {
         return (
-            <div className="rounded-lg border border-gray-200 bg-white py-12 text-center">
+            <div className="rounded-lg border border-border bg-card py-12 text-center">
                 <div className="mx-auto max-w-sm">
-                    <h3 className="text-lg font-medium text-gray-900">
+                    <h3 className="text-lg font-medium text-foreground">
                         No pages found
                     </h3>
-                    <p className="mt-2 text-sm text-gray-500">
+                    <p className="mt-2 text-sm text-muted-foreground">
                         Try adjusting your filters or create a new funnel to generate
                         pages.
                     </p>
@@ -95,46 +95,46 @@ export function PagesTable({ pages, username }: PagesTableProps) {
     };
 
     return (
-        <div className="overflow-hidden rounded-lg border border-gray-200 bg-white">
+        <div className="overflow-hidden rounded-lg border border-border bg-card">
             <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
+                    <thead className="bg-muted/50">
                         <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                 Page Title
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                 Type
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                 Page URL & Slug
                             </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
+                            <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                 Published
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                 Funnel
                             </th>
-                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                            <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                 Created
                             </th>
-                            <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-gray-500">
+                            <th className="px-6 py-3 text-center text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                 Actions
                             </th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-200 bg-white">
+                    <tbody className="divide-y divide-gray-200 bg-card">
                         {pages.map((page) => (
                             <tr
                                 key={`${page.type}-${page.id}`}
-                                className="hover:bg-gray-50"
+                                className="hover:bg-muted/50"
                             >
                                 <td className="px-6 py-4">
-                                    <div className="text-sm font-medium text-gray-900">
+                                    <div className="text-sm font-medium text-foreground">
                                         {page.headline}
                                     </div>
                                     {page.vanity_slug && (
-                                        <div className="mt-1 text-xs text-gray-500">
+                                        <div className="mt-1 text-xs text-muted-foreground">
                                             /{page.vanity_slug}
                                         </div>
                                     )}
@@ -156,10 +156,10 @@ export function PagesTable({ pages, username }: PagesTableProps) {
                                         <PublishToggle page={page} />
                                     </div>
                                 </td>
-                                <td className="px-6 py-4 text-sm text-gray-900">
+                                <td className="px-6 py-4 text-sm text-foreground">
                                     {page.funnel_name}
                                 </td>
-                                <td className="px-6 py-4 text-sm text-gray-500">
+                                <td className="px-6 py-4 text-sm text-muted-foreground">
                                     {formatDistanceToNow(new Date(page.created_at), {
                                         addSuffix: true,
                                     })}

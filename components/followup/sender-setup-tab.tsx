@@ -240,17 +240,17 @@ export function SenderSetupTab({
                     </div>
                 ) : (
                     <div className="space-y-4">
-                        <div className="flex items-start gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                            <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                        <div className="flex items-start gap-3 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                            <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
                             <div className="flex-1">
-                                <p className="text-sm font-medium text-blue-900">
+                                <p className="text-sm font-medium text-primary">
                                     Quick Start: Connect Gmail
                                 </p>
-                                <p className="text-sm text-blue-700 mt-1">
+                                <p className="text-sm text-primary mt-1">
                                     Send emails through your Gmail account - no DNS
                                     setup required! Perfect for getting started quickly.
                                 </p>
-                                <ul className="text-xs text-blue-600 mt-2 space-y-1">
+                                <ul className="text-xs text-primary mt-2 space-y-1">
                                     <li>✓ Instant setup - just click to connect</li>
                                     <li>✓ Uses Gmail's excellent deliverability</li>
                                     <li>✓ No domain verification needed</li>
@@ -281,10 +281,10 @@ export function SenderSetupTab({
                         </Button>
 
                         <div className="pt-4 border-t">
-                            <p className="text-sm font-medium text-gray-700 mb-2">
+                            <p className="text-sm font-medium text-foreground mb-2">
                                 Or use custom domain with SendGrid
                             </p>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                                 For professional branding and higher sending limits, set
                                 up your custom domain below. Requires DNS configuration
                                 at your domain registrar.
@@ -300,7 +300,7 @@ export function SenderSetupTab({
                     <h3 className="text-lg font-semibold mb-4">
                         Sender Information (SendGrid)
                     </h3>
-                    <p className="text-sm text-gray-600 mb-4">
+                    <p className="text-sm text-muted-foreground mb-4">
                         Configure your SendGrid sender details. You'll need to set up
                         domain authentication in your SendGrid account.
                     </p>
@@ -315,7 +315,7 @@ export function SenderSetupTab({
                                 placeholder="Your Name or Company Name"
                                 className="mt-1"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                                 Example: "Sarah from Acme Corp"
                             </p>
                         </div>
@@ -330,7 +330,7 @@ export function SenderSetupTab({
                                 placeholder="followup@yourdomain.com"
                                 className="mt-1"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                                 Use an email from your SendGrid authenticated domain
                             </p>
                         </div>
@@ -347,7 +347,7 @@ export function SenderSetupTab({
                                 maxLength={11}
                                 className="mt-1"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                                 Max 11 characters. Used as sender name for SMS messages.
                             </p>
                         </div>

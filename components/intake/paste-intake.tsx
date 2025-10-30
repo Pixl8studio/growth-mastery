@@ -84,10 +84,10 @@ export function PasteIntake({ projectId, userId, onComplete }: PasteIntakeProps)
         <Card className="p-6">
             <div className="space-y-4">
                 <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-foreground">
                         Paste Your Content
                     </h3>
-                    <p className="mt-1 text-sm text-gray-600">
+                    <p className="mt-1 text-sm text-muted-foreground">
                         Paste text about your business, offer, or existing materials
                     </p>
                 </div>
@@ -96,7 +96,7 @@ export function PasteIntake({ projectId, userId, onComplete }: PasteIntakeProps)
                 <div>
                     <label
                         htmlFor="sessionName"
-                        className="block text-sm font-medium text-gray-700"
+                        className="block text-sm font-medium text-foreground"
                     >
                         Session Name (optional)
                     </label>
@@ -106,7 +106,7 @@ export function PasteIntake({ projectId, userId, onComplete }: PasteIntakeProps)
                         value={sessionName}
                         onChange={(e) => setSessionName(e.target.value)}
                         placeholder="e.g., Coaching Offer Description"
-                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                        className="mt-1 block w-full rounded-md border border-border px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary"
                     />
                 </div>
 
@@ -114,7 +114,7 @@ export function PasteIntake({ projectId, userId, onComplete }: PasteIntakeProps)
                 <div>
                     <label
                         htmlFor="content"
-                        className="block text-sm font-medium text-gray-700"
+                        className="block text-sm font-medium text-foreground"
                     >
                         Content <span className="text-red-500">*</span>
                     </label>
@@ -124,9 +124,9 @@ export function PasteIntake({ projectId, userId, onComplete }: PasteIntakeProps)
                         onChange={(e) => setContent(e.target.value)}
                         placeholder="Paste your content here... (minimum 100 characters)"
                         rows={12}
-                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                        className="mt-1 block w-full rounded-md border border-border px-3 py-2 font-mono text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-primary"
                     />
-                    <div className="mt-2 flex justify-between text-xs text-gray-500">
+                    <div className="mt-2 flex justify-between text-xs text-muted-foreground">
                         <span>
                             {wordCount} {wordCount === 1 ? "word" : "words"}
                         </span>
@@ -147,11 +147,9 @@ export function PasteIntake({ projectId, userId, onComplete }: PasteIntakeProps)
                 </Button>
 
                 {/* Help Text */}
-                <div className="rounded-lg bg-blue-50 p-4">
-                    <h4 className="mb-2 text-sm font-semibold text-blue-900">
-                        💡 Tips
-                    </h4>
-                    <ul className="space-y-1 text-sm text-blue-800">
+                <div className="rounded-lg bg-primary/5 p-4">
+                    <h4 className="mb-2 text-sm font-semibold text-primary">💡 Tips</h4>
+                    <ul className="space-y-1 text-sm text-primary">
                         <li>
                             • Include details about your business and target audience
                         </li>

@@ -58,15 +58,15 @@ export function RegistrationPageTemplate({ page }: RegistrationPageProps) {
     const bulletPoints = page.benefit_bullets || [];
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+        <div className="min-h-screen bg-gradient-to-br gradient-hero">
             <div className="mx-auto max-w-4xl px-4 py-16">
                 {/* Header */}
                 <div className="mb-12 text-center">
-                    <h1 className="mb-4 text-5xl font-bold text-gray-900">
+                    <h1 className="mb-4 text-5xl font-bold text-foreground">
                         {page.headline}
                     </h1>
                     {page.subheadline && (
-                        <p className="text-xl text-gray-700">{page.subheadline}</p>
+                        <p className="text-xl text-foreground">{page.subheadline}</p>
                     )}
                 </div>
 
@@ -76,7 +76,7 @@ export function RegistrationPageTemplate({ page }: RegistrationPageProps) {
                         {/* Benefits */}
                         {bulletPoints.length > 0 && (
                             <div className="mb-8">
-                                <p className="mb-4 text-lg font-semibold text-gray-900">
+                                <p className="mb-4 text-lg font-semibold text-foreground">
                                     In this training, you'll discover:
                                 </p>
                                 <ul className="space-y-3">
@@ -87,7 +87,7 @@ export function RegistrationPageTemplate({ page }: RegistrationPageProps) {
                                                 className="flex items-start"
                                             >
                                                 <CheckCircle className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-green-600" />
-                                                <span className="text-gray-700">
+                                                <span className="text-foreground">
                                                     {bullet}
                                                 </span>
                                             </li>
@@ -102,7 +102,7 @@ export function RegistrationPageTemplate({ page }: RegistrationPageProps) {
                             <div>
                                 <label
                                     htmlFor="name"
-                                    className="block text-sm font-medium text-gray-700"
+                                    className="block text-sm font-medium text-foreground"
                                 >
                                     Full Name
                                 </label>
@@ -120,7 +120,7 @@ export function RegistrationPageTemplate({ page }: RegistrationPageProps) {
                             <div>
                                 <label
                                     htmlFor="email"
-                                    className="block text-sm font-medium text-gray-700"
+                                    className="block text-sm font-medium text-foreground"
                                 >
                                     Email Address
                                 </label>
@@ -149,7 +149,7 @@ export function RegistrationPageTemplate({ page }: RegistrationPageProps) {
 
                         {/* Trust Statement */}
                         {page.trust_statement && (
-                            <p className="mt-6 text-center text-sm text-gray-600">
+                            <p className="mt-6 text-center text-sm text-muted-foreground">
                                 {page.trust_statement}
                             </p>
                         )}
@@ -157,7 +157,7 @@ export function RegistrationPageTemplate({ page }: RegistrationPageProps) {
                 </Card>
 
                 {/* Footer */}
-                <p className="mt-8 text-center text-sm text-gray-600">
+                <p className="mt-8 text-center text-sm text-muted-foreground">
                     Powered by Genie AI
                 </p>
             </div>

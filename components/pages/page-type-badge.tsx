@@ -12,7 +12,7 @@ export function PageTypeBadge({ type }: PageTypeBadgeProps) {
     const config = {
         enrollment: {
             label: "Enrollment",
-            className: "bg-blue-100 text-blue-800",
+            className: "bg-primary/10 text-primary",
         },
         watch: {
             label: "Watch",

@@ -111,7 +111,7 @@ export function ProfileSettings() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-12">
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-muted-foreground">Loading...</div>
             </div>
         );
     }
@@ -119,8 +119,8 @@ export function ProfileSettings() {
     return (
         <div>
             <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Profile Settings</h2>
-                <p className="mt-1 text-sm text-gray-600">
+                <h2 className="text-2xl font-bold text-foreground">Profile Settings</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
                     Manage your account information and public profile
                 </p>
             </div>
@@ -141,7 +141,7 @@ export function ProfileSettings() {
                 <div>
                     <label
                         htmlFor="email"
-                        className="block text-sm font-medium text-gray-700"
+                        className="block text-sm font-medium text-foreground"
                     >
                         Email
                     </label>
@@ -150,9 +150,9 @@ export function ProfileSettings() {
                         type="email"
                         value={email}
                         disabled
-                        className="mt-1 block w-full rounded-md border border-gray-300 bg-gray-50 px-3 py-2 text-gray-500 shadow-sm"
+                        className="mt-1 block w-full rounded-md border border-border bg-muted/50 px-3 py-2 text-muted-foreground shadow-soft"
                     />
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                         Email cannot be changed here. Contact support if needed.
                     </p>
                 </div>
@@ -160,7 +160,7 @@ export function ProfileSettings() {
                 <div>
                     <label
                         htmlFor="fullName"
-                        className="block text-sm font-medium text-gray-700"
+                        className="block text-sm font-medium text-foreground"
                     >
                         Full Name
                     </label>
@@ -169,7 +169,7 @@ export function ProfileSettings() {
                         type="text"
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="mt-1 block w-full rounded-md border border-border bg-card px-3 py-2 text-foreground shadow-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                         placeholder="John Doe"
                     />
                 </div>
@@ -177,7 +177,7 @@ export function ProfileSettings() {
                 <div>
                     <label
                         htmlFor="username"
-                        className="block text-sm font-medium text-gray-700"
+                        className="block text-sm font-medium text-foreground"
                     >
                         Username
                     </label>
@@ -186,14 +186,14 @@ export function ProfileSettings() {
                         type="text"
                         value={username}
                         onChange={(e) => handleUsernameChange(e.target.value)}
-                        className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="mt-1 block w-full rounded-md border border-border bg-card px-3 py-2 text-foreground shadow-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                         placeholder="john-doe"
                     />
                     {usernameError && (
                         <p className="mt-1 text-xs text-red-600">{usernameError}</p>
                     )}
                     {username && !usernameError && (
-                        <p className="mt-1 text-xs text-gray-500">
+                        <p className="mt-1 text-xs text-muted-foreground">
                             Your public profile: {window.location.origin}/{username}
                         </p>
                     )}
@@ -203,14 +203,14 @@ export function ProfileSettings() {
                     <button
                         type="button"
                         onClick={loadProfile}
-                        className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
                     >
                         Cancel
                     </button>
                     <button
                         type="submit"
                         disabled={saving || !!usernameError}
-                        className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {saving ? "Saving..." : "Save changes"}
                     </button>

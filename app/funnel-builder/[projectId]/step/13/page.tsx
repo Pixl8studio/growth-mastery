@@ -106,7 +106,7 @@ export default function Step13Page({
     if (!projectId) {
         return (
             <div className="flex h-screen items-center justify-center">
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-muted-foreground">Loading...</div>
             </div>
         );
     }
@@ -121,12 +121,12 @@ export default function Step13Page({
             stepDescription="Track your funnel's performance and optimize for conversions"
         >
             <div className="space-y-8">
-                <div className="rounded-lg border border-brand-100 bg-gradient-to-br from-brand-50 to-indigo-50 p-8">
+                <div className="rounded-lg border border-brand-100 bg-gradient-to-br from-brand-50 to-primary/5 p-8">
                     <div className="mb-6 flex items-center justify-between">
                         <div className="flex flex-col items-end">
                             <label
                                 htmlFor="timeRange"
-                                className="text-sm font-medium text-gray-700 mb-2"
+                                className="text-sm font-medium text-foreground mb-2"
                             >
                                 Time Range
                             </label>
@@ -134,7 +134,7 @@ export default function Step13Page({
                                 id="timeRange"
                                 value={timeRange}
                                 onChange={(e) => setTimeRange(e.target.value)}
-                                className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="rounded-md border border-border bg-card px-4 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             >
                                 <option value="7">Last 7 days</option>
                                 <option value="30">Last 30 days</option>
@@ -146,7 +146,9 @@ export default function Step13Page({
 
                 {loadingAnalytics && (
                     <div className="flex items-center justify-center py-12">
-                        <div className="text-gray-500">Loading analytics...</div>
+                        <div className="text-muted-foreground">
+                            Loading analytics...
+                        </div>
                     </div>
                 )}
 
@@ -154,62 +156,62 @@ export default function Step13Page({
                     <>
                         {/* Key Metrics */}
                         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
                                 <div className="mb-3 flex items-center justify-between">
-                                    <h3 className="text-sm font-medium text-gray-600">
+                                    <h3 className="text-sm font-medium text-muted-foreground">
                                         Registrations
                                     </h3>
-                                    <Users className="h-5 w-5 text-blue-600" />
+                                    <Users className="h-5 w-5 text-primary" />
                                 </div>
-                                <div className="text-3xl font-bold text-gray-900">
+                                <div className="text-3xl font-bold text-foreground">
                                     {analytics.registrations.toLocaleString()}
                                 </div>
-                                <p className="mt-1 text-xs text-gray-500">
+                                <p className="mt-1 text-xs text-muted-foreground">
                                     Total sign-ups to date
                                 </p>
                             </div>
 
-                            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
                                 <div className="mb-3 flex items-center justify-between">
-                                    <h3 className="text-sm font-medium text-gray-600">
+                                    <h3 className="text-sm font-medium text-muted-foreground">
                                         Video Views
                                     </h3>
                                     <TrendingUp className="h-5 w-5 text-purple-600" />
                                 </div>
-                                <div className="text-3xl font-bold text-gray-900">
+                                <div className="text-3xl font-bold text-foreground">
                                     {analytics.views.toLocaleString()}
                                 </div>
-                                <p className="mt-1 text-xs text-gray-500">
+                                <p className="mt-1 text-xs text-muted-foreground">
                                     Presentation watches
                                 </p>
                             </div>
 
-                            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
                                 <div className="mb-3 flex items-center justify-between">
-                                    <h3 className="text-sm font-medium text-gray-600">
+                                    <h3 className="text-sm font-medium text-muted-foreground">
                                         Conversions
                                     </h3>
                                     <Users className="h-5 w-5 text-green-600" />
                                 </div>
-                                <div className="text-3xl font-bold text-gray-900">
+                                <div className="text-3xl font-bold text-foreground">
                                     {analytics.conversions.toLocaleString()}
                                 </div>
-                                <p className="mt-1 text-xs text-gray-500">
+                                <p className="mt-1 text-xs text-muted-foreground">
                                     {conversionRate}% conversion rate
                                 </p>
                             </div>
 
-                            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
                                 <div className="mb-3 flex items-center justify-between">
-                                    <h3 className="text-sm font-medium text-gray-600">
+                                    <h3 className="text-sm font-medium text-muted-foreground">
                                         Revenue
                                     </h3>
                                     <DollarSign className="h-5 w-5 text-emerald-600" />
                                 </div>
-                                <div className="text-3xl font-bold text-gray-900">
+                                <div className="text-3xl font-bold text-foreground">
                                     ${analytics.revenue.toLocaleString()}
                                 </div>
-                                <p className="mt-1 text-xs text-gray-500">
+                                <p className="mt-1 text-xs text-muted-foreground">
                                     Total generated
                                 </p>
                             </div>
@@ -217,38 +219,38 @@ export default function Step13Page({
 
                         {/* Additional Metrics Row */}
                         <div className="grid gap-6 sm:grid-cols-3">
-                            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                                <h3 className="text-sm font-medium text-gray-600 mb-2">
+                            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+                                <h3 className="text-sm font-medium text-muted-foreground mb-2">
                                     Watch Rate
                                 </h3>
-                                <div className="text-3xl font-bold text-gray-900">
+                                <div className="text-3xl font-bold text-foreground">
                                     {analytics.watchRate?.toFixed(1)}%
                                 </div>
-                                <p className="mt-1 text-xs text-gray-500">
+                                <p className="mt-1 text-xs text-muted-foreground">
                                     Percentage of registrants who watched video
                                 </p>
                             </div>
 
-                            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                                <h3 className="text-sm font-medium text-gray-600 mb-2">
+                            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+                                <h3 className="text-sm font-medium text-muted-foreground mb-2">
                                     Enrollment Rate
                                 </h3>
-                                <div className="text-3xl font-bold text-gray-900">
+                                <div className="text-3xl font-bold text-foreground">
                                     {analytics.enrollmentRate?.toFixed(1)}%
                                 </div>
-                                <p className="mt-1 text-xs text-gray-500">
+                                <p className="mt-1 text-xs text-muted-foreground">
                                     Percentage of viewers who viewed enrollment page
                                 </p>
                             </div>
 
-                            <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-                                <h3 className="text-sm font-medium text-gray-600 mb-2">
+                            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
+                                <h3 className="text-sm font-medium text-muted-foreground mb-2">
                                     Revenue Per Registrant
                                 </h3>
-                                <div className="text-3xl font-bold text-gray-900">
+                                <div className="text-3xl font-bold text-foreground">
                                     ${analytics.revenuePerRegistrant?.toFixed(2)}
                                 </div>
-                                <p className="mt-1 text-xs text-gray-500">
+                                <p className="mt-1 text-xs text-muted-foreground">
                                     Average revenue generated per sign-up
                                 </p>
                             </div>

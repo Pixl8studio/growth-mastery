@@ -21,8 +21,8 @@ export function FunnelSettingsView({ projectId }: FunnelSettingsViewProps) {
     return (
         <div className="space-y-6">
             <div>
-                <h2 className="text-2xl font-bold text-gray-900">Funnel Settings</h2>
-                <p className="mt-2 text-sm text-gray-600">
+                <h2 className="text-2xl font-bold text-foreground">Funnel Settings</h2>
+                <p className="mt-2 text-sm text-muted-foreground">
                     Configure domain, social media, and calendar integrations for this
                     funnel
                 </p>
@@ -61,11 +61,11 @@ export function FunnelSettingsView({ projectId }: FunnelSettingsViewProps) {
                 </TabsContent>
 
                 <TabsContent value="general" className="mt-6">
-                    <div className="rounded-lg border border-gray-200 bg-white p-6">
-                        <h3 className="text-lg font-semibold text-gray-900">
+                    <div className="rounded-lg border border-border bg-card p-6">
+                        <h3 className="text-lg font-semibold text-foreground">
                             General Settings
                         </h3>
-                        <p className="mt-2 text-sm text-gray-600">
+                        <p className="mt-2 text-sm text-muted-foreground">
                             Additional funnel settings coming soon
                         </p>
                     </div>

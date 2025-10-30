@@ -184,7 +184,7 @@ export default function CreateFunnelWithContextExample() {
                                 required
                                 className="mt-1"
                             />
-                            <p className="text-sm text-gray-500 mt-1">
+                            <p className="text-sm text-muted-foreground mt-1">
                                 A memorable name for your funnel project
                             </p>
                         </div>
@@ -197,9 +197,9 @@ export default function CreateFunnelWithContextExample() {
                                 onChange={(e) => setDescription(e.target.value)}
                                 placeholder="What is this funnel about?"
                                 rows={3}
-                                className="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="mt-1 w-full rounded-md border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             />
-                            <p className="text-sm text-gray-500 mt-1">
+                            <p className="text-sm text-muted-foreground mt-1">
                                 Brief description of your funnel's purpose
                             </p>
                         </div>
@@ -214,7 +214,7 @@ export default function CreateFunnelWithContextExample() {
                                 placeholder="e.g., Small business owners"
                                 className="mt-1"
                             />
-                            <p className="text-sm text-gray-500 mt-1">
+                            <p className="text-sm text-muted-foreground mt-1">
                                 Who is this funnel designed for?
                             </p>
                         </div>
@@ -229,7 +229,7 @@ export default function CreateFunnelWithContextExample() {
                                 placeholder="e.g., Digital Marketing"
                                 className="mt-1"
                             />
-                            <p className="text-sm text-gray-500 mt-1">
+                            <p className="text-sm text-muted-foreground mt-1">
                                 What industry or niche does this serve?
                             </p>
                         </div>
@@ -242,8 +242,8 @@ export default function CreateFunnelWithContextExample() {
             </Card>
 
             {/* Hint about AI assistant */}
-            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <p className="text-sm text-blue-800">
+            <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                <p className="text-sm text-primary">
                     💡 <strong>Tip:</strong> Click the AI assistant button in the
                     bottom-right corner! The AI can help you fill in these fields by
                     asking you questions about your business naturally.

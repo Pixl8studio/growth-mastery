@@ -159,12 +159,12 @@ export function StoryLibrary({
 
     const getStoryTypeColor = (type: string) => {
         const colors: Record<string, string> = {
-            micro_story: "bg-blue-100 text-blue-800",
+            micro_story: "bg-primary/10 text-primary",
             proof_element: "bg-green-100 text-green-800",
             testimonial: "bg-purple-100 text-purple-800",
             case_study: "bg-orange-100 text-orange-800",
         };
-        return colors[type] || "bg-gray-100 text-gray-800";
+        return colors[type] || "bg-muted text-foreground";
     };
 
     const getPriceBandColor = (band: string) => {
@@ -173,7 +173,7 @@ export function StoryLibrary({
             mid: "bg-yellow-100 text-yellow-800",
             high: "bg-red-100 text-red-800",
         };
-        return colors[band] || "bg-gray-100 text-gray-800";
+        return colors[band] || "bg-muted text-foreground";
     };
 
     return (
@@ -182,7 +182,7 @@ export function StoryLibrary({
             <div className="flex items-center justify-between">
                 <div>
                     <h3 className="text-lg font-semibold">Story Library</h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                         Manage proof stories indexed by objection, niche, and price
                     </p>
                 </div>
@@ -200,7 +200,7 @@ export function StoryLibrary({
                 <div className="grid grid-cols-3 gap-4">
                     <div>
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                             <Input
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -277,7 +277,7 @@ export function StoryLibrary({
                                         </option>
                                     ))}
                                 </select>
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-muted-foreground mt-1">
                                     {
                                         STORY_TYPES.find(
                                             (t) => t.value === formData.story_type
@@ -410,7 +410,7 @@ export function StoryLibrary({
                                         </option>
                                     ))}
                                 </select>
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-muted-foreground mt-1">
                                     {
                                         STORY_TYPES.find(
                                             (t) => t.value === formData.story_type
@@ -510,13 +510,13 @@ export function StoryLibrary({
             <div className="grid grid-cols-1 gap-4">
                 {filteredStories.length === 0 ? (
                     <Card className="p-12 text-center">
-                        <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                         <h4 className="text-lg font-semibold mb-2">
                             {searchQuery || filterObjection || filterType
                                 ? "No Stories Match Your Filters"
                                 : "No Stories Yet"}
                         </h4>
-                        <p className="text-gray-600 mb-4">
+                        <p className="text-muted-foreground mb-4">
                             {searchQuery || filterObjection || filterType
                                 ? "Try adjusting your filters"
                                 : "Add your first proof story to the library"}
@@ -554,7 +554,7 @@ export function StoryLibrary({
                                         </Badge>
                                     </div>
 
-                                    <p className="text-sm text-gray-600 line-clamp-2 mb-3">
+                                    <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
                                         {story.content}
                                     </p>
 
@@ -597,7 +597,7 @@ export function StoryLibrary({
                                     )}
 
                                     {story.times_used > 0 && (
-                                        <div className="flex items-center gap-1 text-xs text-gray-600">
+                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                             <TrendingUp className="h-3 w-3" />
                                             <span>Used {story.times_used}x</span>
                                         </div>
@@ -619,37 +619,41 @@ export function StoryLibrary({
 
             {/* Stats Footer */}
             {filteredStories.length > 0 && (
-                <Card className="p-4 bg-gradient-to-r from-green-50 to-blue-50">
+                <Card className="p-4 bg-gradient-to-r from-green-50 to-primary/5">
                     <div className="grid grid-cols-4 gap-4 text-center">
                         <div>
-                            <div className="text-2xl font-bold text-gray-900">
+                            <div className="text-2xl font-bold text-foreground">
                                 {filteredStories.length}
                             </div>
-                            <div className="text-xs text-gray-600">Total Stories</div>
+                            <div className="text-xs text-muted-foreground">
+                                Total Stories
+                            </div>
                         </div>
                         <div>
-                            <div className="text-2xl font-bold text-gray-900">
+                            <div className="text-2xl font-bold text-foreground">
                                 {
                                     new Set(
                                         filteredStories.map((s) => s.objection_category)
                                     ).size
                                 }
                             </div>
-                            <div className="text-xs text-gray-600">
+                            <div className="text-xs text-muted-foreground">
                                 Objections Covered
                             </div>
                         </div>
                         <div>
-                            <div className="text-2xl font-bold text-gray-900">
+                            <div className="text-2xl font-bold text-foreground">
                                 {filteredStories.reduce(
                                     (sum, s) => sum + s.times_used,
                                     0
                                 )}
                             </div>
-                            <div className="text-xs text-gray-600">Times Used</div>
+                            <div className="text-xs text-muted-foreground">
+                                Times Used
+                            </div>
                         </div>
                         <div>
-                            <div className="text-2xl font-bold text-gray-900">
+                            <div className="text-2xl font-bold text-foreground">
                                 {(
                                     filteredStories.reduce(
                                         (sum, s) => sum + (s.effectiveness_score || 0),
@@ -657,7 +661,7 @@ export function StoryLibrary({
                                     ) / filteredStories.length
                                 ).toFixed(1)}
                             </div>
-                            <div className="text-xs text-gray-600">
+                            <div className="text-xs text-muted-foreground">
                                 Avg Effectiveness
                             </div>
                         </div>

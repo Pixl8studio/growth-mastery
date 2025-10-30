@@ -17,10 +17,10 @@ export function ProgressBar({ currentStep, className }: ProgressBarProps) {
     return (
         <div className={className}>
             <div className="mb-2 flex items-center justify-between text-sm">
-                <span className="font-medium text-gray-700">
+                <span className="font-medium text-foreground">
                     Step {currentStep} of {FUNNEL_CONFIG.totalSteps}
                 </span>
-                <span className="text-gray-500">{percentage}%</span>
+                <span className="text-muted-foreground">{percentage}%</span>
             </div>
             <Progress value={percentage} className="h-2" />
         </div>

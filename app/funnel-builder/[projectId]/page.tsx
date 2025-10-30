@@ -40,7 +40,7 @@ export default async function FunnelProjectPage({ params }: PageProps) {
     }
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-muted/50">
             <Header />
 
             {/* Main Content */}
@@ -48,7 +48,7 @@ export default async function FunnelProjectPage({ params }: PageProps) {
                 {/* Project Header */}
                 <div className="mb-6">
                     <div className="flex items-center justify-between">
-                        <h1 className="text-3xl font-bold text-gray-900">
+                        <h1 className="text-3xl font-bold text-foreground">
                             {project.name}
                         </h1>
                         <Badge

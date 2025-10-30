@@ -376,7 +376,7 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
 
                 {/* Scoring Configuration */}
                 <TabsContent value="scoring" className="space-y-4 mt-4">
-                    <p className="text-sm text-gray-600 mb-4">
+                    <p className="text-sm text-muted-foreground mb-4">
                         Configure how prospect intent scores are calculated and
                         weighted.
                     </p>
@@ -398,7 +398,7 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                 })
                             }
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                             How much weight to give webinar watch percentage (0-100)
                         </p>
                     </div>
@@ -421,7 +421,7 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                 })
                             }
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                             How much weight to give clicking on offer CTAs
                         </p>
                     </div>
@@ -446,7 +446,7 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                 })
                             }
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                             How much weight to give email opens and clicks
                         </p>
                     </div>
@@ -468,7 +468,7 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                 })
                             }
                         />
-                        <p className="text-xs text-gray-500 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                             How much weight to give direct replies to messages
                         </p>
                     </div>
@@ -568,13 +568,13 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
 
                 {/* Sender Configuration */}
                 <TabsContent value="sender" className="space-y-4 mt-4">
-                    <p className="text-sm text-gray-600 mb-4">
+                    <p className="text-sm text-muted-foreground mb-4">
                         Configure sender identity and Twilio SMS integration for
                         follow-up messages.
                     </p>
 
-                    <div className="space-y-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <h4 className="font-semibold text-blue-900 flex items-center gap-2">
+                    <div className="space-y-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                        <h4 className="font-semibold text-primary flex items-center gap-2">
                             📧 Email Sender Identity
                         </h4>
 
@@ -585,7 +585,7 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                 placeholder="Your Name or Company"
                                 className="mt-2"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                                 The name that appears in the "From" field of emails
                             </p>
                         </div>
@@ -597,9 +597,9 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                 placeholder="noreply@yourdomain.com"
                                 className="mt-2"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                                 Must be a verified domain.{" "}
-                                <a href="#" className="text-blue-600 hover:underline">
+                                <a href="#" className="text-primary hover:underline">
                                     Learn about DNS setup →
                                 </a>
                             </p>
@@ -626,7 +626,7 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                 placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
                                 className="mt-2 font-mono text-sm"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                                 Find this in your{" "}
                                 <a
                                     href="https://console.twilio.com"
@@ -646,7 +646,7 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                 placeholder="••••••••••••••••••••••••••••••••"
                                 className="mt-2 font-mono text-sm"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                                 Keep this secret - never share your auth token
                             </p>
                         </div>
@@ -658,7 +658,7 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                 placeholder="+1 234 567 8900"
                                 className="mt-2"
                             />
-                            <p className="text-xs text-gray-500 mt-1">
+                            <p className="text-xs text-muted-foreground mt-1">
                                 Your Twilio phone number in E.164 format (e.g.,
                                 +12345678900)
                             </p>
@@ -668,14 +668,14 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                             Test Connection
                         </Button>
 
-                        <div className="p-3 bg-blue-50 border border-blue-200 rounded">
-                            <p className="text-sm text-blue-800">
+                        <div className="p-3 bg-primary/5 border border-primary/20 rounded">
+                            <p className="text-sm text-primary">
                                 💡 <strong>Don't have Twilio yet?</strong> Sign up at{" "}
                                 <a
                                     href="https://www.twilio.com/try-twilio"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-blue-600 hover:underline"
+                                    className="text-primary hover:underline"
                                 >
                                     twilio.com
                                 </a>{" "}
@@ -684,11 +684,11 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                         </div>
                     </div>
 
-                    <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg">
-                        <h4 className="font-semibold text-gray-900 mb-3">
+                    <div className="p-4 bg-muted/50 border border-border rounded-lg">
+                        <h4 className="font-semibold text-foreground mb-3">
                             📋 Quick Setup Checklist
                         </h4>
-                        <ul className="space-y-2 text-sm text-gray-700">
+                        <ul className="space-y-2 text-sm text-foreground">
                             <li className="flex items-start gap-2">
                                 <span className="text-green-600 mt-0.5">□</span>
                                 <span>
@@ -720,36 +720,38 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
 
                 {/* Preview */}
                 <TabsContent value="preview" className="mt-4">
-                    <div className="p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg">
+                    <div className="p-6 bg-gradient-to-r from-primary/5 to-purple-50 rounded-lg">
                         <h4 className="font-semibold mb-3">Agent Summary</h4>
                         <div className="space-y-2 text-sm">
                             <div className="flex justify-between">
-                                <span className="text-gray-600">Name:</span>
+                                <span className="text-muted-foreground">Name:</span>
                                 <span className="font-medium">{formData.name}</span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-600">Tone:</span>
+                                <span className="text-muted-foreground">Tone:</span>
                                 <Badge>{formData.voice_config.tone}</Badge>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-600">Personality:</span>
+                                <span className="text-muted-foreground">
+                                    Personality:
+                                </span>
                                 <Badge>{formData.voice_config.personality}</Badge>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-600">Empathy:</span>
+                                <span className="text-muted-foreground">Empathy:</span>
                                 <Badge>{formData.voice_config.empathy_level}</Badge>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-gray-600">Urgency:</span>
+                                <span className="text-muted-foreground">Urgency:</span>
                                 <Badge>{formData.voice_config.urgency_level}</Badge>
                             </div>
                         </div>
 
-                        <div className="mt-6 p-4 bg-white rounded border border-blue-200">
+                        <div className="mt-6 p-4 bg-card rounded border border-primary/20">
                             <p className="text-sm font-medium mb-2">
                                 Sample Message Preview:
                             </p>
-                            <p className="text-sm text-gray-700 italic">
+                            <p className="text-sm text-foreground italic">
                                 "Hey [First Name]! I noticed you watched [watch %]% of
                                 the webinar. Based on what you shared about [challenge],
                                 I think you'll love [offer name]..."

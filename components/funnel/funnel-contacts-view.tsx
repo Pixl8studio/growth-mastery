@@ -109,7 +109,7 @@ export function FunnelContactsView({ projectId }: FunnelContactsViewProps) {
         const badges = {
             registered: <Badge variant="secondary">Registered</Badge>,
             watched: <Badge className="bg-purple-100 text-purple-800">Watched</Badge>,
-            enrolled: <Badge className="bg-blue-100 text-blue-800">Enrolled</Badge>,
+            enrolled: <Badge className="bg-primary/10 text-primary">Enrolled</Badge>,
             purchased: <Badge className="bg-green-100 text-green-800">Purchased</Badge>,
         };
         return (
@@ -146,8 +146,8 @@ export function FunnelContactsView({ projectId }: FunnelContactsViewProps) {
                     onClick={() => setStageFilter("all")}
                     className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                         stageFilter === "all"
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            ? "bg-primary text-white"
+                            : "bg-muted text-foreground hover:bg-gray-200"
                     }`}
                 >
                     All ({stats.total})
@@ -156,8 +156,8 @@ export function FunnelContactsView({ projectId }: FunnelContactsViewProps) {
                     onClick={() => setStageFilter("registered")}
                     className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                         stageFilter === "registered"
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            ? "bg-primary text-white"
+                            : "bg-muted text-foreground hover:bg-gray-200"
                     }`}
                 >
                     Registered ({stats.registered})
@@ -166,8 +166,8 @@ export function FunnelContactsView({ projectId }: FunnelContactsViewProps) {
                     onClick={() => setStageFilter("watched")}
                     className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                         stageFilter === "watched"
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            ? "bg-primary text-white"
+                            : "bg-muted text-foreground hover:bg-gray-200"
                     }`}
                 >
                     Watched ({stats.watched})
@@ -176,8 +176,8 @@ export function FunnelContactsView({ projectId }: FunnelContactsViewProps) {
                     onClick={() => setStageFilter("enrolled")}
                     className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                         stageFilter === "enrolled"
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            ? "bg-primary text-white"
+                            : "bg-muted text-foreground hover:bg-gray-200"
                     }`}
                 >
                     Enrolled ({stats.enrolled})
@@ -186,8 +186,8 @@ export function FunnelContactsView({ projectId }: FunnelContactsViewProps) {
                     onClick={() => setStageFilter("purchased")}
                     className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
                         stageFilter === "purchased"
-                            ? "bg-blue-600 text-white"
-                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                            ? "bg-primary text-white"
+                            : "bg-muted text-foreground hover:bg-gray-200"
                     }`}
                 >
                     Purchased ({stats.purchased})
@@ -195,37 +195,37 @@ export function FunnelContactsView({ projectId }: FunnelContactsViewProps) {
             </div>
 
             {/* Contacts List */}
-            <div className="rounded-lg border border-gray-200 bg-white">
+            <div className="rounded-lg border border-border bg-card">
                 <div className="overflow-x-auto">
                     <table className="w-full">
-                        <thead className="border-b border-gray-200 bg-gray-50">
+                        <thead className="border-b border-border bg-muted/50">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                     Contact
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                     Stage
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                     Watch %
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                                <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                     Registered
                                 </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                             {contacts.map((contact) => (
-                                <tr key={contact.id} className="hover:bg-gray-50">
+                                <tr key={contact.id} className="hover:bg-muted/50">
                                     <td className="whitespace-nowrap px-6 py-4">
                                         <Link
                                             href={`/contacts/${contact.id}`}
-                                            className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                                            className="text-sm font-medium text-primary hover:text-primary"
                                         >
                                             {contact.name || contact.email}
                                         </Link>
                                         {contact.name && (
-                                            <div className="text-xs text-gray-500">
+                                            <div className="text-xs text-muted-foreground">
                                                 {contact.email}
                                             </div>
                                         )}
@@ -233,12 +233,12 @@ export function FunnelContactsView({ projectId }: FunnelContactsViewProps) {
                                     <td className="whitespace-nowrap px-6 py-4">
                                         {getStageBadge(contact.current_stage)}
                                     </td>
-                                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
+                                    <td className="whitespace-nowrap px-6 py-4 text-sm text-foreground">
                                         {contact.video_watch_percentage
                                             ? `${contact.video_watch_percentage}%`
                                             : "-"}
                                     </td>
-                                    <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                                    <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
                                         {new Date(
                                             contact.created_at
                                         ).toLocaleDateString()}
@@ -251,11 +251,11 @@ export function FunnelContactsView({ projectId }: FunnelContactsViewProps) {
 
                 {contacts.length === 0 && (
                     <div className="p-12 text-center">
-                        <Users className="mx-auto h-12 w-12 text-gray-400" />
-                        <h3 className="mt-2 text-sm font-semibold text-gray-900">
+                        <Users className="mx-auto h-12 w-12 text-muted-foreground" />
+                        <h3 className="mt-2 text-sm font-semibold text-foreground">
                             No contacts found
                         </h3>
-                        <p className="mt-1 text-sm text-gray-500">
+                        <p className="mt-1 text-sm text-muted-foreground">
                             {stageFilter !== "all"
                                 ? "Try adjusting your filter"
                                 : "Contacts will appear here when someone registers"}

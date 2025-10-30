@@ -166,7 +166,7 @@ export function UTMBuilder({
                         <Input
                             value={finalUrl}
                             readOnly
-                            className="h-8 text-xs bg-gray-50 font-mono"
+                            className="h-8 text-xs bg-muted/50 font-mono"
                         />
                         <Button
                             onClick={handleCopy}
@@ -181,7 +181,7 @@ export function UTMBuilder({
                             )}
                         </Button>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                         Use this URL in your social posts to track campaign performance
                     </p>
                 </div>

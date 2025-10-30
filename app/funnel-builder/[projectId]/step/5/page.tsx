@@ -470,7 +470,7 @@ export default function Step5EnrollmentPage({
     if (!projectId) {
         return (
             <div className="flex h-screen items-center justify-center">
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-muted-foreground">Loading...</div>
             </div>
         );
     }
@@ -507,7 +507,7 @@ export default function Step5EnrollmentPage({
 
                 {/* Create New Page Button */}
                 {!showCreateForm ? (
-                    <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-indigo-50 p-8">
+                    <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-primary/5 p-8">
                         <div className="text-center">
                             <button
                                 onClick={() => setShowCreateForm(true)}
@@ -515,7 +515,7 @@ export default function Step5EnrollmentPage({
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
                                     canCreatePage
                                         ? "bg-purple-600 text-white hover:bg-purple-700"
-                                        : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                        : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                 }`}
                             >
                                 <PlusCircle className="h-6 w-6" />
@@ -526,15 +526,15 @@ export default function Step5EnrollmentPage({
                         </div>
                     </div>
                 ) : (
-                    <div className="rounded-lg border border-purple-200 bg-gradient-to-br from-purple-50 to-indigo-50 p-8 shadow-sm">
+                    <div className="rounded-lg border border-purple-200 bg-gradient-to-br from-purple-50 to-primary/5 p-8 shadow-soft">
                         <div className="mb-6 flex items-center justify-between">
-                            <h3 className="text-xl font-semibold text-gray-900">
+                            <h3 className="text-xl font-semibold text-foreground">
                                 Create Enrollment Page
                             </h3>
                             <button
                                 onClick={() => setShowCreateForm(false)}
                                 disabled={isCreating}
-                                className="text-gray-500 hover:text-gray-700 disabled:opacity-50"
+                                className="text-muted-foreground hover:text-foreground disabled:opacity-50"
                             >
                                 <X className="h-5 w-5" />
                             </button>
@@ -543,7 +543,7 @@ export default function Step5EnrollmentPage({
                         <TooltipProvider>
                             <div className="space-y-4">
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                                    <label className="mb-2 block text-sm font-medium text-foreground">
                                         Offer
                                     </label>
                                     <select
@@ -555,7 +555,7 @@ export default function Step5EnrollmentPage({
                                             })
                                         }
                                         disabled={isCreating}
-                                        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="w-full rounded-lg border border-border bg-card px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         {offers.map((offer) => (
                                             <option key={offer.id} value={offer.id}>
@@ -564,14 +564,14 @@ export default function Step5EnrollmentPage({
                                             </option>
                                         ))}
                                     </select>
-                                    <p className="mt-1 text-sm text-gray-500">
+                                    <p className="mt-1 text-sm text-muted-foreground">
                                         Page headline will be automatically generated
                                         from offer name
                                     </p>
                                 </div>
 
                                 <div>
-                                    <label className="mb-2 block text-sm font-medium text-gray-700">
+                                    <label className="mb-2 block text-sm font-medium text-foreground">
                                         Presentation Structure
                                     </label>
                                     <select
@@ -583,7 +583,7 @@ export default function Step5EnrollmentPage({
                                             })
                                         }
                                         disabled={isCreating}
-                                        className="w-full rounded-lg border border-gray-300 bg-white px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="w-full rounded-lg border border-border bg-card px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         {deckStructures.map((deck) => (
                                             <option key={deck.id} value={deck.id}>
@@ -592,18 +592,18 @@ export default function Step5EnrollmentPage({
                                             </option>
                                         ))}
                                     </select>
-                                    <p className="mt-1 text-sm text-gray-500">
+                                    <p className="mt-1 text-sm text-muted-foreground">
                                         AI-generated testimonials from presentation
                                         content
                                     </p>
                                 </div>
 
                                 <div>
-                                    <label className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+                                    <label className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
                                         Template Style
                                         <Tooltip>
                                             <TooltipTrigger asChild>
-                                                <HelpCircle className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                                                <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-muted-foreground" />
                                             </TooltipTrigger>
                                             <TooltipContent className="max-w-xs">
                                                 <p className="text-sm">
@@ -617,7 +617,7 @@ export default function Step5EnrollmentPage({
                                     <div className="space-y-3">
                                         {TEMPLATE_OPTIONS.map((template) => (
                                             <div key={template.value}>
-                                                <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-gray-200 bg-white p-4 hover:border-purple-300 hover:bg-purple-50">
+                                                <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card p-4 hover:border-purple-300 hover:bg-purple-50">
                                                     <input
                                                         type="radio"
                                                         name="templateType"
@@ -637,10 +637,10 @@ export default function Step5EnrollmentPage({
                                                         className="mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500"
                                                     />
                                                     <div className="flex-1">
-                                                        <div className="font-medium text-gray-900">
+                                                        <div className="font-medium text-foreground">
                                                             {template.label}
                                                         </div>
-                                                        <p className="mt-1 text-sm text-gray-600">
+                                                        <p className="mt-1 text-sm text-muted-foreground">
                                                             {template.description}
                                                         </p>
                                                     </div>
@@ -665,7 +665,7 @@ export default function Step5EnrollmentPage({
                                     <button
                                         onClick={() => setShowCreateForm(false)}
                                         disabled={isCreating}
-                                        className="rounded-lg border border-gray-300 bg-white px-6 py-2 font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                        className="rounded-lg border border-border bg-card px-6 py-2 font-medium text-foreground hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         Cancel
                                     </button>
@@ -681,7 +681,7 @@ export default function Step5EnrollmentPage({
                                             formData.deckStructureId &&
                                             !isCreating
                                                 ? "bg-purple-600 text-white hover:bg-purple-700"
-                                                : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                                : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                         }`}
                                     >
                                         {isCreating && (
@@ -698,13 +698,13 @@ export default function Step5EnrollmentPage({
                 )}
 
                 {/* Existing Pages List */}
-                <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-                    <div className="border-b border-gray-200 p-6">
+                <div className="rounded-lg border border-border bg-card shadow-soft">
+                    <div className="border-b border-border p-6">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-semibold text-gray-900">
+                            <h3 className="text-xl font-semibold text-foreground">
                                 Your Enrollment Pages
                             </h3>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-muted-foreground">
                                 {enrollmentPages.length} created
                             </span>
                         </div>
@@ -712,7 +712,7 @@ export default function Step5EnrollmentPage({
 
                     <div className="p-6">
                         {enrollmentPages.length === 0 ? (
-                            <div className="py-12 text-center text-gray-500">
+                            <div className="py-12 text-center text-muted-foreground">
                                 <ShoppingCart className="mx-auto mb-4 h-12 w-12 opacity-50" />
                                 <p>
                                     No enrollment pages yet. Create your first one
@@ -725,12 +725,12 @@ export default function Step5EnrollmentPage({
                                     <div
                                         key={page.id}
                                         onClick={() => handleEdit(page.id)}
-                                        className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md"
+                                        className="cursor-pointer rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md"
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
                                                 <div className="mb-2 flex items-center gap-3">
-                                                    <h4 className="text-lg font-semibold text-gray-900">
+                                                    <h4 className="text-lg font-semibold text-foreground">
                                                         {page.headline}
                                                     </h4>
                                                     <span
@@ -746,11 +746,11 @@ export default function Step5EnrollmentPage({
                                                     </span>
                                                 </div>
 
-                                                <p className="mb-3 text-sm text-gray-600">
+                                                <p className="mb-3 text-sm text-muted-foreground">
                                                     {page.subheadline}
                                                 </p>
 
-                                                <div className="flex items-center gap-4 text-sm text-gray-500">
+                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                                     <span>
                                                         Created{" "}
                                                         {new Date(
@@ -763,7 +763,7 @@ export default function Step5EnrollmentPage({
 
                                             <div className="flex items-center gap-4">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-sm text-gray-600">
+                                                    <span className="text-sm text-muted-foreground">
                                                         {page.is_published
                                                             ? "Live"
                                                             : "Draft"}
@@ -787,7 +787,7 @@ export default function Step5EnrollmentPage({
                                                         onClick={() =>
                                                             handlePreview(page.id)
                                                         }
-                                                        className="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                                        className="rounded p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
                                                         title="Preview"
                                                     >
                                                         <Eye className="h-4 w-4" />
@@ -807,7 +807,7 @@ export default function Step5EnrollmentPage({
                                                         onClick={() =>
                                                             handleDelete(page.id)
                                                         }
-                                                        className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                        className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
                                                         title="Delete"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
@@ -823,11 +823,11 @@ export default function Step5EnrollmentPage({
                 </div>
 
                 {/* Helper Info */}
-                <div className="rounded-lg border border-blue-100 bg-blue-50 p-6">
-                    <h4 className="mb-3 font-semibold text-blue-900">
+                <div className="rounded-lg border border-primary/10 bg-primary/5 p-6">
+                    <h4 className="mb-3 font-semibold text-primary">
                         💡 Enrollment Page Tips
                     </h4>
-                    <ul className="space-y-2 text-sm text-blue-800">
+                    <ul className="space-y-2 text-sm text-primary">
                         <li>
                             • Use urgency and scarcity elements to drive immediate
                             action

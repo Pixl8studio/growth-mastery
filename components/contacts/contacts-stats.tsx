@@ -27,14 +27,16 @@ export function ContactsStats({ stats }: ContactsStatsProps) {
             <Card className="p-6">
                 <div className="flex items-center justify-between">
                     <div>
-                        <p className="text-sm font-medium text-gray-600">
+                        <p className="text-sm font-medium text-muted-foreground">
                             Total Contacts
                         </p>
-                        <p className="mt-2 text-3xl font-bold text-gray-900">{total}</p>
+                        <p className="mt-2 text-3xl font-bold text-foreground">
+                            {total}
+                        </p>
                     </div>
-                    <div className="rounded-full bg-blue-100 p-3">
+                    <div className="rounded-full bg-primary/10 p-3">
                         <svg
-                            className="h-6 w-6 text-blue-600"
+                            className="h-6 w-6 text-primary"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -54,13 +56,15 @@ export function ContactsStats({ stats }: ContactsStatsProps) {
             <Card className="p-6">
                 <div className="flex items-center justify-between">
                     <div className="w-full">
-                        <p className="text-sm font-medium text-gray-600">Registered</p>
+                        <p className="text-sm font-medium text-muted-foreground">
+                            Registered
+                        </p>
                         <div className="mt-2 flex items-baseline justify-between">
-                            <p className="text-3xl font-bold text-gray-900">
+                            <p className="text-3xl font-bold text-foreground">
                                 {registered}
                             </p>
                             {total > 0 && (
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-muted-foreground">
                                     {calculatePercentage(registered, total)}%
                                 </p>
                             )}
@@ -88,15 +92,15 @@ export function ContactsStats({ stats }: ContactsStatsProps) {
             <Card className="p-6">
                 <div className="flex items-center justify-between">
                     <div className="w-full">
-                        <p className="text-sm font-medium text-gray-600">
+                        <p className="text-sm font-medium text-muted-foreground">
                             Watched Video
                         </p>
                         <div className="mt-2 flex items-baseline justify-between">
-                            <p className="text-3xl font-bold text-gray-900">
+                            <p className="text-3xl font-bold text-foreground">
                                 {watched}
                             </p>
                             {total > 0 && (
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-muted-foreground">
                                     {calculatePercentage(watched, total)}%
                                 </p>
                             )}
@@ -130,15 +134,15 @@ export function ContactsStats({ stats }: ContactsStatsProps) {
             <Card className="p-6">
                 <div className="flex items-center justify-between">
                     <div className="w-full">
-                        <p className="text-sm font-medium text-gray-600">
+                        <p className="text-sm font-medium text-muted-foreground">
                             Viewed Enrollment
                         </p>
                         <div className="mt-2 flex items-baseline justify-between">
-                            <p className="text-3xl font-bold text-gray-900">
+                            <p className="text-3xl font-bold text-foreground">
                                 {enrolled}
                             </p>
                             {total > 0 && (
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-muted-foreground">
                                     {calculatePercentage(enrolled, total)}%
                                 </p>
                             )}
@@ -166,13 +170,15 @@ export function ContactsStats({ stats }: ContactsStatsProps) {
             <Card className="p-6">
                 <div className="flex items-center justify-between">
                     <div className="w-full">
-                        <p className="text-sm font-medium text-gray-600">Purchased</p>
+                        <p className="text-sm font-medium text-muted-foreground">
+                            Purchased
+                        </p>
                         <div className="mt-2 flex items-baseline justify-between">
-                            <p className="text-3xl font-bold text-gray-900">
+                            <p className="text-3xl font-bold text-foreground">
                                 {purchased}
                             </p>
                             {total > 0 && (
-                                <p className="text-sm text-gray-500">
+                                <p className="text-sm text-muted-foreground">
                                     {calculatePercentage(purchased, total)}%
                                 </p>
                             )}

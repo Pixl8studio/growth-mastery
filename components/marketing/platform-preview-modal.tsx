@@ -40,18 +40,18 @@ export function PlatformPreviewModal({
 
         const platformColors: Record<string, string> = {
             instagram: "bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400",
-            facebook: "bg-blue-600",
-            linkedin: "bg-blue-700",
+            facebook: "bg-primary",
+            linkedin: "bg-primary/90",
             twitter: "bg-sky-500",
         };
 
         return (
-            <div className="bg-white rounded-lg overflow-hidden">
+            <div className="bg-card rounded-lg overflow-hidden">
                 {/* Platform Header */}
                 <div
                     className={`${platformColors[selectedPlatform]} p-3 text-white flex items-center gap-2`}
                 >
-                    <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center text-xl">
+                    <div className="w-8 h-8 rounded-full bg-card flex items-center justify-center text-xl">
                         {platformIcons[selectedPlatform]}
                     </div>
                     <div className="flex-1">
@@ -62,7 +62,7 @@ export function PlatformPreviewModal({
 
                 {/* Media Section */}
                 {content.media_urls && content.media_urls.length > 0 && (
-                    <div className="aspect-square bg-gray-100 flex items-center justify-center">
+                    <div className="aspect-square bg-muted flex items-center justify-center">
                         <img
                             src={content.media_urls[0]}
                             alt="Post media"
@@ -72,7 +72,7 @@ export function PlatformPreviewModal({
                             }}
                         />
                         {!content.media_urls[0] && (
-                            <div className="text-gray-400">
+                            <div className="text-muted-foreground">
                                 <ImageIcon className="h-12 w-12" />
                             </div>
                         )}
@@ -83,21 +83,21 @@ export function PlatformPreviewModal({
                 <div className="p-3">
                     {/* Engagement Buttons (Mock) */}
                     <div className="flex gap-4 mb-3 pb-3 border-b">
-                        <button className="text-gray-700">❤️</button>
-                        <button className="text-gray-700">💬</button>
-                        <button className="text-gray-700">↗️</button>
+                        <button className="text-foreground">❤️</button>
+                        <button className="text-foreground">💬</button>
+                        <button className="text-foreground">↗️</button>
                     </div>
 
                     {/* Caption */}
                     <div className="space-y-2">
                         <div className="text-sm">
                             <span className="font-semibold">Your Brand </span>
-                            <span className="text-gray-900">{content.copy_text}</span>
+                            <span className="text-foreground">{content.copy_text}</span>
                         </div>
 
                         {/* Hashtags */}
                         {content.hashtags && content.hashtags.length > 0 && (
-                            <div className="text-sm text-blue-600">
+                            <div className="text-sm text-primary">
                                 {content.hashtags.map((tag) => `#${tag}`).join(" ")}
                             </div>
                         )}
@@ -112,10 +112,12 @@ export function PlatformPreviewModal({
 
                     {/* Mock Comments */}
                     <div className="mt-3 pt-3 border-t">
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-muted-foreground">
                             View all 24 comments
                         </div>
-                        <div className="text-xs text-gray-400 mt-1">2 hours ago</div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                            2 hours ago
+                        </div>
                     </div>
                 </div>
             </div>
@@ -133,7 +135,7 @@ export function PlatformPreviewModal({
                     <X className="h-8 w-8" />
                 </button>
 
-                <div className="bg-white rounded-lg p-6">
+                <div className="bg-card rounded-lg p-6">
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="text-xl font-bold">Platform Preview</h3>
                         <div className="flex gap-2">
@@ -170,9 +172,9 @@ export function PlatformPreviewModal({
                                 <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-40 h-7 bg-gray-900 rounded-b-3xl z-10"></div>
 
                                 {/* Screen */}
-                                <div className="w-full h-full bg-white rounded-[2.5rem] overflow-hidden overflow-y-auto">
+                                <div className="w-full h-full bg-card rounded-[2.5rem] overflow-hidden overflow-y-auto">
                                     {/* Status Bar */}
-                                    <div className="h-12 bg-white flex items-center justify-between px-6 text-xs">
+                                    <div className="h-12 bg-card flex items-center justify-between px-6 text-xs">
                                         <span>9:41</span>
                                         <div className="flex gap-1">
                                             <span>📶</span>

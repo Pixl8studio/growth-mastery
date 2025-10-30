@@ -121,14 +121,14 @@ export function GlobalProspectsTable({ userId }: GlobalProspectsTableProps) {
 
     const getSegmentBadge = (segment: string) => {
         const colors: Record<string, string> = {
-            no_show: "bg-gray-500 text-white",
+            no_show: "bg-muted/500 text-white",
             skimmer: "bg-yellow-500 text-white",
-            sampler: "bg-blue-500 text-white",
+            sampler: "bg-primary/50 text-white",
             engaged: "bg-green-500 text-white",
             hot: "bg-red-500 text-white",
         };
         return (
-            <Badge className={colors[segment] || "bg-gray-500 text-white"}>
+            <Badge className={colors[segment] || "bg-muted/500 text-white"}>
                 {segment.replace("_", " ")}
             </Badge>
         );
@@ -137,9 +137,9 @@ export function GlobalProspectsTable({ userId }: GlobalProspectsTableProps) {
     const getConsentBadge = (state: string) => {
         const colors: Record<string, string> = {
             opt_in: "bg-green-100 text-green-800",
-            implied: "bg-blue-100 text-blue-800",
+            implied: "bg-primary/10 text-primary",
             opted_out: "bg-red-100 text-red-800",
-            bounced: "bg-gray-100 text-gray-800",
+            bounced: "bg-muted text-foreground",
             complained: "bg-orange-100 text-orange-800",
         };
         return <Badge className={colors[state]}>{state.replace("_", " ")}</Badge>;
@@ -148,7 +148,9 @@ export function GlobalProspectsTable({ userId }: GlobalProspectsTableProps) {
     if (loading) {
         return (
             <Card className="p-8">
-                <div className="text-center text-gray-600">Loading prospects...</div>
+                <div className="text-center text-muted-foreground">
+                    Loading prospects...
+                </div>
             </Card>
         );
     }
@@ -163,7 +165,7 @@ export function GlobalProspectsTable({ userId }: GlobalProspectsTableProps) {
                         placeholder="Search prospects..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg"
+                        className="flex-1 px-4 py-2 border border-border rounded-lg"
                     />
                     <Button variant="outline">Export CSV</Button>
                 </div>
@@ -172,29 +174,29 @@ export function GlobalProspectsTable({ userId }: GlobalProspectsTableProps) {
             {/* Table */}
             <Card className="overflow-x-auto">
                 {filteredProspects.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">
+                    <div className="text-center py-12 text-muted-foreground">
                         No prospects found
                     </div>
                 ) : (
                     <table className="w-full">
-                        <thead className="bg-gray-50 border-b">
+                        <thead className="bg-muted/50 border-b">
                             <tr>
                                 <th
-                                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                                    className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase cursor-pointer hover:bg-muted"
                                     onClick={() => handleSort("email")}
                                 >
                                     Name / Email{" "}
                                     {sortField === "email" &&
                                         (sortDirection === "asc" ? "↑" : "↓")}
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                                     Funnel
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                                     Segment
                                 </th>
                                 <th
-                                    className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                                    className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase cursor-pointer hover:bg-muted"
                                     onClick={() => handleSort("watch_percentage")}
                                 >
                                     Watch%{" "}
@@ -202,18 +204,18 @@ export function GlobalProspectsTable({ userId }: GlobalProspectsTableProps) {
                                         (sortDirection === "asc" ? "↑" : "↓")}
                                 </th>
                                 <th
-                                    className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                                    className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase cursor-pointer hover:bg-muted"
                                     onClick={() => handleSort("intent_score")}
                                 >
                                     Intent{" "}
                                     {sortField === "intent_score" &&
                                         (sortDirection === "asc" ? "↑" : "↓")}
                                 </th>
-                                <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">
+                                <th className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase">
                                     Fit
                                 </th>
                                 <th
-                                    className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                                    className="px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase cursor-pointer hover:bg-muted"
                                     onClick={() => handleSort("total_touches")}
                                 >
                                     Touches{" "}
@@ -221,36 +223,36 @@ export function GlobalProspectsTable({ userId }: GlobalProspectsTableProps) {
                                         (sortDirection === "asc" ? "↑" : "↓")}
                                 </th>
                                 <th
-                                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                                    className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase cursor-pointer hover:bg-muted"
                                     onClick={() => handleSort("last_touch_at")}
                                 >
                                     Last Touch{" "}
                                     {sortField === "last_touch_at" &&
                                         (sortDirection === "asc" ? "↑" : "↓")}
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                                     Next Touch
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                                     Status
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                                <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase">
                                     Consent
                                 </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                             {filteredProspects.map((prospect) => (
-                                <tr key={prospect.id} className="hover:bg-gray-50">
+                                <tr key={prospect.id} className="hover:bg-muted/50">
                                     <td className="px-4 py-3">
-                                        <div className="font-medium text-gray-900">
+                                        <div className="font-medium text-foreground">
                                             {prospect.first_name || prospect.email}
                                         </div>
-                                        <div className="text-sm text-gray-500">
+                                        <div className="text-sm text-muted-foreground">
                                             {prospect.email}
                                         </div>
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600">
+                                    <td className="px-4 py-3 text-sm text-muted-foreground">
                                         {prospect.funnel_projects?.name || "—"}
                                     </td>
                                     <td className="px-4 py-3">
@@ -262,20 +264,20 @@ export function GlobalProspectsTable({ userId }: GlobalProspectsTableProps) {
                                     <td className="px-4 py-3 text-right text-sm font-medium">
                                         {prospect.intent_score}
                                     </td>
-                                    <td className="px-4 py-3 text-right text-sm text-gray-600">
+                                    <td className="px-4 py-3 text-right text-sm text-muted-foreground">
                                         {prospect.fit_score}
                                     </td>
                                     <td className="px-4 py-3 text-right text-sm font-medium">
                                         {prospect.total_touches}
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600">
+                                    <td className="px-4 py-3 text-sm text-muted-foreground">
                                         {prospect.last_touch_at
                                             ? new Date(
                                                   prospect.last_touch_at
                                               ).toLocaleDateString()
                                             : "—"}
                                     </td>
-                                    <td className="px-4 py-3 text-sm text-gray-600">
+                                    <td className="px-4 py-3 text-sm text-muted-foreground">
                                         {prospect.next_scheduled_touch
                                             ? new Date(
                                                   prospect.next_scheduled_touch

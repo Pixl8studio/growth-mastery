@@ -50,10 +50,10 @@ export default function GammaThemeSelector({
 
     return (
         <div className={className}>
-            <label className="mb-4 block text-base font-medium text-gray-700">
+            <label className="mb-4 block text-base font-medium text-foreground">
                 Choose Gamma Theme
             </label>
-            <p className="mb-4 text-sm text-gray-600">
+            <p className="mb-4 text-sm text-muted-foreground">
                 Don't see a theme you love? You can change it later in Gamma.
             </p>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -64,12 +64,12 @@ export default function GammaThemeSelector({
                         className={`group relative rounded-xl border-2 p-4 transition-all duration-200 hover:scale-105 ${
                             selectedTheme === theme.id
                                 ? "border-purple-500 bg-purple-50 shadow-lg ring-4 ring-purple-200"
-                                : "border-gray-200 hover:border-gray-300 hover:shadow-lg"
+                                : "border-border hover:border-border hover:shadow-float"
                         }`}
                         title={theme.name}
                     >
                         {/* Theme Preview Image */}
-                        <div className="mb-3 aspect-[4/3] w-full overflow-hidden rounded-lg bg-gray-100 shadow-md">
+                        <div className="mb-3 aspect-[4/3] w-full overflow-hidden rounded-lg bg-muted shadow-md">
                             {!imageErrors.has(theme.id) ? (
                                 <Image
                                     src={theme.image}
@@ -82,7 +82,7 @@ export default function GammaThemeSelector({
                                 />
                             ) : (
                                 <div className="flex h-full w-full items-center justify-center bg-gray-200">
-                                    <span className="text-sm text-gray-400">
+                                    <span className="text-sm text-muted-foreground">
                                         Preview
                                     </span>
                                 </div>
@@ -90,13 +90,13 @@ export default function GammaThemeSelector({
                         </div>
 
                         {/* Theme Name */}
-                        <span className="block text-center text-base font-semibold leading-tight text-gray-900">
+                        <span className="block text-center text-base font-semibold leading-tight text-foreground">
                             {theme.name}
                         </span>
 
                         {/* Selected Indicator */}
                         {selectedTheme === theme.id && (
-                            <div className="absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 shadow-lg">
+                            <div className="absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-purple-600 shadow-float">
                                 <svg
                                     className="h-5 w-5 text-white"
                                     fill="currentColor"

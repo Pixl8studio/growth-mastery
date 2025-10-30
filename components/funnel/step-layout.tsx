@@ -56,14 +56,14 @@ export function StepLayout({
     const previousHref = getPreviousStepHref(currentStep, projectId);
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-muted/50">
             {/* Step Navigation Sidebar */}
-            <div className="fixed left-0 top-0 h-screen w-64 overflow-y-auto border-r border-gray-200 bg-white">
+            <div className="fixed left-0 top-0 h-screen w-64 overflow-y-auto border-r border-border bg-card">
                 <div className="p-6">
                     {/* Back to Dashboard Button */}
                     <Link
                         href={`/funnel-builder/${projectId}`}
-                        className="mb-6 flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-100 hover:border-gray-300"
+                        className="mb-6 flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:border-border"
                     >
                         <LayoutDashboard className="h-4 w-4" />
                         <span>Back to Dashboard</span>
@@ -71,10 +71,10 @@ export function StepLayout({
 
                     {/* Funnel Info */}
                     <div className="mb-6">
-                        <h2 className="truncate text-lg font-semibold text-gray-900">
+                        <h2 className="truncate text-lg font-semibold text-foreground">
                             {funnelName || "Funnel Builder"}
                         </h2>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-muted-foreground">
                             Step {currentStep} of 12
                         </p>
                     </div>
@@ -94,12 +94,12 @@ export function StepLayout({
                     {(stepTitle || stepDescription) && (
                         <div className="mb-8 text-center">
                             {stepTitle && (
-                                <h1 className="mb-3 text-3xl font-bold text-gray-900">
+                                <h1 className="mb-3 text-3xl font-bold text-foreground">
                                     {stepTitle}
                                 </h1>
                             )}
                             {stepDescription && (
-                                <p className="mx-auto max-w-2xl text-lg text-gray-600">
+                                <p className="mx-auto max-w-2xl text-lg text-muted-foreground">
                                     {stepDescription}
                                 </p>
                             )}
@@ -117,14 +117,14 @@ export function StepLayout({
                                 onPrevious ? (
                                     <button
                                         onClick={onPrevious}
-                                        className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                                        className="inline-flex items-center rounded-lg border border-border bg-card px-6 py-3 font-medium text-foreground transition-colors hover:bg-muted/50"
                                     >
                                         <ArrowLeft className="mr-2 h-4 w-4" />
                                         Previous
                                     </button>
                                 ) : (
                                     <Link href={previousHref}>
-                                        <button className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                                        <button className="inline-flex items-center rounded-lg border border-border bg-card px-6 py-3 font-medium text-foreground transition-colors hover:bg-muted/50">
                                             <ArrowLeft className="mr-2 h-4 w-4" />
                                             Previous
                                         </button>
@@ -132,7 +132,7 @@ export function StepLayout({
                                 )
                             ) : (
                                 <Link href={`/funnel-builder/${projectId}`}>
-                                    <button className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-50">
+                                    <button className="inline-flex items-center rounded-lg border border-border bg-card px-6 py-3 font-medium text-foreground transition-colors hover:bg-muted/50">
                                         <ArrowLeft className="mr-2 h-4 w-4" />
                                         Back to Dashboard
                                     </button>
@@ -145,7 +145,7 @@ export function StepLayout({
                             {showSaveButton && (
                                 <button
                                     onClick={onSave}
-                                    className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-6 py-3 font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                                    className="inline-flex items-center rounded-lg border border-border bg-card px-6 py-3 font-medium text-foreground transition-colors hover:bg-muted/50"
                                 >
                                     <Check className="mr-2 h-4 w-4" />
                                     {saveLabel}
@@ -159,8 +159,8 @@ export function StepLayout({
                                         disabled={nextDisabled}
                                         className={`inline-flex items-center rounded-lg px-6 py-3 font-medium transition-colors ${
                                             nextDisabled
-                                                ? "cursor-not-allowed bg-gray-300 text-gray-500"
-                                                : "bg-blue-600 text-white hover:bg-blue-700"
+                                                ? "cursor-not-allowed bg-gray-300 text-muted-foreground"
+                                                : "bg-primary text-white hover:bg-primary/90"
                                         }`}
                                     >
                                         {nextLabel}
@@ -172,8 +172,8 @@ export function StepLayout({
                                             disabled={nextDisabled}
                                             className={`inline-flex items-center rounded-lg px-6 py-3 font-medium transition-colors ${
                                                 nextDisabled
-                                                    ? "cursor-not-allowed bg-gray-300 text-gray-500"
-                                                    : "bg-blue-600 text-white hover:bg-blue-700"
+                                                    ? "cursor-not-allowed bg-gray-300 text-muted-foreground"
+                                                    : "bg-primary text-white hover:bg-primary/90"
                                             }`}
                                         >
                                             {nextLabel}

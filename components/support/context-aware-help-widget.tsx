@@ -213,8 +213,8 @@ export function ContextAwareHelpWidget() {
                 className={cn(
                     "fixed bottom-6 right-6 z-50",
                     "h-14 w-14 rounded-full",
-                    "bg-gradient-to-r from-blue-600 to-purple-600",
-                    "text-white shadow-lg",
+                    "bg-gradient-to-r from-primary to-purple-600",
+                    "text-white shadow-float",
                     "hover:shadow-xl hover:scale-110",
                     "transition-all duration-200",
                     "flex items-center justify-center"
@@ -226,10 +226,10 @@ export function ContextAwareHelpWidget() {
 
             {/* Chat Panel */}
             {isOpen && (
-                <div className="fixed bottom-24 right-6 z-50 w-96 rounded-lg bg-white shadow-2xl border border-gray-200">
+                <div className="fixed bottom-24 right-6 z-50 w-96 rounded-lg bg-card shadow-2xl border border-border">
                     <div className="flex flex-col h-[32rem]">
                         {/* Header */}
-                        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600 rounded-t-lg">
+                        <div className="p-4 border-b border-border bg-gradient-to-r from-primary to-purple-600 rounded-t-lg">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <Sparkles className="h-5 w-5 text-white" />
@@ -267,8 +267,8 @@ export function ContextAwareHelpWidget() {
                                         className={cn(
                                             "max-w-[80%] rounded-lg px-4 py-2",
                                             msg.role === "user"
-                                                ? "bg-blue-600 text-white"
-                                                : "bg-gray-100 text-gray-900"
+                                                ? "bg-primary text-white"
+                                                : "bg-muted text-foreground"
                                         )}
                                     >
                                         <div className="text-sm whitespace-pre-wrap">
@@ -279,8 +279,8 @@ export function ContextAwareHelpWidget() {
                             ))}
                             {(loading || executing) && (
                                 <div className="flex justify-start">
-                                    <div className="bg-gray-100 rounded-lg px-4 py-2">
-                                        <Loader2 className="h-5 w-5 animate-spin text-gray-600" />
+                                    <div className="bg-muted rounded-lg px-4 py-2">
+                                        <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                                     </div>
                                 </div>
                             )}
@@ -288,7 +288,7 @@ export function ContextAwareHelpWidget() {
                         </div>
 
                         {/* Input */}
-                        <div className="p-4 border-t border-gray-200">
+                        <div className="p-4 border-t border-border">
                             <div className="flex gap-2">
                                 <input
                                     type="text"
@@ -296,7 +296,7 @@ export function ContextAwareHelpWidget() {
                                     onChange={(e) => setInput(e.target.value)}
                                     onKeyDown={handleKeyDown}
                                     placeholder="Ask me anything..."
-                                    className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    className="flex-1 rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                                     disabled={loading || executing}
                                 />
                                 <Button

@@ -75,7 +75,7 @@ export function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
             {/* Header */}
             <div>
                 <h3 className="text-lg font-semibold">Analytics Dashboard</h3>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                     Track sequence performance and engagement metrics
                 </p>
             </div>
@@ -84,8 +84,8 @@ export function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
             <div className="grid grid-cols-4 gap-4">
                 <Card className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-600">Open Rate</span>
-                        <Mail className="h-4 w-4 text-blue-500" />
+                        <span className="text-sm text-muted-foreground">Open Rate</span>
+                        <Mail className="h-4 w-4 text-primary-foreground0" />
                     </div>
                     <div className="flex items-end gap-2">
                         <div className="text-2xl font-bold">{overallOpenRate}%</div>
@@ -94,14 +94,16 @@ export function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
                             +2.3%
                         </div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                         {data.overall.totalOpened.toLocaleString()} opens
                     </p>
                 </Card>
 
                 <Card className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-600">Click Rate</span>
+                        <span className="text-sm text-muted-foreground">
+                            Click Rate
+                        </span>
                         <MousePointer className="h-4 w-4 text-purple-500" />
                     </div>
                     <div className="flex items-end gap-2">
@@ -111,14 +113,16 @@ export function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
                             +1.8%
                         </div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                         {data.overall.totalClicked.toLocaleString()} clicks
                     </p>
                 </Card>
 
                 <Card className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-600">Conversion Rate</span>
+                        <span className="text-sm text-muted-foreground">
+                            Conversion Rate
+                        </span>
                         <Users className="h-4 w-4 text-green-500" />
                     </div>
                     <div className="flex items-end gap-2">
@@ -130,14 +134,14 @@ export function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
                             +0.5%
                         </div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                         {data.overall.totalConverted.toLocaleString()} conversions
                     </p>
                 </Card>
 
                 <Card className="p-4">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-gray-600">Revenue</span>
+                        <span className="text-sm text-muted-foreground">Revenue</span>
                         <DollarSign className="h-4 w-4 text-yellow-500" />
                     </div>
                     <div className="flex items-end gap-2">
@@ -149,20 +153,22 @@ export function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
                             +12.4%
                         </div>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">From follow-ups</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                        From follow-ups
+                    </p>
                 </Card>
             </div>
 
             {/* Sequence Performance */}
             <Card className="p-6">
                 <div className="flex items-center gap-2 mb-4">
-                    <BarChart3 className="h-5 w-5 text-gray-600" />
+                    <BarChart3 className="h-5 w-5 text-muted-foreground" />
                     <h4 className="font-semibold">Sequence Performance</h4>
                 </div>
 
                 <div className="space-y-3">
                     {data.sequences.length === 0 ? (
-                        <div className="text-center py-8 text-gray-500">
+                        <div className="text-center py-8 text-muted-foreground">
                             No sequence data yet. Start sending follow-ups to see
                             performance metrics.
                         </div>
@@ -191,7 +197,7 @@ export function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
                                             <h5 className="font-medium">
                                                 {sequence.name}
                                             </h5>
-                                            <p className="text-xs text-gray-600">
+                                            <p className="text-xs text-muted-foreground">
                                                 {sequence.sent.toLocaleString()} sent
                                             </p>
                                         </div>
@@ -202,7 +208,7 @@ export function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
 
                                     <div className="grid grid-cols-4 gap-4 text-sm">
                                         <div>
-                                            <div className="text-xs text-gray-600 mb-1">
+                                            <div className="text-xs text-muted-foreground mb-1">
                                                 Open Rate
                                             </div>
                                             <div className="font-semibold">
@@ -210,7 +216,7 @@ export function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
                                             </div>
                                         </div>
                                         <div>
-                                            <div className="text-xs text-gray-600 mb-1">
+                                            <div className="text-xs text-muted-foreground mb-1">
                                                 Click Rate
                                             </div>
                                             <div className="font-semibold">
@@ -218,7 +224,7 @@ export function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
                                             </div>
                                         </div>
                                         <div>
-                                            <div className="text-xs text-gray-600 mb-1">
+                                            <div className="text-xs text-muted-foreground mb-1">
                                                 Conversion
                                             </div>
                                             <div className="font-semibold">
@@ -226,7 +232,7 @@ export function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
                                             </div>
                                         </div>
                                         <div>
-                                            <div className="text-xs text-gray-600 mb-1">
+                                            <div className="text-xs text-muted-foreground mb-1">
                                                 Replied
                                             </div>
                                             <div className="font-semibold">
@@ -240,7 +246,7 @@ export function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
                                         <div>
                                             <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                                                 <div
-                                                    className="h-full bg-blue-500"
+                                                    className="h-full bg-primary/50"
                                                     style={{ width: `${openRate}%` }}
                                                 />
                                             </div>
@@ -274,15 +280,15 @@ export function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
                 <h4 className="font-semibold mb-4">Engagement Funnel</h4>
                 <div className="space-y-2">
                     <div className="flex items-center gap-4">
-                        <div className="w-32 text-sm text-gray-600">Sent</div>
-                        <div className="flex-1 h-12 bg-blue-500 rounded flex items-center px-4 text-white font-medium">
+                        <div className="w-32 text-sm text-muted-foreground">Sent</div>
+                        <div className="flex-1 h-12 bg-primary/50 rounded flex items-center px-4 text-white font-medium">
                             {data.overall.totalSent.toLocaleString()} (100%)
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className="w-32 text-sm text-gray-600">Opened</div>
+                        <div className="w-32 text-sm text-muted-foreground">Opened</div>
                         <div
-                            className="h-12 bg-blue-400 rounded flex items-center px-4 text-white font-medium"
+                            className="h-12 bg-primary/40 rounded flex items-center px-4 text-white font-medium"
                             style={{
                                 width: `${(data.overall.totalOpened / data.overall.totalSent) * 100}%`,
                             }}
@@ -292,7 +298,9 @@ export function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className="w-32 text-sm text-gray-600">Clicked</div>
+                        <div className="w-32 text-sm text-muted-foreground">
+                            Clicked
+                        </div>
                         <div
                             className="h-12 bg-purple-500 rounded flex items-center px-4 text-white font-medium"
                             style={{
@@ -308,7 +316,9 @@ export function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
                         </div>
                     </div>
                     <div className="flex items-center gap-4">
-                        <div className="w-32 text-sm text-gray-600">Converted</div>
+                        <div className="w-32 text-sm text-muted-foreground">
+                            Converted
+                        </div>
                         <div
                             className="h-12 bg-green-500 rounded flex items-center px-4 text-white font-medium"
                             style={{
@@ -335,19 +345,19 @@ export function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
                                 45.2% open
                             </Badge>
                         </div>
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-muted-foreground">
                             Best performing subject line across all sequences
                         </p>
                     </div>
 
-                    <div className="p-3 bg-blue-50 rounded border border-blue-200">
+                    <div className="p-3 bg-primary/5 rounded border border-primary/20">
                         <div className="flex justify-between items-center mb-1">
                             <span className="font-medium">CTA: See the results →</span>
-                            <Badge className="bg-blue-100 text-blue-800">
+                            <Badge className="bg-primary/10 text-primary">
                                 32.8% click
                             </Badge>
                         </div>
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-muted-foreground">
                             Highest click-through rate for CTAs
                         </p>
                     </div>
@@ -359,7 +369,7 @@ export function AnalyticsDashboard({ data }: AnalyticsDashboardProps) {
                                 12.4% convert
                             </Badge>
                         </div>
-                        <p className="text-xs text-gray-600">
+                        <p className="text-xs text-muted-foreground">
                             Story with highest conversion rate
                         </p>
                     </div>

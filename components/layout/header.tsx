@@ -21,7 +21,7 @@ export async function Header() {
     const user = await getCurrentUser();
 
     return (
-        <header className="sticky top-0 z-50 border-b border-gray-200 bg-white">
+        <header className="sticky top-0 z-50 border-b border-border bg-card">
             <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 <div className="flex h-16 items-center justify-between">
                     {/* Logo */}
@@ -29,7 +29,7 @@ export async function Header() {
                         href={user ? "/funnel-builder" : "/"}
                         className="flex items-center space-x-2"
                     >
-                        <span className="text-2xl font-bold text-gray-900">
+                        <span className="text-2xl font-bold text-foreground">
                             Genie AI
                         </span>
                     </Link>
@@ -39,25 +39,25 @@ export async function Header() {
                         <nav className="flex items-center space-x-6">
                             <Link
                                 href="/funnel-builder"
-                                className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                                className="text-sm font-medium text-foreground hover:text-foreground"
                             >
                                 Funnels
                             </Link>
                             <Link
                                 href="/pages"
-                                className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                                className="text-sm font-medium text-foreground hover:text-foreground"
                             >
                                 Pages
                             </Link>
                             <Link
                                 href="/ai-followup"
-                                className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                                className="text-sm font-medium text-foreground hover:text-foreground"
                             >
                                 AI Followup
                             </Link>
                             <Link
                                 href="/contacts"
-                                className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                                className="text-sm font-medium text-foreground hover:text-foreground"
                             >
                                 Contacts
                             </Link>

@@ -287,7 +287,7 @@ export default function Step9RegistrationPage({
     if (!projectId) {
         return (
             <div className="flex h-screen items-center justify-center">
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-muted-foreground">Loading...</div>
             </div>
         );
     }
@@ -324,7 +324,7 @@ export default function Step9RegistrationPage({
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
                                     hasDeckStructure
                                         ? "bg-green-600 text-white hover:bg-green-700"
-                                        : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                        : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                 }`}
                             >
                                 <PlusCircle className="h-6 w-6" />
@@ -335,14 +335,14 @@ export default function Step9RegistrationPage({
                         </div>
                     </div>
                 ) : (
-                    <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                    <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
                         <div className="mb-6 flex items-center justify-between">
-                            <h3 className="text-xl font-semibold text-gray-900">
+                            <h3 className="text-xl font-semibold text-foreground">
                                 Create Registration Page
                             </h3>
                             <button
                                 onClick={() => setShowCreateForm(false)}
-                                className="text-gray-500 hover:text-gray-700"
+                                className="text-muted-foreground hover:text-foreground"
                             >
                                 <X className="h-5 w-5" />
                             </button>
@@ -350,7 +350,7 @@ export default function Step9RegistrationPage({
 
                         <div className="space-y-4">
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                <label className="mb-2 block text-sm font-medium text-foreground">
                                     Page Headline
                                 </label>
                                 <input
@@ -363,12 +363,12 @@ export default function Step9RegistrationPage({
                                         })
                                     }
                                     placeholder="e.g., Master AI Sales in 90 Minutes"
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
                                 />
                             </div>
 
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                <label className="mb-2 block text-sm font-medium text-foreground">
                                     Deck Structure
                                 </label>
                                 <select
@@ -379,7 +379,7 @@ export default function Step9RegistrationPage({
                                             deckStructureId: e.target.value,
                                         })
                                     }
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
                                 >
                                     {deckStructures.map((deck) => (
                                         <option key={deck.id} value={deck.id}>
@@ -388,7 +388,7 @@ export default function Step9RegistrationPage({
                                         </option>
                                     ))}
                                 </select>
-                                <p className="mt-1 text-sm text-gray-500">
+                                <p className="mt-1 text-sm text-muted-foreground">
                                     Content will be pulled from this deck structure
                                 </p>
                             </div>
@@ -396,7 +396,7 @@ export default function Step9RegistrationPage({
                             <div className="flex justify-end gap-3">
                                 <button
                                     onClick={() => setShowCreateForm(false)}
-                                    className="rounded-lg border border-gray-300 px-6 py-2 font-medium text-gray-700 hover:bg-gray-50"
+                                    className="rounded-lg border border-border px-6 py-2 font-medium text-foreground hover:bg-muted/50"
                                 >
                                     Cancel
                                 </button>
@@ -406,7 +406,7 @@ export default function Step9RegistrationPage({
                                     className={`rounded-lg px-6 py-2 font-semibold ${
                                         formData.headline.trim() && !isCreating
                                             ? "bg-green-600 text-white hover:bg-green-700"
-                                            : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                            : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                     }`}
                                 >
                                     {isCreating ? "Creating..." : "Create Page"}
@@ -417,13 +417,13 @@ export default function Step9RegistrationPage({
                 )}
 
                 {/* Existing Pages List */}
-                <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-                    <div className="border-b border-gray-200 p-6">
+                <div className="rounded-lg border border-border bg-card shadow-soft">
+                    <div className="border-b border-border p-6">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-semibold text-gray-900">
+                            <h3 className="text-xl font-semibold text-foreground">
                                 Your Registration Pages
                             </h3>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-muted-foreground">
                                 {registrationPages.length} created
                             </span>
                         </div>
@@ -431,7 +431,7 @@ export default function Step9RegistrationPage({
 
                     <div className="p-6">
                         {registrationPages.length === 0 ? (
-                            <div className="py-12 text-center text-gray-500">
+                            <div className="py-12 text-center text-muted-foreground">
                                 <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
                                 <p>
                                     No registration pages yet. Create your first one
@@ -443,12 +443,12 @@ export default function Step9RegistrationPage({
                                 {registrationPages.map((page) => (
                                     <div
                                         key={page.id}
-                                        className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-green-300 hover:shadow-md"
+                                        className="rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-green-300 hover:shadow-md"
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
                                                 <div className="mb-2 flex items-center gap-3">
-                                                    <h4 className="text-lg font-semibold text-gray-900">
+                                                    <h4 className="text-lg font-semibold text-foreground">
                                                         {page.headline}
                                                     </h4>
                                                     <span
@@ -464,11 +464,11 @@ export default function Step9RegistrationPage({
                                                     </span>
                                                 </div>
 
-                                                <p className="mb-3 text-sm text-gray-600">
+                                                <p className="mb-3 text-sm text-muted-foreground">
                                                     {page.subheadline}
                                                 </p>
 
-                                                <div className="flex items-center gap-4 text-sm text-gray-500">
+                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                                     <span>
                                                         Created{" "}
                                                         {new Date(
@@ -483,7 +483,7 @@ export default function Step9RegistrationPage({
 
                                             <div className="flex items-center gap-4">
                                                 <div className="flex items-center gap-2">
-                                                    <span className="text-sm text-gray-600">
+                                                    <span className="text-sm text-muted-foreground">
                                                         {page.is_published
                                                             ? "Live"
                                                             : "Draft"}
@@ -504,7 +504,7 @@ export default function Step9RegistrationPage({
                                                         onClick={() =>
                                                             handlePreview(page.id)
                                                         }
-                                                        className="rounded p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                                        className="rounded p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
                                                         title="Preview"
                                                     >
                                                         <Eye className="h-4 w-4" />
@@ -524,7 +524,7 @@ export default function Step9RegistrationPage({
                                                         onClick={() =>
                                                             handleDelete(page.id)
                                                         }
-                                                        className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                        className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
                                                         title="Delete"
                                                     >
                                                         <Trash2 className="h-4 w-4" />
@@ -540,11 +540,11 @@ export default function Step9RegistrationPage({
                 </div>
 
                 {/* Helper Info */}
-                <div className="rounded-lg border border-blue-100 bg-blue-50 p-6">
-                    <h4 className="mb-3 font-semibold text-blue-900">
+                <div className="rounded-lg border border-primary/10 bg-primary/5 p-6">
+                    <h4 className="mb-3 font-semibold text-primary">
                         💡 Registration Page Tips
                     </h4>
-                    <ul className="space-y-2 text-sm text-blue-800">
+                    <ul className="space-y-2 text-sm text-primary">
                         <li>
                             • Use the Visual Editor to customize all content, colors,
                             and layout

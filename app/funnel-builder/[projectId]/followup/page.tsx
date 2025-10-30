@@ -24,7 +24,7 @@ export default function FollowupManagementPage() {
         <div className="container mx-auto p-6">
             <div className="mb-6">
                 <h1 className="text-3xl font-bold">AI Follow-Up Engine</h1>
-                <p className="text-gray-600 mt-2">
+                <p className="text-muted-foreground mt-2">
                     Intelligent, personalized post-webinar engagement automation
                 </p>
             </div>

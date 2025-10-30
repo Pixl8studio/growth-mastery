@@ -93,10 +93,10 @@ export function FunnelProgressionTimeline({ contact }: FunnelProgressionTimeline
                                         isCompleted
                                             ? "border-green-500 bg-green-500 text-white"
                                             : isCurrent
-                                              ? "border-blue-500 bg-blue-50 text-blue-600"
+                                              ? "border-primary bg-primary/5 text-primary"
                                               : isDropOff
                                                 ? "border-red-500 bg-red-50 text-red-600"
-                                                : "border-gray-300 bg-gray-50 text-gray-400"
+                                                : "border-border bg-muted/50 text-muted-foreground"
                                     }`}
                                 >
                                     {stage.icon}
@@ -108,8 +108,8 @@ export function FunnelProgressionTimeline({ contact }: FunnelProgressionTimeline
                                         <h4
                                             className={`text-sm font-semibold ${
                                                 isCompleted || isCurrent
-                                                    ? "text-gray-900"
-                                                    : "text-gray-500"
+                                                    ? "text-foreground"
+                                                    : "text-muted-foreground"
                                             }`}
                                         >
                                             {stage.title}
@@ -120,7 +120,7 @@ export function FunnelProgressionTimeline({ contact }: FunnelProgressionTimeline
                                             </span>
                                         )}
                                         {isCurrent && !isCompleted && (
-                                            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-800">
+                                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                                                 Current
                                             </span>
                                         )}
@@ -130,7 +130,7 @@ export function FunnelProgressionTimeline({ contact }: FunnelProgressionTimeline
                                             </span>
                                         )}
                                     </div>
-                                    <p className="mt-0.5 text-sm text-gray-600">
+                                    <p className="mt-0.5 text-sm text-muted-foreground">
                                         {stage.description}
                                     </p>
                                 </div>

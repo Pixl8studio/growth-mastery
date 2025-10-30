@@ -156,7 +156,7 @@ export function ProfileConfigForm({ profile, onUpdate }: ProfileConfigFormProps)
                     placeholder="Describe your brand voice, key messaging themes, and how you want to communicate with your audience..."
                     className="min-h-[200px]"
                 />
-                <p className="text-sm text-gray-600 mt-2">
+                <p className="text-sm text-muted-foreground mt-2">
                     Auto-populated from your intake call and offer. Edit to refine your
                     brand voice.
                 </p>
@@ -170,7 +170,7 @@ export function ProfileConfigForm({ profile, onUpdate }: ProfileConfigFormProps)
                             <Sparkles className="h-5 w-5 text-purple-500" />
                             Echo Mode - Voice Mirroring
                         </h3>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-muted-foreground">
                             AI learns your unique writing style and mirrors it
                         </p>
                     </div>
@@ -235,7 +235,7 @@ export function ProfileConfigForm({ profile, onUpdate }: ProfileConfigFormProps)
                             <label className="text-sm font-medium">
                                 Conversational ↔ Professional
                             </label>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-muted-foreground">
                                 {toneSettings.conversational_professional}
                             </span>
                         </div>
@@ -256,7 +256,7 @@ export function ProfileConfigForm({ profile, onUpdate }: ProfileConfigFormProps)
                     <div>
                         <div className="flex justify-between mb-2">
                             <label className="text-sm font-medium">Warmth</label>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-muted-foreground">
                                 {toneSettings.warmth}
                             </span>
                         </div>
@@ -274,7 +274,7 @@ export function ProfileConfigForm({ profile, onUpdate }: ProfileConfigFormProps)
                     <div>
                         <div className="flex justify-between mb-2">
                             <label className="text-sm font-medium">Urgency</label>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-muted-foreground">
                                 {toneSettings.urgency}
                             </span>
                         </div>
@@ -292,7 +292,7 @@ export function ProfileConfigForm({ profile, onUpdate }: ProfileConfigFormProps)
                     <div>
                         <div className="flex justify-between mb-2">
                             <label className="text-sm font-medium">Empathy</label>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-muted-foreground">
                                 {toneSettings.empathy}
                             </span>
                         </div>
@@ -310,7 +310,7 @@ export function ProfileConfigForm({ profile, onUpdate }: ProfileConfigFormProps)
                     <div>
                         <div className="flex justify-between mb-2">
                             <label className="text-sm font-medium">Confidence</label>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-muted-foreground">
                                 {toneSettings.confidence}
                             </span>
                         </div>
@@ -361,16 +361,16 @@ export function ProfileConfigForm({ profile, onUpdate }: ProfileConfigFormProps)
                             onClick={() => toggleStoryTheme(theme.id)}
                             className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                                 storyThemes.includes(theme.id)
-                                    ? "border-blue-500 bg-blue-50"
-                                    : "border-gray-200 hover:border-gray-300"
+                                    ? "border-primary bg-primary/5"
+                                    : "border-border hover:border-border"
                             }`}
                         >
                             <div className="flex items-center gap-2">
                                 <div
                                     className={`w-4 h-4 rounded border ${
                                         storyThemes.includes(theme.id)
-                                            ? "bg-blue-500 border-blue-500"
-                                            : "border-gray-300"
+                                            ? "bg-primary/50 border-primary"
+                                            : "border-border"
                                     }`}
                                 >
                                     {storyThemes.includes(theme.id) && (
@@ -391,7 +391,7 @@ export function ProfileConfigForm({ profile, onUpdate }: ProfileConfigFormProps)
                                     <div className="font-medium text-sm">
                                         {theme.label}
                                     </div>
-                                    <div className="text-xs text-gray-600">
+                                    <div className="text-xs text-muted-foreground">
                                         {theme.desc}
                                     </div>
                                 </div>

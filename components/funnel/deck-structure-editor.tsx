@@ -91,9 +91,9 @@ export function DeckStructureEditor({
         <div className="space-y-6">
             {/* Save Button - Sticky at top */}
             {!readOnly && (
-                <div className="sticky top-0 z-10 flex items-center justify-between rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
+                <div className="sticky top-0 z-10 flex items-center justify-between rounded-lg border border-border bg-card p-4 shadow-soft">
                     <div>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-muted-foreground">
                             {slides.length} slides •{" "}
                             {editingSlide !== null ? "Editing" : "View mode"}
                         </p>
@@ -123,8 +123,8 @@ export function DeckStructureEditor({
                 return (
                     <div key={sectionKey} className="space-y-3">
                         {/* Section Header */}
-                        <div className="sticky top-20 z-[5] rounded-lg border-l-4 border-blue-500 bg-blue-50 px-4 py-3">
-                            <h3 className="text-lg font-semibold text-gray-900">
+                        <div className="sticky top-20 z-[5] rounded-lg border-l-4 border-primary bg-primary/5 px-4 py-3">
+                            <h3 className="text-lg font-semibold text-foreground">
                                 {sectionNames[sectionKey]} ({sectionSlides.length}{" "}
                                 slides)
                             </h3>
@@ -142,12 +142,12 @@ export function DeckStructureEditor({
                                     key={slide.slideNumber}
                                     className={`rounded-lg border p-4 transition-all ${
                                         isEditing
-                                            ? "border-blue-500 bg-blue-50 shadow-md"
-                                            : "border-gray-200 bg-white hover:border-gray-300"
+                                            ? "border-primary bg-primary/5 shadow-md"
+                                            : "border-border bg-card hover:border-border"
                                     }`}
                                 >
                                     <div className="mb-2 flex items-center justify-between">
-                                        <span className="text-sm font-medium text-gray-500">
+                                        <span className="text-sm font-medium text-muted-foreground">
                                             Slide {slide.slideNumber}
                                         </span>
                                         {!readOnly && !isEditing && (
@@ -166,7 +166,7 @@ export function DeckStructureEditor({
                                     {isEditing ? (
                                         <div className="space-y-3">
                                             <div>
-                                                <label className="mb-1 block text-sm font-medium text-gray-700">
+                                                <label className="mb-1 block text-sm font-medium text-foreground">
                                                     Slide Title
                                                 </label>
                                                 <input
@@ -179,11 +179,11 @@ export function DeckStructureEditor({
                                                             e.target.value
                                                         )
                                                     }
-                                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className="w-full rounded-lg border border-border bg-card px-3 py-2 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
                                                 />
                                             </div>
                                             <div>
-                                                <label className="mb-1 block text-sm font-medium text-gray-700">
+                                                <label className="mb-1 block text-sm font-medium text-foreground">
                                                     Slide Description
                                                 </label>
                                                 <textarea
@@ -196,7 +196,7 @@ export function DeckStructureEditor({
                                                         )
                                                     }
                                                     rows={3}
-                                                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                    className="w-full rounded-lg border border-border bg-card px-3 py-2 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary"
                                                 />
                                             </div>
                                             <div className="flex gap-2">
@@ -213,10 +213,10 @@ export function DeckStructureEditor({
                                         </div>
                                     ) : (
                                         <div>
-                                            <h4 className="mb-2 text-lg font-semibold text-gray-900">
+                                            <h4 className="mb-2 text-lg font-semibold text-foreground">
                                                 {slide.title}
                                             </h4>
-                                            <p className="text-sm text-gray-600">
+                                            <p className="text-sm text-muted-foreground">
                                                 {slide.description}
                                             </p>
                                         </div>

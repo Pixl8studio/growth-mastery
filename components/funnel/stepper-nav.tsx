@@ -51,7 +51,7 @@ export function StepperNav({
         <nav className={cn("space-y-2", className)}>
             {/* Completion Percentage */}
             <div className="mb-4 text-right">
-                <span className="text-sm font-medium text-gray-600">
+                <span className="text-sm font-medium text-muted-foreground">
                     {completionPercentage}% Complete
                 </span>
             </div>
@@ -71,12 +71,13 @@ export function StepperNav({
                             "group block rounded-lg border px-4 py-5 transition-all",
                             {
                                 // Current page
-                                "border-blue-500 bg-blue-50 shadow-sm": isCurrentPage,
+                                "border-primary bg-primary/5 shadow-soft":
+                                    isCurrentPage,
                                 // Active step (not on page)
-                                "border-blue-300 bg-white hover:border-blue-400 hover:bg-blue-50":
+                                "border-primary/30 bg-card hover:border-primary/40 hover:bg-primary/5":
                                     isActive && !isCurrentPage,
                                 // Completed or future steps (all clickable!)
-                                "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50":
+                                "border-border bg-card hover:border-border hover:bg-muted/50":
                                     isCompleted || isFuture,
                             }
                         )}
@@ -89,22 +90,21 @@ export function StepperNav({
                                         className={cn(
                                             "text-xs font-medium uppercase tracking-wider",
                                             {
-                                                "text-blue-600":
+                                                "text-primary":
                                                     isCurrentPage || isActive,
-                                                "text-green-600":
-                                                    isCompleted && !isActive,
-                                                "text-gray-500": isFuture,
-                                                "text-gray-600":
-                                                    !isActive &&
-                                                    !isCompleted &&
-                                                    !isFuture,
+                                                "text-accent": isCompleted && !isActive,
+                                                "text-muted-foreground":
+                                                    isFuture ||
+                                                    (!isActive &&
+                                                        !isCompleted &&
+                                                        !isFuture),
                                             }
                                         )}
                                     >
                                         Step {step.number}
                                     </span>
                                     {isCurrentPage && (
-                                        <span className="rounded-full bg-blue-500 px-2 py-0.5 text-xs font-medium text-white">
+                                        <span className="rounded-full bg-primary/50 px-2 py-0.5 text-xs font-medium text-white">
                                             Current
                                         </span>
                                     )}
@@ -120,10 +120,10 @@ export function StepperNav({
                                     </div>
                                 )}
                             </div>
-                            <h3 className="text-base font-semibold leading-snug text-gray-900">
+                            <h3 className="text-base font-semibold leading-snug text-foreground">
                                 {step.title}
                             </h3>
-                            <p className="text-sm leading-relaxed text-gray-600">
+                            <p className="text-sm leading-relaxed text-muted-foreground">
                                 {step.description}
                             </p>
                         </div>

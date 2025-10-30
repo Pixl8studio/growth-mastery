@@ -176,7 +176,7 @@ export function RecurringPostScheduler({
                         <select
                             value={dayOfWeek}
                             onChange={(e) => setDayOfWeek(parseInt(e.target.value))}
-                            className="w-full rounded-md border border-gray-300 px-3 py-2"
+                            className="w-full rounded-md border border-border px-3 py-2"
                         >
                             {daysOfWeek.map((day) => (
                                 <option key={day.value} value={day.value}>
@@ -214,7 +214,7 @@ export function RecurringPostScheduler({
                         value={time}
                         onChange={(e) => setTime(e.target.value)}
                     />
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                         Timezone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
                     </p>
                 </div>
@@ -280,7 +280,7 @@ export function RecurringPostScheduler({
 
                 {/* Preview Dates */}
                 {previewDates.length > 0 && (
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
                         <h4 className="font-semibold mb-3">
                             Upcoming Posts ({previewDates.length})
                         </h4>
@@ -290,10 +290,10 @@ export function RecurringPostScheduler({
                                     key={index}
                                     className="flex items-center gap-3 text-sm"
                                 >
-                                    <span className="font-mono text-blue-600">
+                                    <span className="font-mono text-primary">
                                         #{index + 1}
                                     </span>
-                                    <span className="text-gray-700">{date}</span>
+                                    <span className="text-foreground">{date}</span>
                                 </div>
                             ))}
                         </div>

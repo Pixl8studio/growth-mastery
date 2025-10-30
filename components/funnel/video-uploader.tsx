@@ -167,10 +167,10 @@ export function VideoUploader({ projectId, onUploadComplete }: VideoUploaderProp
                 {...getRootProps()}
                 className={`cursor-pointer rounded-xl border-2 border-dashed p-12 text-center transition-colors ${
                     isDragActive
-                        ? "border-blue-500 bg-blue-50"
+                        ? "border-primary bg-primary/5"
                         : uploading
-                          ? "border-gray-300 bg-gray-50"
-                          : "border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50"
+                          ? "border-border bg-muted/50"
+                          : "border-border bg-card hover:border-primary/40 hover:bg-primary/5"
                 }`}
             >
                 <input {...getInputProps()} disabled={uploading} />
@@ -179,27 +179,31 @@ export function VideoUploader({ projectId, onUploadComplete }: VideoUploaderProp
 
                 {uploading ? (
                     <div>
-                        <p className="mb-3 text-lg font-semibold text-gray-900">
+                        <p className="mb-3 text-lg font-semibold text-foreground">
                             Uploading...
                         </p>
                         <div className="mx-auto h-2 w-64 overflow-hidden rounded-full bg-gray-200">
                             <div
-                                className="h-full bg-blue-500 transition-all duration-300"
+                                className="h-full bg-primary/50 transition-all duration-300"
                                 style={{ width: `${progress}%` }}
                             />
                         </div>
-                        <p className="mt-2 text-sm text-gray-600">{progress}%</p>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                            {progress}%
+                        </p>
                     </div>
                 ) : isDragActive ? (
-                    <p className="text-lg font-semibold text-blue-600">
+                    <p className="text-lg font-semibold text-primary">
                         Drop your video here
                     </p>
                 ) : (
                     <div>
-                        <p className="mb-2 text-lg font-semibold text-gray-900">
+                        <p className="mb-2 text-lg font-semibold text-foreground">
                             Drag and drop your video here
                         </p>
-                        <p className="mb-4 text-sm text-gray-600">or click to browse</p>
+                        <p className="mb-4 text-sm text-muted-foreground">
+                            or click to browse
+                        </p>
                         <Button type="button" variant="outline">
                             Choose Video
                         </Button>
@@ -208,16 +212,18 @@ export function VideoUploader({ projectId, onUploadComplete }: VideoUploaderProp
             </div>
 
             {/* File Requirements Display */}
-            <div className="rounded-lg bg-gray-50 p-4 text-sm">
+            <div className="rounded-lg bg-muted/50 p-4 text-sm">
                 <div className="mb-3">
-                    <p className="mb-1 font-medium text-gray-700">Accepted formats:</p>
-                    <p className="text-gray-600">MP4, MOV, AVI, WebM</p>
+                    <p className="mb-1 font-medium text-foreground">
+                        Accepted formats:
+                    </p>
+                    <p className="text-muted-foreground">MP4, MOV, AVI, WebM</p>
                 </div>
                 <div className="mb-3">
-                    <p className="mb-1 font-medium text-gray-700">File size limit:</p>
-                    <p className="text-gray-600">Maximum 1GB per video</p>
+                    <p className="mb-1 font-medium text-foreground">File size limit:</p>
+                    <p className="text-muted-foreground">Maximum 1GB per video</p>
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                     💡 Tip: Record at 1080p resolution for best quality while staying
                     under the limit
                 </p>

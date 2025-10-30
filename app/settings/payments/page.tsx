@@ -86,7 +86,7 @@ export default function PaymentsSettingsPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-12">
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-muted-foreground">Loading...</div>
             </div>
         );
     }
@@ -94,21 +94,21 @@ export default function PaymentsSettingsPage() {
     return (
         <div>
             <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Payment Settings</h2>
-                <p className="mt-1 text-sm text-gray-600">
+                <h2 className="text-2xl font-bold text-foreground">Payment Settings</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
                     Connect your Stripe account to receive payments from your funnels
                 </p>
             </div>
 
             {/* Stripe Connect Status */}
             <div className="space-y-6">
-                <div className="rounded-lg border border-gray-200 p-6">
+                <div className="rounded-lg border border-border p-6">
                     <div className="mb-4 flex items-center justify-between">
                         <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
+                            <h3 className="text-lg font-semibold text-foreground">
                                 Stripe Connect
                             </h3>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Accept payments directly through your funnels
                             </p>
                         </div>
@@ -128,7 +128,7 @@ export default function PaymentsSettingsPage() {
                                 Connected
                             </span>
                         ) : (
-                            <span className="inline-flex items-center rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-800">
+                            <span className="inline-flex items-center rounded-full bg-muted px-3 py-1 text-sm font-medium text-foreground">
                                 Not Connected
                             </span>
                         )}
@@ -164,33 +164,33 @@ export default function PaymentsSettingsPage() {
 
                             {/* Account Capabilities */}
                             <div className="space-y-3">
-                                <h4 className="text-sm font-semibold text-gray-900">
+                                <h4 className="text-sm font-semibold text-foreground">
                                     Account Capabilities
                                 </h4>
                                 <div className="space-y-2">
                                     <div className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-600">
+                                        <span className="text-sm text-muted-foreground">
                                             Accept Charges
                                         </span>
                                         <span
                                             className={`text-sm font-medium ${
                                                 chargesEnabled
                                                     ? "text-green-600"
-                                                    : "text-gray-500"
+                                                    : "text-muted-foreground"
                                             }`}
                                         >
                                             {chargesEnabled ? "Enabled" : "Pending"}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                        <span className="text-sm text-gray-600">
+                                        <span className="text-sm text-muted-foreground">
                                             Receive Payouts
                                         </span>
                                         <span
                                             className={`text-sm font-medium ${
                                                 payoutsEnabled
                                                     ? "text-green-600"
-                                                    : "text-gray-500"
+                                                    : "text-muted-foreground"
                                             }`}
                                         >
                                             {payoutsEnabled ? "Enabled" : "Pending"}
@@ -200,11 +200,11 @@ export default function PaymentsSettingsPage() {
                             </div>
 
                             {/* Platform Fee Info */}
-                            <div className="rounded-md bg-blue-50 p-4">
-                                <h4 className="text-sm font-semibold text-blue-900">
+                            <div className="rounded-md bg-primary/5 p-4">
+                                <h4 className="text-sm font-semibold text-primary">
                                     Platform Fee
                                 </h4>
-                                <p className="mt-1 text-sm text-blue-800">
+                                <p className="mt-1 text-sm text-primary">
                                     Genie AI acts as your affiliate marketer and charges
                                     a 20% platform fee + $0.50 per transaction for all
                                     sales we generate. You'll receive 80% of each sale
@@ -222,11 +222,11 @@ export default function PaymentsSettingsPage() {
                         </div>
                     ) : (
                         <div className="space-y-4">
-                            <div className="rounded-md bg-blue-50 p-4">
-                                <h4 className="text-sm font-semibold text-blue-900">
+                            <div className="rounded-md bg-primary/5 p-4">
+                                <h4 className="text-sm font-semibold text-primary">
                                     Why Connect Stripe?
                                 </h4>
-                                <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-blue-800">
+                                <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-primary">
                                     <li>
                                         Accept payments directly through your funnels
                                     </li>
@@ -239,7 +239,7 @@ export default function PaymentsSettingsPage() {
                             <button
                                 type="button"
                                 onClick={handleConnectStripe}
-                                className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
+                                className="inline-flex items-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/50"
                             >
                                 <svg
                                     className="mr-2 h-5 w-5"
@@ -257,7 +257,7 @@ export default function PaymentsSettingsPage() {
                                 Connect Stripe Account
                             </button>
 
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                                 You'll be redirected to Stripe to complete the
                                 connection process
                             </p>
@@ -266,11 +266,11 @@ export default function PaymentsSettingsPage() {
                 </div>
 
                 {/* Transaction History (Future) */}
-                <div className="rounded-lg border border-gray-200 p-6">
-                    <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                <div className="rounded-lg border border-border p-6">
+                    <h3 className="mb-4 text-lg font-semibold text-foreground">
                         Transaction History
                     </h3>
-                    <div className="text-center text-sm text-gray-500">
+                    <div className="text-center text-sm text-muted-foreground">
                         <p>No transactions yet</p>
                         <p className="mt-1">
                             Transactions will appear here once you start receiving

@@ -124,13 +124,13 @@ export function SchedulingModal({
                     <div className="flex items-center justify-between mb-6">
                         <div>
                             <h2 className="text-2xl font-bold">Schedule Post</h2>
-                            <p className="text-sm text-gray-600 capitalize">
+                            <p className="text-sm text-muted-foreground capitalize">
                                 {platform}
                             </p>
                         </div>
                         <button
                             onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600"
+                            className="text-muted-foreground hover:text-muted-foreground"
                         >
                             <X className="h-6 w-6" />
                         </button>
@@ -161,17 +161,17 @@ export function SchedulingModal({
                                     value={scheduleTime}
                                     onChange={(e) => setScheduleTime(e.target.value)}
                                 />
-                                <p className="text-xs text-gray-600 mt-1">
+                                <p className="text-xs text-muted-foreground mt-1">
                                     {Intl.DateTimeFormat().resolvedOptions().timeZone}
                                 </p>
                             </div>
                         </div>
 
                         {/* Best Time Suggestions */}
-                        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
                             <div className="flex items-center gap-2 mb-3">
-                                <Sparkles className="h-4 w-4 text-blue-600" />
-                                <h4 className="font-semibold text-blue-900">
+                                <Sparkles className="h-4 w-4 text-primary" />
+                                <h4 className="font-semibold text-primary">
                                     Best Times for {platform}
                                 </h4>
                             </div>
@@ -222,7 +222,7 @@ export function SchedulingModal({
                                     <Label className="font-medium">
                                         Recurring Post
                                     </Label>
-                                    <p className="text-xs text-gray-600">
+                                    <p className="text-xs text-muted-foreground">
                                         Schedule this post to repeat
                                     </p>
                                 </div>

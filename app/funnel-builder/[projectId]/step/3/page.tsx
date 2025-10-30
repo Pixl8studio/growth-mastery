@@ -366,7 +366,7 @@ export default function Step3Page({
     if (!projectId) {
         return (
             <div className="flex h-screen items-center justify-center">
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-muted-foreground">Loading...</div>
             </div>
         );
     }
@@ -397,10 +397,10 @@ export default function Step3Page({
 
                 {/* Generation Interface */}
                 {!isGenerating ? (
-                    <div className="rounded-lg border border-brand-100 bg-gradient-to-br from-brand-50 to-indigo-50 p-8">
+                    <div className="rounded-lg border border-brand-100 bg-gradient-to-br from-brand-50 to-primary/5 p-8">
                         <div className="mx-auto mb-6 max-w-md space-y-4">
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                <label className="mb-2 block text-sm font-medium text-foreground">
                                     Presentation Type
                                 </label>
                                 <div className="grid grid-cols-3 gap-3">
@@ -409,11 +409,11 @@ export default function Step3Page({
                                         className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
                                             presentationType === "webinar"
                                                 ? "border-brand-500 bg-brand-50 text-brand-900"
-                                                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                                                : "border-border bg-card text-foreground hover:border-gray-400"
                                         }`}
                                     >
                                         <div className="font-semibold">Webinar</div>
-                                        <div className="text-xs text-gray-600">
+                                        <div className="text-xs text-muted-foreground">
                                             Full 55-slide framework
                                         </div>
                                     </button>
@@ -422,11 +422,11 @@ export default function Step3Page({
                                         className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
                                             presentationType === "vsl"
                                                 ? "border-brand-500 bg-brand-50 text-brand-900"
-                                                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                                                : "border-border bg-card text-foreground hover:border-gray-400"
                                         }`}
                                     >
                                         <div className="font-semibold">VSL</div>
-                                        <div className="text-xs text-gray-600">
+                                        <div className="text-xs text-muted-foreground">
                                             5-10 slide short script
                                         </div>
                                     </button>
@@ -437,11 +437,11 @@ export default function Step3Page({
                                         className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
                                             presentationType === "sales_page"
                                                 ? "border-brand-500 bg-brand-50 text-brand-900"
-                                                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                                                : "border-border bg-card text-foreground hover:border-gray-400"
                                         }`}
                                     >
                                         <div className="font-semibold">Sales Page</div>
-                                        <div className="text-xs text-gray-600">
+                                        <div className="text-xs text-muted-foreground">
                                             Pitch video script
                                         </div>
                                     </button>
@@ -449,7 +449,7 @@ export default function Step3Page({
                             </div>
 
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                <label className="mb-2 block text-sm font-medium text-foreground">
                                     Select Intake Call Source
                                 </label>
                                 <select
@@ -458,7 +458,7 @@ export default function Step3Page({
                                         setSelectedTranscript(e.target.value)
                                     }
                                     disabled={transcripts.length === 0}
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-brand-500 focus:ring-2 focus:ring-brand-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-brand-500 focus:ring-2 focus:ring-brand-500 disabled:cursor-not-allowed disabled:bg-muted"
                                 >
                                     {transcripts.length === 0 ? (
                                         <option value="">
@@ -492,7 +492,7 @@ export default function Step3Page({
                             </div>
 
                             <div>
-                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                <label className="mb-2 block text-sm font-medium text-foreground">
                                     Deck Size
                                 </label>
                                 <div className="grid grid-cols-2 gap-3">
@@ -501,11 +501,11 @@ export default function Step3Page({
                                         className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
                                             slideCount === "5"
                                                 ? "border-brand-500 bg-brand-50 text-brand-900"
-                                                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                                                : "border-border bg-card text-foreground hover:border-gray-400"
                                         }`}
                                     >
                                         <div className="font-semibold">5 Slides</div>
-                                        <div className="text-xs text-gray-600">
+                                        <div className="text-xs text-muted-foreground">
                                             Test Mode (~30s)
                                         </div>
                                     </button>
@@ -514,16 +514,16 @@ export default function Step3Page({
                                         className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
                                             slideCount === "55"
                                                 ? "border-brand-500 bg-brand-50 text-brand-900"
-                                                : "border-gray-300 bg-white text-gray-700 hover:border-gray-400"
+                                                : "border-border bg-card text-foreground hover:border-gray-400"
                                         }`}
                                     >
                                         <div className="font-semibold">55 Slides</div>
-                                        <div className="text-xs text-gray-600">
+                                        <div className="text-xs text-muted-foreground">
                                             Full Deck (~3-5 min)
                                         </div>
                                     </button>
                                 </div>
-                                <p className="mt-2 text-xs text-gray-500">
+                                <p className="mt-2 text-xs text-muted-foreground">
                                     {slideCount === "5"
                                         ? "🚀 Quick test with first 5 slides from the framework"
                                         : "📊 Complete Magnetic Masterclass Framework (recommended)"}
@@ -538,7 +538,7 @@ export default function Step3Page({
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
                                     selectedTranscript
                                         ? "bg-brand-500 text-white hover:bg-brand-600"
-                                        : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                        : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                 }`}
                             >
                                 <Sparkles className="h-6 w-6" />
@@ -547,7 +547,7 @@ export default function Step3Page({
                                     : "Generate Deck Structure"}
                             </button>
 
-                            <div className="mt-4 space-y-1 text-sm text-gray-500">
+                            <div className="mt-4 space-y-1 text-sm text-muted-foreground">
                                 <p>
                                     ⚡ Generation time:{" "}
                                     {slideCount === "5"
@@ -566,15 +566,15 @@ export default function Step3Page({
                         </div>
                     </div>
                 ) : (
-                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-6">
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-6">
                         <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-blue-100">
-                                <Sparkles className="h-6 w-6 text-blue-600" />
+                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-primary/10">
+                                <Sparkles className="h-6 w-6 text-primary" />
                             </div>
-                            <h3 className="mb-2 text-xl font-semibold text-blue-900">
+                            <h3 className="mb-2 text-xl font-semibold text-primary">
                                 Generating Presentation Outline...
                             </h3>
-                            <p className="text-blue-700">
+                            <p className="text-primary">
                                 AI is analyzing your intake call and creating your
                                 structure
                             </p>
@@ -587,16 +587,16 @@ export default function Step3Page({
 
                         <div className="mx-auto max-w-md">
                             <div className="mb-2 flex items-center justify-between">
-                                <span className="text-sm font-medium text-blue-700">
+                                <span className="text-sm font-medium text-primary">
                                     Progress
                                 </span>
-                                <span className="text-sm text-blue-600">
+                                <span className="text-sm text-primary">
                                     {generationProgress}%
                                 </span>
                             </div>
-                            <div className="h-3 w-full rounded-full bg-blue-200">
+                            <div className="h-3 w-full rounded-full bg-primary/20">
                                 <div
-                                    className="h-3 rounded-full bg-blue-600 transition-all duration-500 ease-out"
+                                    className="h-3 rounded-full bg-primary transition-all duration-500 ease-out"
                                     style={{ width: `${generationProgress}%` }}
                                 />
                             </div>
@@ -605,13 +605,13 @@ export default function Step3Page({
                 )}
 
                 {/* Generated Presentation Structures */}
-                <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-                    <div className="border-b border-gray-200 p-6">
+                <div className="rounded-lg border border-border bg-card shadow-soft">
+                    <div className="border-b border-border p-6">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-semibold text-gray-900">
+                            <h3 className="text-xl font-semibold text-foreground">
                                 Your Presentation Structures
                             </h3>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-muted-foreground">
                                 {deckStructures.length} created
                             </span>
                         </div>
@@ -619,7 +619,7 @@ export default function Step3Page({
 
                     <div className="p-6">
                         {deckStructures.length === 0 ? (
-                            <div className="py-12 text-center text-gray-500">
+                            <div className="py-12 text-center text-muted-foreground">
                                 <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
                                 <p>
                                     No presentation structures yet. Generate your first
@@ -632,7 +632,7 @@ export default function Step3Page({
                                     <div
                                         key={deck.id}
                                         onClick={() => handleViewDeck(deck)}
-                                        className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-blue-400 hover:shadow-md"
+                                        className="cursor-pointer rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
                                     >
                                         <div
                                             className="flex items-start justify-between"
@@ -650,7 +650,7 @@ export default function Step3Page({
                                                                         e.target.value
                                                                     )
                                                                 }
-                                                                className="flex-1 rounded border border-blue-300 px-2 py-1 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                                className="flex-1 rounded border border-primary/30 px-2 py-1 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
                                                                 onKeyDown={(e) => {
                                                                     if (
                                                                         e.key ===
@@ -675,7 +675,7 @@ export default function Step3Page({
                                                                         deck.id
                                                                     )
                                                                 }
-                                                                className="rounded bg-blue-600 px-2 py-1 text-sm text-white hover:bg-blue-700"
+                                                                className="rounded bg-primary px-2 py-1 text-sm text-white hover:bg-primary/90"
                                                             >
                                                                 Save
                                                             </button>
@@ -685,7 +685,7 @@ export default function Step3Page({
                                                                         null
                                                                     )
                                                                 }
-                                                                className="rounded bg-gray-300 px-2 py-1 text-sm text-gray-700 hover:bg-gray-400"
+                                                                className="rounded bg-gray-300 px-2 py-1 text-sm text-foreground hover:bg-gray-400"
                                                             >
                                                                 Cancel
                                                             </button>
@@ -693,7 +693,7 @@ export default function Step3Page({
                                                     ) : (
                                                         <>
                                                             <h4
-                                                                className="cursor-pointer text-lg font-semibold text-gray-900 hover:text-blue-600"
+                                                                className="cursor-pointer text-lg font-semibold text-foreground hover:text-primary"
                                                                 onDoubleClick={(e) => {
                                                                     e.stopPropagation();
                                                                     startEditingName(
@@ -710,7 +710,7 @@ export default function Step3Page({
                                                                         deck
                                                                     );
                                                                 }}
-                                                                className="rounded p-1 text-blue-600 hover:bg-blue-50"
+                                                                className="rounded p-1 text-primary hover:bg-primary/5"
                                                             >
                                                                 <Pencil className="h-4 w-4" />
                                                             </button>
@@ -718,7 +718,7 @@ export default function Step3Page({
                                                     )}
                                                 </div>
 
-                                                <div className="flex items-center gap-4 text-sm text-gray-600">
+                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                                     <span>
                                                         📊 {deck.slideCount} slides
                                                     </span>
@@ -737,7 +737,7 @@ export default function Step3Page({
                                                         e.stopPropagation();
                                                         handleViewDeck(deck);
                                                     }}
-                                                    className="rounded p-2 text-blue-600 hover:bg-blue-50"
+                                                    className="rounded p-2 text-primary hover:bg-primary/5"
                                                 >
                                                     View
                                                 </button>
@@ -746,7 +746,7 @@ export default function Step3Page({
                                                         e.stopPropagation();
                                                         handleDownloadDeck(deck);
                                                     }}
-                                                    className="rounded p-2 text-gray-600 hover:bg-gray-50"
+                                                    className="rounded p-2 text-muted-foreground hover:bg-muted/50"
                                                     title="Download JSON"
                                                 >
                                                     <Download className="h-4 w-4" />
@@ -756,7 +756,7 @@ export default function Step3Page({
                                                         e.stopPropagation();
                                                         handleDuplicateDeck(deck);
                                                     }}
-                                                    className="rounded p-2 text-gray-600 hover:bg-gray-50"
+                                                    className="rounded p-2 text-muted-foreground hover:bg-muted/50"
                                                     title="Duplicate"
                                                 >
                                                     <Copy className="h-4 w-4" />
@@ -766,7 +766,7 @@ export default function Step3Page({
                                                         e.stopPropagation();
                                                         handleDeleteDeck(deck.id);
                                                     }}
-                                                    className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                    className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
                                                     title="Delete"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
@@ -784,15 +784,15 @@ export default function Step3Page({
             {/* Deck Editor Modal */}
             {selectedDeck && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-                    <div className="flex h-[90vh] w-full max-w-6xl flex-col rounded-lg bg-white shadow-2xl">
-                        <div className="rounded-t-lg border-b border-gray-200 bg-gray-50 p-6">
+                    <div className="flex h-[90vh] w-full max-w-6xl flex-col rounded-lg bg-card shadow-2xl">
+                        <div className="rounded-t-lg border-b border-border bg-muted/50 p-6">
                             <div className="flex items-center justify-between">
-                                <h2 className="text-2xl font-bold text-gray-900">
+                                <h2 className="text-2xl font-bold text-foreground">
                                     {selectedDeck.title}
                                 </h2>
                                 <button
                                     onClick={() => setSelectedDeck(null)}
-                                    className="text-2xl font-bold text-gray-400 hover:text-gray-600"
+                                    className="text-2xl font-bold text-muted-foreground hover:text-muted-foreground"
                                 >
                                     ×
                                 </button>

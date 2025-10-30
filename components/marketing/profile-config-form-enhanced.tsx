@@ -400,7 +400,7 @@ export function ProfileConfigFormEnhanced({
                     placeholder="Describe your brand voice, key messaging themes, and how you want to communicate with your audience..."
                     className="min-h-[200px]"
                 />
-                <p className="text-sm text-gray-600 mt-2">
+                <p className="text-sm text-muted-foreground mt-2">
                     Auto-populated from your intake call and offer. Edit to refine.
                 </p>
             </Card>
@@ -464,7 +464,7 @@ export function ProfileConfigFormEnhanced({
                             </Button>
                         </div>
                         {logoUrl && (
-                            <div className="mt-2 p-2 border rounded bg-gray-50">
+                            <div className="mt-2 p-2 border rounded bg-muted/50">
                                 <img
                                     src={logoUrl}
                                     alt="Logo preview"
@@ -484,7 +484,7 @@ export function ProfileConfigFormEnhanced({
                             <select
                                 value={fontPreference}
                                 onChange={(e) => setFontPreference(e.target.value)}
-                                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                className="w-full rounded-md border border-border px-3 py-2"
                             >
                                 <option value="sans-serif">Sans Serif (Modern)</option>
                                 <option value="serif">Serif (Traditional)</option>
@@ -496,7 +496,7 @@ export function ProfileConfigFormEnhanced({
                             <select
                                 value={imageryStyle}
                                 onChange={(e) => setImageryStyle(e.target.value)}
-                                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                className="w-full rounded-md border border-border px-3 py-2"
                             >
                                 <option value="professional">Professional</option>
                                 <option value="casual">Casual</option>
@@ -515,7 +515,7 @@ export function ProfileConfigFormEnhanced({
                             <Sparkles className="h-5 w-5 text-purple-500" />
                             Echo Mode - Voice Mirroring
                         </h3>
-                        <p className="text-sm text-gray-600">
+                        <p className="text-sm text-muted-foreground">
                             AI learns your unique writing style and mirrors it
                         </p>
                     </div>
@@ -553,7 +553,7 @@ export function ProfileConfigFormEnhanced({
                         <div>
                             <div className="flex justify-between mb-2">
                                 <Label>Voice Strength (How Strictly to Mirror)</Label>
-                                <span className="text-sm text-gray-600">
+                                <span className="text-sm text-muted-foreground">
                                     {voiceStrength}%
                                 </span>
                             </div>
@@ -571,7 +571,7 @@ export function ProfileConfigFormEnhanced({
                             <select
                                 value={vocabularyLevel}
                                 onChange={(e) => setVocabularyLevel(e.target.value)}
-                                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                className="w-full rounded-md border border-border px-3 py-2"
                             >
                                 <option value="simple">Simple</option>
                                 <option value="intermediate">Intermediate</option>
@@ -644,7 +644,7 @@ export function ProfileConfigFormEnhanced({
                     <div>
                         <div className="flex justify-between mb-2">
                             <Label>Conversational ↔ Professional</Label>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-muted-foreground">
                                 {toneSettings.conversational_professional}
                             </span>
                         </div>
@@ -665,7 +665,7 @@ export function ProfileConfigFormEnhanced({
                     <div>
                         <div className="flex justify-between mb-2">
                             <Label>Warmth</Label>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-muted-foreground">
                                 {toneSettings.warmth}
                             </span>
                         </div>
@@ -683,7 +683,7 @@ export function ProfileConfigFormEnhanced({
                     <div>
                         <div className="flex justify-between mb-2">
                             <Label>Urgency</Label>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-muted-foreground">
                                 {toneSettings.urgency}
                             </span>
                         </div>
@@ -701,7 +701,7 @@ export function ProfileConfigFormEnhanced({
                     <div>
                         <div className="flex justify-between mb-2">
                             <Label>Empathy</Label>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-muted-foreground">
                                 {toneSettings.empathy}
                             </span>
                         </div>
@@ -719,7 +719,7 @@ export function ProfileConfigFormEnhanced({
                     <div>
                         <div className="flex justify-between mb-2">
                             <Label>Confidence</Label>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-muted-foreground">
                                 {toneSettings.confidence}
                             </span>
                         </div>
@@ -738,7 +738,7 @@ export function ProfileConfigFormEnhanced({
                     <div>
                         <div className="flex justify-between mb-2">
                             <Label>Humor</Label>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-muted-foreground">
                                 {toneSettings.humor}
                             </span>
                         </div>
@@ -756,7 +756,7 @@ export function ProfileConfigFormEnhanced({
                     <div>
                         <div className="flex justify-between mb-2">
                             <Label>Authority</Label>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-muted-foreground">
                                 {toneSettings.authority}
                             </span>
                         </div>
@@ -774,7 +774,7 @@ export function ProfileConfigFormEnhanced({
                     <div>
                         <div className="flex justify-between mb-2">
                             <Label>Vulnerability</Label>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-muted-foreground">
                                 {toneSettings.vulnerability}
                             </span>
                         </div>
@@ -832,8 +832,8 @@ export function ProfileConfigFormEnhanced({
                                     <div
                                         className={`w-4 h-4 rounded border ${
                                             storyThemes.includes(theme.id)
-                                                ? "bg-blue-500 border-blue-500"
-                                                : "border-gray-300"
+                                                ? "bg-primary/50 border-primary"
+                                                : "border-border"
                                         }`}
                                     >
                                         {storyThemes.includes(theme.id) && (
@@ -854,7 +854,7 @@ export function ProfileConfigFormEnhanced({
                                         <div className="font-medium text-sm">
                                             {theme.label}
                                         </div>
-                                        <div className="text-xs text-gray-600">
+                                        <div className="text-xs text-muted-foreground">
                                             {theme.desc}
                                         </div>
                                     </div>
@@ -896,7 +896,7 @@ export function ProfileConfigFormEnhanced({
                         <select
                             value={storyMixStrategy}
                             onChange={(e) => setStoryMixStrategy(e.target.value)}
-                            className="w-full rounded-md border border-gray-300 px-3 py-2"
+                            className="w-full rounded-md border border-border px-3 py-2"
                         >
                             <option value="balanced">Balanced Mix</option>
                             <option value="variety-focused">Variety-Focused</option>
@@ -954,7 +954,7 @@ export function ProfileConfigFormEnhanced({
                         <select
                             value={sensitiveTopicsHandling}
                             onChange={(e) => setSensitiveTopicsHandling(e.target.value)}
-                            className="w-full rounded-md border border-gray-300 px-3 py-2"
+                            className="w-full rounded-md border border-border px-3 py-2"
                         >
                             <option value="avoid">Avoid Completely</option>
                             <option value="disclaimer">Include with Disclaimer</option>
@@ -976,7 +976,7 @@ export function ProfileConfigFormEnhanced({
                         <select
                             value={industry}
                             onChange={(e) => setIndustry(e.target.value)}
-                            className="w-full rounded-md border border-gray-300 px-3 py-2"
+                            className="w-full rounded-md border border-border px-3 py-2"
                         >
                             <option value="general">General</option>
                             <option value="coaching">Coaching</option>
@@ -998,7 +998,7 @@ export function ProfileConfigFormEnhanced({
                     <div className="flex items-center justify-between">
                         <div>
                             <Label className="font-medium">Auto-Disclaimer</Label>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Automatically add disclaimers when needed
                             </p>
                         </div>
@@ -1013,7 +1013,7 @@ export function ProfileConfigFormEnhanced({
                         <select
                             value={copyrightPolicy}
                             onChange={(e) => setCopyrightPolicy(e.target.value)}
-                            className="w-full rounded-md border border-gray-300 px-3 py-2"
+                            className="w-full rounded-md border border-border px-3 py-2"
                         >
                             <option value="strict">Strict (Original Only)</option>
                             <option value="moderate">
@@ -1028,7 +1028,7 @@ export function ProfileConfigFormEnhanced({
                             <Label className="font-medium">
                                 Image Licensing Required
                             </Label>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Enforce proper licensing for all images
                             </p>
                         </div>

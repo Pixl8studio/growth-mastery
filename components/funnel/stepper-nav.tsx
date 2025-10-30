@@ -27,7 +27,8 @@ const STEPS: Step[] = [
     { number: 9, title: "Registration", description: "Lead capture" },
     { number: 10, title: "Flow Setup", description: "Connect pages" },
     { number: 11, title: "AI Follow-Up", description: "Smart automation" },
-    { number: 12, title: "Analytics", description: "Track performance" },
+    { number: 12, title: "Marketing Content", description: "Social content engine" },
+    { number: 13, title: "Analytics", description: "Track performance" },
 ];
 
 interface StepperNavProps {

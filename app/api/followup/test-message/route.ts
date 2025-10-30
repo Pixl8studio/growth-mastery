@@ -125,13 +125,6 @@ This is a test message. Unsubscribe functionality will work in production messag
 
         // Send via appropriate channel
         if (body.channel === "email") {
-            // Validate email configuration
-            if (!config.sender_verified) {
-                throw new ValidationError(
-                    "Domain not verified. Please verify your sender domain first."
-                );
-            }
-
             const recipientEmail = body.recipient_email || user.email;
 
             if (!recipientEmail) {

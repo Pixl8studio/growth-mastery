@@ -57,3 +57,4 @@ prisma/dev.db-journal
 
 # AI coding config (using parent repo's config)
 ai-coding-config/
+docs/launch-genius-engine-main/

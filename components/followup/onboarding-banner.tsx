@@ -45,9 +45,9 @@ export function OnboardingBanner({
     const steps: OnboardingStep[] = [
         {
             id: "verify",
-            title: "Verify Sender Domain",
+            title: "Configure Email Sender",
             description:
-                "Set up your email sender and verify your domain for deliverability",
+                "Connect Gmail or configure SendGrid for email sending",
             completed: senderVerified,
         },
         {
@@ -182,7 +182,7 @@ export function OnboardingBanner({
                             {!steps[0].completed && (
                                 <>
                                     Go to the <strong>Sender Setup</strong> tab to
-                                    verify your domain
+                                    configure your email sender
                                 </>
                             )}
                             {steps[0].completed && !steps[1].completed && (

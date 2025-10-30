@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/components/ui/use-toast";
@@ -25,13 +26,15 @@ import {
     Share2,
 } from "lucide-react";
 
-// Import components (will create these next)
+// Import enhanced components with comprehensive controls
 import { ProfileConfigForm } from "@/components/marketing/profile-config-form";
 import { ContentGenerator } from "@/components/marketing/content-generator";
 import { ContentCalendar } from "@/components/marketing/content-calendar";
 import { MarketingAnalyticsDashboard } from "@/components/marketing/marketing-analytics-dashboard";
 import { TrendExplorer } from "@/components/marketing/trend-explorer";
 import { MarketingSettings } from "@/components/marketing/marketing-settings";
+import { ApprovalWorkflowModal } from "@/components/marketing/approval-workflow-modal";
+import { ExperimentCreatorModal } from "@/components/marketing/experiment-creator-modal";
 
 export default function Step12Page({
     params,
@@ -52,7 +55,12 @@ export default function Step12Page({
         scheduledPosts: 0,
         activeExperiments: 0,
         overallOI1000: 0,
+        pendingApprovals: 0,
     });
+
+    // Modal states
+    const [showApprovalModal, setShowApprovalModal] = useState(false);
+    const [showExperimentModal, setShowExperimentModal] = useState(false);
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
@@ -263,37 +271,66 @@ export default function Step12Page({
                     </div>
 
                     {marketingEnabled && (
-                        <div className="mt-6 grid grid-cols-4 gap-4 text-sm">
-                            <div className="text-center p-3 bg-white rounded-lg">
-                                <div className="text-2xl font-bold text-blue-600">
-                                    {stats.postsThisMonth}
-                                </div>
-                                <div className="text-gray-600">Posts This Month</div>
-                            </div>
-                            <div className="text-center p-3 bg-white rounded-lg">
-                                <div className="text-2xl font-bold text-green-600">
-                                    {stats.totalOptIns}
-                                </div>
-                                <div className="text-gray-600">Total Opt-ins</div>
-                                {stats.overallOI1000 > 0 && (
-                                    <div className="text-xs text-gray-500 mt-1">
-                                        {stats.overallOI1000.toFixed(1)} O/I-1000
+                        <>
+                            <div className="mt-6 grid grid-cols-5 gap-4 text-sm">
+                                <div className="text-center p-3 bg-white rounded-lg">
+                                    <div className="text-2xl font-bold text-blue-600">
+                                        {stats.postsThisMonth}
                                     </div>
-                                )}
-                            </div>
-                            <div className="text-center p-3 bg-white rounded-lg">
-                                <div className="text-2xl font-bold text-purple-600">
-                                    {stats.scheduledPosts}
+                                    <div className="text-gray-600">Posts This Month</div>
                                 </div>
-                                <div className="text-gray-600">Scheduled</div>
-                            </div>
-                            <div className="text-center p-3 bg-white rounded-lg">
-                                <div className="text-2xl font-bold text-orange-600">
-                                    {stats.activeExperiments}
+                                <div className="text-center p-3 bg-white rounded-lg">
+                                    <div className="text-2xl font-bold text-green-600">
+                                        {stats.totalOptIns}
+                                    </div>
+                                    <div className="text-gray-600">Total Opt-ins</div>
+                                    {stats.overallOI1000 > 0 && (
+                                        <div className="text-xs text-gray-500 mt-1">
+                                            {stats.overallOI1000.toFixed(1)} O/I-1000
+                                        </div>
+                                    )}
                                 </div>
-                                <div className="text-gray-600">Active Tests</div>
+                                <div className="text-center p-3 bg-white rounded-lg">
+                                    <div className="text-2xl font-bold text-purple-600">
+                                        {stats.scheduledPosts}
+                                    </div>
+                                    <div className="text-gray-600">Scheduled</div>
+                                </div>
+                                <div className="text-center p-3 bg-white rounded-lg">
+                                    <div className="text-2xl font-bold text-orange-600">
+                                        {stats.activeExperiments}
+                                    </div>
+                                    <div className="text-gray-600">Active Tests</div>
+                                </div>
+                                <div
+                                    className="text-center p-3 bg-white rounded-lg cursor-pointer hover:bg-yellow-50 transition-colors"
+                                    onClick={() => setShowApprovalModal(true)}
+                                >
+                                    <div className="text-2xl font-bold text-yellow-600">
+                                        {stats.pendingApprovals}
+                                    </div>
+                                    <div className="text-gray-600">Pending</div>
+                                </div>
                             </div>
-                        </div>
+
+                            {/* Quick Action Buttons */}
+                            <div className="mt-4 flex justify-end gap-3">
+                                <Button
+                                    onClick={() => setShowApprovalModal(true)}
+                                    variant="outline"
+                                    size="sm"
+                                >
+                                    Review Approvals
+                                </Button>
+                                <Button
+                                    onClick={() => setShowExperimentModal(true)}
+                                    variant="outline"
+                                    size="sm"
+                                >
+                                    Create A/B Test
+                                </Button>
+                            </div>
+                        </>
                     )}
                 </Card>
 
@@ -389,6 +426,31 @@ export default function Step12Page({
                     </Tabs>
                 )}
             </div>
+
+            {/* Approval Workflow Modal */}
+            {marketingEnabled && (
+                <ApprovalWorkflowModal
+                    isOpen={showApprovalModal}
+                    onClose={() => setShowApprovalModal(false)}
+                    funnelProjectId={projectId}
+                    onApprovalComplete={() => {
+                        loadStats();
+                    }}
+                />
+            )}
+
+            {/* Experiment Creator Modal */}
+            {marketingEnabled && (
+                <ExperimentCreatorModal
+                    isOpen={showExperimentModal}
+                    onClose={() => setShowExperimentModal(false)}
+                    funnelProjectId={projectId}
+                    onExperimentCreated={() => {
+                        setShowExperimentModal(false);
+                        loadStats();
+                    }}
+                />
+            )}
         </StepLayout>
     );
 }

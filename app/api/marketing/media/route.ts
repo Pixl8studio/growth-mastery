@@ -28,7 +28,13 @@ export async function GET(request: NextRequest) {
         logger.info({ userId: user.id, funnelProjectId }, "Media library requested");
 
         // Mock media library
-        const mockMedia = [];
+        const mockMedia: Array<{
+            id: string;
+            url: string;
+            alt_text: string;
+            type: "image" | "video";
+            created_at: string;
+        }> = [];
 
         return NextResponse.json({
             success: true,

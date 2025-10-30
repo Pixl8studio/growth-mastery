@@ -217,7 +217,7 @@ export default function Step10Page({
     if (!projectId) {
         return (
             <div className="flex h-screen items-center justify-center">
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-muted-foreground">Loading...</div>
             </div>
         );
     }
@@ -263,15 +263,15 @@ export default function Step10Page({
                                                 ? flowSetup.registrationPagePublished
                                                     ? "border-green-300 bg-green-50"
                                                     : "border-yellow-300 bg-yellow-50"
-                                                : "border-gray-200 bg-white"
+                                                : "border-border bg-card"
                                         }`}
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
-                                                <h3 className="mb-2 text-lg font-semibold text-gray-900">
+                                                <h3 className="mb-2 text-lg font-semibold text-foreground">
                                                     1. Registration Page
                                                 </h3>
-                                                <p className="text-sm text-gray-600">
+                                                <p className="text-sm text-muted-foreground">
                                                     Lead capture page where prospects
                                                     sign up for your webinar
                                                 </p>
@@ -293,7 +293,7 @@ export default function Step10Page({
                                                     </div>
                                                 )
                                             ) : (
-                                                <AlertCircle className="h-6 w-6 text-gray-400" />
+                                                <AlertCircle className="h-6 w-6 text-muted-foreground" />
                                             )}
                                         </div>
                                     </div>
@@ -318,15 +318,15 @@ export default function Step10Page({
                                                 ? flowSetup.watchPagePublished
                                                     ? "border-green-300 bg-green-50"
                                                     : "border-yellow-300 bg-yellow-50"
-                                                : "border-gray-200 bg-white"
+                                                : "border-border bg-card"
                                         }`}
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
-                                                <h3 className="mb-2 text-lg font-semibold text-gray-900">
+                                                <h3 className="mb-2 text-lg font-semibold text-foreground">
                                                     2. Watch Page
                                                 </h3>
-                                                <p className="text-sm text-gray-600">
+                                                <p className="text-sm text-muted-foreground">
                                                     Video landing page where prospects
                                                     watch your presentation
                                                 </p>
@@ -348,7 +348,7 @@ export default function Step10Page({
                                                     </div>
                                                 )
                                             ) : (
-                                                <AlertCircle className="h-6 w-6 text-gray-400" />
+                                                <AlertCircle className="h-6 w-6 text-muted-foreground" />
                                             )}
                                         </div>
                                     </div>
@@ -373,15 +373,15 @@ export default function Step10Page({
                                                 ? flowSetup.enrollmentPagePublished
                                                     ? "border-green-300 bg-green-50"
                                                     : "border-yellow-300 bg-yellow-50"
-                                                : "border-gray-200 bg-white"
+                                                : "border-border bg-card"
                                         }`}
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
-                                                <h3 className="mb-2 text-lg font-semibold text-gray-900">
+                                                <h3 className="mb-2 text-lg font-semibold text-foreground">
                                                     3. Enrollment Page
                                                 </h3>
-                                                <p className="text-sm text-gray-600">
+                                                <p className="text-sm text-muted-foreground">
                                                     Sales page where prospects purchase
                                                     your offer
                                                 </p>
@@ -403,7 +403,7 @@ export default function Step10Page({
                                                     </div>
                                                 )
                                             ) : (
-                                                <AlertCircle className="h-6 w-6 text-gray-400" />
+                                                <AlertCircle className="h-6 w-6 text-muted-foreground" />
                                             )}
                                         </div>
                                     </div>
@@ -433,12 +433,12 @@ export default function Step10Page({
                                     </p>
                                 </div>
                             ) : allPagesPublished ? (
-                                <div className="rounded-lg border border-blue-200 bg-blue-50 p-6 text-center">
-                                    <div className="mx-auto mb-3 h-12 w-12 animate-spin rounded-full border-4 border-blue-200 border-t-blue-600"></div>
-                                    <h3 className="mb-2 text-xl font-semibold text-blue-900">
+                                <div className="rounded-lg border border-primary/20 bg-primary/5 p-6 text-center">
+                                    <div className="mx-auto mb-3 h-12 w-12 animate-spin rounded-full border-4 border-primary/20 border-t-primary"></div>
+                                    <h3 className="mb-2 text-xl font-semibold text-primary">
                                         Creating Your Flow...
                                     </h3>
-                                    <p className="text-blue-800">
+                                    <p className="text-primary">
                                         Connecting your pages automatically.
                                     </p>
                                 </div>

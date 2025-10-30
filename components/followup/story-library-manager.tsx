@@ -15,7 +15,7 @@ export function StoryLibraryManager() {
         <Card className="p-6">
             <div className="mb-4">
                 <h2 className="text-2xl font-bold">Story Library</h2>
-                <p className="text-gray-600 mt-1">
+                <p className="text-muted-foreground mt-1">
                     Proof stories, testimonials, and case studies for objection handling
                 </p>
             </div>
@@ -25,13 +25,13 @@ export function StoryLibraryManager() {
                     <div className="flex justify-between items-start mb-2">
                         <div>
                             <h3 className="font-semibold">ROI in 60 Days</h3>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Client recovered investment within 2 months
                             </p>
                         </div>
                         <Badge>Testimonial</Badge>
                     </div>
-                    <div className="text-sm text-gray-600 mt-2">
+                    <div className="text-sm text-muted-foreground mt-2">
                         <div>🎯 Objection: price_concern</div>
                         <div>🏢 Niche: coaching, consulting</div>
                         <div>💰 Price Band: mid</div>
@@ -40,7 +40,7 @@ export function StoryLibraryManager() {
                     </div>
                 </div>
 
-                <div className="text-center text-gray-500 py-4">
+                <div className="text-center text-muted-foreground py-4">
                     Stories can be added and managed via API endpoints
                 </div>
             </div>

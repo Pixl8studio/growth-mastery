@@ -66,11 +66,11 @@ export function StoryAngleSelector({
     if (angles.length === 0) {
         return (
             <Card className="p-12 text-center border-dashed">
-                <Sparkles className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                <Sparkles className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">
                     No Story Angles Yet
                 </h3>
-                <p className="text-gray-600 text-sm">
+                <p className="text-muted-foreground text-sm">
                     Generate content to see story angle options
                 </p>
             </Card>
@@ -82,7 +82,7 @@ export function StoryAngleSelector({
             <div className="flex items-center justify-between">
                 <div>
                     <h3 className="text-lg font-semibold">Choose Your Story Angle</h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                         Select the angle that best fits your message
                     </p>
                 </div>
@@ -107,15 +107,15 @@ export function StoryAngleSelector({
                         key={index}
                         className={`p-5 cursor-pointer transition-all hover:shadow-lg ${
                             selectedAngle?.angle === angle.angle
-                                ? "border-2 border-blue-500 bg-blue-50"
-                                : "border border-gray-200 hover:border-blue-300"
+                                ? "border-2 border-primary bg-primary/5"
+                                : "border border-border hover:border-primary/30"
                         }`}
                         onClick={() => handleSelectAngle(angle)}
                     >
                         {/* Selection Indicator */}
                         {selectedAngle?.angle === angle.angle && (
                             <div className="flex justify-end mb-2">
-                                <CheckCircle2 className="h-5 w-5 text-blue-500" />
+                                <CheckCircle2 className="h-5 w-5 text-primary-foreground0" />
                             </div>
                         )}
 
@@ -125,10 +125,10 @@ export function StoryAngleSelector({
                                 {index === 0 ? "🎯" : index === 1 ? "💡" : "✨"}
                             </span>
                             <div className="flex-1">
-                                <h4 className="font-semibold text-blue-600 mb-1">
+                                <h4 className="font-semibold text-primary mb-1">
                                     {angle.angle}
                                 </h4>
-                                <p className="text-xs text-gray-500 uppercase">
+                                <p className="text-xs text-muted-foreground uppercase">
                                     Angle {index + 1}
                                 </p>
                             </div>
@@ -136,20 +136,20 @@ export function StoryAngleSelector({
 
                         {/* Hook */}
                         <div className="mb-3">
-                            <div className="text-xs font-semibold text-gray-500 mb-1">
+                            <div className="text-xs font-semibold text-muted-foreground mb-1">
                                 HOOK:
                             </div>
-                            <p className="text-sm text-gray-900 font-medium">
+                            <p className="text-sm text-foreground font-medium">
                                 {angle.hook}
                             </p>
                         </div>
 
                         {/* Story Outline Preview */}
                         <div>
-                            <div className="text-xs font-semibold text-gray-500 mb-1">
+                            <div className="text-xs font-semibold text-muted-foreground mb-1">
                                 OUTLINE:
                             </div>
-                            <p className="text-xs text-gray-700 line-clamp-4">
+                            <p className="text-xs text-foreground line-clamp-4">
                                 {angle.story_outline}
                             </p>
                         </div>
@@ -195,14 +195,14 @@ export function StoryAngleSelector({
             </div>
 
             {selectedAngle && (
-                <Card className="p-4 bg-blue-50 border-blue-200">
+                <Card className="p-4 bg-primary/5 border-primary/20">
                     <div className="flex items-start gap-3">
-                        <CheckCircle2 className="h-5 w-5 text-blue-600 mt-0.5" />
+                        <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" />
                         <div>
-                            <h4 className="font-semibold text-blue-900 mb-1">
+                            <h4 className="font-semibold text-primary mb-1">
                                 Selected: {selectedAngle.angle}
                             </h4>
-                            <p className="text-sm text-blue-800">
+                            <p className="text-sm text-primary">
                                 Content will be generated using this angle. You can
                                 change your selection at any time.
                             </p>

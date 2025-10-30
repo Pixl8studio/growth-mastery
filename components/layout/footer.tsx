@@ -9,19 +9,19 @@ export function Footer() {
     const currentYear = new Date().getFullYear();
 
     return (
-        <footer className="border-t border-gray-200 bg-white">
+        <footer className="border-t border-border bg-card">
             <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
                 <div className="grid grid-cols-2 gap-8 md:grid-cols-4">
                     {/* Product */}
                     <div>
-                        <h3 className="mb-4 text-sm font-semibold text-gray-900">
+                        <h3 className="mb-4 text-sm font-semibold text-foreground">
                             Product
                         </h3>
                         <ul className="space-y-3">
                             <li>
                                 <Link
                                     href="/funnel-builder"
-                                    className="text-sm text-gray-600 hover:text-gray-900"
+                                    className="text-sm text-muted-foreground hover:text-foreground"
                                 >
                                     Funnel Builder
                                 </Link>
@@ -29,7 +29,7 @@ export function Footer() {
                             <li>
                                 <Link
                                     href="/contacts"
-                                    className="text-sm text-gray-600 hover:text-gray-900"
+                                    className="text-sm text-muted-foreground hover:text-foreground"
                                 >
                                     Contacts
                                 </Link>
@@ -37,7 +37,7 @@ export function Footer() {
                             <li>
                                 <Link
                                     href="/dashboard"
-                                    className="text-sm text-gray-600 hover:text-gray-900"
+                                    className="text-sm text-muted-foreground hover:text-foreground"
                                 >
                                     Dashboard
                                 </Link>
@@ -47,14 +47,14 @@ export function Footer() {
 
                     {/* Company */}
                     <div>
-                        <h3 className="mb-4 text-sm font-semibold text-gray-900">
+                        <h3 className="mb-4 text-sm font-semibold text-foreground">
                             Company
                         </h3>
                         <ul className="space-y-3">
                             <li>
                                 <Link
                                     href="/about"
-                                    className="text-sm text-gray-600 hover:text-gray-900"
+                                    className="text-sm text-muted-foreground hover:text-foreground"
                                 >
                                     About
                                 </Link>
@@ -62,7 +62,7 @@ export function Footer() {
                             <li>
                                 <Link
                                     href="/blog"
-                                    className="text-sm text-gray-600 hover:text-gray-900"
+                                    className="text-sm text-muted-foreground hover:text-foreground"
                                 >
                                     Blog
                                 </Link>
@@ -70,7 +70,7 @@ export function Footer() {
                             <li>
                                 <Link
                                     href="/contact"
-                                    className="text-sm text-gray-600 hover:text-gray-900"
+                                    className="text-sm text-muted-foreground hover:text-foreground"
                                 >
                                     Contact
                                 </Link>
@@ -80,14 +80,14 @@ export function Footer() {
 
                     {/* Resources */}
                     <div>
-                        <h3 className="mb-4 text-sm font-semibold text-gray-900">
+                        <h3 className="mb-4 text-sm font-semibold text-foreground">
                             Resources
                         </h3>
                         <ul className="space-y-3">
                             <li>
                                 <Link
                                     href="/docs"
-                                    className="text-sm text-gray-600 hover:text-gray-900"
+                                    className="text-sm text-muted-foreground hover:text-foreground"
                                 >
                                     Documentation
                                 </Link>
@@ -95,7 +95,7 @@ export function Footer() {
                             <li>
                                 <Link
                                     href="/support"
-                                    className="text-sm text-gray-600 hover:text-gray-900"
+                                    className="text-sm text-muted-foreground hover:text-foreground"
                                 >
                                     Support
                                 </Link>
@@ -103,7 +103,7 @@ export function Footer() {
                             <li>
                                 <Link
                                     href="/api"
-                                    className="text-sm text-gray-600 hover:text-gray-900"
+                                    className="text-sm text-muted-foreground hover:text-foreground"
                                 >
                                     API Reference
                                 </Link>
@@ -113,14 +113,14 @@ export function Footer() {
 
                     {/* Legal */}
                     <div>
-                        <h3 className="mb-4 text-sm font-semibold text-gray-900">
+                        <h3 className="mb-4 text-sm font-semibold text-foreground">
                             Legal
                         </h3>
                         <ul className="space-y-3">
                             <li>
                                 <Link
                                     href="/privacy"
-                                    className="text-sm text-gray-600 hover:text-gray-900"
+                                    className="text-sm text-muted-foreground hover:text-foreground"
                                 >
                                     Privacy Policy
                                 </Link>
@@ -128,7 +128,7 @@ export function Footer() {
                             <li>
                                 <Link
                                     href="/terms"
-                                    className="text-sm text-gray-600 hover:text-gray-900"
+                                    className="text-sm text-muted-foreground hover:text-foreground"
                                 >
                                     Terms of Service
                                 </Link>
@@ -137,8 +137,8 @@ export function Footer() {
                     </div>
                 </div>
 
-                <div className="mt-8 border-t border-gray-200 pt-8">
-                    <p className="text-center text-sm text-gray-500">
+                <div className="mt-8 border-t border-border pt-8">
+                    <p className="text-center text-sm text-muted-foreground">
                         &copy; {currentYear} Genie AI. All rights reserved.
                     </p>
                 </div>

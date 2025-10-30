@@ -59,29 +59,31 @@ export function EnrollmentPageTemplate({ page }: EnrollmentPageProps) {
     const bonuses = offer?.bonuses || [];
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-muted/50">
             <div className="mx-auto max-w-4xl px-4 py-16">
                 {/* Header */}
                 <div className="mb-12 text-center">
-                    <h1 className="mb-4 text-5xl font-bold text-gray-900">
+                    <h1 className="mb-4 text-5xl font-bold text-foreground">
                         {page.headline}
                     </h1>
                     {page.subheadline && (
-                        <p className="text-xl text-gray-700">{page.subheadline}</p>
+                        <p className="text-xl text-foreground">{page.subheadline}</p>
                     )}
                 </div>
 
                 {/* Price */}
                 {offer && !isBookCall && (
                     <div className="mb-8 text-center">
-                        <p className="mb-2 text-sm font-medium text-gray-600">
+                        <p className="mb-2 text-sm font-medium text-muted-foreground">
                             Investment:
                         </p>
-                        <p className="text-6xl font-bold text-blue-600">
+                        <p className="text-6xl font-bold text-primary">
                             {formatCurrency(offer.price || 0)}
                         </p>
                         {offer.tagline && (
-                            <p className="mt-2 text-gray-600">{offer.tagline}</p>
+                            <p className="mt-2 text-muted-foreground">
+                                {offer.tagline}
+                            </p>
                         )}
                     </div>
                 )}
@@ -90,14 +92,14 @@ export function EnrollmentPageTemplate({ page }: EnrollmentPageProps) {
                 {features.length > 0 && (
                     <Card className="mb-8">
                         <CardContent className="p-8">
-                            <h2 className="mb-6 text-2xl font-bold text-gray-900">
+                            <h2 className="mb-6 text-2xl font-bold text-foreground">
                                 What's Included:
                             </h2>
                             <ul className="space-y-4">
                                 {features.map((feature: string, index: number) => (
                                     <li key={index} className="flex items-start">
                                         <CheckCircle className="mr-3 mt-0.5 h-6 w-6 flex-shrink-0 text-green-600" />
-                                        <span className="text-lg text-gray-700">
+                                        <span className="text-lg text-foreground">
                                             {feature}
                                         </span>
                                     </li>
@@ -120,7 +122,7 @@ export function EnrollmentPageTemplate({ page }: EnrollmentPageProps) {
                                 {bonuses.map((bonus: string, index: number) => (
                                     <li key={index} className="flex items-start">
                                         <CheckCircle className="mr-3 mt-0.5 h-5 w-5 flex-shrink-0 text-yellow-700" />
-                                        <span className="text-gray-800">{bonus}</span>
+                                        <span className="text-foreground">{bonus}</span>
                                     </li>
                                 ))}
                             </ul>
@@ -160,7 +162,7 @@ export function EnrollmentPageTemplate({ page }: EnrollmentPageProps) {
                 </div>
 
                 {/* Footer */}
-                <p className="mt-12 text-center text-sm text-gray-600">
+                <p className="mt-12 text-center text-sm text-muted-foreground">
                     Powered by Genie AI
                 </p>
             </div>

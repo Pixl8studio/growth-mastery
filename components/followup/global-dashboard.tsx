@@ -65,7 +65,7 @@ export function GlobalDashboard({ userId }: GlobalDashboardProps) {
     if (loading) {
         return (
             <div className="text-center py-12">
-                <div className="text-gray-600">Loading analytics...</div>
+                <div className="text-muted-foreground">Loading analytics...</div>
             </div>
         );
     }
@@ -73,21 +73,21 @@ export function GlobalDashboard({ userId }: GlobalDashboardProps) {
     if (!analytics) {
         return (
             <Card className="p-8 text-center">
-                <p className="text-gray-600">No analytics data available</p>
+                <p className="text-muted-foreground">No analytics data available</p>
             </Card>
         );
     }
 
     const segments = [
-        { key: "no_show", label: "No Show", color: "bg-gray-500" },
+        { key: "no_show", label: "No Show", color: "bg-muted/500" },
         { key: "skimmer", label: "Skimmer", color: "bg-yellow-500" },
-        { key: "sampler", label: "Sampler", color: "bg-blue-500" },
+        { key: "sampler", label: "Sampler", color: "bg-primary/50" },
         { key: "engaged", label: "Engaged", color: "bg-green-500" },
         { key: "hot", label: "Hot", color: "bg-red-500" },
     ];
 
     const engagementLevels = [
-        { key: "cold", label: "Cold", color: "bg-blue-400" },
+        { key: "cold", label: "Cold", color: "bg-primary/40" },
         { key: "warm", label: "Warm", color: "bg-yellow-400" },
         { key: "hot", label: "Hot", color: "bg-red-400" },
     ];
@@ -97,39 +97,39 @@ export function GlobalDashboard({ userId }: GlobalDashboardProps) {
             {/* Key Metrics Cards */}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 <Card className="p-6">
-                    <div className="text-sm font-medium text-gray-600">
+                    <div className="text-sm font-medium text-muted-foreground">
                         Total Prospects
                     </div>
-                    <div className="mt-2 text-3xl font-bold text-gray-900">
+                    <div className="mt-2 text-3xl font-bold text-foreground">
                         {analytics.totalProspects.toLocaleString()}
                     </div>
                 </Card>
 
                 <Card className="p-6">
-                    <div className="text-sm font-medium text-gray-600">
+                    <div className="text-sm font-medium text-muted-foreground">
                         Avg Intent Score
                     </div>
-                    <div className="mt-2 text-3xl font-bold text-gray-900">
+                    <div className="mt-2 text-3xl font-bold text-foreground">
                         {analytics.avgIntentScore}
-                        <span className="text-lg text-gray-500">/100</span>
+                        <span className="text-lg text-muted-foreground">/100</span>
                     </div>
                 </Card>
 
                 <Card className="p-6">
-                    <div className="text-sm font-medium text-gray-600">
+                    <div className="text-sm font-medium text-muted-foreground">
                         Conversion Rate
                     </div>
-                    <div className="mt-2 text-3xl font-bold text-gray-900">
+                    <div className="mt-2 text-3xl font-bold text-foreground">
                         {analytics.conversionRate}
-                        <span className="text-lg text-gray-500">%</span>
+                        <span className="text-lg text-muted-foreground">%</span>
                     </div>
                 </Card>
 
                 <Card className="p-6">
-                    <div className="text-sm font-medium text-gray-600">
+                    <div className="text-sm font-medium text-muted-foreground">
                         Active Sequences
                     </div>
-                    <div className="mt-2 text-3xl font-bold text-gray-900">
+                    <div className="mt-2 text-3xl font-bold text-foreground">
                         {analytics.activeSequences}
                     </div>
                 </Card>
@@ -137,7 +137,7 @@ export function GlobalDashboard({ userId }: GlobalDashboardProps) {
 
             {/* Segment Breakdown */}
             <Card className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <h3 className="text-lg font-semibold text-foreground mb-4">
                     Prospects by Segment
                 </h3>
                 <div className="space-y-3">
@@ -152,10 +152,10 @@ export function GlobalDashboard({ userId }: GlobalDashboardProps) {
                             <div key={segment.key} className="flex items-center gap-3">
                                 <div className="flex-1">
                                     <div className="flex justify-between mb-1">
-                                        <span className="text-sm font-medium text-gray-700">
+                                        <span className="text-sm font-medium text-foreground">
                                             {segment.label}
                                         </span>
-                                        <span className="text-sm text-gray-600">
+                                        <span className="text-sm text-muted-foreground">
                                             {count} ({Math.round(percentage)}%)
                                         </span>
                                     </div>
@@ -174,7 +174,7 @@ export function GlobalDashboard({ userId }: GlobalDashboardProps) {
 
             {/* Engagement Level Breakdown */}
             <Card className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <h3 className="text-lg font-semibold text-foreground mb-4">
                     Prospects by Engagement Level
                 </h3>
                 <div className="grid gap-4 md:grid-cols-3">
@@ -191,14 +191,14 @@ export function GlobalDashboard({ userId }: GlobalDashboardProps) {
                                     <div
                                         className={`w-3 h-3 rounded-full ${level.color}`}
                                     />
-                                    <span className="font-medium text-gray-900">
+                                    <span className="font-medium text-foreground">
                                         {level.label}
                                     </span>
                                 </div>
-                                <div className="text-2xl font-bold text-gray-900">
+                                <div className="text-2xl font-bold text-foreground">
                                     {count}
                                 </div>
-                                <div className="text-sm text-gray-600">
+                                <div className="text-sm text-muted-foreground">
                                     {Math.round(percentage)}% of total
                                 </div>
                             </Card>
@@ -210,7 +210,7 @@ export function GlobalDashboard({ userId }: GlobalDashboardProps) {
             {/* Funnel Performance */}
             {analytics.byFunnel.length > 0 && (
                 <Card className="p-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                    <h3 className="text-lg font-semibold text-foreground mb-4">
                         Performance by Funnel
                     </h3>
                     <div className="space-y-3">
@@ -220,10 +220,10 @@ export function GlobalDashboard({ userId }: GlobalDashboardProps) {
                                 className="flex items-center justify-between p-3 border rounded"
                             >
                                 <div>
-                                    <div className="font-medium text-gray-900">
+                                    <div className="font-medium text-foreground">
                                         {funnel.funnelName}
                                     </div>
-                                    <div className="text-sm text-gray-600">
+                                    <div className="text-sm text-muted-foreground">
                                         {funnel.prospectCount} prospects
                                     </div>
                                 </div>
@@ -245,11 +245,11 @@ export function GlobalDashboard({ userId }: GlobalDashboardProps) {
 
             {/* Recent Activity */}
             <Card className="p-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <h3 className="text-lg font-semibold text-foreground mb-4">
                     Recent Activity
                 </h3>
                 {analytics.recentActivity.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="text-center py-8 text-muted-foreground">
                         No recent activity
                     </div>
                 ) : (
@@ -260,17 +260,17 @@ export function GlobalDashboard({ userId }: GlobalDashboardProps) {
                                 className="flex items-center justify-between p-3 border rounded"
                             >
                                 <div className="flex-1">
-                                    <div className="font-medium text-gray-900">
+                                    <div className="font-medium text-foreground">
                                         {activity.prospectName ||
                                             activity.prospectEmail}
                                     </div>
-                                    <div className="text-sm text-gray-600">
+                                    <div className="text-sm text-muted-foreground">
                                         {activity.funnelName}
                                     </div>
                                 </div>
                                 <div className="text-right">
                                     <Badge>{activity.eventType}</Badge>
-                                    <div className="text-xs text-gray-500 mt-1">
+                                    <div className="text-xs text-muted-foreground mt-1">
                                         {new Date(
                                             activity.timestamp
                                         ).toLocaleDateString()}

@@ -193,12 +193,12 @@ export function VariantInlineEditor({
     return (
         <>
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75">
-                <div className="bg-white rounded-lg w-full max-w-5xl max-h-[95vh] flex flex-col">
+                <div className="bg-card rounded-lg w-full max-w-5xl max-h-[95vh] flex flex-col">
                     {/* Header */}
                     <div className="p-6 border-b flex items-center justify-between">
                         <div>
                             <h2 className="text-2xl font-bold">Edit Variant</h2>
-                            <p className="text-sm text-gray-600 capitalize">
+                            <p className="text-sm text-muted-foreground capitalize">
                                 {variant.platform} • {variant.format_type || "post"}
                             </p>
                         </div>
@@ -213,7 +213,7 @@ export function VariantInlineEditor({
                             </Button>
                             <button
                                 onClick={onClose}
-                                className="text-gray-400 hover:text-gray-600"
+                                className="text-muted-foreground hover:text-muted-foreground"
                             >
                                 <X className="h-6 w-6" />
                             </button>
@@ -236,7 +236,7 @@ export function VariantInlineEditor({
                                                 ? "text-red-600 font-semibold"
                                                 : charWarning
                                                   ? "text-orange-600"
-                                                  : "text-gray-600"
+                                                  : "text-muted-foreground"
                                         }`}
                                     >
                                         {characterCount} / {charLimit}
@@ -285,12 +285,12 @@ export function VariantInlineEditor({
                                 {hashtags.map((tag) => (
                                     <span
                                         key={tag}
-                                        className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm flex items-center gap-2"
+                                        className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm flex items-center gap-2"
                                     >
                                         #{tag}
                                         <button
                                             onClick={() => removeHashtag(tag)}
-                                            className="hover:text-blue-900"
+                                            className="hover:text-primary"
                                         >
                                             <X className="h-3 w-3" />
                                         </button>
@@ -372,7 +372,7 @@ export function VariantInlineEditor({
                         )}
 
                         {/* CTA Configuration */}
-                        <div className="p-4 border rounded-lg bg-gray-50">
+                        <div className="p-4 border rounded-lg bg-muted/50">
                             <h3 className="font-semibold mb-3 flex items-center gap-2">
                                 <LinkIcon className="h-4 w-4" />
                                 Call-to-Action
@@ -396,7 +396,7 @@ export function VariantInlineEditor({
                                         <select
                                             value={ctaType}
                                             onChange={(e) => setCtaType(e.target.value)}
-                                            className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                            className="w-full rounded-md border border-border px-3 py-2"
                                         >
                                             <option value="bio_link">Bio Link</option>
                                             <option value="dm_keyword">
@@ -458,7 +458,7 @@ export function VariantInlineEditor({
                         </div>
 
                         {/* Link Strategy */}
-                        <div className="p-4 border rounded-lg bg-blue-50">
+                        <div className="p-4 border rounded-lg bg-primary/5">
                             <h3 className="font-semibold mb-3">Link Tracking</h3>
                             <UTMBuilder
                                 baseUrl={primaryUrl}
@@ -487,7 +487,7 @@ export function VariantInlineEditor({
                                                     | "rejected"
                                             )
                                         }
-                                        className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                        className="w-full rounded-md border border-border px-3 py-2"
                                     >
                                         <option value="pending">Pending Review</option>
                                         <option value="approved">Approved</option>

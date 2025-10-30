@@ -157,21 +157,21 @@ export function TestMessageModal({
                                     className={cn(
                                         "flex items-center gap-3 p-4 rounded-lg border-2 transition-all",
                                         channel === "email"
-                                            ? "border-blue-500 bg-blue-50"
-                                            : "border-gray-200 bg-white hover:border-gray-300"
+                                            ? "border-primary bg-primary/5"
+                                            : "border-border bg-card hover:border-border"
                                     )}
                                 >
                                     <Mail
                                         className={cn(
                                             "h-5 w-5",
                                             channel === "email"
-                                                ? "text-blue-600"
-                                                : "text-gray-400"
+                                                ? "text-primary"
+                                                : "text-muted-foreground"
                                         )}
                                     />
                                     <div className="text-left">
                                         <div className="font-medium text-sm">Email</div>
-                                        <div className="text-xs text-gray-500">
+                                        <div className="text-xs text-muted-foreground">
                                             Test email delivery
                                         </div>
                                     </div>
@@ -184,7 +184,7 @@ export function TestMessageModal({
                                         "flex items-center gap-3 p-4 rounded-lg border-2 transition-all",
                                         channel === "sms"
                                             ? "border-green-500 bg-green-50"
-                                            : "border-gray-200 bg-white hover:border-gray-300"
+                                            : "border-border bg-card hover:border-border"
                                     )}
                                 >
                                     <MessageSquare
@@ -192,12 +192,12 @@ export function TestMessageModal({
                                             "h-5 w-5",
                                             channel === "sms"
                                                 ? "text-green-600"
-                                                : "text-gray-400"
+                                                : "text-muted-foreground"
                                         )}
                                     />
                                     <div className="text-left">
                                         <div className="font-medium text-sm">SMS</div>
-                                        <div className="text-xs text-gray-500">
+                                        <div className="text-xs text-muted-foreground">
                                             Test SMS delivery
                                         </div>
                                     </div>
@@ -217,7 +217,7 @@ export function TestMessageModal({
                                     placeholder="your.email@example.com"
                                     className="mt-2"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-muted-foreground mt-1">
                                     Test message will be sent to this address
                                 </p>
                             </div>
@@ -234,15 +234,15 @@ export function TestMessageModal({
                                     placeholder="+1234567890"
                                     className="mt-2"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-muted-foreground mt-1">
                                     Include country code (e.g., +1 for US)
                                 </p>
                             </div>
                         )}
 
                         {/* Info Box */}
-                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm">
-                            <p className="text-blue-800">
+                        <div className="bg-primary/5 border border-primary/20 rounded-lg p-3 text-sm">
+                            <p className="text-primary">
                                 {channel === "email" && (
                                     <>
                                         ℹ️ This will send a sample follow-up email with
@@ -296,10 +296,10 @@ export function TestMessageModal({
                                 <CheckCircle2 className="h-8 w-8 text-green-600" />
                             </div>
                         </div>
-                        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                        <h3 className="text-lg font-semibold text-foreground mb-2">
                             Test Message Sent!
                         </h3>
-                        <p className="text-sm text-gray-600 mb-6">
+                        <p className="text-sm text-muted-foreground mb-6">
                             {channel === "email"
                                 ? `Check your inbox at ${recipientEmail}`
                                 : `Check your phone at ${recipientPhone}`}

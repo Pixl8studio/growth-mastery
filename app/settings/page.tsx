@@ -147,7 +147,7 @@ export default function SettingsPage() {
     if (loading) {
         return (
             <div className="flex h-screen items-center justify-center">
-                <div className="text-gray-500">Loading settings...</div>
+                <div className="text-muted-foreground">Loading settings...</div>
             </div>
         );
     }
@@ -155,8 +155,8 @@ export default function SettingsPage() {
     return (
         <div className="mx-auto max-w-5xl p-8">
             <div className="mb-8">
-                <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-                <p className="mt-2 text-gray-600">
+                <h1 className="text-3xl font-bold text-foreground">Settings</h1>
+                <p className="mt-2 text-muted-foreground">
                     Manage your account preferences and integrations
                 </p>
             </div>
@@ -166,44 +166,50 @@ export default function SettingsPage() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Link
                         href="/settings/profile"
-                        className="rounded-lg border border-gray-200 bg-white p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                        className="rounded-lg border border-border bg-card p-4 hover:border-primary/30 hover:bg-primary/5 transition-smooth"
                     >
-                        <h3 className="font-semibold text-gray-900">Profile</h3>
-                        <p className="mt-1 text-sm text-gray-600">
+                        <h3 className="font-semibold text-foreground">Profile</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
                             Name, email, username
                         </p>
                     </Link>
                     <Link
                         href="/settings/integrations"
-                        className="rounded-lg border border-gray-200 bg-white p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                        className="rounded-lg border border-border bg-card p-4 hover:border-primary/30 hover:bg-primary/5 transition-smooth"
                     >
-                        <h3 className="font-semibold text-gray-900">Integrations</h3>
-                        <p className="mt-1 text-sm text-gray-600">CRM webhooks</p>
+                        <h3 className="font-semibold text-foreground">Integrations</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            CRM webhooks
+                        </p>
                     </Link>
                     <Link
                         href="/settings/payments"
-                        className="rounded-lg border border-gray-200 bg-white p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                        className="rounded-lg border border-border bg-card p-4 hover:border-primary/30 hover:bg-primary/5 transition-smooth"
                     >
-                        <h3 className="font-semibold text-gray-900">Payments</h3>
-                        <p className="mt-1 text-sm text-gray-600">Stripe Connect</p>
+                        <h3 className="font-semibold text-foreground">Payments</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            Stripe Connect
+                        </p>
                     </Link>
                     <Link
                         href="/settings/domains"
-                        className="rounded-lg border border-gray-200 bg-white p-4 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                        className="rounded-lg border border-border bg-card p-4 hover:border-primary/30 hover:bg-primary/5 transition-smooth"
                     >
-                        <h3 className="font-semibold text-gray-900">Domains</h3>
-                        <p className="mt-1 text-sm text-gray-600">Custom domains</p>
+                        <h3 className="font-semibold text-foreground">Domains</h3>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                            Custom domains
+                        </p>
                     </Link>
                 </div>
 
                 {/* Business Settings */}
-                <div className="rounded-lg border border-gray-200 bg-white p-6">
-                    <h2 className="mb-6 text-xl font-semibold text-gray-900">
+                <div className="rounded-lg border border-border bg-card p-6">
+                    <h2 className="mb-6 text-xl font-semibold text-foreground">
                         Business Settings
                     </h2>
                     <div className="space-y-6">
                         <div>
-                            <label className="mb-2 flex items-center text-sm font-medium text-gray-700">
+                            <label className="mb-2 flex items-center text-sm font-medium text-foreground">
                                 <Building2 className="mr-2 h-4 w-4" />
                                 Company Name
                             </label>
@@ -216,13 +222,13 @@ export default function SettingsPage() {
                                         company_name: e.target.value,
                                     })
                                 }
-                                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="w-full rounded-md border border-border px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                                 placeholder="Your Company"
                             />
                         </div>
 
                         <div>
-                            <label className="mb-2 flex items-center text-sm font-medium text-gray-700">
+                            <label className="mb-2 flex items-center text-sm font-medium text-foreground">
                                 <Mail className="mr-2 h-4 w-4" />
                                 Support Email
                             </label>
@@ -235,13 +241,13 @@ export default function SettingsPage() {
                                         support_email: e.target.value,
                                     })
                                 }
-                                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="w-full rounded-md border border-border px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                                 placeholder="support@yourcompany.com"
                             />
                         </div>
 
                         <div>
-                            <label className="mb-2 flex items-center text-sm font-medium text-gray-700">
+                            <label className="mb-2 flex items-center text-sm font-medium text-foreground">
                                 <Globe className="mr-2 h-4 w-4" />
                                 Timezone
                             </label>
@@ -253,7 +259,7 @@ export default function SettingsPage() {
                                         timezone: e.target.value,
                                     })
                                 }
-                                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="w-full rounded-md border border-border px-3 py-2 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             >
                                 {TIMEZONES.map((tz) => (
                                     <option key={tz} value={tz}>
@@ -266,17 +272,17 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Beta Features */}
-                <div className="rounded-lg border border-gray-200 bg-white p-6">
-                    <h2 className="mb-6 text-xl font-semibold text-gray-900">
+                <div className="rounded-lg border border-border bg-card p-6">
+                    <h2 className="mb-6 text-xl font-semibold text-foreground">
                         Beta Features
                     </h2>
                     <div className="space-y-4">
                         <div className="flex items-center justify-between">
                             <div>
-                                <h3 className="font-medium text-gray-900">
+                                <h3 className="font-medium text-foreground">
                                     AI Follow-Up Engine
                                 </h3>
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm text-muted-foreground">
                                     Automated AI-powered follow-up sequences
                                 </p>
                             </div>
@@ -290,12 +296,12 @@ export default function SettingsPage() {
                                 }
                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                                     settings.beta_followup_engine_enabled
-                                        ? "bg-blue-600"
+                                        ? "bg-primary"
                                         : "bg-gray-200"
                                 }`}
                             >
                                 <span
-                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${
                                         settings.beta_followup_engine_enabled
                                             ? "translate-x-6"
                                             : "translate-x-1"
@@ -306,10 +312,10 @@ export default function SettingsPage() {
 
                         <div className="flex items-center justify-between">
                             <div>
-                                <h3 className="font-medium text-gray-900">
+                                <h3 className="font-medium text-foreground">
                                     Advanced Analytics
                                 </h3>
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm text-muted-foreground">
                                     Enhanced analytics and reporting modules
                                 </p>
                             </div>
@@ -323,12 +329,12 @@ export default function SettingsPage() {
                                 }
                                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                                     settings.beta_analytics_modules_enabled
-                                        ? "bg-blue-600"
+                                        ? "bg-primary"
                                         : "bg-gray-200"
                                 }`}
                             >
                                 <span
-                                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${
                                         settings.beta_analytics_modules_enabled
                                             ? "translate-x-6"
                                             : "translate-x-1"
@@ -340,8 +346,8 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Integration Status */}
-                <div className="rounded-lg border border-gray-200 bg-white p-6">
-                    <h2 className="mb-6 text-xl font-semibold text-gray-900">
+                <div className="rounded-lg border border-border bg-card p-6">
+                    <h2 className="mb-6 text-xl font-semibold text-foreground">
                         Integration Status
                     </h2>
                     <div className="grid gap-4 sm:grid-cols-2">
@@ -365,7 +371,7 @@ export default function SettingsPage() {
                         ].map((integration) => (
                             <div
                                 key={integration.key}
-                                className="flex items-center justify-between rounded-lg border border-gray-200 p-4"
+                                className="flex items-center justify-between rounded-lg border border-border p-4"
                             >
                                 <div className="flex items-center space-x-3">
                                     {integrationStatus[
@@ -373,9 +379,9 @@ export default function SettingsPage() {
                                     ] ? (
                                         <Check className="h-5 w-5 text-green-600" />
                                     ) : (
-                                        <X className="h-5 w-5 text-gray-400" />
+                                        <X className="h-5 w-5 text-muted-foreground" />
                                     )}
-                                    <span className="font-medium text-gray-900">
+                                    <span className="font-medium text-foreground">
                                         {integration.name}
                                     </span>
                                 </div>
@@ -383,7 +389,7 @@ export default function SettingsPage() {
                                     href={integration.docs}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-blue-600 hover:text-blue-500"
+                                    className="text-primary hover:text-primary-foreground0"
                                 >
                                     <ExternalLink className="h-4 w-4" />
                                 </a>

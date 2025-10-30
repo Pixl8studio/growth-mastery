@@ -67,7 +67,7 @@ export function PagesFilterBar({ funnels }: PagesFilterBarProps) {
                 <div>
                     <label
                         htmlFor="funnel-filter"
-                        className="mb-1 block text-sm font-medium text-gray-700"
+                        className="mb-1 block text-sm font-medium text-foreground"
                     >
                         Funnel
                     </label>
@@ -75,7 +75,7 @@ export function PagesFilterBar({ funnels }: PagesFilterBarProps) {
                         id="funnel-filter"
                         value={funnelId}
                         onChange={(e) => setFunnelId(e.target.value)}
-                        className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="block w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     >
                         <option value="all">All Funnels</option>
                         {funnels.map((funnel) => (
@@ -90,7 +90,7 @@ export function PagesFilterBar({ funnels }: PagesFilterBarProps) {
                 <div>
                     <label
                         htmlFor="type-filter"
-                        className="mb-1 block text-sm font-medium text-gray-700"
+                        className="mb-1 block text-sm font-medium text-foreground"
                     >
                         Page Type
                     </label>
@@ -98,7 +98,7 @@ export function PagesFilterBar({ funnels }: PagesFilterBarProps) {
                         id="type-filter"
                         value={pageType}
                         onChange={(e) => setPageType(e.target.value)}
-                        className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="block w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     >
                         <option value="all">All Types</option>
                         <option value="enrollment">Enrollment</option>
@@ -111,7 +111,7 @@ export function PagesFilterBar({ funnels }: PagesFilterBarProps) {
                 <div>
                     <label
                         htmlFor="status-filter"
-                        className="mb-1 block text-sm font-medium text-gray-700"
+                        className="mb-1 block text-sm font-medium text-foreground"
                     >
                         Status
                     </label>
@@ -119,7 +119,7 @@ export function PagesFilterBar({ funnels }: PagesFilterBarProps) {
                         id="status-filter"
                         value={isPublished}
                         onChange={(e) => setIsPublished(e.target.value)}
-                        className="block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        className="block w-full rounded-md border border-border bg-card px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                     >
                         <option value="all">All</option>
                         <option value="true">Published</option>
@@ -131,12 +131,12 @@ export function PagesFilterBar({ funnels }: PagesFilterBarProps) {
                 <div>
                     <label
                         htmlFor="search-filter"
-                        className="mb-1 block text-sm font-medium text-gray-700"
+                        className="mb-1 block text-sm font-medium text-foreground"
                     >
                         Search
                     </label>
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             id="search-filter"
                             type="text"

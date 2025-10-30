@@ -167,49 +167,49 @@ export function ContactsTable({
 
             {/* Table */}
             {contacts.length > 0 && (
-                <div className="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm">
+                <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft">
                     <div className="overflow-x-auto">
                         <table className="min-w-full divide-y divide-gray-200">
-                            <thead className="bg-gray-50">
+                            <thead className="bg-muted/50">
                                 <tr>
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                         Contact
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                         Funnel
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                         Stage
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                         Video Progress
                                     </th>
-                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                                    <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                         Last Activity
                                     </th>
-                                    <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">
+                                    <th className="px-6 py-3 text-right text-xs font-medium uppercase tracking-wider text-muted-foreground">
                                         Actions
                                     </th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-gray-200 bg-white">
+                            <tbody className="divide-y divide-gray-200 bg-card">
                                 {contacts.map((contact) => (
                                     <tr
                                         key={contact.id}
-                                        className="hover:bg-gray-50 transition-colors"
+                                        className="hover:bg-muted/50 transition-smooth"
                                     >
                                         <td className="whitespace-nowrap px-6 py-4">
                                             <div className="flex flex-col">
-                                                <div className="text-sm font-medium text-gray-900">
+                                                <div className="text-sm font-medium text-foreground">
                                                     {contact.name || "Anonymous"}
                                                 </div>
-                                                <div className="text-sm text-gray-500">
+                                                <div className="text-sm text-muted-foreground">
                                                     {contact.email}
                                                 </div>
                                             </div>
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4">
-                                            <div className="text-sm text-gray-900">
+                                            <div className="text-sm text-foreground">
                                                 {contact.funnel_projects?.name ||
                                                     "Unknown Funnel"}
                                             </div>
@@ -233,18 +233,18 @@ export function ContactsTable({
                                                         }}
                                                     />
                                                 </div>
-                                                <span className="text-sm text-gray-600">
+                                                <span className="text-sm text-muted-foreground">
                                                     {contact.video_watch_percentage}%
                                                 </span>
                                             </div>
                                         </td>
-                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
+                                        <td className="whitespace-nowrap px-6 py-4 text-sm text-muted-foreground">
                                             {formatDateTime(contact.last_activity_at)}
                                         </td>
                                         <td className="whitespace-nowrap px-6 py-4 text-right text-sm font-medium">
                                             <Link
                                                 href={`/contacts/${contact.id}`}
-                                                className="text-blue-600 hover:text-blue-900"
+                                                className="text-primary hover:text-primary"
                                             >
                                                 View Details →
                                             </Link>

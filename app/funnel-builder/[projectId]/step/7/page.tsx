@@ -310,7 +310,7 @@ export default function Step7Page({
     if (!projectId) {
         return (
             <div className="flex h-screen items-center justify-center">
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-muted-foreground">Loading...</div>
             </div>
         );
     }
@@ -328,11 +328,11 @@ export default function Step7Page({
         >
             <div className="space-y-8">
                 {/* Recording Instructions */}
-                <div className="rounded-lg border border-blue-100 bg-blue-50 p-6">
-                    <h3 className="mb-3 text-lg font-semibold text-gray-900">
+                <div className="rounded-lg border border-primary/10 bg-primary/5 p-6">
+                    <h3 className="mb-3 text-lg font-semibold text-foreground">
                         🎬 How to Record Your Presentation
                     </h3>
-                    <ol className="space-y-2 text-sm text-gray-700">
+                    <ol className="space-y-2 text-sm text-foreground">
                         <li className="flex items-start">
                             <span className="mr-2">1️⃣</span>
                             <span>Open a Zoom meeting alone</span>
@@ -360,25 +360,25 @@ export default function Step7Page({
 
                 {/* Recording Helper Section */}
                 {deckStructures.length > 0 && (
-                    <div className="rounded-lg border border-blue-100 bg-gradient-to-br from-blue-50 to-indigo-50 p-6">
+                    <div className="rounded-lg border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/5 p-6">
                         <div className="mb-4">
-                            <h3 className="mb-2 text-lg font-semibold text-gray-900">
+                            <h3 className="mb-2 text-lg font-semibold text-foreground">
                                 🎬 Recording Helper
                             </h3>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Select your deck to view it alongside your talk track
                                 while recording
                             </p>
                         </div>
 
                         <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium text-gray-700">
+                            <label className="mb-2 block text-sm font-medium text-foreground">
                                 Select Deck Structure
                             </label>
                             <select
                                 value={selectedDeckId}
                                 onChange={(e) => setSelectedDeckId(e.target.value)}
-                                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-blue-500 focus:ring-2 focus:ring-blue-500"
+                                className="w-full rounded-lg border border-border px-4 py-2 focus:border-primary focus:ring-2 focus:ring-primary"
                             >
                                 {deckStructures.map((deck) => (
                                     <option key={deck.id} value={deck.id}>
@@ -396,7 +396,7 @@ export default function Step7Page({
                                     className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 font-medium transition-colors ${
                                         selectedDeck.gamma_deck_url
                                             ? "bg-purple-600 text-white hover:bg-purple-700"
-                                            : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                            : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                     }`}
                                 >
                                     <Presentation className="h-5 w-5" />
@@ -417,8 +417,8 @@ export default function Step7Page({
                                             (t) =>
                                                 t.deck_structure_id === selectedDeckId
                                         )
-                                            ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                                            : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                            ? "bg-primary text-white hover:bg-primary/90"
+                                            : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                     }`}
                                 >
                                     <FileText className="h-5 w-5" />
@@ -453,13 +453,13 @@ export default function Step7Page({
                     />
                 </div>
 
-                <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-                    <div className="border-b border-gray-200 p-6">
+                <div className="rounded-lg border border-border bg-card shadow-soft">
+                    <div className="border-b border-border p-6">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-semibold text-gray-900">
+                            <h3 className="text-xl font-semibold text-foreground">
                                 Your Videos
                             </h3>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-muted-foreground">
                                 {videos.length} uploaded
                             </span>
                         </div>
@@ -467,7 +467,7 @@ export default function Step7Page({
 
                     <div className="p-6">
                         {videos.length === 0 ? (
-                            <div className="py-12 text-center text-gray-500">
+                            <div className="py-12 text-center text-muted-foreground">
                                 <Video className="mx-auto mb-4 h-12 w-12 opacity-50" />
                                 <p>No videos yet. Upload your first one above!</p>
                             </div>
@@ -476,17 +476,17 @@ export default function Step7Page({
                                 {videos.map((video) => (
                                     <div
                                         key={video.id}
-                                        className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition-all hover:border-red-300 hover:shadow-md"
+                                        className="rounded-lg border border-border bg-card p-4 shadow-sm transition-all hover:border-red-300 hover:shadow-md"
                                     >
                                         <div className="mb-3 flex items-center justify-between">
-                                            <span className="text-sm font-semibold text-gray-900">
+                                            <span className="text-sm font-semibold text-foreground">
                                                 Presentation Video
                                             </span>
                                             <button
                                                 onClick={() =>
                                                     handleDeleteVideo(video.id)
                                                 }
-                                                className="rounded p-1 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                className="rounded p-1 text-muted-foreground hover:bg-red-50 hover:text-red-600"
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </button>
@@ -501,12 +501,12 @@ export default function Step7Page({
                                                 />
                                             ) : (
                                                 <div className="flex h-full items-center justify-center">
-                                                    <Video className="h-12 w-12 text-gray-500" />
+                                                    <Video className="h-12 w-12 text-muted-foreground" />
                                                 </div>
                                             )}
                                         </div>
 
-                                        <div className="mb-3 text-sm text-gray-600">
+                                        <div className="mb-3 text-sm text-muted-foreground">
                                             <div className="flex items-center justify-between">
                                                 <span>
                                                     ⏱️{" "}
@@ -571,21 +571,21 @@ export default function Step7Page({
             {/* Talk Track Viewer Modal */}
             {selectedTalkTrack && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-                    <div className="flex h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-white shadow-2xl">
-                        <div className="flex-shrink-0 rounded-t-lg border-b border-gray-200 bg-gray-50 p-6">
+                    <div className="flex h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-card shadow-2xl">
+                        <div className="flex-shrink-0 rounded-t-lg border-b border-border bg-muted/50 p-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <h2 className="text-2xl font-bold text-gray-900">
+                                    <h2 className="text-2xl font-bold text-foreground">
                                         Talk Track Script
                                     </h2>
-                                    <p className="mt-1 text-sm text-gray-600">
+                                    <p className="mt-1 text-sm text-muted-foreground">
                                         Use this script while recording your
                                         presentation
                                     </p>
                                 </div>
                                 <button
                                     onClick={() => setSelectedTalkTrack(null)}
-                                    className="text-2xl font-bold text-gray-400 hover:text-gray-600"
+                                    className="text-2xl font-bold text-muted-foreground hover:text-muted-foreground"
                                 >
                                     ×
                                 </button>
@@ -594,7 +594,7 @@ export default function Step7Page({
 
                         <div className="flex-1 overflow-y-scroll p-6">
                             <div className="prose max-w-none">
-                                <pre className="whitespace-pre-wrap rounded-lg bg-gray-50 p-4 text-sm">
+                                <pre className="whitespace-pre-wrap rounded-lg bg-muted/50 p-4 text-sm">
                                     {selectedTalkTrack.content}
                                 </pre>
                             </div>

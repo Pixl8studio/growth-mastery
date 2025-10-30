@@ -23,7 +23,7 @@ export function ShareButton({ username, vanitySlug }: ShareButtonProps) {
 
     if (!vanitySlug) {
         return (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Link2 className="h-4 w-4" />
                 <span>No slug set</span>
             </div>
@@ -57,9 +57,9 @@ export function ShareButton({ username, vanitySlug }: ShareButtonProps) {
     };
 
     return (
-        <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-            <Link2 className="h-4 w-4 text-gray-500" />
-            <code className="flex-1 text-sm text-gray-700">
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2">
+            <Link2 className="h-4 w-4 text-muted-foreground" />
+            <code className="flex-1 text-sm text-foreground">
                 {username}/{vanitySlug}
             </code>
             <Button variant="ghost" size="sm" onClick={handleCopy} className="h-8 px-2">

@@ -62,23 +62,23 @@ export function ProjectCard({ project }: ProjectCardProps) {
                     {/* Completion Percentage */}
                     <div className="space-y-2">
                         <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600">Completion</span>
-                            <span className="font-medium text-blue-600">
+                            <span className="text-muted-foreground">Completion</span>
+                            <span className="font-medium text-primary">
                                 {isLoading ? "..." : `${completionPercentage}%`}
                             </span>
                         </div>
                         {/* Progress Bar */}
                         <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
                             <div
-                                className="h-full rounded-full bg-blue-600 transition-all duration-500"
+                                className="h-full rounded-full bg-primary transition-all duration-500"
                                 style={{ width: `${completionPercentage}%` }}
                             />
                         </div>
                     </div>
 
                     <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Last updated</span>
-                        <span className="font-medium text-gray-900">
+                        <span className="text-muted-foreground">Last updated</span>
+                        <span className="font-medium text-foreground">
                             {formatDate(project.updated_at)}
                         </span>
                     </div>

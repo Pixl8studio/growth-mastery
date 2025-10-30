@@ -66,10 +66,10 @@ export function IntakeMethodSelector({
     return (
         <div className="space-y-4">
             <div className="text-center">
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-foreground">
                     Choose Your Intake Method
                 </h3>
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-1 text-sm text-muted-foreground">
                     Select how you'd like to provide your business information
                 </p>
             </div>
@@ -84,8 +84,8 @@ export function IntakeMethodSelector({
                         <Card
                             key={method.id}
                             className={cn("p-6 transition-all", {
-                                "border-blue-500 bg-blue-50": isSelected,
-                                "cursor-pointer hover:shadow-lg hover:border-gray-300":
+                                "border-primary bg-primary/5": isSelected,
+                                "cursor-pointer hover:shadow-lg hover:border-border":
                                     !isDisabled,
                                 "cursor-not-allowed opacity-60": isDisabled,
                             })}
@@ -97,7 +97,8 @@ export function IntakeMethodSelector({
                                         className={cn(
                                             "flex h-12 w-12 items-center justify-center rounded-full",
                                             {
-                                                "bg-blue-100": method.color === "blue",
+                                                "bg-primary/10":
+                                                    method.color === "blue",
                                                 "bg-purple-100":
                                                     method.color === "purple",
                                                 "bg-green-100":
@@ -110,8 +111,7 @@ export function IntakeMethodSelector({
                                     >
                                         <Icon
                                             className={cn("h-6 w-6", {
-                                                "text-blue-600":
-                                                    method.color === "blue",
+                                                "text-primary": method.color === "blue",
                                                 "text-purple-600":
                                                     method.color === "purple",
                                                 "text-green-600":
@@ -129,10 +129,10 @@ export function IntakeMethodSelector({
                                     )}
                                 </div>
 
-                                <h4 className="mb-2 font-semibold text-gray-900">
+                                <h4 className="mb-2 font-semibold text-foreground">
                                     {method.title}
                                 </h4>
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm text-muted-foreground">
                                     {method.description}
                                 </p>
                                 {method.comingSoon && (

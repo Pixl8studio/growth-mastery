@@ -63,9 +63,9 @@ export function PostVariantCardEnhanced({
 
     const platformColors: Record<string, string> = {
         instagram: "from-pink-500 to-purple-500",
-        facebook: "from-blue-600 to-blue-700",
-        linkedin: "from-blue-700 to-blue-800",
-        twitter: "from-sky-500 to-blue-500",
+        facebook: "from-primary to-primary/90",
+        linkedin: "from-primary/90 to-primary",
+        twitter: "from-sky-500 to-primary/50",
     };
 
     const approvalStatusConfig: Record<string, { color: string; icon: any }> = {
@@ -204,7 +204,7 @@ export function PostVariantCardEnhanced({
                         <div className="relative">
                             <button
                                 onClick={() => setShowActions(!showActions)}
-                                className="text-gray-400 hover:text-gray-600"
+                                className="text-muted-foreground hover:text-muted-foreground"
                             >
                                 <MoreVertical className="h-5 w-5" />
                             </button>
@@ -215,13 +215,13 @@ export function PostVariantCardEnhanced({
                                         className="fixed inset-0 z-10"
                                         onClick={() => setShowActions(false)}
                                     />
-                                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border z-20">
+                                    <div className="absolute right-0 mt-2 w-48 bg-card rounded-lg shadow-lg border z-20">
                                         <button
                                             onClick={() => {
                                                 handleDuplicate();
                                                 setShowActions(false);
                                             }}
-                                            className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
+                                            className="w-full text-left px-4 py-2 hover:bg-muted/50 flex items-center gap-2"
                                         >
                                             <Copy className="h-4 w-4" />
                                             Duplicate
@@ -231,7 +231,7 @@ export function PostVariantCardEnhanced({
                                                 handleABTest();
                                                 setShowActions(false);
                                             }}
-                                            className="w-full text-left px-4 py-2 hover:bg-gray-50 flex items-center gap-2"
+                                            className="w-full text-left px-4 py-2 hover:bg-muted/50 flex items-center gap-2"
                                         >
                                             <Eye className="h-4 w-4" />
                                             A/B Test
@@ -241,7 +241,7 @@ export function PostVariantCardEnhanced({
                                                 handleDelete();
                                                 setShowActions(false);
                                             }}
-                                            className="w-full text-left px-4 py-2 hover:bg-gray-50 text-red-600 flex items-center gap-2"
+                                            className="w-full text-left px-4 py-2 hover:bg-muted/50 text-red-600 flex items-center gap-2"
                                         >
                                             <Trash2 className="h-4 w-4" />
                                             Delete
@@ -271,7 +271,7 @@ export function PostVariantCardEnhanced({
                                 {preflight.issues.length} Issues
                             </Badge>
                         ) : (
-                            <Badge className="bg-gray-100 text-gray-700">
+                            <Badge className="bg-muted text-foreground">
                                 <AlertTriangle className="h-3 w-3 mr-1" />
                                 Not Validated
                             </Badge>
@@ -280,10 +280,10 @@ export function PostVariantCardEnhanced({
 
                     {/* Content Preview */}
                     <div className="mb-4">
-                        <p className="text-sm text-gray-900 line-clamp-4">
+                        <p className="text-sm text-foreground line-clamp-4">
                             {variant.copy_text}
                         </p>
-                        <div className="mt-2 text-xs text-gray-500">
+                        <div className="mt-2 text-xs text-muted-foreground">
                             {variant.copy_text.length} characters
                             {variant.hashtags && variant.hashtags.length > 0 && (
                                 <> • {variant.hashtags.length} hashtags</>
@@ -307,7 +307,7 @@ export function PostVariantCardEnhanced({
                                 </div>
                             ))}
                             {variant.media_urls.length > 3 && (
-                                <div className="w-16 h-16 rounded border bg-gray-100 flex items-center justify-center text-xs text-gray-600">
+                                <div className="w-16 h-16 rounded border bg-muted flex items-center justify-center text-xs text-muted-foreground">
                                     +{variant.media_urls.length - 3}
                                 </div>
                             )}

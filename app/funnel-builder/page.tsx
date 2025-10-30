@@ -38,17 +38,17 @@ export default async function FunnelBuilderPage() {
     const draftProjects = projects?.filter((p) => p.status === "draft").length || 0;
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-muted/50">
             <Header />
 
             {/* Main Content */}
             <main className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
                 {/* Hero Section */}
                 <div className="mb-12 text-center">
-                    <h1 className="mb-4 text-4xl font-bold text-gray-900">
+                    <h1 className="mb-4 text-4xl font-bold text-foreground">
                         Create your AI-powered magnetic masterclass funnel
                     </h1>
-                    <p className="mx-auto mb-8 max-w-2xl text-xl text-gray-600">
+                    <p className="mx-auto mb-8 max-w-2xl text-xl text-muted-foreground">
                         From conversation to conversion in under 45 minutes. Create
                         complete sales funnels with AI-generated content, pitch videos,
                         and optimized pages.
@@ -76,15 +76,15 @@ export default async function FunnelBuilderPage() {
                         <CardContent className="pt-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">
+                                    <p className="text-sm font-medium text-muted-foreground">
                                         Total Funnels
                                     </p>
-                                    <p className="mt-2 text-3xl font-bold text-gray-900">
+                                    <p className="mt-2 text-3xl font-bold text-foreground">
                                         {totalProjects}
                                     </p>
                                 </div>
-                                <div className="rounded-full bg-blue-100 p-3">
-                                    <BarChart3 className="h-6 w-6 text-blue-600" />
+                                <div className="rounded-full bg-primary/10 p-3">
+                                    <BarChart3 className="h-6 w-6 text-primary" />
                                 </div>
                             </div>
                         </CardContent>
@@ -94,10 +94,10 @@ export default async function FunnelBuilderPage() {
                         <CardContent className="pt-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">
+                                    <p className="text-sm font-medium text-muted-foreground">
                                         Active Funnels
                                     </p>
-                                    <p className="mt-2 text-3xl font-bold text-gray-900">
+                                    <p className="mt-2 text-3xl font-bold text-foreground">
                                         {activeProjects}
                                     </p>
                                 </div>
@@ -112,15 +112,15 @@ export default async function FunnelBuilderPage() {
                         <CardContent className="pt-6">
                             <div className="flex items-center justify-between">
                                 <div>
-                                    <p className="text-sm font-medium text-gray-600">
+                                    <p className="text-sm font-medium text-muted-foreground">
                                         Draft Funnels
                                     </p>
-                                    <p className="mt-2 text-3xl font-bold text-gray-900">
+                                    <p className="mt-2 text-3xl font-bold text-foreground">
                                         {draftProjects}
                                     </p>
                                 </div>
-                                <div className="rounded-full bg-gray-100 p-3">
-                                    <Users className="h-6 w-6 text-gray-600" />
+                                <div className="rounded-full bg-muted p-3">
+                                    <Users className="h-6 w-6 text-muted-foreground" />
                                 </div>
                             </div>
                         </CardContent>
@@ -130,7 +130,7 @@ export default async function FunnelBuilderPage() {
                 {/* Projects List */}
                 <div className="mb-12">
                     <div className="mb-6">
-                        <h2 className="text-2xl font-bold text-gray-900">
+                        <h2 className="text-2xl font-bold text-foreground">
                             Your Funnels
                         </h2>
                     </div>
@@ -143,13 +143,13 @@ export default async function FunnelBuilderPage() {
 
                             {/* Create New Card */}
                             <Link href="/funnel-builder/create">
-                                <Card className="flex h-full cursor-pointer items-center justify-center border-2 border-dashed border-gray-300 transition-colors hover:border-gray-400 hover:bg-gray-50">
+                                <Card className="flex h-full cursor-pointer items-center justify-center border-2 border-dashed border-border transition-colors hover:border-gray-400 hover:bg-muted/50">
                                     <CardContent className="py-12 text-center">
-                                        <Plus className="mx-auto mb-4 h-12 w-12 text-blue-600" />
-                                        <h3 className="mb-2 text-lg font-medium text-gray-900">
+                                        <Plus className="mx-auto mb-4 h-12 w-12 text-primary" />
+                                        <h3 className="mb-2 text-lg font-medium text-foreground">
                                             Create New Funnel
                                         </h3>
-                                        <p className="text-sm text-gray-600">
+                                        <p className="text-sm text-muted-foreground">
                                             Start building your next funnel
                                         </p>
                                     </CardContent>
@@ -157,13 +157,13 @@ export default async function FunnelBuilderPage() {
                             </Link>
                         </div>
                     ) : (
-                        <Card className="border-2 border-dashed border-gray-300">
+                        <Card className="border-2 border-dashed border-border">
                             <CardContent className="py-12 text-center">
-                                <BarChart3 className="mx-auto mb-4 h-16 w-16 text-gray-400" />
-                                <h3 className="mb-2 text-xl font-semibold text-gray-900">
+                                <BarChart3 className="mx-auto mb-4 h-16 w-16 text-muted-foreground" />
+                                <h3 className="mb-2 text-xl font-semibold text-foreground">
                                     No funnels yet
                                 </h3>
-                                <p className="mb-6 text-gray-600">
+                                <p className="mb-6 text-muted-foreground">
                                     Create your first funnel to get started!
                                 </p>
                                 <Link href="/funnel-builder/create">

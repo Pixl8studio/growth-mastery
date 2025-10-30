@@ -262,7 +262,7 @@ export function MarketingSettingsEnhanced({
                 <h3 className="text-lg font-semibold mb-4">Platform Connections</h3>
 
                 {loading ? (
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="text-center py-8 text-muted-foreground">
                         Loading connections...
                     </div>
                 ) : (
@@ -285,7 +285,7 @@ export function MarketingSettingsEnhanced({
                                                 {platform.name}
                                             </div>
                                             {connected && connection && (
-                                                <div className="text-sm text-gray-600">
+                                                <div className="text-sm text-muted-foreground">
                                                     Connected as{" "}
                                                     {connection.account_name}
                                                     {connection.last_sync_at && (
@@ -327,7 +327,7 @@ export function MarketingSettingsEnhanced({
                                             </>
                                         ) : (
                                             <>
-                                                <XCircle className="h-5 w-5 text-gray-400" />
+                                                <XCircle className="h-5 w-5 text-muted-foreground" />
                                                 <Button
                                                     onClick={() =>
                                                         handleConnect(platform.id)
@@ -354,7 +354,7 @@ export function MarketingSettingsEnhanced({
                     <div className="flex items-center justify-between">
                         <div>
                             <Label className="font-medium">Default Space</Label>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Where new content is created by default
                             </p>
                         </div>
@@ -385,7 +385,7 @@ export function MarketingSettingsEnhanced({
                     <div className="flex items-center justify-between pt-4 border-t">
                         <div>
                             <Label className="font-medium">Auto-Publish</Label>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Automatically publish scheduled posts without manual
                                 approval
                             </p>
@@ -407,14 +407,14 @@ export function MarketingSettingsEnhanced({
                         </div>
                         <div>
                             <Label className="mb-2 block">Timezone</Label>
-                            <Input value={timezone} readOnly className="bg-gray-50" />
+                            <Input value={timezone} readOnly className="bg-muted/50" />
                         </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-4 border-t">
                         <div>
                             <Label className="font-medium">Require Approval</Label>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 All posts need manual approval before publishing
                             </p>
                         </div>
@@ -427,7 +427,7 @@ export function MarketingSettingsEnhanced({
                     <div className="flex items-center justify-between">
                         <div>
                             <Label className="font-medium">Auto-Optimize Timing</Label>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Use best time suggestions automatically
                             </p>
                         </div>
@@ -452,7 +452,7 @@ export function MarketingSettingsEnhanced({
                         <select
                             value={industry}
                             onChange={(e) => setIndustry(e.target.value)}
-                            className="w-full rounded-md border border-gray-300 px-3 py-2"
+                            className="w-full rounded-md border border-border px-3 py-2"
                         >
                             <option value="general">General</option>
                             <option value="coaching">Coaching</option>
@@ -506,7 +506,7 @@ export function MarketingSettingsEnhanced({
                     <div className="flex items-center justify-between pt-4 border-t">
                         <div>
                             <Label className="font-medium">Auto-Disclaimer</Label>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Automatically add appropriate disclaimers
                             </p>
                         </div>
@@ -521,7 +521,7 @@ export function MarketingSettingsEnhanced({
                         <select
                             value={copyrightPolicy}
                             onChange={(e) => setCopyrightPolicy(e.target.value)}
-                            className="w-full rounded-md border border-gray-300 px-3 py-2"
+                            className="w-full rounded-md border border-border px-3 py-2"
                         >
                             <option value="strict">
                                 Strict (Original Content Only)
@@ -538,7 +538,7 @@ export function MarketingSettingsEnhanced({
                             <Label className="font-medium">
                                 Image Licensing Required
                             </Label>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Enforce licensing for all images
                             </p>
                         </div>
@@ -553,7 +553,7 @@ export function MarketingSettingsEnhanced({
                         <select
                             value={readingLevelEnforcement}
                             onChange={(e) => setReadingLevelEnforcement(e.target.value)}
-                            className="w-full rounded-md border border-gray-300 px-3 py-2"
+                            className="w-full rounded-md border border-border px-3 py-2"
                         >
                             <option value="strict">Strict (Block if Exceeded)</option>
                             <option value="soft_warning">
@@ -581,7 +581,7 @@ export function MarketingSettingsEnhanced({
                                 setDailyPostLimit(parseInt(e.target.value) || 10)
                             }
                         />
-                        <p className="text-xs text-gray-600 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                             Soft warning threshold for total posts per day
                         </p>
                     </div>
@@ -602,7 +602,7 @@ export function MarketingSettingsEnhanced({
                     <div>
                         <div className="flex justify-between mb-2">
                             <Label>Notification Threshold</Label>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-muted-foreground">
                                 {notificationThreshold}%
                             </span>
                         </div>
@@ -613,7 +613,7 @@ export function MarketingSettingsEnhanced({
                             max={100}
                             step={5}
                         />
-                        <p className="text-xs text-gray-600 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                             Warn when reaching this % of daily limit
                         </p>
                     </div>
@@ -623,7 +623,7 @@ export function MarketingSettingsEnhanced({
                             <Label className="font-medium">
                                 Override Limits (Admin)
                             </Label>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Allow posting beyond soft limits
                             </p>
                         </div>
@@ -633,11 +633,11 @@ export function MarketingSettingsEnhanced({
                         />
                     </div>
 
-                    <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                        <div className="font-medium text-blue-900 mb-1">
+                    <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                        <div className="font-medium text-primary mb-1">
                             Soft Warnings Only
                         </div>
-                        <div className="text-sm text-blue-800">
+                        <div className="text-sm text-primary">
                             No hard stops. We'll notify you when approaching limits but
                             never block your content.
                         </div>
@@ -649,7 +649,7 @@ export function MarketingSettingsEnhanced({
             {/* Section 5: Notification Preferences */}
             <Card className="p-6">
                 <div className="flex items-center gap-2 mb-4">
-                    <Bell className="h-5 w-5 text-blue-500" />
+                    <Bell className="h-5 w-5 text-primary-foreground0" />
                     <h3 className="text-lg font-semibold">Notification Preferences</h3>
                 </div>
 
@@ -657,7 +657,7 @@ export function MarketingSettingsEnhanced({
                     <div className="flex items-center justify-between">
                         <div>
                             <Label className="font-medium">Email Notifications</Label>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Receive email updates
                             </p>
                         </div>
@@ -724,7 +724,7 @@ export function MarketingSettingsEnhanced({
                                     onChange={(e) =>
                                         setNotificationFrequency(e.target.value)
                                     }
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                    className="w-full rounded-md border border-border px-3 py-2"
                                 >
                                     <option value="immediate">Immediate</option>
                                     <option value="daily_digest">Daily Digest</option>
@@ -778,20 +778,20 @@ export function MarketingSettingsEnhanced({
 
                 <div className="space-y-2">
                     {activityLog.slice(0, 10).map((activity, index) => (
-                        <div key={index} className="p-3 bg-gray-50 rounded-lg text-sm">
+                        <div key={index} className="p-3 bg-muted/50 rounded-lg text-sm">
                             <div className="flex items-center justify-between mb-1">
                                 <span className="font-medium">{activity.action}</span>
-                                <span className="text-xs text-gray-600">
+                                <span className="text-xs text-muted-foreground">
                                     {new Date(activity.created_at).toLocaleString()}
                                 </span>
                             </div>
-                            <div className="text-xs text-gray-600">
+                            <div className="text-xs text-muted-foreground">
                                 {activity.details}
                             </div>
                         </div>
                     ))}
                     {activityLog.length === 0 && (
-                        <div className="text-center py-8 text-gray-500">
+                        <div className="text-center py-8 text-muted-foreground">
                             No activity yet
                         </div>
                     )}
@@ -811,10 +811,10 @@ export function MarketingSettingsEnhanced({
                 </div>
 
                 <div className="space-y-3">
-                    <div className="flex items-center justify-between p-3 bg-white rounded border">
+                    <div className="flex items-center justify-between p-3 bg-card rounded border">
                         <div>
                             <Label className="font-medium">Clear Sandbox Content</Label>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Remove all content in sandbox space
                             </p>
                         </div>
@@ -829,12 +829,12 @@ export function MarketingSettingsEnhanced({
                         </Button>
                     </div>
 
-                    <div className="flex items-center justify-between p-3 bg-white rounded border">
+                    <div className="flex items-center justify-between p-3 bg-card rounded border">
                         <div>
                             <Label className="font-medium">
                                 Reset Profile to Defaults
                             </Label>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Reset all profile settings
                             </p>
                         </div>
@@ -848,12 +848,12 @@ export function MarketingSettingsEnhanced({
                         </Button>
                     </div>
 
-                    <div className="flex items-center justify-between p-3 bg-white rounded border">
+                    <div className="flex items-center justify-between p-3 bg-card rounded border">
                         <div>
                             <Label className="font-medium">
                                 Delete All Analytics Data
                             </Label>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Permanently delete analytics history
                             </p>
                         </div>
@@ -867,10 +867,10 @@ export function MarketingSettingsEnhanced({
                         </Button>
                     </div>
 
-                    <div className="flex items-center justify-between p-3 bg-white rounded border">
+                    <div className="flex items-center justify-between p-3 bg-card rounded border">
                         <div>
                             <Label className="font-medium">Archive Old Content</Label>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Move content older than 90 days to archive
                             </p>
                         </div>

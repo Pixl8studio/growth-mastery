@@ -79,7 +79,7 @@ export function ContactEventsList({ events }: ContactEventsListProps) {
 
     if (events.length === 0) {
         return (
-            <div className="text-center text-sm text-gray-500">
+            <div className="text-center text-sm text-muted-foreground">
                 No activity events recorded
             </div>
         );
@@ -97,21 +97,21 @@ export function ContactEventsList({ events }: ContactEventsListProps) {
                     }`}
                 >
                     {/* Icon */}
-                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-100 text-lg">
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted text-lg">
                         {getEventIcon(event.event_type)}
                     </div>
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-gray-900">
+                            <p className="text-sm font-medium text-foreground">
                                 {getEventTitle(event)}
                             </p>
                             <Badge variant={getEventVariant(event.event_type)}>
                                 {event.event_type}
                             </Badge>
                         </div>
-                        <p className="mt-1 text-xs text-gray-500">
+                        <p className="mt-1 text-xs text-muted-foreground">
                             {formatDateTime(event.created_at)}
                         </p>
                         {event.event_data &&
@@ -120,10 +120,10 @@ export function ContactEventsList({ events }: ContactEventsListProps) {
                         Object.keys(event.event_data as Record<string, unknown>)
                             .length > 0 ? (
                             <details className="mt-2">
-                                <summary className="cursor-pointer text-xs text-blue-600 hover:text-blue-800">
+                                <summary className="cursor-pointer text-xs text-primary hover:text-primary">
                                     View details
                                 </summary>
-                                <pre className="mt-2 overflow-x-auto rounded bg-gray-50 p-2 text-xs text-gray-700">
+                                <pre className="mt-2 overflow-x-auto rounded bg-muted/50 p-2 text-xs text-foreground">
                                     {JSON.stringify(event.event_data, null, 2)}
                                 </pre>
                             </details>

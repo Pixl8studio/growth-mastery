@@ -337,7 +337,7 @@ export function ContentGeneratorEnhanced({
             {/* Section 1: Brief Metadata */}
             <Card className="p-6">
                 <div className="flex items-center gap-2 mb-4">
-                    <FileText className="h-5 w-5 text-blue-500" />
+                    <FileText className="h-5 w-5 text-primary-foreground0" />
                     <h3 className="text-lg font-semibold">Brief Metadata</h3>
                 </div>
                 <div className="space-y-4">
@@ -380,12 +380,12 @@ export function ContentGeneratorEnhanced({
                             {campaignTags.map((tag) => (
                                 <span
                                     key={tag}
-                                    className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm flex items-center gap-2"
+                                    className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm flex items-center gap-2"
                                 >
                                     {tag}
                                     <button
                                         onClick={() => removeTag(tag)}
-                                        className="hover:text-blue-900"
+                                        className="hover:text-primary"
                                     >
                                         <Trash2 className="h-3 w-3" />
                                     </button>
@@ -428,7 +428,7 @@ export function ContentGeneratorEnhanced({
                         <select
                             value={goal}
                             onChange={(e) => setGoal(e.target.value)}
-                            className="w-full rounded-md border border-gray-300 px-3 py-2"
+                            className="w-full rounded-md border border-border px-3 py-2"
                         >
                             <option value="drive_registrations">
                                 Drive Registrations
@@ -475,7 +475,7 @@ export function ContentGeneratorEnhanced({
                             <select
                                 value={targetFunnelStep}
                                 onChange={(e) => setTargetFunnelStep(e.target.value)}
-                                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                className="w-full rounded-md border border-border px-3 py-2"
                             >
                                 <option value="step_1_registration">
                                     Step 1: Registration
@@ -529,7 +529,7 @@ export function ContentGeneratorEnhanced({
                             <select
                                 value={preferredFramework}
                                 onChange={(e) => setPreferredFramework(e.target.value)}
-                                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                className="w-full rounded-md border border-border px-3 py-2"
                             >
                                 <option value="founder_saga">
                                     Founder Saga - Personal journey
@@ -554,7 +554,7 @@ export function ContentGeneratorEnhanced({
                             <select
                                 value={hookStyle}
                                 onChange={(e) => setHookStyle(e.target.value)}
-                                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                className="w-full rounded-md border border-border px-3 py-2"
                             >
                                 <option value="question">Question</option>
                                 <option value="statement">Bold Statement</option>
@@ -590,7 +590,7 @@ export function ContentGeneratorEnhanced({
                                     className={`p-3 border rounded-lg cursor-pointer text-center transition-colors ${
                                         emotionalTones.includes(tone.id)
                                             ? "border-purple-500 bg-purple-50"
-                                            : "border-gray-200 hover:border-gray-300"
+                                            : "border-border hover:border-border"
                                     }`}
                                 >
                                     <div className="text-sm font-medium">
@@ -662,8 +662,8 @@ export function ContentGeneratorEnhanced({
                                     onClick={() => togglePlatform(platform.id)}
                                     className={`p-3 border rounded-lg cursor-pointer text-center transition-colors ${
                                         selectedPlatforms.includes(platform.id)
-                                            ? "border-blue-500 bg-blue-50"
-                                            : "border-gray-200 hover:border-gray-300"
+                                            ? "border-primary bg-primary/5"
+                                            : "border-border hover:border-border"
                                     }`}
                                 >
                                     <div className="text-2xl mb-1">{platform.icon}</div>
@@ -679,7 +679,7 @@ export function ContentGeneratorEnhanced({
                     {selectedPlatforms.map((platform) => (
                         <div
                             key={platform}
-                            className="p-4 border rounded-lg bg-gray-50"
+                            className="p-4 border rounded-lg bg-muted/50"
                         >
                             <h4 className="font-semibold capitalize mb-3">
                                 {platform} Settings
@@ -698,7 +698,7 @@ export function ContentGeneratorEnhanced({
                                                 e.target.value
                                             )
                                         }
-                                        className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
+                                        className="w-full rounded-md border border-border px-2 py-1 text-sm"
                                     >
                                         <option value="post">Post</option>
                                         <option value="carousel">Carousel</option>
@@ -722,7 +722,7 @@ export function ContentGeneratorEnhanced({
                                                 e.target.value
                                             )
                                         }
-                                        className="w-full rounded-md border border-gray-300 px-2 py-1 text-sm"
+                                        className="w-full rounded-md border border-border px-2 py-1 text-sm"
                                     >
                                         <option value="bio_link">Bio Link</option>
                                         <option value="dm_keyword">DM Keyword</option>
@@ -809,7 +809,7 @@ export function ContentGeneratorEnhanced({
                             <select
                                 value={ctaType}
                                 onChange={(e) => setCtaType(e.target.value)}
-                                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                className="w-full rounded-md border border-border px-3 py-2"
                             >
                                 <option value="bio_link">Bio Link</option>
                                 <option value="dm_keyword">DM Keyword</option>
@@ -842,7 +842,7 @@ export function ContentGeneratorEnhanced({
                     <div className="flex items-center justify-between pt-2 border-t">
                         <div>
                             <Label className="font-medium">Link Shortener</Label>
-                            <p className="text-xs text-gray-600">
+                            <p className="text-xs text-muted-foreground">
                                 Use short links for tracking
                             </p>
                         </div>
@@ -855,7 +855,7 @@ export function ContentGeneratorEnhanced({
                     <div className="flex items-center justify-between">
                         <div>
                             <Label className="font-medium">Tracking Enabled</Label>
-                            <p className="text-xs text-gray-600">
+                            <p className="text-xs text-muted-foreground">
                                 Track clicks and conversions
                             </p>
                         </div>
@@ -877,7 +877,7 @@ export function ContentGeneratorEnhanced({
                     <div className="flex items-center justify-between">
                         <div>
                             <Label className="font-medium">Include Media</Label>
-                            <p className="text-xs text-gray-600">
+                            <p className="text-xs text-muted-foreground">
                                 Add images or videos to posts
                             </p>
                         </div>
@@ -927,7 +927,7 @@ export function ContentGeneratorEnhanced({
                                     <Upload className="h-4 w-4 mr-2" />
                                     Upload Media from Library
                                 </Button>
-                                <p className="text-xs text-gray-600 mt-1">
+                                <p className="text-xs text-muted-foreground mt-1">
                                     Or let AI suggest appropriate images
                                 </p>
                             </div>
@@ -937,7 +937,7 @@ export function ContentGeneratorEnhanced({
                                     <Label className="font-medium">
                                         AI Image Generation
                                     </Label>
-                                    <p className="text-xs text-gray-600">
+                                    <p className="text-xs text-muted-foreground">
                                         Generate custom images with AI
                                     </p>
                                 </div>
@@ -952,7 +952,7 @@ export function ContentGeneratorEnhanced({
                                     <Label className="font-medium">
                                         Auto-Generate Alt Text
                                     </Label>
-                                    <p className="text-xs text-gray-600">
+                                    <p className="text-xs text-muted-foreground">
                                         Accessibility descriptions
                                     </p>
                                 </div>
@@ -969,14 +969,14 @@ export function ContentGeneratorEnhanced({
             {/* Section 7: Generation Configuration */}
             <Card className="p-6">
                 <div className="flex items-center gap-2 mb-4">
-                    <Settings className="h-5 w-5 text-gray-500" />
+                    <Settings className="h-5 w-5 text-muted-foreground" />
                     <h3 className="text-lg font-semibold">Generation Configuration</h3>
                 </div>
                 <div className="space-y-4">
                     <div>
                         <div className="flex justify-between mb-2">
                             <Label>Variant Count per Platform</Label>
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-muted-foreground">
                                 {variantCount}
                             </span>
                         </div>
@@ -987,7 +987,7 @@ export function ContentGeneratorEnhanced({
                             max={5}
                             step={1}
                         />
-                        <p className="text-xs text-gray-600 mt-1">
+                        <p className="text-xs text-muted-foreground mt-1">
                             Generate {variantCount} version
                             {variantCount !== 1 ? "s" : ""} per platform
                         </p>
@@ -996,7 +996,7 @@ export function ContentGeneratorEnhanced({
                     <div className="flex items-center justify-between pt-2 border-t">
                         <div>
                             <Label className="font-medium">Apply Echo Mode</Label>
-                            <p className="text-xs text-gray-600">
+                            <p className="text-xs text-muted-foreground">
                                 Use your voice mirroring from Profile
                             </p>
                         </div>
@@ -1011,7 +1011,7 @@ export function ContentGeneratorEnhanced({
                             <Label className="font-medium">
                                 Include Media Suggestions
                             </Label>
-                            <p className="text-xs text-gray-600">
+                            <p className="text-xs text-muted-foreground">
                                 AI suggests relevant images
                             </p>
                         </div>
@@ -1024,7 +1024,7 @@ export function ContentGeneratorEnhanced({
                     <div className="flex items-center justify-between pt-2 border-t">
                         <div>
                             <Label className="font-medium">Generate A/B Variants</Label>
-                            <p className="text-xs text-gray-600">
+                            <p className="text-xs text-muted-foreground">
                                 Create variants for testing
                             </p>
                         </div>
@@ -1040,7 +1040,7 @@ export function ContentGeneratorEnhanced({
                             <select
                                 value={experimentType}
                                 onChange={(e) => setExperimentType(e.target.value)}
-                                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                className="w-full rounded-md border border-border px-3 py-2"
                             >
                                 <option value="hook">
                                     Hook Test (Different Openings)
@@ -1067,13 +1067,13 @@ export function ContentGeneratorEnhanced({
                     className="w-full flex items-center justify-between"
                 >
                     <div className="flex items-center gap-2">
-                        <Settings className="h-5 w-5 text-indigo-500" />
+                        <Settings className="h-5 w-5 text-primary/50" />
                         <h3 className="text-lg font-semibold">Advanced Options</h3>
                     </div>
                     {showAdvanced ? (
-                        <ChevronUp className="h-5 w-5 text-gray-400" />
+                        <ChevronUp className="h-5 w-5 text-muted-foreground" />
                     ) : (
-                        <ChevronDown className="h-5 w-5 text-gray-400" />
+                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
                     )}
                 </button>
 
@@ -1119,7 +1119,7 @@ export function ContentGeneratorEnhanced({
                                 <select
                                     value={readingLevel}
                                     onChange={(e) => setReadingLevel(e.target.value)}
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                    className="w-full rounded-md border border-border px-3 py-2"
                                 >
                                     <option value="6th_grade">6th Grade</option>
                                     <option value="8th_grade">
@@ -1135,7 +1135,7 @@ export function ContentGeneratorEnhanced({
                                 <select
                                     value={emojiUsage}
                                     onChange={(e) => setEmojiUsage(e.target.value)}
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                    className="w-full rounded-md border border-border px-3 py-2"
                                 >
                                     <option value="none">None</option>
                                     <option value="minimal">Minimal</option>
@@ -1149,7 +1149,7 @@ export function ContentGeneratorEnhanced({
             </Card>
 
             {/* Section 9: Save as Template */}
-            <Card className="p-6 bg-gradient-to-r from-purple-50 to-blue-50">
+            <Card className="p-6 bg-gradient-to-r from-purple-50 to-primary/5">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                         <Save className="h-6 w-6 text-purple-500" />
@@ -1157,7 +1157,7 @@ export function ContentGeneratorEnhanced({
                             <h3 className="font-semibold">
                                 Save This Brief as Template
                             </h3>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Reuse these settings for future content
                             </p>
                         </div>
@@ -1201,15 +1201,15 @@ export function ContentGeneratorEnhanced({
                         {storyAngles.map((angle, index) => (
                             <div
                                 key={index}
-                                className="p-4 border rounded-lg hover:border-blue-500 transition-colors"
+                                className="p-4 border rounded-lg hover:border-primary transition-smooth"
                             >
-                                <div className="font-semibold text-blue-600 mb-2">
+                                <div className="font-semibold text-primary mb-2">
                                     {angle.angle}
                                 </div>
-                                <div className="text-sm text-gray-700 mb-3">
+                                <div className="text-sm text-foreground mb-3">
                                     <strong>Hook:</strong> {angle.hook}
                                 </div>
-                                <div className="text-xs text-gray-600">
+                                <div className="text-xs text-muted-foreground">
                                     {angle.story_outline.substring(0, 150)}...
                                 </div>
                             </div>

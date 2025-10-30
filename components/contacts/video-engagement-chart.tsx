@@ -51,7 +51,7 @@ export function VideoEngagementChart({
             {/* Summary */}
             <div className="flex items-center justify-between">
                 <div>
-                    <h4 className="text-sm font-medium text-gray-900">
+                    <h4 className="text-sm font-medium text-foreground">
                         Watch Progress: {watchPercentage}%
                     </h4>
                     {dropOffPoint !== null && watchPercentage < 100 && (
@@ -99,12 +99,12 @@ export function VideoEngagementChart({
                                             ? "border-green-600 bg-green-600 text-white"
                                             : status === "dropped"
                                               ? "border-red-500 bg-red-50 text-red-600"
-                                              : "border-gray-300 bg-white text-gray-400"
+                                              : "border-border bg-card text-muted-foreground"
                                     }`}
                                 >
                                     {milestone}
                                 </div>
-                                <div className="mt-1 text-center text-xs text-gray-600">
+                                <div className="mt-1 text-center text-xs text-muted-foreground">
                                     {status === "reached" &&
                                         milestone === dropOffPoint && (
                                             <span className="text-red-600">
@@ -127,7 +127,7 @@ export function VideoEngagementChart({
 
                     return (
                         <div key={milestone} className="text-center">
-                            <div className="text-xs font-medium text-gray-600">
+                            <div className="text-xs font-medium text-muted-foreground">
                                 {milestone}%
                             </div>
                             <div className="mt-1">
@@ -153,9 +153,9 @@ export function VideoEngagementChart({
             </div>
 
             {/* Insights */}
-            <div className="rounded-lg bg-blue-50 p-4">
-                <h5 className="mb-2 text-sm font-semibold text-blue-900">Insights</h5>
-                <ul className="space-y-1 text-sm text-blue-800">
+            <div className="rounded-lg bg-primary/5 p-4">
+                <h5 className="mb-2 text-sm font-semibold text-primary">Insights</h5>
+                <ul className="space-y-1 text-sm text-primary">
                     {watchPercentage === 0 && (
                         <li>
                             • Contact registered but hasn&apos;t watched the video yet

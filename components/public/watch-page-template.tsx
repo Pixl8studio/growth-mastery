@@ -43,15 +43,15 @@ export function WatchPageTemplate({ page }: WatchPageProps) {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-muted/50">
             <div className="mx-auto max-w-5xl px-4 py-16">
                 {/* Header */}
                 <div className="mb-8 text-center">
-                    <h1 className="mb-4 text-4xl font-bold text-gray-900">
+                    <h1 className="mb-4 text-4xl font-bold text-foreground">
                         {page.headline}
                     </h1>
                     {page.subheadline && (
-                        <p className="text-xl text-gray-700">{page.subheadline}</p>
+                        <p className="text-xl text-foreground">{page.subheadline}</p>
                     )}
                 </div>
 
@@ -70,7 +70,7 @@ export function WatchPageTemplate({ page }: WatchPageProps) {
                         </div>
                     ) : (
                         <div className="flex aspect-video items-center justify-center bg-gray-200">
-                            <p className="text-gray-600">
+                            <p className="text-muted-foreground">
                                 Video player will appear here
                             </p>
                         </div>
@@ -87,14 +87,14 @@ export function WatchPageTemplate({ page }: WatchPageProps) {
                         {page.cta_config?.text || "Get Full Access Now"}
                     </Button>
                     {page.cta_config?.subtext && (
-                        <p className="mt-3 text-sm text-gray-600">
+                        <p className="mt-3 text-sm text-muted-foreground">
                             {page.cta_config.subtext}
                         </p>
                     )}
                 </div>
 
                 {/* Footer */}
-                <p className="mt-12 text-center text-sm text-gray-600">
+                <p className="mt-12 text-center text-sm text-muted-foreground">
                     Powered by Genie AI
                 </p>
             </div>

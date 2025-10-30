@@ -93,10 +93,10 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
         <Card className="p-6">
             <div className="space-y-4">
                 <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-foreground">
                         Scrape Website Content
                     </h3>
-                    <p className="mt-1 text-sm text-gray-600">
+                    <p className="mt-1 text-sm text-muted-foreground">
                         Import content from your enrollment page, landing page, or
                         website
                     </p>
@@ -106,7 +106,7 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
                 <div>
                     <label
                         htmlFor="sessionName"
-                        className="block text-sm font-medium text-gray-700"
+                        className="block text-sm font-medium text-foreground"
                     >
                         Session Name (optional)
                     </label>
@@ -116,7 +116,7 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
                         value={sessionName}
                         onChange={(e) => setSessionName(e.target.value)}
                         placeholder="e.g., Sales Page Copy"
-                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                        className="mt-1 block w-full rounded-md border border-border px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary"
                     />
                 </div>
 
@@ -124,19 +124,19 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
                 <div>
                     <label
                         htmlFor="url"
-                        className="block text-sm font-medium text-gray-700"
+                        className="block text-sm font-medium text-foreground"
                     >
                         Website URL <span className="text-red-500">*</span>
                     </label>
                     <div className="relative mt-1">
-                        <Globe className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+                        <Globe className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
                         <input
                             type="url"
                             id="url"
                             value={url}
                             onChange={(e) => setUrl(e.target.value)}
                             placeholder="https://example.com/your-page"
-                            className="block w-full rounded-md border border-gray-300 py-2 pl-10 pr-3 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                            className="block w-full rounded-md border border-border py-2 pl-10 pr-3 shadow-sm focus:border-primary focus:outline-none focus:ring-primary"
                         />
                     </div>
                     {url && validateUrl(url) && (
@@ -144,7 +144,7 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
                             href={url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="mt-1 inline-flex items-center text-xs text-blue-600 hover:text-blue-700"
+                            className="mt-1 inline-flex items-center text-xs text-primary hover:text-primary"
                         >
                             Preview in new tab
                             <ExternalLink className="ml-1 h-3 w-3" />
@@ -180,11 +180,9 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
                 )}
 
                 {/* Help Text */}
-                <div className="rounded-lg bg-blue-50 p-4">
-                    <h4 className="mb-2 text-sm font-semibold text-blue-900">
-                        💡 Tips
-                    </h4>
-                    <ul className="space-y-1 text-sm text-blue-800">
+                <div className="rounded-lg bg-primary/5 p-4">
+                    <h4 className="mb-2 text-sm font-semibold text-primary">💡 Tips</h4>
+                    <ul className="space-y-1 text-sm text-primary">
                         <li>
                             • Works best with enrollment pages, sales pages, or landing
                             pages

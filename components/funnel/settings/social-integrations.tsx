@@ -19,10 +19,10 @@ export function SocialIntegrations({ projectId }: SocialIntegrationsProps) {
     return (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-foreground">
                     Social Media Integrations
                 </h3>
-                <p className="mt-2 text-sm text-gray-600">
+                <p className="mt-2 text-sm text-muted-foreground">
                     Connect your social media accounts to enable posting and engagement
                     features
                 </p>

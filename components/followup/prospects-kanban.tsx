@@ -62,8 +62,8 @@ export function ProspectsKanban({ userId }: ProspectsKanbanProps) {
         {
             id: "cold",
             title: "❄️ Cold",
-            color: "border-blue-300 bg-blue-50",
-            headerColor: "bg-blue-100 text-blue-900",
+            color: "border-primary/30 bg-primary/5",
+            headerColor: "bg-primary/10 text-primary",
         },
         {
             id: "warm",
@@ -85,19 +85,21 @@ export function ProspectsKanban({ userId }: ProspectsKanbanProps) {
 
     const getSegmentColor = (segment: string) => {
         const colors: Record<string, string> = {
-            no_show: "bg-gray-500",
+            no_show: "bg-muted/500",
             skimmer: "bg-yellow-500",
-            sampler: "bg-blue-500",
+            sampler: "bg-primary/50",
             engaged: "bg-green-500",
             hot: "bg-red-500",
         };
-        return colors[segment] || "bg-gray-500";
+        return colors[segment] || "bg-muted/500";
     };
 
     if (loading) {
         return (
             <Card className="p-8">
-                <div className="text-center text-gray-600">Loading kanban board...</div>
+                <div className="text-center text-muted-foreground">
+                    Loading kanban board...
+                </div>
             </Card>
         );
     }
@@ -127,24 +129,24 @@ export function ProspectsKanban({ userId }: ProspectsKanbanProps) {
                         {/* Column Content */}
                         <div className="p-4 space-y-3 min-h-[400px] max-h-[600px] overflow-y-auto">
                             {columnProspects.length === 0 ? (
-                                <div className="text-center py-12 text-gray-500 text-sm">
+                                <div className="text-center py-12 text-muted-foreground text-sm">
                                     No prospects in this category
                                 </div>
                             ) : (
                                 columnProspects.map((prospect) => (
                                     <Card
                                         key={prospect.id}
-                                        className="p-3 bg-white hover:shadow-md transition-shadow cursor-pointer"
+                                        className="p-3 bg-card hover:shadow-md transition-shadow cursor-pointer"
                                     >
                                         <div className="space-y-2">
                                             {/* Name & Status */}
                                             <div className="flex items-start justify-between gap-2">
                                                 <div className="flex-1 min-w-0">
-                                                    <div className="font-medium text-sm text-gray-900 truncate">
+                                                    <div className="font-medium text-sm text-foreground truncate">
                                                         {prospect.first_name ||
                                                             prospect.email}
                                                     </div>
-                                                    <div className="text-xs text-gray-500 truncate">
+                                                    <div className="text-xs text-muted-foreground truncate">
                                                         {prospect.email}
                                                     </div>
                                                 </div>
@@ -160,7 +162,7 @@ export function ProspectsKanban({ userId }: ProspectsKanbanProps) {
 
                                             {/* Funnel */}
                                             {prospect.funnel_projects && (
-                                                <div className="text-xs text-gray-600 truncate">
+                                                <div className="text-xs text-muted-foreground truncate">
                                                     📊 {prospect.funnel_projects.name}
                                                 </div>
                                             )}
@@ -171,7 +173,7 @@ export function ProspectsKanban({ userId }: ProspectsKanbanProps) {
                                                     <div
                                                         className={`w-2 h-2 rounded-full ${getSegmentColor(prospect.segment)}`}
                                                     />
-                                                    <span className="text-gray-600">
+                                                    <span className="text-muted-foreground">
                                                         {prospect.segment}
                                                     </span>
                                                 </div>
@@ -179,7 +181,7 @@ export function ProspectsKanban({ userId }: ProspectsKanbanProps) {
 
                                             <div className="grid grid-cols-3 gap-2 text-xs">
                                                 <div>
-                                                    <div className="text-gray-500">
+                                                    <div className="text-muted-foreground">
                                                         Watch
                                                     </div>
                                                     <div className="font-medium">
@@ -187,7 +189,7 @@ export function ProspectsKanban({ userId }: ProspectsKanbanProps) {
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-gray-500">
+                                                    <div className="text-muted-foreground">
                                                         Intent
                                                     </div>
                                                     <div className="font-medium">
@@ -195,7 +197,7 @@ export function ProspectsKanban({ userId }: ProspectsKanbanProps) {
                                                     </div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-gray-500">
+                                                    <div className="text-muted-foreground">
                                                         Touches
                                                     </div>
                                                     <div className="font-medium">
@@ -206,7 +208,7 @@ export function ProspectsKanban({ userId }: ProspectsKanbanProps) {
 
                                             {/* Next Touch */}
                                             {prospect.next_scheduled_touch && (
-                                                <div className="text-xs text-gray-500 pt-1 border-t">
+                                                <div className="text-xs text-muted-foreground pt-1 border-t">
                                                     Next:{" "}
                                                     {new Date(
                                                         prospect.next_scheduled_touch

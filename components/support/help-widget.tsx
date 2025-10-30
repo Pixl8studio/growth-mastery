@@ -110,7 +110,7 @@ export function HelpWidget() {
             {/* Floating Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-blue-600 text-white shadow-lg transition-all hover:bg-blue-500"
+                className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg transition-all hover:bg-primary/50"
                 aria-label="Toggle help menu"
             >
                 {isOpen ? (
@@ -122,10 +122,10 @@ export function HelpWidget() {
 
             {/* Help Menu/Chat Panel */}
             {isOpen && (
-                <div className="fixed bottom-24 right-6 z-50 w-96 rounded-lg border border-gray-200 bg-white shadow-xl">
+                <div className="fixed bottom-24 right-6 z-50 w-96 rounded-lg border border-border bg-card shadow-xl">
                     {showMenu && (
                         <div className="p-6">
-                            <h3 className="mb-4 text-lg font-semibold text-gray-900">
+                            <h3 className="mb-4 text-lg font-semibold text-foreground">
                                 💬 Need help?
                             </h3>
                             <div className="space-y-3">
@@ -160,8 +160,8 @@ export function HelpWidget() {
                     {showChat && (
                         <div className="flex h-[500px] flex-col">
                             {/* Chat Header */}
-                            <div className="flex items-center justify-between border-b border-gray-200 p-4">
-                                <h3 className="font-semibold text-gray-900">
+                            <div className="flex items-center justify-between border-b border-border p-4">
+                                <h3 className="font-semibold text-foreground">
                                     Chat with Genie
                                 </h3>
                                 <button
@@ -171,7 +171,7 @@ export function HelpWidget() {
                                         setThreadId(null);
                                         setMessages([]);
                                     }}
-                                    className="text-gray-400 hover:text-gray-600"
+                                    className="text-muted-foreground hover:text-muted-foreground"
                                     aria-label="Close chat"
                                 >
                                     <X className="h-5 w-5" />
@@ -186,29 +186,29 @@ export function HelpWidget() {
                                         className={cn(
                                             "max-w-[85%] rounded-lg p-3",
                                             msg.role === "user"
-                                                ? "ml-auto bg-blue-600 text-white"
-                                                : "bg-gray-100 text-gray-900"
+                                                ? "ml-auto bg-primary text-white"
+                                                : "bg-muted text-foreground"
                                         )}
                                     >
                                         {msg.content}
                                     </div>
                                 ))}
                                 {loading && (
-                                    <div className="max-w-[85%] rounded-lg bg-gray-100 p-3 text-gray-900">
+                                    <div className="max-w-[85%] rounded-lg bg-muted p-3 text-foreground">
                                         Thinking...
                                     </div>
                                 )}
                             </div>
 
                             {/* Input */}
-                            <div className="border-t border-gray-200 p-4">
+                            <div className="border-t border-border p-4">
                                 <div className="flex space-x-2">
                                     <input
                                         value={input}
                                         onChange={(e) => setInput(e.target.value)}
                                         onKeyDown={handleKeyDown}
                                         placeholder="Type your message..."
-                                        className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                        className="flex-1 rounded-md border border-border px-3 py-2 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                                     />
                                     <Button
                                         onClick={sendMessageToAssistant}

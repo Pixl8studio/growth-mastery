@@ -91,46 +91,46 @@ export function DomainSettings({ projectId }: DomainSettingsProps) {
 
     if (loading) {
         return (
-            <div className="rounded-lg border border-gray-200 bg-white p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
                 <div className="h-40 animate-pulse rounded bg-gray-200" />
             </div>
         );
     }
 
     return (
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
+        <div className="rounded-lg border border-border bg-card p-6">
             <div className="mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Custom Domain</h3>
-                <p className="mt-2 text-sm text-gray-600">
+                <h3 className="text-lg font-semibold text-foreground">Custom Domain</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
                     Select a custom domain for this funnel or use the default domain.
                 </p>
             </div>
 
             <div className="space-y-4">
                 {/* Default Domain Option */}
-                <label className="flex cursor-pointer items-center justify-between rounded-lg border border-gray-200 p-4 hover:bg-gray-50">
+                <label className="flex cursor-pointer items-center justify-between rounded-lg border border-border p-4 hover:bg-muted/50">
                     <div className="flex items-center gap-3">
                         <input
                             type="radio"
                             name="domain"
                             checked={selectedDomainId === null}
                             onChange={() => setSelectedDomainId(null)}
-                            className="h-4 w-4 text-blue-600"
+                            className="h-4 w-4 text-primary"
                         />
                         <div>
                             <div className="flex items-center gap-2">
-                                <Globe className="h-4 w-4 text-gray-400" />
-                                <span className="font-medium text-gray-900">
+                                <Globe className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-medium text-foreground">
                                     Default Domain
                                 </span>
                             </div>
-                            <p className="mt-1 text-xs text-gray-500">
+                            <p className="mt-1 text-xs text-muted-foreground">
                                 Use the app's default domain for all pages
                             </p>
                         </div>
                     </div>
                     {selectedDomainId === null && (
-                        <Check className="h-5 w-5 text-blue-600" />
+                        <Check className="h-5 w-5 text-primary" />
                     )}
                 </label>
 
@@ -138,7 +138,7 @@ export function DomainSettings({ projectId }: DomainSettingsProps) {
                 {domains.map((domain) => (
                     <label
                         key={domain.id}
-                        className="flex cursor-pointer items-center justify-between rounded-lg border border-gray-200 p-4 hover:bg-gray-50"
+                        className="flex cursor-pointer items-center justify-between rounded-lg border border-border p-4 hover:bg-muted/50"
                     >
                         <div className="flex items-center gap-3">
                             <input
@@ -146,16 +146,16 @@ export function DomainSettings({ projectId }: DomainSettingsProps) {
                                 name="domain"
                                 checked={selectedDomainId === domain.id}
                                 onChange={() => setSelectedDomainId(domain.id)}
-                                className="h-4 w-4 text-blue-600"
+                                className="h-4 w-4 text-primary"
                             />
                             <div>
                                 <div className="flex items-center gap-2">
-                                    <Globe className="h-4 w-4 text-blue-600" />
-                                    <span className="font-medium text-gray-900">
+                                    <Globe className="h-4 w-4 text-primary" />
+                                    <span className="font-medium text-foreground">
                                         {domain.domain}
                                     </span>
                                 </div>
-                                <p className="mt-1 text-xs text-gray-500">
+                                <p className="mt-1 text-xs text-muted-foreground">
                                     Status:{" "}
                                     {domain.status === "verified"
                                         ? "Active"
@@ -164,18 +164,18 @@ export function DomainSettings({ projectId }: DomainSettingsProps) {
                             </div>
                         </div>
                         {selectedDomainId === domain.id && (
-                            <Check className="h-5 w-5 text-blue-600" />
+                            <Check className="h-5 w-5 text-primary" />
                         )}
                     </label>
                 ))}
 
                 {domains.length === 0 && (
-                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center">
-                        <Globe className="mx-auto h-8 w-8 text-gray-400" />
-                        <p className="mt-2 text-sm text-gray-600">
+                    <div className="rounded-lg border border-border bg-muted/50 p-6 text-center">
+                        <Globe className="mx-auto h-8 w-8 text-muted-foreground" />
+                        <p className="mt-2 text-sm text-muted-foreground">
                             No custom domains configured.
                         </p>
-                        <p className="mt-1 text-xs text-gray-500">
+                        <p className="mt-1 text-xs text-muted-foreground">
                             Add a custom domain in Settings → Domains
                         </p>
                     </div>

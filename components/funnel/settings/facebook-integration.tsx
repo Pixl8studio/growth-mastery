@@ -106,22 +106,22 @@ export function FacebookIntegration({ projectId }: FacebookIntegrationProps) {
 
     if (loading) {
         return (
-            <div className="rounded-lg border border-gray-200 bg-white p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
                 <div className="h-24 animate-pulse rounded bg-gray-200" />
             </div>
         );
     }
 
     return (
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
+        <div className="rounded-lg border border-border bg-card p-6">
             <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
-                    <div className="rounded-lg bg-blue-100 p-2">
-                        <Facebook className="h-6 w-6 text-blue-600" />
+                    <div className="rounded-lg bg-primary/10 p-2">
+                        <Facebook className="h-6 w-6 text-primary" />
                     </div>
                     <div>
-                        <h4 className="font-semibold text-gray-900">Facebook</h4>
-                        <p className="text-xs text-gray-500">
+                        <h4 className="font-semibold text-foreground">Facebook</h4>
+                        <p className="text-xs text-muted-foreground">
                             Connect your Facebook Page
                         </p>
                     </div>
@@ -141,11 +141,11 @@ export function FacebookIntegration({ projectId }: FacebookIntegrationProps) {
 
             {connection ? (
                 <div className="mt-4 space-y-3">
-                    <div className="rounded-lg bg-gray-50 p-3">
-                        <div className="text-sm font-medium text-gray-900">
+                    <div className="rounded-lg bg-muted/50 p-3">
+                        <div className="text-sm font-medium text-foreground">
                             {connection.account_name || "Facebook Page"}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-muted-foreground">
                             Connected{" "}
                             {new Date(connection.connected_at).toLocaleDateString()}
                         </div>

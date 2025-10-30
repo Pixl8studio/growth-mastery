@@ -146,10 +146,10 @@ export function UploadIntake({ projectId, userId, onComplete }: UploadIntakeProp
         <Card className="p-6">
             <div className="space-y-4">
                 <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-foreground">
                         Upload Documents
                     </h3>
-                    <p className="mt-1 text-sm text-gray-600">
+                    <p className="mt-1 text-sm text-muted-foreground">
                         Upload PDF, Word, or text files about your business
                     </p>
                 </div>
@@ -158,7 +158,7 @@ export function UploadIntake({ projectId, userId, onComplete }: UploadIntakeProp
                 <div>
                     <label
                         htmlFor="sessionName"
-                        className="block text-sm font-medium text-gray-700"
+                        className="block text-sm font-medium text-foreground"
                     >
                         Session Name (optional)
                     </label>
@@ -168,7 +168,7 @@ export function UploadIntake({ projectId, userId, onComplete }: UploadIntakeProp
                         value={sessionName}
                         onChange={(e) => setSessionName(e.target.value)}
                         placeholder="e.g., Product Documentation"
-                        className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                        className="mt-1 block w-full rounded-md border border-border px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary"
                     />
                 </div>
 
@@ -178,18 +178,18 @@ export function UploadIntake({ projectId, userId, onComplete }: UploadIntakeProp
                     onDragOver={handleDragOver}
                     onDragLeave={handleDragLeave}
                     className={cn(
-                        "rounded-lg border-2 border-dashed p-8 text-center transition-colors",
+                        "rounded-lg border-2 border-dashed p-8 text-center transition-smooth",
                         {
-                            "border-blue-500 bg-blue-50": isDragging,
-                            "border-gray-300 bg-gray-50": !isDragging,
+                            "border-primary bg-primary/5": isDragging,
+                            "border-border bg-muted/50": !isDragging,
                         }
                     )}
                 >
                     {!file ? (
                         <div className="space-y-4">
-                            <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                            <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
                             <div>
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm text-muted-foreground">
                                     Drag and drop your file here, or
                                 </p>
                                 <Button
@@ -212,26 +212,26 @@ export function UploadIntake({ projectId, userId, onComplete }: UploadIntakeProp
                                     className="hidden"
                                 />
                             </div>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                                 Supported: PDF, DOCX, DOC, TXT, MD (max 10MB)
                             </p>
                         </div>
                     ) : (
-                        <div className="flex items-center justify-between rounded-lg bg-white p-4">
+                        <div className="flex items-center justify-between rounded-lg bg-card p-4">
                             <div className="flex items-center space-x-3">
-                                <FileText className="h-8 w-8 text-blue-600" />
+                                <FileText className="h-8 w-8 text-primary" />
                                 <div className="text-left">
-                                    <p className="font-medium text-gray-900">
+                                    <p className="font-medium text-foreground">
                                         {file.name}
                                     </p>
-                                    <p className="text-sm text-gray-500">
+                                    <p className="text-sm text-muted-foreground">
                                         {formatFileSize(file.size)}
                                     </p>
                                 </div>
                             </div>
                             <button
                                 onClick={() => setFile(null)}
-                                className="text-gray-400 hover:text-gray-600"
+                                className="text-muted-foreground hover:text-muted-foreground"
                             >
                                 <X className="h-5 w-5" />
                             </button>
@@ -257,11 +257,9 @@ export function UploadIntake({ projectId, userId, onComplete }: UploadIntakeProp
                 </Button>
 
                 {/* Help Text */}
-                <div className="rounded-lg bg-blue-50 p-4">
-                    <h4 className="mb-2 text-sm font-semibold text-blue-900">
-                        💡 Tips
-                    </h4>
-                    <ul className="space-y-1 text-sm text-blue-800">
+                <div className="rounded-lg bg-primary/5 p-4">
+                    <h4 className="mb-2 text-sm font-semibold text-primary">💡 Tips</h4>
+                    <ul className="space-y-1 text-sm text-primary">
                         <li>• Upload pitch decks, product docs, or business plans</li>
                         <li>• We'll automatically extract text from your documents</li>
                         <li>

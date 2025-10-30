@@ -182,8 +182,8 @@ export default function DomainsSettingsPage() {
         return (
             <div className="max-w-4xl mx-auto p-6">
                 <div className="text-center py-12">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-                    <p className="mt-4 text-gray-600">Loading domains...</p>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+                    <p className="mt-4 text-muted-foreground">Loading domains...</p>
                 </div>
             </div>
         );
@@ -192,7 +192,7 @@ export default function DomainsSettingsPage() {
     return (
         <div className="max-w-4xl mx-auto p-6">
             <h1 className="text-3xl font-bold mb-2">Custom Domains</h1>
-            <p className="text-gray-600 mb-6">
+            <p className="text-muted-foreground mb-6">
                 Connect your own domain to your funnel projects for a branded
                 experience.
             </p>
@@ -209,7 +209,7 @@ export default function DomainsSettingsPage() {
                 </div>
             )}
 
-            <div className="bg-white rounded-lg shadow p-6 mb-6">
+            <div className="bg-card rounded-lg shadow p-6 mb-6">
                 <h2 className="text-xl font-semibold mb-4">Add New Domain</h2>
 
                 <form onSubmit={handleAddDomain} className="space-y-4">
@@ -226,10 +226,10 @@ export default function DomainsSettingsPage() {
                             value={newDomain}
                             onChange={(e) => setNewDomain(e.target.value)}
                             placeholder="webinar.yourcompany.com"
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                             required
                         />
-                        <p className="text-sm text-gray-600 mt-1">
+                        <p className="text-sm text-muted-foreground mt-1">
                             Supports both root domains (company.com) and subdomains
                             (webinar.company.com)
                         </p>
@@ -246,7 +246,7 @@ export default function DomainsSettingsPage() {
                             id="project"
                             value={selectedProjectId}
                             onChange={(e) => setSelectedProjectId(e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-4 py-2 border border-border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                             required
                         >
                             <option value="">Select a project...</option>
@@ -266,7 +266,7 @@ export default function DomainsSettingsPage() {
                     <button
                         type="submit"
                         disabled={adding || projects.length === 0}
-                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-smooth"
                     >
                         {adding ? "Adding..." : "Add Domain"}
                     </button>
@@ -277,21 +277,23 @@ export default function DomainsSettingsPage() {
                 <h2 className="text-xl font-semibold">Your Domains</h2>
 
                 {domains.length === 0 ? (
-                    <div className="bg-white rounded-lg shadow p-8 text-center">
-                        <p className="text-gray-600">No domains connected yet.</p>
-                        <p className="text-sm text-gray-500 mt-2">
+                    <div className="bg-card rounded-lg shadow p-8 text-center">
+                        <p className="text-muted-foreground">
+                            No domains connected yet.
+                        </p>
+                        <p className="text-sm text-muted-foreground mt-2">
                             Add a custom domain above to get started.
                         </p>
                     </div>
                 ) : (
                     domains.map((domain) => (
-                        <div key={domain.id} className="bg-white rounded-lg shadow p-6">
+                        <div key={domain.id} className="bg-card rounded-lg shadow p-6">
                             <div className="flex justify-between items-start mb-4">
                                 <div>
                                     <h3 className="text-lg font-semibold">
                                         {domain.domain}
                                     </h3>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="text-sm text-muted-foreground">
                                         Points to: {domain.funnel_projects.name}
                                     </p>
                                 </div>
@@ -310,14 +312,14 @@ export default function DomainsSettingsPage() {
                             </div>
 
                             {!domain.verified && (
-                                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                                <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mb-4">
                                     <h4 className="font-semibold mb-2">
                                         DNS Configuration Required
                                     </h4>
                                     <p className="text-sm mb-2">
                                         Add this CNAME record to your DNS provider:
                                     </p>
-                                    <div className="bg-white p-3 rounded border font-mono text-sm space-y-1">
+                                    <div className="bg-card p-3 rounded border font-mono text-sm space-y-1">
                                         <div>
                                             <strong>Type:</strong> CNAME
                                         </div>
@@ -333,7 +335,7 @@ export default function DomainsSettingsPage() {
                                     <button
                                         onClick={() => handleVerifyDomain(domain.id)}
                                         disabled={verifying === domain.id}
-                                        className="mt-3 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                        className="mt-3 px-4 py-2 bg-primary text-white rounded hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-smooth"
                                     >
                                         {verifying === domain.id
                                             ? "Checking..."
@@ -363,7 +365,7 @@ export default function DomainsSettingsPage() {
                                 onClick={() =>
                                     handleDeleteDomain(domain.id, domain.domain)
                                 }
-                                className="text-red-600 hover:text-red-800 text-sm font-medium transition-colors"
+                                className="text-red-600 hover:text-red-800 text-sm font-medium transition-smooth"
                             >
                                 Remove Domain
                             </button>

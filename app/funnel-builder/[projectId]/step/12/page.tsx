@@ -232,7 +232,9 @@ export default function Step12Page({
                 <div className="flex items-center justify-center py-12">
                     <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4" />
-                        <p className="text-gray-600">Loading marketing engine...</p>
+                        <p className="text-muted-foreground">
+                            Loading marketing engine...
+                        </p>
                     </div>
                 </div>
             </StepLayout>
@@ -250,15 +252,15 @@ export default function Step12Page({
         >
             <div className="space-y-6">
                 {/* Enable/Disable Section */}
-                <Card className="p-6 bg-gradient-to-r from-blue-50 to-purple-50">
+                <Card className="p-6 bg-gradient-to-r from-primary/5 to-purple-50">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <Share2 className="h-6 w-6 text-blue-500" />
+                            <Share2 className="h-6 w-6 text-primary-foreground0" />
                             <div>
                                 <h3 className="text-lg font-semibold">
                                     Enable Marketing Content Engine
                                 </h3>
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm text-muted-foreground">
                                     Generate platform-optimized content in your
                                     authentic founder voice
                                 </p>
@@ -273,45 +275,51 @@ export default function Step12Page({
                     {marketingEnabled && (
                         <>
                             <div className="mt-6 grid grid-cols-5 gap-4 text-sm">
-                                <div className="text-center p-3 bg-white rounded-lg">
-                                    <div className="text-2xl font-bold text-blue-600">
+                                <div className="text-center p-3 bg-card rounded-lg">
+                                    <div className="text-2xl font-bold text-primary">
                                         {stats.postsThisMonth}
                                     </div>
-                                    <div className="text-gray-600">
+                                    <div className="text-muted-foreground">
                                         Posts This Month
                                     </div>
                                 </div>
-                                <div className="text-center p-3 bg-white rounded-lg">
+                                <div className="text-center p-3 bg-card rounded-lg">
                                     <div className="text-2xl font-bold text-green-600">
                                         {stats.totalOptIns}
                                     </div>
-                                    <div className="text-gray-600">Total Opt-ins</div>
+                                    <div className="text-muted-foreground">
+                                        Total Opt-ins
+                                    </div>
                                     {stats.overallOI1000 > 0 && (
-                                        <div className="text-xs text-gray-500 mt-1">
+                                        <div className="text-xs text-muted-foreground mt-1">
                                             {stats.overallOI1000.toFixed(1)} O/I-1000
                                         </div>
                                     )}
                                 </div>
-                                <div className="text-center p-3 bg-white rounded-lg">
+                                <div className="text-center p-3 bg-card rounded-lg">
                                     <div className="text-2xl font-bold text-purple-600">
                                         {stats.scheduledPosts}
                                     </div>
-                                    <div className="text-gray-600">Scheduled</div>
+                                    <div className="text-muted-foreground">
+                                        Scheduled
+                                    </div>
                                 </div>
-                                <div className="text-center p-3 bg-white rounded-lg">
+                                <div className="text-center p-3 bg-card rounded-lg">
                                     <div className="text-2xl font-bold text-orange-600">
                                         {stats.activeExperiments}
                                     </div>
-                                    <div className="text-gray-600">Active Tests</div>
+                                    <div className="text-muted-foreground">
+                                        Active Tests
+                                    </div>
                                 </div>
                                 <div
-                                    className="text-center p-3 bg-white rounded-lg cursor-pointer hover:bg-yellow-50 transition-colors"
+                                    className="text-center p-3 bg-card rounded-lg cursor-pointer hover:bg-yellow-50 transition-smooth"
                                     onClick={() => setShowApprovalModal(true)}
                                 >
                                     <div className="text-2xl font-bold text-yellow-600">
                                         {stats.pendingApprovals}
                                     </div>
-                                    <div className="text-gray-600">Pending</div>
+                                    <div className="text-muted-foreground">Pending</div>
                                 </div>
                             </div>
 

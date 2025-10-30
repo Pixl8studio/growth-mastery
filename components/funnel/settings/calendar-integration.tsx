@@ -106,7 +106,7 @@ export function CalendarIntegration({ projectId }: CalendarIntegrationProps) {
 
     if (loading) {
         return (
-            <div className="rounded-lg border border-gray-200 bg-white p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
                 <div className="h-32 animate-pulse rounded bg-gray-200" />
             </div>
         );
@@ -115,25 +115,25 @@ export function CalendarIntegration({ projectId }: CalendarIntegrationProps) {
     return (
         <div className="space-y-6">
             <div>
-                <h3 className="text-lg font-semibold text-gray-900">
+                <h3 className="text-lg font-semibold text-foreground">
                     Calendar Integration
                 </h3>
-                <p className="mt-2 text-sm text-gray-600">
+                <p className="mt-2 text-sm text-muted-foreground">
                     Connect your calendar to enable scheduling features
                 </p>
             </div>
 
-            <div className="rounded-lg border border-gray-200 bg-white p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
                 <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="rounded-lg bg-blue-100 p-3">
-                            <Calendar className="h-6 w-6 text-blue-600" />
+                        <div className="rounded-lg bg-primary/10 p-3">
+                            <Calendar className="h-6 w-6 text-primary" />
                         </div>
                         <div>
-                            <h4 className="font-semibold text-gray-900">
+                            <h4 className="font-semibold text-foreground">
                                 Google Calendar
                             </h4>
-                            <p className="text-xs text-gray-500">
+                            <p className="text-xs text-muted-foreground">
                                 Connect your Google Calendar
                             </p>
                         </div>
@@ -153,24 +153,24 @@ export function CalendarIntegration({ projectId }: CalendarIntegrationProps) {
 
                 {connection ? (
                     <div className="mt-4 space-y-3">
-                        <div className="rounded-lg bg-gray-50 p-4">
+                        <div className="rounded-lg bg-muted/50 p-4">
                             <div className="mb-2 flex items-center justify-between">
-                                <span className="text-sm font-medium text-gray-700">
+                                <span className="text-sm font-medium text-foreground">
                                     Calendar
                                 </span>
-                                <span className="text-xs text-gray-500">
+                                <span className="text-xs text-muted-foreground">
                                     {connection.account_email}
                                 </span>
                             </div>
-                            <div className="text-sm text-gray-900">
+                            <div className="text-sm text-foreground">
                                 {connection.calendar_name || "Primary Calendar"}
                             </div>
-                            <div className="mt-2 text-xs text-gray-500">
+                            <div className="mt-2 text-xs text-muted-foreground">
                                 Connected{" "}
                                 {new Date(connection.connected_at).toLocaleDateString()}
                             </div>
                             {connection.last_synced_at && (
-                                <div className="text-xs text-gray-500">
+                                <div className="text-xs text-muted-foreground">
                                     Last synced{" "}
                                     {new Date(
                                         connection.last_synced_at
@@ -189,11 +189,11 @@ export function CalendarIntegration({ projectId }: CalendarIntegrationProps) {
                     </div>
                 ) : (
                     <div className="mt-4 space-y-4">
-                        <div className="rounded-lg bg-gray-50 p-4">
-                            <h5 className="mb-2 text-sm font-medium text-gray-900">
+                        <div className="rounded-lg bg-muted/50 p-4">
+                            <h5 className="mb-2 text-sm font-medium text-foreground">
                                 Features with Calendar Connection
                             </h5>
-                            <ul className="space-y-1 text-xs text-gray-600">
+                            <ul className="space-y-1 text-xs text-muted-foreground">
                                 <li>
                                     • Schedule calls and meetings directly from funnel
                                 </li>
@@ -216,14 +216,14 @@ export function CalendarIntegration({ projectId }: CalendarIntegrationProps) {
             </div>
 
             {/* Future providers placeholder */}
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-6">
+            <div className="rounded-lg border border-border bg-muted/50 p-6">
                 <div className="flex items-center gap-3">
-                    <Calendar className="h-5 w-5 text-gray-400" />
+                    <Calendar className="h-5 w-5 text-muted-foreground" />
                     <div>
-                        <h5 className="text-sm font-medium text-gray-700">
+                        <h5 className="text-sm font-medium text-foreground">
                             More Calendars
                         </h5>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted-foreground">
                             Outlook and CalDAV support coming soon
                         </p>
                     </div>

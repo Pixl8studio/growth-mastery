@@ -97,13 +97,15 @@ export function FunnelFollowupView({ projectId }: FunnelFollowupViewProps) {
                         <CardTitle className="text-sm font-medium">
                             Total Prospects
                         </CardTitle>
-                        <Users className="h-4 w-4 text-blue-600" />
+                        <Users className="h-4 w-4 text-primary" />
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">
                             {stats.total_prospects}
                         </div>
-                        <p className="text-xs text-gray-500">Active in sequence</p>
+                        <p className="text-xs text-muted-foreground">
+                            Active in sequence
+                        </p>
                     </CardContent>
                 </Card>
 
@@ -116,7 +118,7 @@ export function FunnelFollowupView({ projectId }: FunnelFollowupViewProps) {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{stats.total_touches}</div>
-                        <p className="text-xs text-gray-500">Messages sent</p>
+                        <p className="text-xs text-muted-foreground">Messages sent</p>
                     </CardContent>
                 </Card>
 
@@ -131,7 +133,7 @@ export function FunnelFollowupView({ projectId }: FunnelFollowupViewProps) {
                         <div className="text-2xl font-bold">
                             {stats.conversion_rate.toFixed(1)}%
                         </div>
-                        <p className="text-xs text-gray-500">From followup</p>
+                        <p className="text-xs text-muted-foreground">From followup</p>
                     </CardContent>
                 </Card>
 
@@ -146,14 +148,18 @@ export function FunnelFollowupView({ projectId }: FunnelFollowupViewProps) {
                         <div className="text-2xl font-bold">
                             ${stats.revenue_generated.toLocaleString()}
                         </div>
-                        <p className="text-xs text-gray-500">Total from followup</p>
+                        <p className="text-xs text-muted-foreground">
+                            Total from followup
+                        </p>
                     </CardContent>
                 </Card>
             </div>
 
             {/* Prospects List */}
-            <div className="rounded-lg border border-gray-200 bg-white p-6">
-                <h3 className="mb-4 text-lg font-semibold text-gray-900">Prospects</h3>
+            <div className="rounded-lg border border-border bg-card p-6">
+                <h3 className="mb-4 text-lg font-semibold text-foreground">
+                    Prospects
+                </h3>
                 <ProspectList funnelProjectId={projectId} />
             </div>
         </div>

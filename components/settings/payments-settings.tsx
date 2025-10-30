@@ -96,7 +96,7 @@ export function PaymentsSettings() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-12">
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-muted-foreground">Loading...</div>
             </div>
         );
     }
@@ -104,19 +104,19 @@ export function PaymentsSettings() {
     return (
         <div>
             <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Payment Settings</h2>
-                <p className="mt-1 text-sm text-gray-600">
+                <h2 className="text-2xl font-bold text-foreground">Payment Settings</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
                     Connect Stripe to accept payments through your funnel pages
                 </p>
             </div>
 
-            <div className="rounded-lg border border-gray-200 bg-white p-6">
+            <div className="rounded-lg border border-border bg-card p-6">
                 <div className="flex items-start justify-between">
                     <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
+                        <h3 className="text-lg font-semibold text-foreground">
                             Stripe Connect
                         </h3>
-                        <p className="mt-1 text-sm text-gray-600">
+                        <p className="mt-1 text-sm text-muted-foreground">
                             {stripeConnected
                                 ? "Your Stripe account is connected"
                                 : "Connect your Stripe account to accept payments"}
@@ -132,7 +132,7 @@ export function PaymentsSettings() {
                                                 : "bg-red-500"
                                         }`}
                                     />
-                                    <span className="text-sm text-gray-700">
+                                    <span className="text-sm text-foreground">
                                         {chargesEnabled
                                             ? "Charges enabled"
                                             : "Charges not yet enabled"}
@@ -146,14 +146,14 @@ export function PaymentsSettings() {
                                                 : "bg-red-500"
                                         }`}
                                     />
-                                    <span className="text-sm text-gray-700">
+                                    <span className="text-sm text-foreground">
                                         {payoutsEnabled
                                             ? "Payouts enabled"
                                             : "Payouts not yet enabled"}
                                     </span>
                                 </div>
                                 {stripeAccountId && (
-                                    <p className="mt-2 text-xs text-gray-500">
+                                    <p className="mt-2 text-xs text-muted-foreground">
                                         Account ID: {stripeAccountId}
                                     </p>
                                 )}
@@ -165,14 +165,14 @@ export function PaymentsSettings() {
                         {stripeConnected ? (
                             <button
                                 onClick={handleDisconnectStripe}
-                                className="rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+                                className="rounded-md border border-red-300 bg-card px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
                             >
                                 Disconnect
                             </button>
                         ) : (
                             <button
                                 onClick={handleConnectStripe}
-                                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
+                                className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/50"
                             >
                                 Connect Stripe
                             </button>
@@ -181,11 +181,11 @@ export function PaymentsSettings() {
                 </div>
 
                 {!stripeConnected && (
-                    <div className="mt-6 rounded-md bg-blue-50 p-4">
-                        <h4 className="text-sm font-semibold text-blue-900">
+                    <div className="mt-6 rounded-md bg-primary/5 p-4">
+                        <h4 className="text-sm font-semibold text-primary">
                             Why connect Stripe?
                         </h4>
-                        <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-blue-800">
+                        <ul className="mt-2 list-inside list-disc space-y-1 text-sm text-primary">
                             <li>Accept payments directly through your funnel pages</li>
                             <li>
                                 Secure payment processing with industry-standard
@@ -211,7 +211,7 @@ export function PaymentsSettings() {
                             href="https://dashboard.stripe.com"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="mt-3 inline-block rounded-md border border-yellow-300 bg-white px-4 py-2 text-sm font-medium text-yellow-900 hover:bg-yellow-50"
+                            className="mt-3 inline-block rounded-md border border-yellow-300 bg-card px-4 py-2 text-sm font-medium text-yellow-900 hover:bg-yellow-50"
                         >
                             Go to Stripe Dashboard
                         </a>

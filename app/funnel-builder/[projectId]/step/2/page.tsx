@@ -278,7 +278,7 @@ export default function Step2Page({
     if (!projectId) {
         return (
             <div className="flex h-screen items-center justify-center">
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-muted-foreground">Loading...</div>
             </div>
         );
     }
@@ -311,14 +311,14 @@ export default function Step2Page({
                 {!isGenerating ? (
                     <div className="rounded-lg border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-8">
                         <div className="mx-auto mb-6 max-w-md">
-                            <label className="mb-2 block text-sm font-medium text-gray-700">
+                            <label className="mb-2 block text-sm font-medium text-foreground">
                                 Select Intake Call Source
                             </label>
                             <select
                                 value={selectedTranscript}
                                 onChange={(e) => setSelectedTranscript(e.target.value)}
                                 disabled={transcripts.length === 0}
-                                className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+                                className="w-full rounded-lg border border-border px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-500 disabled:cursor-not-allowed disabled:bg-muted"
                             >
                                 {transcripts.length === 0 ? (
                                     <option value="">No intake calls available</option>
@@ -356,7 +356,7 @@ export default function Step2Page({
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
                                     selectedTranscript
                                         ? "bg-brand-500 text-white hover:bg-brand-600"
-                                        : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                        : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                 }`}
                             >
                                 <Sparkles className="h-6 w-6" />
@@ -365,7 +365,7 @@ export default function Step2Page({
                                     : "Select Call First"}
                             </button>
 
-                            <div className="mt-4 space-y-1 text-sm text-gray-500">
+                            <div className="mt-4 space-y-1 text-sm text-muted-foreground">
                                 <p>⚡ Generation time: ~20 seconds</p>
                                 <p>💰 Creates pricing, features, and bonuses</p>
                             </div>
@@ -406,12 +406,12 @@ export default function Step2Page({
 
                 {/* AI Suggested Offers - Alternative Variations */}
                 {alternatives.length > 0 && (
-                    <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-indigo-50 p-6">
+                    <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-primary/5 p-6">
                         <div className="mb-6">
-                            <h3 className="mb-2 text-xl font-semibold text-gray-900">
+                            <h3 className="mb-2 text-xl font-semibold text-foreground">
                                 🎯 AI Suggested Offer Variations
                             </h3>
-                            <p className="text-gray-600">
+                            <p className="text-muted-foreground">
                                 Explore these strategic alternatives optimized for
                                 different market positions
                             </p>
@@ -421,7 +421,7 @@ export default function Step2Page({
                             {alternatives.map((alt: any, idx: number) => (
                                 <div
                                     key={idx}
-                                    className="rounded-lg border border-purple-200 bg-white p-5 shadow-sm transition-all hover:shadow-md"
+                                    className="rounded-lg border border-purple-200 bg-card p-5 shadow-sm transition-all hover:shadow-md"
                                 >
                                     <div className="mb-3">
                                         <div className="mb-1 inline-block rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700">
@@ -432,7 +432,7 @@ export default function Step2Page({
                                         </div>
                                     </div>
 
-                                    <h4 className="mb-2 text-lg font-semibold text-gray-900">
+                                    <h4 className="mb-2 text-lg font-semibold text-foreground">
                                         {alt.name}
                                     </h4>
 
@@ -440,7 +440,7 @@ export default function Step2Page({
                                         ${alt.price}
                                     </div>
 
-                                    <div className="mb-3 space-y-1 text-sm text-gray-600">
+                                    <div className="mb-3 space-y-1 text-sm text-muted-foreground">
                                         <div>
                                             📦 {alt.features?.length || 0} features
                                         </div>
@@ -460,7 +460,7 @@ export default function Step2Page({
                                     </div>
 
                                     {alt.keyDifference && (
-                                        <p className="mb-4 text-sm italic text-gray-600">
+                                        <p className="mb-4 text-sm italic text-muted-foreground">
                                             "{alt.keyDifference}"
                                         </p>
                                     )}
@@ -487,13 +487,13 @@ export default function Step2Page({
                 )}
 
                 {/* Generated Offers */}
-                <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-                    <div className="border-b border-gray-200 p-6">
+                <div className="rounded-lg border border-border bg-card shadow-soft">
+                    <div className="border-b border-border p-6">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-semibold text-gray-900">
+                            <h3 className="text-xl font-semibold text-foreground">
                                 Your Offers
                             </h3>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-muted-foreground">
                                 {offers.length} created
                             </span>
                         </div>
@@ -501,7 +501,7 @@ export default function Step2Page({
 
                     <div className="p-6">
                         {offers.length === 0 ? (
-                            <div className="py-12 text-center text-gray-500">
+                            <div className="py-12 text-center text-muted-foreground">
                                 <DollarSign className="mx-auto mb-4 h-12 w-12 opacity-50" />
                                 <p>No offers yet. Generate your first one above!</p>
                             </div>
@@ -511,7 +511,7 @@ export default function Step2Page({
                                     <div
                                         key={offer.id}
                                         onClick={() => setSelectedOffer(offer)}
-                                        className="cursor-pointer rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-green-300 hover:shadow-md"
+                                        className="cursor-pointer rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-green-300 hover:shadow-md"
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
@@ -564,7 +564,7 @@ export default function Step2Page({
                                                                 onClick={() =>
                                                                     setEditingId(null)
                                                                 }
-                                                                className="rounded bg-gray-300 px-2 py-1 text-sm text-gray-700 hover:bg-gray-400"
+                                                                className="rounded bg-gray-300 px-2 py-1 text-sm text-foreground hover:bg-gray-400"
                                                             >
                                                                 Cancel
                                                             </button>
@@ -572,7 +572,7 @@ export default function Step2Page({
                                                     ) : (
                                                         <>
                                                             <h4
-                                                                className="cursor-pointer text-lg font-semibold text-gray-900 hover:text-green-600"
+                                                                className="cursor-pointer text-lg font-semibold text-foreground hover:text-green-600"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
                                                                     setEditingId(
@@ -603,10 +603,10 @@ export default function Step2Page({
                                                     )}
                                                 </div>
 
-                                                <div className="mb-2 text-gray-600">
+                                                <div className="mb-2 text-muted-foreground">
                                                     {offer.description}
                                                 </div>
-                                                <div className="flex items-center gap-4 text-sm text-gray-600">
+                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                                     <span className="text-2xl font-bold text-green-600">
                                                         ${offer.price}
                                                     </span>
@@ -631,7 +631,7 @@ export default function Step2Page({
                                                     e.stopPropagation();
                                                     handleDeleteOffer(offer.id);
                                                 }}
-                                                className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
                                             >
                                                 <Trash2 className="h-4 w-4" />
                                             </button>
@@ -647,15 +647,15 @@ export default function Step2Page({
             {/* Offer Editor Modal */}
             {selectedOffer && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-                    <div className="flex h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-white shadow-2xl">
-                        <div className="rounded-t-lg border-b border-gray-200 bg-gray-50 p-6">
+                    <div className="flex h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-card shadow-2xl">
+                        <div className="rounded-t-lg border-b border-border bg-muted/50 p-6">
                             <div className="flex items-center justify-between">
-                                <h2 className="text-2xl font-bold text-gray-900">
+                                <h2 className="text-2xl font-bold text-foreground">
                                     {selectedOffer.name}
                                 </h2>
                                 <button
                                     onClick={() => setSelectedOffer(null)}
-                                    className="text-2xl font-bold text-gray-400 hover:text-gray-600"
+                                    className="text-2xl font-bold text-muted-foreground hover:text-muted-foreground"
                                 >
                                     ×
                                 </button>

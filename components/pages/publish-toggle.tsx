@@ -49,7 +49,7 @@ export function PublishToggle({ page }: PublishToggleProps) {
                 disabled={isLoading}
                 aria-label={isPublished ? "Unpublish page" : "Publish page"}
             />
-            <span className="text-xs text-gray-500">
+            <span className="text-xs text-muted-foreground">
                 {isPublished ? "Live" : "Draft"}
             </span>
         </div>

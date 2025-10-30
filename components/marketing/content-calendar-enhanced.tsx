@@ -341,7 +341,7 @@ export function ContentCalendarEnhanced({
 
                 {/* Filters */}
                 <div className="flex items-center gap-3 pt-3 border-t">
-                    <Filter className="h-4 w-4 text-gray-400" />
+                    <Filter className="h-4 w-4 text-muted-foreground" />
                     <select
                         value={platformFilter || "all"}
                         onChange={(e) =>
@@ -349,7 +349,7 @@ export function ContentCalendarEnhanced({
                                 e.target.value === "all" ? null : e.target.value
                             )
                         }
-                        className="text-sm rounded-md border border-gray-300 px-2 py-1"
+                        className="text-sm rounded-md border border-border px-2 py-1"
                     >
                         <option value="all">All Platforms</option>
                         <option value="instagram">Instagram</option>
@@ -365,7 +365,7 @@ export function ContentCalendarEnhanced({
                                 e.target.value === "all" ? null : e.target.value
                             )
                         }
-                        className="text-sm rounded-md border border-gray-300 px-2 py-1"
+                        className="text-sm rounded-md border border-border px-2 py-1"
                     >
                         <option value="all">All Statuses</option>
                         <option value="draft">Draft</option>
@@ -376,7 +376,7 @@ export function ContentCalendarEnhanced({
 
                     {selectedEntries.length > 0 && (
                         <div className="ml-auto flex items-center gap-2">
-                            <span className="text-sm text-gray-600">
+                            <span className="text-sm text-muted-foreground">
                                 {selectedEntries.length} selected
                             </span>
                             <Button
@@ -406,7 +406,9 @@ export function ContentCalendarEnhanced({
                 <Card className="p-4">
                     {loading ? (
                         <div className="flex items-center justify-center py-12">
-                            <div className="text-gray-500">Loading calendar...</div>
+                            <div className="text-muted-foreground">
+                                Loading calendar...
+                            </div>
                         </div>
                     ) : (
                         <>
@@ -416,7 +418,7 @@ export function ContentCalendarEnhanced({
                                     (day) => (
                                         <div
                                             key={day}
-                                            className="text-center text-sm font-medium text-gray-600 py-2"
+                                            className="text-center text-sm font-medium text-muted-foreground py-2"
                                         >
                                             {day}
                                         </div>
@@ -445,9 +447,9 @@ export function ContentCalendarEnhanced({
                                             onClick={() => setSelectedDay(day)}
                                             className={`aspect-square border rounded-lg p-2 cursor-pointer transition-colors ${
                                                 hasEntries
-                                                    ? "bg-blue-50 border-blue-300 hover:bg-blue-100"
-                                                    : "bg-white border-gray-200 hover:border-gray-300"
-                                            } ${selectedDay === day ? "ring-2 ring-blue-500" : ""}`}
+                                                    ? "bg-primary/5 border-primary/30 hover:bg-primary/10"
+                                                    : "bg-card border-border hover:border-border"
+                                            } ${selectedDay === day ? "ring-2 ring-primary" : ""}`}
                                         >
                                             <div className="text-sm font-medium mb-1">
                                                 {day}
@@ -479,7 +481,7 @@ export function ContentCalendarEnhanced({
                                                             );
                                                         })}
                                                     {dayEntries.length > 2 && (
-                                                        <div className="text-xs text-gray-600">
+                                                        <div className="text-xs text-muted-foreground">
                                                             +{dayEntries.length - 2}
                                                         </div>
                                                     )}
@@ -508,7 +510,7 @@ export function ContentCalendarEnhanced({
                             return (
                                 <div
                                     key={entry.id}
-                                    className="p-3 bg-gray-50 rounded-lg flex items-center gap-3"
+                                    className="p-3 bg-muted/50 rounded-lg flex items-center gap-3"
                                 >
                                     <Checkbox
                                         checked={selectedEntries.includes(entry.id)}
@@ -524,7 +526,7 @@ export function ContentCalendarEnhanced({
                                             <span className="text-sm font-medium capitalize">
                                                 {variant?.platform}
                                             </span>
-                                            <span className="text-xs text-gray-600">
+                                            <span className="text-xs text-muted-foreground">
                                                 {scheduledDate.toLocaleDateString()} at{" "}
                                                 {scheduledDate.toLocaleTimeString([], {
                                                     hour: "2-digit",
@@ -535,7 +537,7 @@ export function ContentCalendarEnhanced({
                                                 <CheckCircle2 className="h-4 w-4 text-green-600" />
                                             )}
                                         </div>
-                                        <div className="text-xs text-gray-700 truncate">
+                                        <div className="text-xs text-foreground truncate">
                                             {variant?.copy_text?.substring(0, 80)}...
                                         </div>
                                     </div>
@@ -591,7 +593,7 @@ export function ContentCalendarEnhanced({
                             return (
                                 <div
                                     key={entry.id}
-                                    className="p-3 bg-gray-50 rounded-lg"
+                                    className="p-3 bg-muted/50 rounded-lg"
                                 >
                                     <div className="flex items-center gap-2 mb-2">
                                         <span className="text-lg">
@@ -607,20 +609,20 @@ export function ContentCalendarEnhanced({
                                             className={`text-xs px-2 py-0.5 rounded ${
                                                 entry.publish_status === "published"
                                                     ? "bg-green-100 text-green-700"
-                                                    : "bg-blue-100 text-blue-700"
+                                                    : "bg-primary/10 text-primary"
                                             }`}
                                         >
                                             {entry.publish_status}
                                         </span>
                                     </div>
-                                    <p className="text-xs text-gray-700">
+                                    <p className="text-xs text-foreground">
                                         {variant?.copy_text?.substring(0, 100)}...
                                     </p>
                                 </div>
                             );
                         })}
                         {getEntriesForDay(selectedDay).length === 0 && (
-                            <div className="text-center py-8 text-gray-500">
+                            <div className="text-center py-8 text-muted-foreground">
                                 No posts scheduled for this day
                             </div>
                         )}
@@ -659,7 +661,7 @@ export function ContentCalendarEnhanced({
                                     className={`p-3 rounded-lg border ${
                                         isUpcoming
                                             ? "bg-orange-50 border-orange-200"
-                                            : "bg-gray-50 border-gray-200"
+                                            : "bg-muted/50 border-border"
                                     }`}
                                 >
                                     <div className="flex items-center justify-between">
@@ -691,7 +693,7 @@ export function ContentCalendarEnhanced({
                         })}
                     {filteredEntries.filter((e) => e.publish_status === "scheduled")
                         .length === 0 && (
-                        <div className="text-center py-8 text-gray-500">
+                        <div className="text-center py-8 text-muted-foreground">
                             No posts in publishing queue
                         </div>
                     )}
@@ -701,7 +703,7 @@ export function ContentCalendarEnhanced({
             {/* Scheduling Modal */}
             {showSchedulingModal && schedulingVariantId && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-75">
-                    <div className="bg-white rounded-lg max-w-2xl w-full">
+                    <div className="bg-card rounded-lg max-w-2xl w-full">
                         <RecurringPostScheduler
                             variantId={schedulingVariantId}
                             onSchedule={(config) => {

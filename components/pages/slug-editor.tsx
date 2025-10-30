@@ -196,7 +196,7 @@ export function SlugEditor({
                         }}
                         autoFocus
                     />
-                    <p className="mt-1 text-xs text-gray-500 truncate">
+                    <p className="mt-1 text-xs text-muted-foreground truncate">
                         URL will be: {window.location.origin}/{username}/
                         {formatSlug(slug)}
                     </p>
@@ -230,17 +230,17 @@ export function SlugEditor({
         <div className="flex items-center gap-2">
             <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                    <code className="text-sm text-gray-700 truncate block">
+                    <code className="text-sm text-foreground truncate block">
                         {displayUrl}
                     </code>
                     {!isVanityUrl && (
-                        <span className="text-xs text-gray-500 italic whitespace-nowrap">
+                        <span className="text-xs text-muted-foreground italic whitespace-nowrap">
                             (ID link)
                         </span>
                     )}
                 </div>
                 {!isVanityUrl && (
-                    <p className="text-xs text-gray-500 mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                         Set a vanity slug for a custom URL
                     </p>
                 )}

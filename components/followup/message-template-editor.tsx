@@ -373,7 +373,7 @@ export function MessageTemplateEditor({
             <div className="flex items-center justify-between">
                 <div>
                     <h3 className="text-lg font-semibold">Message Templates</h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                         Create personalized email and SMS messages for your sequences
                     </p>
                 </div>
@@ -416,8 +416,8 @@ export function MessageTemplateEditor({
                                     onClick={() => setChannelFilter("all")}
                                     className={`px-3 py-1.5 rounded text-sm ${
                                         channelFilter === "all"
-                                            ? "bg-blue-500 text-white"
-                                            : "bg-gray-100 hover:bg-gray-200"
+                                            ? "bg-primary/50 text-white"
+                                            : "bg-muted hover:bg-gray-200"
                                     }`}
                                 >
                                     All
@@ -426,8 +426,8 @@ export function MessageTemplateEditor({
                                     onClick={() => setChannelFilter("email")}
                                     className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
                                         channelFilter === "email"
-                                            ? "bg-blue-500 text-white"
-                                            : "bg-gray-100 hover:bg-gray-200"
+                                            ? "bg-primary/50 text-white"
+                                            : "bg-muted hover:bg-gray-200"
                                     }`}
                                 >
                                     <Mail className="h-3 w-3" />
@@ -437,8 +437,8 @@ export function MessageTemplateEditor({
                                     onClick={() => setChannelFilter("sms")}
                                     className={`px-3 py-1.5 rounded text-sm flex items-center gap-1 ${
                                         channelFilter === "sms"
-                                            ? "bg-blue-500 text-white"
-                                            : "bg-gray-100 hover:bg-gray-200"
+                                            ? "bg-primary/50 text-white"
+                                            : "bg-muted hover:bg-gray-200"
                                     }`}
                                 >
                                     <MessageSquare className="h-3 w-3" />
@@ -447,7 +447,7 @@ export function MessageTemplateEditor({
                             </div>
                         </div>
 
-                        <div className="ml-auto text-sm text-gray-600">
+                        <div className="ml-auto text-sm text-muted-foreground">
                             Showing {filteredMessages.length} of {messages.length}{" "}
                             messages
                         </div>
@@ -652,19 +652,19 @@ export function MessageTemplateEditor({
                                         <button
                                             key={t.token}
                                             onClick={() => insertToken(t.token, "body")}
-                                            className="w-full text-left p-2 rounded border border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-colors"
+                                            className="w-full text-left p-2 rounded border border-border hover:border-purple-500 hover:bg-purple-50 transition-smooth"
                                         >
                                             <code className="text-xs text-purple-600 font-mono">
                                                 {t.token}
                                             </code>
-                                            <p className="text-xs text-gray-600 mt-1">
+                                            <p className="text-xs text-muted-foreground mt-1">
                                                 {t.description}
                                             </p>
                                         </button>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg">
+                                <div className="p-4 bg-gradient-to-r from-purple-50 to-primary/5 rounded-lg">
                                     <div className="flex items-center justify-between mb-3">
                                         <h5 className="font-medium">Live Preview</h5>
                                         <div className="flex items-center gap-2">
@@ -697,7 +697,7 @@ export function MessageTemplateEditor({
                                     {formData.channel === "email" &&
                                         formData.subject_line && (
                                             <div className="mb-4">
-                                                <span className="text-xs text-gray-600 font-medium">
+                                                <span className="text-xs text-muted-foreground font-medium">
                                                     Subject:
                                                 </span>
                                                 <p className="text-sm font-medium mt-1">
@@ -733,7 +733,7 @@ export function MessageTemplateEditor({
                                                 </p>
                                             </div>
                                         )}
-                                    <div className="p-4 bg-white rounded border">
+                                    <div className="p-4 bg-card rounded border">
                                         <p className="text-sm whitespace-pre-wrap">
                                             {renderPreview()}
                                         </p>
@@ -930,19 +930,19 @@ export function MessageTemplateEditor({
                                         <button
                                             key={t.token}
                                             onClick={() => insertToken(t.token, "body")}
-                                            className="w-full text-left p-2 rounded border border-gray-200 hover:border-purple-500 hover:bg-purple-50 transition-colors"
+                                            className="w-full text-left p-2 rounded border border-border hover:border-purple-500 hover:bg-purple-50 transition-smooth"
                                         >
                                             <code className="text-xs text-purple-600 font-mono">
                                                 {t.token}
                                             </code>
-                                            <p className="text-xs text-gray-600 mt-1">
+                                            <p className="text-xs text-muted-foreground mt-1">
                                                 {t.description}
                                             </p>
                                         </button>
                                     ))}
                                 </div>
                             ) : (
-                                <div className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg">
+                                <div className="p-4 bg-gradient-to-r from-purple-50 to-primary/5 rounded-lg">
                                     <div className="flex items-center justify-between mb-3">
                                         <h5 className="font-medium">Live Preview</h5>
                                         <div className="flex items-center gap-2">
@@ -975,7 +975,7 @@ export function MessageTemplateEditor({
                                     {formData.channel === "email" &&
                                         formData.subject_line && (
                                             <div className="mb-4">
-                                                <span className="text-xs text-gray-600 font-medium">
+                                                <span className="text-xs text-muted-foreground font-medium">
                                                     Subject:
                                                 </span>
                                                 <p className="text-sm font-medium mt-1">
@@ -1011,7 +1011,7 @@ export function MessageTemplateEditor({
                                                 </p>
                                             </div>
                                         )}
-                                    <div className="p-4 bg-white rounded border">
+                                    <div className="p-4 bg-card rounded border">
                                         <p className="text-sm whitespace-pre-wrap">
                                             {renderPreview()}
                                         </p>
@@ -1032,13 +1032,13 @@ export function MessageTemplateEditor({
             <div className="space-y-3">
                 {filteredMessages.length === 0 ? (
                     <Card className="p-12 text-center">
-                        <MessageSquare className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                         <h4 className="text-lg font-semibold mb-2">
                             {messages.length === 0
                                 ? "No Messages Yet"
                                 : "No Matching Messages"}
                         </h4>
-                        <p className="text-gray-600 mb-4">
+                        <p className="text-muted-foreground mb-4">
                             {messages.length === 0
                                 ? "Add your first message template to this sequence"
                                 : "Try adjusting your filters to see more messages"}
@@ -1064,7 +1064,7 @@ export function MessageTemplateEditor({
                                             <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center font-semibold text-purple-600">
                                                 {message.message_order}
                                             </div>
-                                            <span className="text-xs text-gray-500 font-medium">
+                                            <span className="text-xs text-muted-foreground font-medium">
                                                 {message.message_order} of{" "}
                                                 {getSequenceMessageCount(
                                                     message.sequence_id
@@ -1081,7 +1081,7 @@ export function MessageTemplateEditor({
                                                     "current" && (
                                                     <Badge
                                                         variant="default"
-                                                        className="bg-indigo-100 text-indigo-800"
+                                                        className="bg-primary/10 text-primary"
                                                     >
                                                         {getSequenceName(
                                                             message.sequence_id
@@ -1102,12 +1102,12 @@ export function MessageTemplateEditor({
                                             </div>
 
                                             {message.subject_line && (
-                                                <p className="text-sm font-medium text-gray-700 mb-1">
+                                                <p className="text-sm font-medium text-foreground mb-1">
                                                     {message.subject_line}
                                                 </p>
                                             )}
 
-                                            <p className="text-sm text-gray-600 line-clamp-3 whitespace-pre-line">
+                                            <p className="text-sm text-muted-foreground line-clamp-3 whitespace-pre-line">
                                                 {message.body_content}
                                             </p>
                                         </div>

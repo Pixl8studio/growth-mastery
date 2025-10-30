@@ -281,10 +281,10 @@ export function AdvancedAIAssistant() {
                 className={cn(
                     "fixed bottom-6 right-6 z-50",
                     "h-14 w-14 rounded-full",
-                    "gradient-emerald",
-                    "text-primary-foreground shadow-soft",
-                    "hover:shadow-glow hover:scale-110",
-                    "transition-smooth",
+                    "bg-gradient-to-r from-primary to-purple-600",
+                    "text-white shadow-float",
+                    "hover:shadow-xl hover:scale-110",
+                    "transition-all duration-200",
                     "flex items-center justify-center",
                     "animate-pulse"
                 )}
@@ -297,7 +297,7 @@ export function AdvancedAIAssistant() {
             {isOpen && (
                 <div
                     className={cn(
-                        "fixed right-6 z-50 rounded-lg bg-white shadow-2xl border border-gray-200",
+                        "fixed right-6 z-50 rounded-lg bg-card shadow-2xl border border-border",
                         "transition-all duration-300",
                         isExpanded
                             ? "bottom-24 w-[32rem] h-[42rem]"
@@ -306,10 +306,10 @@ export function AdvancedAIAssistant() {
                 >
                     <div className="flex flex-col h-full">
                         {/* Enhanced Header */}
-                        <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 rounded-t-lg">
+                        <div className="p-4 border-b border-border bg-gradient-to-r from-primary via-purple-600 to-pink-600 rounded-t-lg">
                             <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+                                    <div className="p-2 bg-card/20 rounded-lg backdrop-blur-sm">
                                         <Sparkles className="h-5 w-5 text-white" />
                                     </div>
                                     <div>
@@ -327,7 +327,7 @@ export function AdvancedAIAssistant() {
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => setIsExpanded(!isExpanded)}
-                                        className="p-1 text-white/80 hover:text-white hover:bg-white/10 rounded transition-colors"
+                                        className="p-1 text-white/80 hover:text-white hover:bg-card/10 rounded transition-smooth"
                                         title={isExpanded ? "Collapse" : "Expand"}
                                     >
                                         {isExpanded ? (
@@ -338,7 +338,7 @@ export function AdvancedAIAssistant() {
                                     </button>
                                     <button
                                         onClick={() => setIsOpen(false)}
-                                        className="p-1 text-white/80 hover:text-white hover:bg-white/10 rounded transition-colors"
+                                        className="p-1 text-white/80 hover:text-white hover:bg-card/10 rounded transition-smooth"
                                     >
                                         <X className="h-5 w-5" />
                                     </button>
@@ -358,9 +358,9 @@ export function AdvancedAIAssistant() {
                                             %
                                         </span>
                                     </div>
-                                    <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
+                                    <div className="h-1.5 bg-card/20 rounded-full overflow-hidden">
                                         <div
-                                            className="h-full bg-white rounded-full transition-all duration-500"
+                                            className="h-full bg-card rounded-full transition-all duration-500"
                                             style={{
                                                 width: `${(currentStep / FUNNEL_STEPS.length) * 100}%`,
                                             }}
@@ -372,8 +372,8 @@ export function AdvancedAIAssistant() {
 
                         {/* Quick Actions */}
                         {context?.forms && context.forms.length > 0 && (
-                            <div className="p-3 bg-gradient-to-r from-blue-50 to-purple-50 border-b border-gray-200">
-                                <p className="text-xs font-medium text-gray-700 mb-2">
+                            <div className="p-3 bg-gradient-to-r from-primary/5 to-purple-50 border-b border-border">
+                                <p className="text-xs font-medium text-foreground mb-2">
                                     Quick Actions:
                                 </p>
                                 <div className="flex flex-wrap gap-2">
@@ -383,7 +383,7 @@ export function AdvancedAIAssistant() {
                                                 "Help me fill in this form"
                                             )
                                         }
-                                        className="px-3 py-1.5 text-xs bg-white border border-blue-200 text-blue-700 rounded-full hover:bg-blue-50 transition-colors flex items-center gap-1"
+                                        className="px-3 py-1.5 text-xs bg-card border border-primary/20 text-primary rounded-full hover:bg-primary/5 transition-colors flex items-center gap-1"
                                     >
                                         <Zap className="h-3 w-3" />
                                         Fill Form
@@ -392,7 +392,7 @@ export function AdvancedAIAssistant() {
                                         onClick={() =>
                                             handleQuickAction("What should I do next?")
                                         }
-                                        className="px-3 py-1.5 text-xs bg-white border border-purple-200 text-purple-700 rounded-full hover:bg-purple-50 transition-colors flex items-center gap-1"
+                                        className="px-3 py-1.5 text-xs bg-card border border-purple-200 text-purple-700 rounded-full hover:bg-purple-50 transition-colors flex items-center gap-1"
                                     >
                                         <ArrowRight className="h-3 w-3" />
                                         Next Steps
@@ -401,7 +401,7 @@ export function AdvancedAIAssistant() {
                                         onClick={() =>
                                             handleQuickAction("Explain this page")
                                         }
-                                        className="px-3 py-1.5 text-xs bg-white border border-pink-200 text-pink-700 rounded-full hover:bg-pink-50 transition-colors flex items-center gap-1"
+                                        className="px-3 py-1.5 text-xs bg-card border border-pink-200 text-pink-700 rounded-full hover:bg-pink-50 transition-colors flex items-center gap-1"
                                     >
                                         <HelpCircle className="h-3 w-3" />
                                         Explain
@@ -411,7 +411,7 @@ export function AdvancedAIAssistant() {
                         )}
 
                         {/* Messages Area */}
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                        <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-muted/50">
                             {messages.map((msg, idx) => (
                                 <div
                                     key={idx}
@@ -424,10 +424,10 @@ export function AdvancedAIAssistant() {
                                 >
                                     <div
                                         className={cn(
-                                            "max-w-[85%] rounded-2xl px-4 py-3 shadow-sm",
+                                            "max-w-[85%] rounded-2xl px-4 py-3 shadow-soft",
                                             msg.role === "user"
-                                                ? "bg-gradient-to-r from-blue-600 to-purple-600 text-white"
-                                                : "bg-white text-gray-900 border border-gray-200"
+                                                ? "bg-gradient-to-r from-primary to-purple-600 text-white"
+                                                : "bg-card text-foreground border border-border"
                                         )}
                                     >
                                         <div
@@ -461,12 +461,12 @@ export function AdvancedAIAssistant() {
                                                             </li>
                                                         ),
                                                         strong: ({ children }) => (
-                                                            <strong className="font-semibold text-gray-900">
+                                                            <strong className="font-semibold text-foreground">
                                                                 {children}
                                                             </strong>
                                                         ),
                                                         code: ({ children }) => (
-                                                            <code className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">
+                                                            <code className="px-1.5 py-0.5 bg-muted rounded text-xs font-mono">
                                                                 {children}
                                                             </code>
                                                         ),
@@ -483,10 +483,10 @@ export function AdvancedAIAssistant() {
                             ))}
                             {(loading || executing) && (
                                 <div className="flex justify-start">
-                                    <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 shadow-sm">
+                                    <div className="bg-card border border-border rounded-2xl px-4 py-3 shadow-soft">
                                         <div className="flex items-center gap-2">
-                                            <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                                            <span className="text-sm text-gray-600">
+                                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                            <span className="text-sm text-muted-foreground">
                                                 {executing
                                                     ? "Taking action..."
                                                     : "Thinking..."}
@@ -499,7 +499,7 @@ export function AdvancedAIAssistant() {
                         </div>
 
                         {/* Enhanced Input Area */}
-                        <div className="p-4 border-t border-gray-200 bg-white rounded-b-lg">
+                        <div className="p-4 border-t border-border bg-card rounded-b-lg">
                             <div className="flex gap-2">
                                 <input
                                     type="text"
@@ -507,18 +507,18 @@ export function AdvancedAIAssistant() {
                                     onChange={(e) => setInput(e.target.value)}
                                     onKeyDown={handleKeyDown}
                                     placeholder="Ask me anything..."
-                                    className="flex-1 rounded-xl border border-gray-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-all"
+                                    className="flex-1 rounded-xl border border-border px-4 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                                     disabled={loading || executing}
                                 />
                                 <Button
                                     onClick={sendMessageToAssistant}
                                     disabled={!input.trim() || loading || executing}
-                                    className="rounded-xl px-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                                    className="rounded-xl px-4 bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-700"
                                 >
                                     <Send className="h-4 w-4" />
                                 </Button>
                             </div>
-                            <p className="text-xs text-gray-500 mt-2 flex items-center gap-1">
+                            <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
                                 <Sparkles className="h-3 w-3" />
                                 Powered by AI • Context-aware • Can take actions
                             </p>

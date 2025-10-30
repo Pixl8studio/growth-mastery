@@ -112,7 +112,7 @@ export function ComplianceValidator({
             case "fail":
                 return <XCircle className="h-5 w-5 text-red-600" />;
             case "pending":
-                return <AlertCircle className="h-5 w-5 text-gray-400" />;
+                return <AlertCircle className="h-5 w-5 text-muted-foreground" />;
         }
     };
 
@@ -123,7 +123,7 @@ export function ComplianceValidator({
             case "warning":
                 return "text-orange-600 bg-orange-50 border-orange-200";
             case "info":
-                return "text-blue-600 bg-blue-50 border-blue-200";
+                return "text-primary bg-primary/5 border-primary/20";
         }
     };
 
@@ -154,25 +154,25 @@ export function ComplianceValidator({
                 {result && (
                     <>
                         <div className="space-y-2">
-                            <div className="flex items-center justify-between p-2 rounded bg-gray-50">
+                            <div className="flex items-center justify-between p-2 rounded bg-muted/50">
                                 <span className="text-sm font-medium">
                                     Compliance Check
                                 </span>
                                 {getCheckIcon(result.compliance_check)}
                             </div>
-                            <div className="flex items-center justify-between p-2 rounded bg-gray-50">
+                            <div className="flex items-center justify-between p-2 rounded bg-muted/50">
                                 <span className="text-sm font-medium">
                                     Accessibility Check
                                 </span>
                                 {getCheckIcon(result.accessibility_check)}
                             </div>
-                            <div className="flex items-center justify-between p-2 rounded bg-gray-50">
+                            <div className="flex items-center justify-between p-2 rounded bg-muted/50">
                                 <span className="text-sm font-medium">
                                     Brand Voice Check
                                 </span>
                                 {getCheckIcon(result.brand_voice_check)}
                             </div>
-                            <div className="flex items-center justify-between p-2 rounded bg-gray-50">
+                            <div className="flex items-center justify-between p-2 rounded bg-muted/50">
                                 <span className="text-sm font-medium">
                                     Character Limit Check
                                 </span>
@@ -218,7 +218,7 @@ export function ComplianceValidator({
                 )}
 
                 {!result && (
-                    <div className="text-center py-8 text-gray-500">
+                    <div className="text-center py-8 text-muted-foreground">
                         <Shield className="h-12 w-12 mx-auto mb-3 opacity-30" />
                         <p className="text-sm">
                             Click "Run Validation" to check content

@@ -199,22 +199,22 @@ export function GoogleDriveIntake({
         <Card className="p-6">
             <div className="space-y-4">
                 <div>
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-foreground">
                         Connect Google Drive
                     </h3>
-                    <p className="mt-1 text-sm text-gray-600">
+                    <p className="mt-1 text-sm text-muted-foreground">
                         Import documents directly from your Google Drive
                     </p>
                 </div>
 
                 {!accessToken ? (
                     <div className="space-y-4">
-                        <div className="flex flex-col items-center rounded-lg border border-gray-200 bg-gray-50 p-8 text-center">
-                            <Cloud className="mb-4 h-16 w-16 text-gray-400" />
-                            <h4 className="mb-2 font-semibold text-gray-900">
+                        <div className="flex flex-col items-center rounded-lg border border-border bg-muted/50 p-8 text-center">
+                            <Cloud className="mb-4 h-16 w-16 text-muted-foreground" />
+                            <h4 className="mb-2 font-semibold text-foreground">
                                 Connect Your Google Drive
                             </h4>
-                            <p className="mb-4 text-sm text-gray-600">
+                            <p className="mb-4 text-sm text-muted-foreground">
                                 You'll be prompted to grant access to your Google Drive
                                 files
                             </p>
@@ -222,7 +222,7 @@ export function GoogleDriveIntake({
                                 onClick={handleConnect}
                                 disabled={isConnecting}
                                 size="lg"
-                                className="bg-blue-600 hover:bg-blue-700"
+                                className="bg-primary hover:bg-primary/90"
                             >
                                 {isConnecting
                                     ? "Connecting..."
@@ -230,11 +230,11 @@ export function GoogleDriveIntake({
                             </Button>
                         </div>
 
-                        <div className="rounded-lg bg-blue-50 p-4">
-                            <h4 className="mb-2 text-sm font-semibold text-blue-900">
+                        <div className="rounded-lg bg-primary/5 p-4">
+                            <h4 className="mb-2 text-sm font-semibold text-primary">
                                 🔒 Privacy & Security
                             </h4>
-                            <ul className="space-y-1 text-sm text-blue-800">
+                            <ul className="space-y-1 text-sm text-primary">
                                 <li>
                                     • We only request read-only access to your files
                                 </li>
@@ -252,7 +252,7 @@ export function GoogleDriveIntake({
                         <div>
                             <label
                                 htmlFor="sessionName"
-                                className="block text-sm font-medium text-gray-700"
+                                className="block text-sm font-medium text-foreground"
                             >
                                 Session Name (optional)
                             </label>
@@ -262,18 +262,18 @@ export function GoogleDriveIntake({
                                 value={sessionName}
                                 onChange={(e) => setSessionName(e.target.value)}
                                 placeholder="e.g., Product Documentation"
-                                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500"
+                                className="mt-1 block w-full rounded-md border border-border px-3 py-2 shadow-sm focus:border-primary focus:outline-none focus:ring-primary"
                             />
                         </div>
 
                         {/* File List */}
                         <div>
-                            <label className="mb-2 block text-sm font-medium text-gray-700">
+                            <label className="mb-2 block text-sm font-medium text-foreground">
                                 Select Files to Import
                             </label>
-                            <div className="max-h-96 space-y-2 overflow-y-auto rounded-lg border border-gray-200 bg-gray-50 p-4">
+                            <div className="max-h-96 space-y-2 overflow-y-auto rounded-lg border border-border bg-muted/50 p-4">
                                 {files.length === 0 ? (
-                                    <p className="py-8 text-center text-sm text-gray-500">
+                                    <p className="py-8 text-center text-sm text-muted-foreground">
                                         No files found in your Google Drive
                                     </p>
                                 ) : (
@@ -281,20 +281,20 @@ export function GoogleDriveIntake({
                                         <div
                                             key={file.id}
                                             onClick={() => toggleFileSelection(file.id)}
-                                            className="flex cursor-pointer items-center justify-between rounded-lg bg-white p-3 transition-colors hover:bg-gray-50"
+                                            className="flex cursor-pointer items-center justify-between rounded-lg bg-card p-3 transition-colors hover:bg-muted/50"
                                         >
                                             <div className="flex items-center space-x-3">
                                                 {selectedFileIds.has(file.id) ? (
-                                                    <CheckSquare className="h-5 w-5 text-blue-600" />
+                                                    <CheckSquare className="h-5 w-5 text-primary" />
                                                 ) : (
-                                                    <Square className="h-5 w-5 text-gray-400" />
+                                                    <Square className="h-5 w-5 text-muted-foreground" />
                                                 )}
-                                                <FileText className="h-6 w-6 text-blue-600" />
+                                                <FileText className="h-6 w-6 text-primary" />
                                                 <div>
-                                                    <p className="text-sm font-medium text-gray-900">
+                                                    <p className="text-sm font-medium text-foreground">
                                                         {file.name}
                                                     </p>
-                                                    <p className="text-xs text-gray-500">
+                                                    <p className="text-xs text-muted-foreground">
                                                         {formatFileSize(file.size)}
                                                     </p>
                                                 </div>
@@ -304,7 +304,7 @@ export function GoogleDriveIntake({
                                 )}
                             </div>
                             {selectedFileIds.size > 0 && (
-                                <p className="mt-2 text-sm text-gray-600">
+                                <p className="mt-2 text-sm text-muted-foreground">
                                     {selectedFileIds.size}{" "}
                                     {selectedFileIds.size === 1 ? "file" : "files"}{" "}
                                     selected

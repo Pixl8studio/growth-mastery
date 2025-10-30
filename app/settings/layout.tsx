@@ -33,7 +33,7 @@ export default async function SettingsLayout({
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-muted/50">
             <Header />
 
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -45,7 +45,7 @@ export default async function SettingsLayout({
                                 <Link
                                     key={item.name}
                                     href={item.href}
-                                    className="flex items-center rounded-md px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                                    className="flex items-center rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-muted hover:text-foreground"
                                 >
                                     {item.name}
                                 </Link>
@@ -55,7 +55,7 @@ export default async function SettingsLayout({
 
                     {/* Main Content */}
                     <main className="lg:col-span-9">
-                        <div className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                        <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
                             {children}
                         </div>
                     </main>

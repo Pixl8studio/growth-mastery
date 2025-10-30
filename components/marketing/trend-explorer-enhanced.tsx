@@ -213,7 +213,7 @@ export function TrendExplorerEnhanced({
 
                 <div className="space-y-4">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                         <Input
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -257,7 +257,7 @@ export function TrendExplorerEnhanced({
                                 onChange={(e) =>
                                     setDateRange(e.target.value as "7" | "30" | "90")
                                 }
-                                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                className="w-full rounded-md border border-border px-3 py-2"
                             >
                                 <option value="7">Last 7 Days</option>
                                 <option value="30">Last 30 Days</option>
@@ -274,7 +274,7 @@ export function TrendExplorerEnhanced({
                                         e.target.value === "all" ? null : e.target.value
                                     )
                                 }
-                                className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                className="w-full rounded-md border border-border px-3 py-2"
                             >
                                 <option value="all">All Categories</option>
                                 <option value="business">Business</option>
@@ -336,7 +336,7 @@ export function TrendExplorerEnhanced({
                                                 Score: {trend.trend_score}
                                             </Badge>
                                         </div>
-                                        <p className="text-sm text-gray-600 mb-2">
+                                        <p className="text-sm text-muted-foreground mb-2">
                                             {trend.description}
                                         </p>
                                         <div className="flex flex-wrap gap-2">
@@ -371,7 +371,7 @@ export function TrendExplorerEnhanced({
                                             size="sm"
                                         >
                                             {isSaved ? (
-                                                <BookmarkCheck className="h-4 w-4 text-blue-500" />
+                                                <BookmarkCheck className="h-4 w-4 text-primary-foreground0" />
                                             ) : (
                                                 <Bookmark className="h-4 w-4" />
                                             )}
@@ -407,7 +407,7 @@ export function TrendExplorerEnhanced({
                             .map((trend) => (
                                 <div
                                     key={trend.id}
-                                    className="p-3 border rounded-lg bg-blue-50 border-blue-200"
+                                    className="p-3 border rounded-lg bg-primary/5 border-primary/20"
                                 >
                                     <div className="flex items-center justify-between mb-2">
                                         <h4 className="font-semibold text-sm">
@@ -415,12 +415,12 @@ export function TrendExplorerEnhanced({
                                         </h4>
                                         <button
                                             onClick={() => handleUnsaveTrend(trend.id)}
-                                            className="text-gray-400 hover:text-red-500"
+                                            className="text-muted-foreground hover:text-red-500"
                                         >
                                             <X className="h-4 w-4" />
                                         </button>
                                     </div>
-                                    <p className="text-xs text-gray-600 mb-2">
+                                    <p className="text-xs text-muted-foreground mb-2">
                                         {trend.description}
                                     </p>
                                     <Button
@@ -442,11 +442,11 @@ export function TrendExplorerEnhanced({
             {/* Empty State */}
             {trends.length === 0 && !loading && (
                 <Card className="p-12 text-center border-dashed">
-                    <TrendingUp className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                    <TrendingUp className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-foreground mb-2">
                         Discover Trending Topics
                     </h3>
-                    <p className="text-gray-600 text-sm mb-4">
+                    <p className="text-muted-foreground text-sm mb-4">
                         Search for trending topics to create timely, relevant content
                     </p>
                     <Button onClick={handleSearch}>
@@ -458,13 +458,13 @@ export function TrendExplorerEnhanced({
 
             {/* Section 2: Trend Details Panel (Sidebar) */}
             {selectedTrend && (
-                <div className="fixed inset-y-0 right-0 w-96 bg-white shadow-2xl border-l z-50 overflow-y-auto">
+                <div className="fixed inset-y-0 right-0 w-96 bg-card shadow-2xl border-l z-50 overflow-y-auto">
                     <div className="p-6">
                         <div className="flex items-center justify-between mb-6">
                             <h3 className="text-xl font-bold">Trend Details</h3>
                             <button
                                 onClick={() => setSelectedTrend(null)}
-                                className="text-gray-400 hover:text-gray-600"
+                                className="text-muted-foreground hover:text-muted-foreground"
                             >
                                 <X className="h-6 w-6" />
                             </button>
@@ -485,17 +485,17 @@ export function TrendExplorerEnhanced({
                                         {selectedTrend.category}
                                     </Badge>
                                 </div>
-                                <p className="text-sm text-gray-700">
+                                <p className="text-sm text-foreground">
                                     {selectedTrend.description}
                                 </p>
                             </div>
 
                             {/* Why It's Trending */}
-                            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                <h4 className="font-semibold text-blue-900 mb-2">
+                            <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                                <h4 className="font-semibold text-primary mb-2">
                                     Why It's Trending
                                 </h4>
-                                <p className="text-sm text-blue-800">
+                                <p className="text-sm text-primary">
                                     This topic is gaining traction across{" "}
                                     {selectedTrend.platforms.join(", ")} with high
                                     engagement rates. Perfect timing to join the
@@ -515,7 +515,7 @@ export function TrendExplorerEnhanced({
                                             (angle, index) => (
                                                 <div
                                                     key={index}
-                                                    className="p-3 bg-gray-50 rounded border text-sm"
+                                                    className="p-3 bg-muted/50 rounded border text-sm"
                                                 >
                                                     {angle}
                                                 </div>
@@ -536,7 +536,7 @@ export function TrendExplorerEnhanced({
                                             (post, index) => (
                                                 <div
                                                     key={index}
-                                                    className="p-3 bg-gray-50 rounded text-xs text-gray-700"
+                                                    className="p-3 bg-muted/50 rounded text-xs text-foreground"
                                                 >
                                                     {post}
                                                 </div>

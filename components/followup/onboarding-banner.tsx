@@ -82,13 +82,13 @@ export function OnboardingBanner({
     }
 
     return (
-        <Card className="relative overflow-hidden border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-blue-50">
+        <Card className="relative overflow-hidden border-2 border-purple-200 bg-gradient-to-r from-purple-50 to-primary/5">
             <div className="absolute top-0 right-0">
                 <Button
                     variant="ghost"
                     size="sm"
                     onClick={handleDismiss}
-                    className="m-2 hover:bg-white/50"
+                    className="m-2 hover:bg-card/50"
                 >
                     <X className="h-4 w-4" />
                 </Button>
@@ -96,10 +96,10 @@ export function OnboardingBanner({
 
             <div className="p-6 pr-12">
                 <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-gray-900">
+                    <h3 className="text-lg font-semibold text-foreground">
                         Welcome to AI Follow-Up Engine! 👋
                     </h3>
-                    <p className="text-sm text-gray-600 mt-1">
+                    <p className="text-sm text-muted-foreground mt-1">
                         Let's set up your automated follow-up system in three simple
                         steps
                     </p>
@@ -107,7 +107,7 @@ export function OnboardingBanner({
 
                 {/* Progress Bar */}
                 <div className="mb-6">
-                    <div className="flex items-center justify-between text-xs text-gray-600 mb-1">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
                         <span>Setup Progress</span>
                         <span>
                             {completedCount} of {steps.length} complete
@@ -115,7 +115,7 @@ export function OnboardingBanner({
                     </div>
                     <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
                         <div
-                            className="h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-500"
+                            className="h-full bg-gradient-to-r from-purple-500 to-primary/50 transition-all duration-500"
                             style={{
                                 width: `${(completedCount / steps.length) * 100}%`,
                             }}
@@ -132,7 +132,7 @@ export function OnboardingBanner({
                                 "p-4 rounded-lg border-2 transition-all",
                                 step.completed
                                     ? "bg-green-50 border-green-200"
-                                    : "bg-white border-gray-200"
+                                    : "bg-card border-border"
                             )}
                         >
                             <div className="flex items-start gap-3">
@@ -140,7 +140,7 @@ export function OnboardingBanner({
                                     {step.completed ? (
                                         <CheckCircle2 className="h-5 w-5 text-green-600" />
                                     ) : (
-                                        <Circle className="h-5 w-5 text-gray-400" />
+                                        <Circle className="h-5 w-5 text-muted-foreground" />
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -150,7 +150,7 @@ export function OnboardingBanner({
                                                 "text-xs font-medium px-2 py-0.5 rounded",
                                                 step.completed
                                                     ? "bg-green-100 text-green-700"
-                                                    : "bg-gray-100 text-gray-600"
+                                                    : "bg-muted text-muted-foreground"
                                             )}
                                         >
                                             Step {index + 1}
@@ -161,10 +161,10 @@ export function OnboardingBanner({
                                             </span>
                                         )}
                                     </div>
-                                    <h4 className="text-sm font-semibold text-gray-900 mb-1">
+                                    <h4 className="text-sm font-semibold text-foreground mb-1">
                                         {step.title}
                                     </h4>
-                                    <p className="text-xs text-gray-600 leading-relaxed">
+                                    <p className="text-xs text-muted-foreground leading-relaxed">
                                         {step.description}
                                     </p>
                                 </div>
@@ -175,8 +175,8 @@ export function OnboardingBanner({
 
                 {/* Next Step Hint */}
                 {!allComplete && (
-                    <div className="mt-4 p-3 bg-white rounded-lg border border-purple-200">
-                        <p className="text-sm text-gray-700">
+                    <div className="mt-4 p-3 bg-card rounded-lg border border-purple-200">
+                        <p className="text-sm text-foreground">
                             <strong className="text-purple-700">Next step:</strong>{" "}
                             {!steps[0].completed && (
                                 <>

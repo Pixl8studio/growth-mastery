@@ -337,7 +337,7 @@ export default function Step4Page({
     if (!projectId) {
         return (
             <div className="flex h-screen items-center justify-center">
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-muted-foreground">Loading...</div>
             </div>
         );
     }
@@ -371,14 +371,14 @@ export default function Step4Page({
                     <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-pink-50 p-6">
                         <div className="mb-6 space-y-6">
                             <div className="mx-auto max-w-md">
-                                <label className="mb-2 block text-sm font-medium text-gray-700">
+                                <label className="mb-2 block text-sm font-medium text-foreground">
                                     Select Deck Structure
                                 </label>
                                 <select
                                     value={selectedDeckId}
                                     onChange={(e) => setSelectedDeckId(e.target.value)}
                                     disabled={deckStructures.length === 0}
-                                    className="w-full rounded-lg border border-gray-300 px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:bg-gray-100"
+                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:bg-muted"
                                 >
                                     {deckStructures.length === 0 ? (
                                         <option value="">
@@ -407,7 +407,7 @@ export default function Step4Page({
                                 )}
                             </div>
 
-                            <div className="-mx-6 px-6 py-6 bg-white/50 rounded-lg">
+                            <div className="-mx-6 px-6 py-6 bg-card/50 rounded-lg">
                                 <GammaThemeSelector
                                     selectedTheme={settings.theme}
                                     onThemeChange={(theme) =>
@@ -424,7 +424,7 @@ export default function Step4Page({
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
                                     selectedDeckId
                                         ? "bg-purple-600 text-white hover:bg-purple-700"
-                                        : "cursor-not-allowed bg-gray-300 text-gray-500"
+                                        : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                 }`}
                             >
                                 <Rocket className="h-6 w-6" />
@@ -433,7 +433,7 @@ export default function Step4Page({
                                     : "Select Deck Structure First"}
                             </button>
 
-                            <div className="mt-4 space-y-1 text-sm text-gray-500">
+                            <div className="mt-4 space-y-1 text-sm text-muted-foreground">
                                 <p>⚡ Generation time: ~2-3 minutes</p>
                                 <p>🎨 Creates professionally designed slides</p>
                             </div>
@@ -476,13 +476,13 @@ export default function Step4Page({
                 )}
 
                 {/* Generated Gamma Decks */}
-                <div className="rounded-lg border border-gray-200 bg-white shadow-sm">
-                    <div className="border-b border-gray-200 p-6">
+                <div className="rounded-lg border border-border bg-card shadow-soft">
+                    <div className="border-b border-border p-6">
                         <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-semibold text-gray-900">
+                            <h3 className="text-xl font-semibold text-foreground">
                                 Your Presentations
                             </h3>
-                            <span className="text-sm text-gray-500">
+                            <span className="text-sm text-muted-foreground">
                                 {gammaDecks.length} created
                             </span>
                         </div>
@@ -490,7 +490,7 @@ export default function Step4Page({
 
                     <div className="p-6">
                         {gammaDecks.length === 0 ? (
-                            <div className="py-12 text-center text-gray-500">
+                            <div className="py-12 text-center text-muted-foreground">
                                 <Presentation className="mx-auto mb-4 h-12 w-12 opacity-50" />
                                 <p>
                                     No Gamma presentations yet. Generate your first one
@@ -520,7 +520,7 @@ export default function Step4Page({
                                                 );
                                             }
                                         }}
-                                        className={`rounded-lg border border-gray-200 bg-white p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md ${
+                                        className={`rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md ${
                                             deck.deck_url ? "cursor-pointer" : ""
                                         }`}
                                     >
@@ -570,14 +570,14 @@ export default function Step4Page({
                                                                 onClick={() =>
                                                                     setEditingId(null)
                                                                 }
-                                                                className="rounded bg-gray-300 px-2 py-1 text-sm text-gray-700 hover:bg-gray-400"
+                                                                className="rounded bg-gray-300 px-2 py-1 text-sm text-foreground hover:bg-gray-400"
                                                             >
                                                                 <X className="h-4 w-4" />
                                                             </button>
                                                         </div>
                                                     ) : (
                                                         <>
-                                                            <h4 className="text-lg font-semibold text-gray-900">
+                                                            <h4 className="text-lg font-semibold text-foreground">
                                                                 {deck.title}
                                                             </h4>
                                                             <button
@@ -597,7 +597,7 @@ export default function Step4Page({
                                                     )}
                                                 </div>
 
-                                                <div className="mb-3 flex items-center gap-4 text-sm text-gray-600">
+                                                <div className="mb-3 flex items-center gap-4 text-sm text-muted-foreground">
                                                     <span
                                                         className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
                                                             deck.status === "completed"
@@ -642,7 +642,7 @@ export default function Step4Page({
                                                                 e.stopPropagation();
                                                                 handleExportPDF(deck);
                                                             }}
-                                                            className="rounded p-2 text-blue-600 hover:bg-blue-50"
+                                                            className="rounded p-2 text-primary hover:bg-primary/5"
                                                             title="Export to PDF"
                                                         >
                                                             <FileDown className="h-4 w-4" />
@@ -674,7 +674,7 @@ export default function Step4Page({
                                                     onClick={() =>
                                                         handleDeleteDeck(deck.id)
                                                     }
-                                                    className="rounded p-2 text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                    className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
                                                     title="Delete deck"
                                                 >
                                                     <Trash2 className="h-4 w-4" />

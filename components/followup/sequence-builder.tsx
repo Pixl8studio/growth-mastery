@@ -224,10 +224,10 @@ export function SequenceBuilder({
             hot: "bg-red-100 text-red-800",
             engaged: "bg-orange-100 text-orange-800",
             sampler: "bg-yellow-100 text-yellow-800",
-            skimmer: "bg-blue-100 text-blue-800",
-            no_show: "bg-gray-100 text-gray-800",
+            skimmer: "bg-primary/10 text-primary",
+            no_show: "bg-muted text-foreground",
         };
-        return colors[segment] || "bg-gray-100 text-gray-800";
+        return colors[segment] || "bg-muted text-foreground";
     };
 
     return (
@@ -236,7 +236,7 @@ export function SequenceBuilder({
             <div className="flex items-center justify-between">
                 <div>
                     <h3 className="text-lg font-semibold">Message Sequences</h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                         Create sequences, then generate AI-powered messages for each one
                     </p>
                 </div>
@@ -360,7 +360,7 @@ export function SequenceBuilder({
                                         });
                                     }}
                                 />
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-muted-foreground mt-1">
                                     Min: 1 | Recommended: 3-8 for best flow
                                 </p>
                             </div>
@@ -451,7 +451,7 @@ export function SequenceBuilder({
 
             {/* Create Form */}
             {showCreateForm && (
-                <Card className="p-6 border-2 border-blue-500">
+                <Card className="p-6 border-2 border-primary">
                     <h4 className="font-semibold mb-4">Create New Sequence</h4>
                     <div className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
@@ -558,7 +558,7 @@ export function SequenceBuilder({
                                         });
                                     }}
                                 />
-                                <p className="text-xs text-gray-500 mt-1">
+                                <p className="text-xs text-muted-foreground mt-1">
                                     Min: 1 | Recommended: 3-8 for best flow
                                 </p>
                             </div>
@@ -654,9 +654,9 @@ export function SequenceBuilder({
             <div className="space-y-4">
                 {sequences.length === 0 ? (
                     <Card className="p-12 text-center">
-                        <Mail className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <Mail className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                         <h4 className="text-lg font-semibold mb-2">No Sequences Yet</h4>
-                        <p className="text-gray-600 mb-4">
+                        <p className="text-muted-foreground mb-4">
                             Create your first follow-up sequence to start automating
                             engagement
                         </p>
@@ -695,7 +695,7 @@ export function SequenceBuilder({
                                         )}
                                     </div>
                                     {sequence.description && (
-                                        <p className="text-sm text-gray-600">
+                                        <p className="text-sm text-muted-foreground">
                                             {sequence.description}
                                         </p>
                                     )}
@@ -813,8 +813,8 @@ export function SequenceBuilder({
                             {/* Sequence Details */}
                             <div className="grid grid-cols-4 gap-4 text-sm mt-4">
                                 <div className="flex items-center gap-2">
-                                    <MessageSquare className="h-4 w-4 text-gray-400" />
-                                    <span className="text-gray-600">
+                                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-muted-foreground">
                                         {sequence.message_count || 0} of{" "}
                                         {sequence.total_messages} messages
                                         {sequence.message_count !==
@@ -826,14 +826,14 @@ export function SequenceBuilder({
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Clock className="h-4 w-4 text-gray-400" />
-                                    <span className="text-gray-600">
+                                    <Clock className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-muted-foreground">
                                         {sequence.deadline_hours}h duration
                                     </span>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Users className="h-4 w-4 text-gray-400" />
-                                    <span className="text-gray-600">
+                                    <Users className="h-4 w-4 text-muted-foreground" />
+                                    <span className="text-muted-foreground">
                                         {sequence.target_segments.length} segments
                                     </span>
                                 </div>
@@ -864,7 +864,9 @@ export function SequenceBuilder({
 
                             {/* Target Segments */}
                             <div className="flex gap-2 mt-4">
-                                <span className="text-sm text-gray-600">Targets:</span>
+                                <span className="text-sm text-muted-foreground">
+                                    Targets:
+                                </span>
                                 {sequence.target_segments.map((segment) => (
                                     <Badge
                                         key={segment}
@@ -877,18 +879,18 @@ export function SequenceBuilder({
 
                             {/* Generation Progress */}
                             {generatingMessagesFor === sequence.id && (
-                                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                <div className="mt-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="text-sm font-medium text-blue-900">
+                                        <span className="text-sm font-medium text-primary">
                                             {generationStatus}
                                         </span>
-                                        <span className="text-sm text-blue-600">
+                                        <span className="text-sm text-primary">
                                             {generationProgress}%
                                         </span>
                                     </div>
-                                    <div className="w-full bg-blue-100 rounded-full h-2">
+                                    <div className="w-full bg-primary/10 rounded-full h-2">
                                         <div
-                                            className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                            className="bg-primary h-2 rounded-full transition-all duration-300"
                                             style={{ width: `${generationProgress}%` }}
                                         />
                                     </div>
@@ -898,7 +900,7 @@ export function SequenceBuilder({
                             {/* Timeline Visualization */}
                             <div className="mt-6 pt-4 border-t">
                                 <div className="flex items-center gap-2 mb-3">
-                                    <Clock className="h-4 w-4 text-gray-400" />
+                                    <Clock className="h-4 w-4 text-muted-foreground" />
                                     <span className="text-sm font-medium">
                                         Timeline
                                     </span>
@@ -913,10 +915,10 @@ export function SequenceBuilder({
                                                 key={i}
                                                 className="flex flex-col items-center"
                                             >
-                                                <div className="w-6 h-6 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-medium mb-2">
+                                                <div className="w-6 h-6 rounded-full bg-primary/50 text-white flex items-center justify-center text-xs font-medium mb-2">
                                                     {i + 1}
                                                 </div>
-                                                <span className="text-xs text-gray-500">
+                                                <span className="text-xs text-muted-foreground">
                                                     +{i * 12}h
                                                 </span>
                                             </div>

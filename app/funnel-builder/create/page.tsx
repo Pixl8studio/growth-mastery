@@ -99,13 +99,13 @@ export default function CreateFunnelPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-muted/50">
             {/* Header */}
-            <header className="border-b bg-white">
+            <header className="border-b bg-card">
                 <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
                     <Link
                         href="/funnel-builder"
-                        className="inline-flex items-center text-sm font-medium text-gray-600 hover:text-gray-900"
+                        className="inline-flex items-center text-sm font-medium text-muted-foreground hover:text-foreground"
                     >
                         <ArrowLeft className="mr-2 h-4 w-4" />
                         Back to Funnels
@@ -116,10 +116,10 @@ export default function CreateFunnelPage() {
             {/* Main Content */}
             <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
                 <div className="mb-8 text-center">
-                    <h1 className="mb-2 text-3xl font-bold text-gray-900">
+                    <h1 className="mb-2 text-3xl font-bold text-foreground">
                         Create New Funnel
                     </h1>
-                    <p className="text-gray-600">
+                    <p className="text-muted-foreground">
                         Give your funnel a name and let's get started
                     </p>
                 </div>
@@ -151,7 +151,7 @@ export default function CreateFunnelPage() {
                                     className="mt-1"
                                     autoFocus
                                 />
-                                <p className="mt-1 text-xs text-gray-500">
+                                <p className="mt-1 text-xs text-muted-foreground">
                                     Choose a name that describes your offer
                                 </p>
                             </div>
@@ -180,32 +180,30 @@ export default function CreateFunnelPage() {
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ol className="space-y-2 text-sm text-gray-700">
+                        <ol className="space-y-2 text-sm text-foreground">
                             <li className="flex items-start">
-                                <span className="mr-2 font-bold text-blue-600">1.</span>
+                                <span className="mr-2 font-bold text-primary">1.</span>
                                 AI Intake Call - Have a conversation about your business
                             </li>
                             <li className="flex items-start">
-                                <span className="mr-2 font-bold text-blue-600">2.</span>
+                                <span className="mr-2 font-bold text-primary">2.</span>
                                 Define Offer - AI analyzes intake to create optimized
                                 offers with 7 P's framework
                             </li>
                             <li className="flex items-start">
-                                <span className="mr-2 font-bold text-blue-600">3.</span>
+                                <span className="mr-2 font-bold text-primary">3.</span>
                                 Create 55-slide presentation structure
                             </li>
                             <li className="flex items-start">
-                                <span className="mr-2 font-bold text-blue-600">4.</span>
+                                <span className="mr-2 font-bold text-primary">4.</span>
                                 Generate beautiful Gamma presentation
                             </li>
                             <li className="flex items-start">
-                                <span className="mr-2 font-bold text-blue-600">5.</span>
+                                <span className="mr-2 font-bold text-primary">5.</span>
                                 Create enrollment page with AI-written sales copy
                             </li>
                             <li className="flex items-start">
-                                <span className="mr-2 font-bold text-blue-600">
-                                    ...
-                                </span>
+                                <span className="mr-2 font-bold text-primary">...</span>
                                 And 6 more steps to complete your funnel!
                             </li>
                         </ol>

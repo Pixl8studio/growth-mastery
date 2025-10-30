@@ -144,14 +144,14 @@ export function ExperimentCreatorModal({
                                 <h2 className="text-2xl font-bold">
                                     Create A/B Test Experiment
                                 </h2>
-                                <p className="text-sm text-gray-600">
+                                <p className="text-sm text-muted-foreground">
                                     Test different variations to optimize performance
                                 </p>
                             </div>
                         </div>
                         <button
                             onClick={onClose}
-                            className="text-gray-400 hover:text-gray-600"
+                            className="text-muted-foreground hover:text-muted-foreground"
                         >
                             <X className="h-6 w-6" />
                         </button>
@@ -179,7 +179,7 @@ export function ExperimentCreatorModal({
                                 <select
                                     value={experimentType}
                                     onChange={(e) => setExperimentType(e.target.value)}
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                    className="w-full rounded-md border border-border px-3 py-2"
                                 >
                                     <option value="hook">
                                         Hook Test (Different Opening Lines)
@@ -207,7 +207,7 @@ export function ExperimentCreatorModal({
                                 <select
                                     value={baseVariantId}
                                     onChange={(e) => setBaseVariantId(e.target.value)}
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                    className="w-full rounded-md border border-border px-3 py-2"
                                 >
                                     <option value="">Select a variant...</option>
                                     {variants.map((variant) => (
@@ -224,7 +224,7 @@ export function ExperimentCreatorModal({
                                     <Label className="font-medium">
                                         Auto-Generate Variant B
                                     </Label>
-                                    <p className="text-xs text-gray-600">
+                                    <p className="text-xs text-muted-foreground">
                                         AI creates alternative based on experiment type
                                     </p>
                                 </div>
@@ -260,7 +260,7 @@ export function ExperimentCreatorModal({
                             <div>
                                 <div className="flex justify-between mb-2">
                                     <Label>Sample Size (Posts per Variant)</Label>
-                                    <span className="text-sm text-gray-600">
+                                    <span className="text-sm text-muted-foreground">
                                         {sampleSize}
                                     </span>
                                 </div>
@@ -276,7 +276,7 @@ export function ExperimentCreatorModal({
                             <div>
                                 <div className="flex justify-between mb-2">
                                     <Label>Distribution Split (A vs B)</Label>
-                                    <span className="text-sm text-gray-600">
+                                    <span className="text-sm text-muted-foreground">
                                         {distributionSplit}% / {100 - distributionSplit}
                                         %
                                     </span>
@@ -297,7 +297,7 @@ export function ExperimentCreatorModal({
                                 <select
                                     value={successMetric}
                                     onChange={(e) => setSuccessMetric(e.target.value)}
-                                    className="w-full rounded-md border border-gray-300 px-3 py-2"
+                                    className="w-full rounded-md border border-border px-3 py-2"
                                 >
                                     <option value="engagement">
                                         Engagement Rate (Likes, Comments, Shares)
@@ -313,7 +313,7 @@ export function ExperimentCreatorModal({
                             <div>
                                 <div className="flex justify-between mb-2">
                                     <Label>Minimum Confidence Threshold</Label>
-                                    <span className="text-sm text-gray-600">
+                                    <span className="text-sm text-muted-foreground">
                                         {minConfidence}%
                                     </span>
                                 </div>
@@ -324,7 +324,7 @@ export function ExperimentCreatorModal({
                                     max={99}
                                     step={1}
                                 />
-                                <p className="text-xs text-gray-600 mt-1">
+                                <p className="text-xs text-muted-foreground mt-1">
                                     Winner declared only when this confidence level is
                                     reached
                                 </p>
@@ -350,7 +350,7 @@ export function ExperimentCreatorModal({
                                     <Label className="font-medium">
                                         Auto-Declare Winner
                                     </Label>
-                                    <p className="text-xs text-gray-600">
+                                    <p className="text-xs text-muted-foreground">
                                         Automatically declare winner when confidence is
                                         reached
                                     </p>
@@ -394,8 +394,8 @@ export function ExperimentCreatorModal({
                                             onClick={() => togglePlatform(platform.id)}
                                             className={`p-3 border rounded-lg cursor-pointer text-center transition-colors ${
                                                 selectedPlatforms.includes(platform.id)
-                                                    ? "border-blue-500 bg-blue-50"
-                                                    : "border-gray-200 hover:border-gray-300"
+                                                    ? "border-primary bg-primary/5"
+                                                    : "border-border hover:border-border"
                                             }`}
                                         >
                                             <div className="text-2xl mb-1">

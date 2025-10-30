@@ -209,7 +209,7 @@ export default function IntegrationsSettingsPage() {
     if (loading) {
         return (
             <div className="flex items-center justify-center py-12">
-                <div className="text-gray-500">Loading...</div>
+                <div className="text-muted-foreground">Loading...</div>
             </div>
         );
     }
@@ -217,8 +217,8 @@ export default function IntegrationsSettingsPage() {
     return (
         <div>
             <div className="mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">Integrations</h2>
-                <p className="mt-1 text-sm text-gray-600">
+                <h2 className="text-2xl font-bold text-foreground">Integrations</h2>
+                <p className="mt-1 text-sm text-muted-foreground">
                     Connect your CRM and other services to automatically sync leads
                 </p>
             </div>
@@ -237,13 +237,13 @@ export default function IntegrationsSettingsPage() {
 
             <form onSubmit={handleSave} className="space-y-6">
                 {/* Webhook Configuration */}
-                <div className="rounded-lg border border-gray-200 p-6">
+                <div className="rounded-lg border border-border p-6">
                     <div className="mb-4 flex items-center justify-between">
                         <div>
-                            <h3 className="text-lg font-semibold text-gray-900">
+                            <h3 className="text-lg font-semibold text-foreground">
                                 CRM Webhook
                             </h3>
-                            <p className="text-sm text-gray-600">
+                            <p className="text-sm text-muted-foreground">
                                 Automatically send lead data to your CRM when users
                                 register
                             </p>
@@ -252,11 +252,11 @@ export default function IntegrationsSettingsPage() {
                             type="button"
                             onClick={() => setWebhookEnabled(!webhookEnabled)}
                             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                                webhookEnabled ? "bg-blue-600" : "bg-gray-200"
+                                webhookEnabled ? "bg-primary" : "bg-gray-200"
                             }`}
                         >
                             <span
-                                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                                className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${
                                     webhookEnabled ? "translate-x-6" : "translate-x-1"
                                 }`}
                             />
@@ -268,7 +268,7 @@ export default function IntegrationsSettingsPage() {
                             <div>
                                 <label
                                     htmlFor="webhookUrl"
-                                    className="block text-sm font-medium text-gray-700"
+                                    className="block text-sm font-medium text-foreground"
                                 >
                                     Webhook URL
                                 </label>
@@ -277,22 +277,22 @@ export default function IntegrationsSettingsPage() {
                                     type="url"
                                     value={webhookUrl}
                                     onChange={(e) => setWebhookUrl(e.target.value)}
-                                    className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    className="mt-1 block w-full rounded-md border border-border bg-card px-3 py-2 text-foreground shadow-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                                     placeholder="https://your-crm.com/webhooks/genie-ai"
                                     required={webhookEnabled}
                                 />
-                                <p className="mt-1 text-xs text-gray-500">
+                                <p className="mt-1 text-xs text-muted-foreground">
                                     We'll send a POST request to this URL when a contact
                                     registers through your funnel pages
                                 </p>
                             </div>
 
                             {/* Popular CRM Setup Instructions */}
-                            <div className="rounded-md bg-blue-50 p-4">
-                                <h4 className="mb-2 text-sm font-semibold text-blue-900">
+                            <div className="rounded-md bg-primary/5 p-4">
+                                <h4 className="mb-2 text-sm font-semibold text-primary">
                                     Popular CRM Setup
                                 </h4>
-                                <div className="space-y-2 text-xs text-blue-800">
+                                <div className="space-y-2 text-xs text-primary">
                                     <div>
                                         <strong>GoHighLevel:</strong> Create a custom
                                         webhook in Automation → Workflows, then paste
@@ -312,7 +312,7 @@ export default function IntegrationsSettingsPage() {
                             <div>
                                 <label
                                     htmlFor="webhookSecret"
-                                    className="block text-sm font-medium text-gray-700"
+                                    className="block text-sm font-medium text-foreground"
                                 >
                                     Webhook Secret (Optional)
                                 </label>
@@ -321,10 +321,10 @@ export default function IntegrationsSettingsPage() {
                                     type="text"
                                     value={webhookSecret}
                                     onChange={(e) => setWebhookSecret(e.target.value)}
-                                    className="mt-1 block w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-gray-900 shadow-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                    className="mt-1 block w-full rounded-md border border-border bg-card px-3 py-2 text-foreground shadow-sm placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                                     placeholder="your-webhook-secret"
                                 />
-                                <p className="mt-1 text-xs text-gray-500">
+                                <p className="mt-1 text-xs text-muted-foreground">
                                     Used to sign requests with HMAC for verification
                                 </p>
                             </div>
@@ -334,22 +334,22 @@ export default function IntegrationsSettingsPage() {
                                     type="button"
                                     onClick={handleTestWebhook}
                                     disabled={testing || !webhookUrl}
-                                    className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     {testing ? "Sending test..." : "Send test webhook"}
                                 </button>
                             </div>
 
                             {/* Webhook Payload Example */}
-                            <div className="mt-4 rounded-md bg-gray-50 p-4">
-                                <h4 className="mb-2 text-sm font-semibold text-gray-900">
+                            <div className="mt-4 rounded-md bg-muted/50 p-4">
+                                <h4 className="mb-2 text-sm font-semibold text-foreground">
                                     Webhook Payload Example
                                 </h4>
-                                <p className="mb-3 text-xs text-gray-600">
+                                <p className="mb-3 text-xs text-muted-foreground">
                                     This is what your CRM will receive when someone
                                     registers:
                                 </p>
-                                <pre className="overflow-x-auto text-xs text-gray-700">
+                                <pre className="overflow-x-auto text-xs text-foreground">
                                     {JSON.stringify(
                                         {
                                             event: "registration.submitted",
@@ -384,7 +384,7 @@ export default function IntegrationsSettingsPage() {
                                         2
                                     )}
                                 </pre>
-                                <p className="mt-3 text-xs text-gray-600">
+                                <p className="mt-3 text-xs text-muted-foreground">
                                     Headers:{" "}
                                     <code className="rounded bg-gray-200 px-1">
                                         Content-Type: application/json
@@ -408,14 +408,14 @@ export default function IntegrationsSettingsPage() {
                     <button
                         type="button"
                         onClick={loadIntegrations}
-                        className="rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                        className="rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
                     >
                         Cancel
                     </button>
                     <button
                         type="submit"
                         disabled={saving}
-                        className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary/50 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {saving ? "Saving..." : "Save changes"}
                     </button>

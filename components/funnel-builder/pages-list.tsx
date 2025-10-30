@@ -136,13 +136,13 @@ export function PagesList({ userId, username }: PagesListProps) {
     const getPageTypeColor = (type: string) => {
         switch (type) {
             case "registration":
-                return "bg-blue-100 text-blue-800";
+                return "bg-primary/10 text-primary";
             case "watch":
                 return "bg-purple-100 text-purple-800";
             case "enrollment":
                 return "bg-green-100 text-green-800";
             default:
-                return "bg-gray-100 text-gray-800";
+                return "bg-muted text-foreground";
         }
     };
 
@@ -201,7 +201,7 @@ export function PagesList({ userId, username }: PagesListProps) {
 
     if (isLoading) {
         return (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-muted-foreground">
                 <p>Loading pages...</p>
             </div>
         );
@@ -209,7 +209,7 @@ export function PagesList({ userId, username }: PagesListProps) {
 
     if (pages.length === 0) {
         return (
-            <div className="text-center py-12 text-gray-500">
+            <div className="text-center py-12 text-muted-foreground">
                 <p>No pages created yet. Create your first funnel to get started!</p>
             </div>
         );
@@ -233,11 +233,11 @@ export function PagesList({ userId, username }: PagesListProps) {
                                         >
                                             {getPageTypeLabel(page.type)}
                                         </Badge>
-                                        <h4 className="text-lg font-semibold text-gray-900">
+                                        <h4 className="text-lg font-semibold text-foreground">
                                             {page.headline}
                                         </h4>
                                     </div>
-                                    <p className="text-sm text-gray-600">
+                                    <p className="text-sm text-muted-foreground">
                                         Project: {page.projectName}
                                     </p>
                                 </div>
@@ -245,7 +245,7 @@ export function PagesList({ userId, username }: PagesListProps) {
 
                             <div className="space-y-3">
                                 <div>
-                                    <label className="mb-1 block text-xs font-medium text-gray-700">
+                                    <label className="mb-1 block text-xs font-medium text-foreground">
                                         Slug
                                     </label>
                                     <SlugEditor
@@ -261,11 +261,11 @@ export function PagesList({ userId, username }: PagesListProps) {
 
                                 {page.vanitySlug && (
                                     <div>
-                                        <label className="mb-1 block text-xs font-medium text-gray-700">
+                                        <label className="mb-1 block text-xs font-medium text-foreground">
                                             Public URL
                                         </label>
-                                        <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-                                            <code className="flex-1 text-sm text-gray-700 truncate">
+                                        <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2">
+                                            <code className="flex-1 text-sm text-foreground truncate">
                                                 {window.location.origin}/{username}/
                                                 {page.vanitySlug}
                                             </code>
@@ -292,7 +292,7 @@ export function PagesList({ userId, username }: PagesListProps) {
                                 )}
                             </div>
 
-                            <div className="flex items-center justify-between pt-2 border-t border-gray-200">
+                            <div className="flex items-center justify-between pt-2 border-t border-border">
                                 <div className="flex items-center gap-4">
                                     <PublishToggle
                                         page={{
@@ -307,7 +307,7 @@ export function PagesList({ userId, username }: PagesListProps) {
                                             updated_at: page.updatedAt,
                                         }}
                                     />
-                                    <span className="text-sm text-gray-500">
+                                    <span className="text-sm text-muted-foreground">
                                         Updated {formatDate(page.updatedAt)}
                                     </span>
                                 </div>

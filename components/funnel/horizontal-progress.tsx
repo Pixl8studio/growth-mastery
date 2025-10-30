@@ -55,14 +55,14 @@ export function HorizontalProgress({
             {/* Progress Bar */}
             <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                    <span className="font-medium text-gray-700">Funnel Progress</span>
-                    <span className="font-bold text-blue-600">
+                    <span className="font-medium text-foreground">Funnel Progress</span>
+                    <span className="font-bold text-primary">
                         {completionPercentage}%
                     </span>
                 </div>
                 <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
                     <div
-                        className="h-full rounded-full bg-gradient-to-r from-blue-500 to-blue-600 transition-all duration-500"
+                        className="h-full rounded-full bg-gradient-to-r from-primary/50 to-primary transition-all duration-500"
                         style={{ width: `${completionPercentage}%` }}
                     />
                 </div>
@@ -96,10 +96,10 @@ export function HorizontalProgress({
                                             "border-green-500 bg-green-500 shadow-md":
                                                 isCompleted,
                                             // Active (current step)
-                                            "border-blue-500 bg-blue-500 shadow-lg ring-4 ring-blue-100":
+                                            "border-primary bg-primary/50 shadow-lg ring-4 ring-primary/10":
                                                 isActive,
                                             // Future/Incomplete
-                                            "border-gray-300 bg-white hover:border-blue-400 hover:bg-blue-50":
+                                            "border-border bg-card hover:border-primary/40 hover:bg-primary/5":
                                                 !isCompleted && !isActive,
                                         }
                                     )}
@@ -110,7 +110,7 @@ export function HorizontalProgress({
                                         <span
                                             className={cn("text-sm font-bold", {
                                                 "text-white": isActive,
-                                                "text-gray-500 group-hover:text-blue-600":
+                                                "text-muted-foreground group-hover:text-primary":
                                                     !isActive,
                                             })}
                                         >
@@ -126,8 +126,8 @@ export function HorizontalProgress({
                                             "text-xs font-medium leading-tight",
                                             {
                                                 "text-green-700": isCompleted,
-                                                "text-blue-700": isActive,
-                                                "text-gray-600 group-hover:text-blue-600":
+                                                "text-primary": isActive,
+                                                "text-muted-foreground group-hover:text-primary":
                                                     !isCompleted && !isActive,
                                             }
                                         )}
@@ -142,17 +142,17 @@ export function HorizontalProgress({
             </div>
 
             {/* Step Count Summary */}
-            <div className="flex items-center justify-center gap-6 text-sm text-gray-600">
+            <div className="flex items-center justify-center gap-6 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                     <div className="h-3 w-3 rounded-full bg-green-500" />
                     <span>{completedSteps.length} completed</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full border-2 border-blue-500 bg-blue-500" />
+                    <div className="h-3 w-3 rounded-full border-2 border-primary bg-primary/50" />
                     <span>1 active</span>
                 </div>
                 <div className="flex items-center gap-2">
-                    <div className="h-3 w-3 rounded-full border-2 border-gray-300 bg-white" />
+                    <div className="h-3 w-3 rounded-full border-2 border-border bg-card" />
                     <span>{STEPS.length - completedSteps.length - 1} remaining</span>
                 </div>
             </div>

@@ -11,13 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
 import { logger } from "@/lib/client-logger";
-import {
-    FileText,
-    Trash2,
-    Copy,
-    Star,
-    Search,
-} from "lucide-react";
+import { FileText, Trash2, Copy, Star, Search } from "lucide-react";
 
 interface BriefTemplate {
     id: string;
@@ -367,4 +361,3 @@ function TemplateCard({
         </Card>
     );
 }
-

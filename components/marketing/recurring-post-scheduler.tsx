@@ -144,14 +144,22 @@ export function RecurringPostScheduler({
                                 label: "Biweekly",
                                 desc: "Every 2 weeks",
                             },
-                            { value: "monthly", label: "Monthly", desc: "Once per month" },
+                            {
+                                value: "monthly",
+                                label: "Monthly",
+                                desc: "Once per month",
+                            },
                         ].map((freq) => (
                             <Button
                                 key={freq.value}
                                 onClick={() =>
-                                    setFrequency(freq.value as "weekly" | "biweekly" | "monthly")
+                                    setFrequency(
+                                        freq.value as "weekly" | "biweekly" | "monthly"
+                                    )
                                 }
-                                variant={frequency === freq.value ? "default" : "outline"}
+                                variant={
+                                    frequency === freq.value ? "default" : "outline"
+                                }
                                 className="flex flex-col h-auto py-4"
                             >
                                 <div className="font-semibold">{freq.label}</div>
@@ -313,4 +321,3 @@ export function RecurringPostScheduler({
         </Card>
     );
 }
-

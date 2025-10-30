@@ -277,14 +277,17 @@ export function MarketingSettingsEnhanced({
                                     className="flex items-center justify-between p-4 border rounded-lg"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <span className="text-2xl">{platform.icon}</span>
+                                        <span className="text-2xl">
+                                            {platform.icon}
+                                        </span>
                                         <div>
                                             <div className="font-medium">
                                                 {platform.name}
                                             </div>
                                             {connected && connection && (
                                                 <div className="text-sm text-gray-600">
-                                                    Connected as {connection.account_name}
+                                                    Connected as{" "}
+                                                    {connection.account_name}
                                                     {connection.last_sync_at && (
                                                         <span className="text-xs ml-2">
                                                             • Last sync:{" "}
@@ -326,7 +329,9 @@ export function MarketingSettingsEnhanced({
                                             <>
                                                 <XCircle className="h-5 w-5 text-gray-400" />
                                                 <Button
-                                                    onClick={() => handleConnect(platform.id)}
+                                                    onClick={() =>
+                                                        handleConnect(platform.id)
+                                                    }
                                                     size="sm"
                                                 >
                                                     Connect
@@ -381,7 +386,8 @@ export function MarketingSettingsEnhanced({
                         <div>
                             <Label className="font-medium">Auto-Publish</Label>
                             <p className="text-sm text-gray-600">
-                                Automatically publish scheduled posts without manual approval
+                                Automatically publish scheduled posts without manual
+                                approval
                             </p>
                         </div>
                         <Switch
@@ -466,7 +472,9 @@ export function MarketingSettingsEnhanced({
                     </div>
 
                     <div>
-                        <Label className="mb-2 block">Financial Claims Disclaimer</Label>
+                        <Label className="mb-2 block">
+                            Financial Claims Disclaimer
+                        </Label>
                         <Textarea
                             value={financialDisclaimer}
                             onChange={(e) => setFinancialDisclaimer(e.target.value)}
@@ -515,7 +523,9 @@ export function MarketingSettingsEnhanced({
                             onChange={(e) => setCopyrightPolicy(e.target.value)}
                             className="w-full rounded-md border border-gray-300 px-3 py-2"
                         >
-                            <option value="strict">Strict (Original Content Only)</option>
+                            <option value="strict">
+                                Strict (Original Content Only)
+                            </option>
                             <option value="moderate">
                                 Moderate (With Attribution)
                             </option>
@@ -525,7 +535,9 @@ export function MarketingSettingsEnhanced({
 
                     <div className="flex items-center justify-between">
                         <div>
-                            <Label className="font-medium">Image Licensing Required</Label>
+                            <Label className="font-medium">
+                                Image Licensing Required
+                            </Label>
                             <p className="text-sm text-gray-600">
                                 Enforce licensing for all images
                             </p>
@@ -540,13 +552,13 @@ export function MarketingSettingsEnhanced({
                         <Label className="mb-2 block">Reading Level Enforcement</Label>
                         <select
                             value={readingLevelEnforcement}
-                            onChange={(e) =>
-                                setReadingLevelEnforcement(e.target.value)
-                            }
+                            onChange={(e) => setReadingLevelEnforcement(e.target.value)}
                             className="w-full rounded-md border border-gray-300 px-3 py-2"
                         >
                             <option value="strict">Strict (Block if Exceeded)</option>
-                            <option value="soft_warning">Soft Warning (Notify Only)</option>
+                            <option value="soft_warning">
+                                Soft Warning (Notify Only)
+                            </option>
                             <option value="disabled">Disabled</option>
                         </select>
                     </div>
@@ -575,9 +587,7 @@ export function MarketingSettingsEnhanced({
                     </div>
 
                     <div>
-                        <Label className="mb-2 block">
-                            Posts Per Platform Per Day
-                        </Label>
+                        <Label className="mb-2 block">Posts Per Platform Per Day</Label>
                         <Input
                             type="number"
                             min="1"
@@ -610,7 +620,9 @@ export function MarketingSettingsEnhanced({
 
                     <div className="flex items-center justify-between pt-4 border-t">
                         <div>
-                            <Label className="font-medium">Override Limits (Admin)</Label>
+                            <Label className="font-medium">
+                                Override Limits (Admin)
+                            </Label>
                             <p className="text-sm text-gray-600">
                                 Allow posting beyond soft limits
                             </p>
@@ -626,8 +638,8 @@ export function MarketingSettingsEnhanced({
                             Soft Warnings Only
                         </div>
                         <div className="text-sm text-blue-800">
-                            No hard stops. We'll notify you when approaching limits but never
-                            block your content.
+                            No hard stops. We'll notify you when approaching limits but
+                            never block your content.
                         </div>
                     </div>
                 </div>
@@ -668,21 +680,27 @@ export function MarketingSettingsEnhanced({
                                     />
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <Label className="text-sm">Post Failed to Publish</Label>
+                                    <Label className="text-sm">
+                                        Post Failed to Publish
+                                    </Label>
                                     <Switch
                                         checked={notifyOnFail}
                                         onCheckedChange={setNotifyOnFail}
                                     />
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <Label className="text-sm">Experiment Completed</Label>
+                                    <Label className="text-sm">
+                                        Experiment Completed
+                                    </Label>
                                     <Switch
                                         checked={notifyOnExperiment}
                                         onCheckedChange={setNotifyOnExperiment}
                                     />
                                 </div>
                                 <div className="flex items-center justify-between">
-                                    <Label className="text-sm">Approaching Limits</Label>
+                                    <Label className="text-sm">
+                                        Approaching Limits
+                                    </Label>
                                     <Switch
                                         checked={notifyOnLimits}
                                         onCheckedChange={setNotifyOnLimits}
@@ -698,7 +716,9 @@ export function MarketingSettingsEnhanced({
                             </div>
 
                             <div className="pt-4 border-t">
-                                <Label className="mb-2 block">Notification Frequency</Label>
+                                <Label className="mb-2 block">
+                                    Notification Frequency
+                                </Label>
                                 <select
                                     value={notificationFrequency}
                                     onChange={(e) =>
@@ -758,10 +778,7 @@ export function MarketingSettingsEnhanced({
 
                 <div className="space-y-2">
                     {activityLog.slice(0, 10).map((activity, index) => (
-                        <div
-                            key={index}
-                            className="p-3 bg-gray-50 rounded-lg text-sm"
-                        >
+                        <div key={index} className="p-3 bg-gray-50 rounded-lg text-sm">
                             <div className="flex items-center justify-between mb-1">
                                 <span className="font-medium">{activity.action}</span>
                                 <span className="text-xs text-gray-600">
@@ -814,7 +831,9 @@ export function MarketingSettingsEnhanced({
 
                     <div className="flex items-center justify-between p-3 bg-white rounded border">
                         <div>
-                            <Label className="font-medium">Reset Profile to Defaults</Label>
+                            <Label className="font-medium">
+                                Reset Profile to Defaults
+                            </Label>
                             <p className="text-sm text-gray-600">
                                 Reset all profile settings
                             </p>
@@ -831,7 +850,9 @@ export function MarketingSettingsEnhanced({
 
                     <div className="flex items-center justify-between p-3 bg-white rounded border">
                         <div>
-                            <Label className="font-medium">Delete All Analytics Data</Label>
+                            <Label className="font-medium">
+                                Delete All Analytics Data
+                            </Label>
                             <p className="text-sm text-gray-600">
                                 Permanently delete analytics history
                             </p>
@@ -863,4 +884,3 @@ export function MarketingSettingsEnhanced({
         </div>
     );
 }
-

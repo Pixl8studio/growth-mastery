@@ -66,8 +66,7 @@ export function ProfileConfigFormEnhanced({
         (profile.echo_mode_config as any)?.enabled || false
     );
     const [voiceStrength, setVoiceStrength] = useState(75);
-    const [vocabularyLevel, setVocabularyLevel] =
-        useState<string>("intermediate");
+    const [vocabularyLevel, setVocabularyLevel] = useState<string>("intermediate");
     const [sampleContent, setSampleContent] = useState("");
 
     // Section 4: Tone Console (8 sliders)
@@ -80,23 +79,22 @@ export function ProfileConfigFormEnhanced({
         confidence: profile.tone_settings?.confidence || 75,
         humor: (profile.metadata as any)?.tone_extended?.humor || 30,
         authority: (profile.metadata as any)?.tone_extended?.authority || 70,
-        vulnerability:
-            (profile.metadata as any)?.tone_extended?.vulnerability || 40,
+        vulnerability: (profile.metadata as any)?.tone_extended?.vulnerability || 40,
     });
 
     // Section 5: Story Themes
     const [storyThemes, setStoryThemes] = useState<string[]>(
         profile.story_themes || []
     );
-    const [themePriorities, setThemePriorities] = useState<
-        Record<string, number>
-    >((profile.metadata as any)?.theme_priorities || {
-        founder_saga: 3,
-        myth_buster: 3,
-        philosophy_pov: 3,
-        current_event: 3,
-        how_to: 3,
-    });
+    const [themePriorities, setThemePriorities] = useState<Record<string, number>>(
+        (profile.metadata as any)?.theme_priorities || {
+            founder_saga: 3,
+            myth_buster: 3,
+            philosophy_pov: 3,
+            current_event: 3,
+            how_to: 3,
+        }
+    );
     const [storyMixStrategy, setStoryMixStrategy] = useState<string>(
         (profile.metadata as any)?.story_mix_strategy || "balanced"
     );
@@ -111,11 +109,10 @@ export function ProfileConfigFormEnhanced({
     const [requiredElements, setRequiredElements] = useState(
         (profile.metadata as any)?.content_restrictions?.required_elements || ""
     );
-    const [sensitiveTopicsHandling, setSensitiveTopicsHandling] =
-        useState<string>(
-            (profile.metadata as any)?.content_restrictions
-                ?.sensitive_topics_handling || "disclaimer"
-        );
+    const [sensitiveTopicsHandling, setSensitiveTopicsHandling] = useState<string>(
+        (profile.metadata as any)?.content_restrictions?.sensitive_topics_handling ||
+            "disclaimer"
+    );
 
     // Section 7: Compliance Configuration
     const [industry, setIndustry] = useState<string>(
@@ -531,7 +528,9 @@ export function ProfileConfigFormEnhanced({
                 {echoModeEnabled && (
                     <div className="space-y-4">
                         <div>
-                            <Label className="mb-2 block">Sample Content for Calibration</Label>
+                            <Label className="mb-2 block">
+                                Sample Content for Calibration
+                            </Label>
                             <Textarea
                                 value={sampleContent}
                                 onChange={(e) => setSampleContent(e.target.value)}
@@ -544,7 +543,9 @@ export function ProfileConfigFormEnhanced({
                                 className="mt-2"
                                 size="sm"
                             >
-                                <RefreshCw className={`h-4 w-4 mr-2 ${calibrating ? "animate-spin" : ""}`} />
+                                <RefreshCw
+                                    className={`h-4 w-4 mr-2 ${calibrating ? "animate-spin" : ""}`}
+                                />
                                 {calibrating ? "Analyzing..." : "Calibrate Voice"}
                             </Button>
                         </div>
@@ -552,7 +553,9 @@ export function ProfileConfigFormEnhanced({
                         <div>
                             <div className="flex justify-between mb-2">
                                 <Label>Voice Strength (How Strictly to Mirror)</Label>
-                                <span className="text-sm text-gray-600">{voiceStrength}%</span>
+                                <span className="text-sm text-gray-600">
+                                    {voiceStrength}%
+                                </span>
                             </div>
                             <Slider
                                 value={[voiceStrength]}
@@ -778,7 +781,10 @@ export function ProfileConfigFormEnhanced({
                         <Slider
                             value={[toneSettings.vulnerability || 40]}
                             onValueChange={([value]) =>
-                                setToneSettings({ ...toneSettings, vulnerability: value })
+                                setToneSettings({
+                                    ...toneSettings,
+                                    vulnerability: value,
+                                })
                             }
                             min={0}
                             max={100}
@@ -817,10 +823,7 @@ export function ProfileConfigFormEnhanced({
                         },
                         { id: "how_to", label: "How To", desc: "Actionable guides" },
                     ].map((theme) => (
-                        <div
-                            key={theme.id}
-                            className="p-4 border rounded-lg"
-                        >
+                        <div key={theme.id} className="p-4 border rounded-lg">
                             <div className="flex items-center justify-between mb-2">
                                 <div
                                     onClick={() => toggleStoryTheme(theme.id)}
@@ -864,10 +867,14 @@ export function ProfileConfigFormEnhanced({
                                                 <button
                                                     key={star}
                                                     onClick={() =>
-                                                        updateThemePriority(theme.id, star)
+                                                        updateThemePriority(
+                                                            theme.id,
+                                                            star
+                                                        )
                                                     }
                                                     className={`text-lg ${
-                                                        star <= themePriorities[theme.id]
+                                                        star <=
+                                                        themePriorities[theme.id]
                                                             ? "text-yellow-400"
                                                             : "text-gray-300"
                                                     }`}
@@ -919,7 +926,9 @@ export function ProfileConfigFormEnhanced({
                 </div>
                 <div className="space-y-4">
                     <div>
-                        <Label className="mb-2 block">Prohibited Topics (Blacklist)</Label>
+                        <Label className="mb-2 block">
+                            Prohibited Topics (Blacklist)
+                        </Label>
                         <Textarea
                             value={prohibitedTopics}
                             onChange={(e) => setProhibitedTopics(e.target.value)}
@@ -1007,14 +1016,18 @@ export function ProfileConfigFormEnhanced({
                             className="w-full rounded-md border border-gray-300 px-3 py-2"
                         >
                             <option value="strict">Strict (Original Only)</option>
-                            <option value="moderate">Moderate (With Attribution)</option>
+                            <option value="moderate">
+                                Moderate (With Attribution)
+                            </option>
                             <option value="flexible">Flexible (Fair Use)</option>
                         </select>
                     </div>
 
                     <div className="flex items-center justify-between">
                         <div>
-                            <Label className="font-medium">Image Licensing Required</Label>
+                            <Label className="font-medium">
+                                Image Licensing Required
+                            </Label>
                             <p className="text-sm text-gray-600">
                                 Enforce proper licensing for all images
                             </p>
@@ -1037,4 +1050,3 @@ export function ProfileConfigFormEnhanced({
         </div>
     );
 }
-

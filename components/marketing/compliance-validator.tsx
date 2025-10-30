@@ -10,13 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 import { logger } from "@/lib/client-logger";
-import {
-    CheckCircle2,
-    XCircle,
-    AlertCircle,
-    RefreshCw,
-    Shield,
-} from "lucide-react";
+import { CheckCircle2, XCircle, AlertCircle, RefreshCw, Shield } from "lucide-react";
 
 interface ValidationResult {
     passed: boolean;
@@ -122,9 +116,7 @@ export function ComplianceValidator({
         }
     };
 
-    const getSeverityColor = (
-        severity: "error" | "warning" | "info"
-    ): string => {
+    const getSeverityColor = (severity: "error" | "warning" | "info"): string => {
         switch (severity) {
             case "error":
                 return "text-red-600 bg-red-50 border-red-200";
@@ -202,7 +194,9 @@ export function ComplianceValidator({
                                             <div className="font-medium mb-1">
                                                 {issue.type}
                                             </div>
-                                            <div className="text-xs">{issue.message}</div>
+                                            <div className="text-xs">
+                                                {issue.message}
+                                            </div>
                                         </div>
                                     ))}
                                 </div>
@@ -226,11 +220,12 @@ export function ComplianceValidator({
                 {!result && (
                     <div className="text-center py-8 text-gray-500">
                         <Shield className="h-12 w-12 mx-auto mb-3 opacity-30" />
-                        <p className="text-sm">Click "Run Validation" to check content</p>
+                        <p className="text-sm">
+                            Click "Run Validation" to check content
+                        </p>
                     </div>
                 )}
             </div>
         </WrapperComponent>
     );
 }
-

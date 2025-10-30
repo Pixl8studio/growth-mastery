@@ -42,9 +42,7 @@ export function ApprovalWorkflowModal({
     const { toast } = useToast();
     const [loading, setLoading] = useState(true);
     const [variants, setVariants] = useState<PostVariant[]>([]);
-    const [selectedVariant, setSelectedVariant] = useState<PostVariant | null>(
-        null
-    );
+    const [selectedVariant, setSelectedVariant] = useState<PostVariant | null>(null);
     const [platformFilter, setPlatformFilter] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState<string>("pending");
     const [reviewNotes, setReviewNotes] = useState("");
@@ -435,9 +433,7 @@ export function ApprovalWorkflowModal({
                                 {/* Actions */}
                                 <div className="flex gap-3">
                                     <Button
-                                        onClick={() =>
-                                            handleReject(selectedVariant.id)
-                                        }
+                                        onClick={() => handleReject(selectedVariant.id)}
                                         variant="outline"
                                         className="flex-1 text-red-600 border-red-300"
                                     >
@@ -455,7 +451,9 @@ export function ApprovalWorkflowModal({
                                         Request Changes
                                     </Button>
                                     <Button
-                                        onClick={() => handleApprove(selectedVariant.id)}
+                                        onClick={() =>
+                                            handleApprove(selectedVariant.id)
+                                        }
                                         className="flex-1"
                                     >
                                         <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -484,15 +482,18 @@ export function ApprovalWorkflowModal({
                                     </div>
                                 ) : (
                                     variants.map((variant) => {
-                                        const preflight = (variant.preflight_status as any) || {
-                                            passed: false,
-                                        };
+                                        const preflight =
+                                            (variant.preflight_status as any) || {
+                                                passed: false,
+                                            };
 
                                         return (
                                             <Card
                                                 key={variant.id}
                                                 className="p-4 cursor-pointer hover:shadow-lg transition-shadow"
-                                                onClick={() => setSelectedVariant(variant)}
+                                                onClick={() =>
+                                                    setSelectedVariant(variant)
+                                                }
                                             >
                                                 <div className="flex items-start justify-between">
                                                     <div className="flex-1">
@@ -527,13 +528,14 @@ export function ApprovalWorkflowModal({
                                                             {variant.copy_text.length}{" "}
                                                             characters
                                                             {variant.hashtags &&
-                                                                variant.hashtags.length >
-                                                                    0 && (
+                                                                variant.hashtags
+                                                                    .length > 0 && (
                                                                     <>
                                                                         {" "}
                                                                         •{" "}
                                                                         {
-                                                                            variant.hashtags
+                                                                            variant
+                                                                                .hashtags
                                                                                 .length
                                                                         }{" "}
                                                                         hashtags
@@ -588,4 +590,3 @@ export function ApprovalWorkflowModal({
         </>
     );
 }
-

@@ -360,7 +360,9 @@ export function MarketingAnalyticsDashboardEnhanced({
                                     className="text-left py-3 px-2 text-sm font-semibold text-gray-600 cursor-pointer hover:text-gray-900"
                                     onClick={() => handleSort("date")}
                                 >
-                                    Published {sortBy === "date" && (sortOrder === "desc" ? "↓" : "↑")}
+                                    Published{" "}
+                                    {sortBy === "date" &&
+                                        (sortOrder === "desc" ? "↓" : "↑")}
                                 </th>
                                 <th className="text-right py-3 px-2 text-sm font-semibold text-gray-600">
                                     Impressions
@@ -369,13 +371,17 @@ export function MarketingAnalyticsDashboardEnhanced({
                                     className="text-right py-3 px-2 text-sm font-semibold text-gray-600 cursor-pointer hover:text-gray-900"
                                     onClick={() => handleSort("engagement")}
                                 >
-                                    Engagement {sortBy === "engagement" && (sortOrder === "desc" ? "↓" : "↑")}
+                                    Engagement{" "}
+                                    {sortBy === "engagement" &&
+                                        (sortOrder === "desc" ? "↓" : "↑")}
                                 </th>
                                 <th
                                     className="text-right py-3 px-2 text-sm font-semibold text-gray-600 cursor-pointer hover:text-gray-900"
                                     onClick={() => handleSort("opt_ins")}
                                 >
-                                    Opt-ins {sortBy === "opt_ins" && (sortOrder === "desc" ? "↓" : "↑")}
+                                    Opt-ins{" "}
+                                    {sortBy === "opt_ins" &&
+                                        (sortOrder === "desc" ? "↓" : "↑")}
                                 </th>
                                 <th className="text-right py-3 px-2 text-sm font-semibold text-gray-600">
                                     O/I-1000
@@ -389,7 +395,9 @@ export function MarketingAnalyticsDashboardEnhanced({
                             {sortedData.slice(0, 20).map((post) => (
                                 <tr key={post.id} className="border-b hover:bg-gray-50">
                                     <td className="py-3 px-2 text-sm max-w-xs">
-                                        <div className="truncate">{post.post_preview}</div>
+                                        <div className="truncate">
+                                            {post.post_preview}
+                                        </div>
                                     </td>
                                     <td className="py-3 px-2">
                                         <span className="text-sm capitalize">
@@ -397,7 +405,9 @@ export function MarketingAnalyticsDashboardEnhanced({
                                         </span>
                                     </td>
                                     <td className="py-3 px-2 text-sm text-gray-600">
-                                        {new Date(post.published_at).toLocaleDateString()}
+                                        {new Date(
+                                            post.published_at
+                                        ).toLocaleDateString()}
                                     </td>
                                     <td className="py-3 px-2 text-right text-sm">
                                         {post.impressions.toLocaleString()}
@@ -464,8 +474,8 @@ export function MarketingAnalyticsDashboardEnhanced({
                                         {platform.platform}
                                     </span>
                                     <span className="text-sm text-gray-600">
-                                        {platform.post_count} posts • {platform.total_opt_ins}{" "}
-                                        opt-ins
+                                        {platform.post_count} posts •{" "}
+                                        {platform.total_opt_ins} opt-ins
                                     </span>
                                 </div>
                                 <div className="w-full bg-gray-200 rounded-full h-2">
@@ -485,7 +495,10 @@ export function MarketingAnalyticsDashboardEnhanced({
                                     />
                                 </div>
                                 <div className="flex justify-between text-xs text-gray-600 mt-1">
-                                    <span>Engagement: {platform.engagement_rate.toFixed(1)}%</span>
+                                    <span>
+                                        Engagement:{" "}
+                                        {platform.engagement_rate.toFixed(1)}%
+                                    </span>
                                     <span>O/I-1000: {platform.oi_1000.toFixed(1)}</span>
                                 </div>
                             </div>
@@ -519,7 +532,8 @@ export function MarketingAnalyticsDashboardEnhanced({
                                 </div>
                                 <div className="flex justify-between text-xs text-gray-600 mt-1">
                                     <span>
-                                        Avg Engagement: {framework.avg_engagement_rate.toFixed(1)}%
+                                        Avg Engagement:{" "}
+                                        {framework.avg_engagement_rate.toFixed(1)}%
                                     </span>
                                     <span>
                                         Avg O/I-1000: {framework.avg_oi_1000.toFixed(1)}
@@ -549,7 +563,8 @@ export function MarketingAnalyticsDashboardEnhanced({
                                 <div>
                                     <h4 className="font-semibold">{experiment.name}</h4>
                                     <p className="text-sm text-gray-600">
-                                        {experiment.experiment_type} • {experiment.status}
+                                        {experiment.experiment_type} •{" "}
+                                        {experiment.status}
                                     </p>
                                 </div>
                                 {experiment.status === "completed" &&
@@ -570,13 +585,17 @@ export function MarketingAnalyticsDashboardEnhanced({
                                     </div>
                                     <div className="space-y-1 text-xs">
                                         <div className="flex justify-between">
-                                            <span className="text-gray-600">Impressions:</span>
+                                            <span className="text-gray-600">
+                                                Impressions:
+                                            </span>
                                             <span className="font-medium">
                                                 {experiment.variant_a_impressions?.toLocaleString()}
                                             </span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-gray-600">Engagement:</span>
+                                            <span className="text-gray-600">
+                                                Engagement:
+                                            </span>
                                             <span className="font-medium">
                                                 {experiment.variant_a_engagement_rate?.toFixed(
                                                     1
@@ -585,7 +604,9 @@ export function MarketingAnalyticsDashboardEnhanced({
                                             </span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-gray-600">Opt-ins:</span>
+                                            <span className="text-gray-600">
+                                                Opt-ins:
+                                            </span>
                                             <span className="font-medium">
                                                 {experiment.variant_a_opt_ins}
                                             </span>
@@ -601,13 +622,17 @@ export function MarketingAnalyticsDashboardEnhanced({
                                     </div>
                                     <div className="space-y-1 text-xs">
                                         <div className="flex justify-between">
-                                            <span className="text-gray-600">Impressions:</span>
+                                            <span className="text-gray-600">
+                                                Impressions:
+                                            </span>
                                             <span className="font-medium">
                                                 {experiment.variant_b_impressions?.toLocaleString()}
                                             </span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-gray-600">Engagement:</span>
+                                            <span className="text-gray-600">
+                                                Engagement:
+                                            </span>
                                             <span className="font-medium">
                                                 {experiment.variant_b_engagement_rate?.toFixed(
                                                     1
@@ -616,7 +641,9 @@ export function MarketingAnalyticsDashboardEnhanced({
                                             </span>
                                         </div>
                                         <div className="flex justify-between">
-                                            <span className="text-gray-600">Opt-ins:</span>
+                                            <span className="text-gray-600">
+                                                Opt-ins:
+                                            </span>
                                             <span className="font-medium">
                                                 {experiment.variant_b_opt_ins}
                                             </span>
@@ -671,4 +698,3 @@ export function MarketingAnalyticsDashboardEnhanced({
         </div>
     );
 }
-

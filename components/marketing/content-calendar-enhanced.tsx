@@ -98,12 +98,9 @@ export function ContentCalendarEnhanced({
 
     const handlePromoteToProduction = async (entryId: string) => {
         try {
-            const response = await fetch(
-                `/api/marketing/calendar/${entryId}/promote`,
-                {
-                    method: "POST",
-                }
-            );
+            const response = await fetch(`/api/marketing/calendar/${entryId}/promote`, {
+                method: "POST",
+            });
 
             const data = await response.json();
 
@@ -165,7 +162,10 @@ export function ContentCalendarEnhanced({
             return;
         }
 
-        if (action === "delete" && !confirm(`Delete ${selectedEntries.length} posts?`)) {
+        if (
+            action === "delete" &&
+            !confirm(`Delete ${selectedEntries.length} posts?`)
+        ) {
             return;
         }
 
@@ -232,11 +232,7 @@ export function ContentCalendarEnhanced({
     };
 
     const getEntriesForDay = (day: number) => {
-        const date = new Date(
-            currentMonth.getFullYear(),
-            currentMonth.getMonth(),
-            day
-        );
+        const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
 
         return entries.filter((entry) => {
             const scheduledDate = new Date(entry.scheduled_publish_at);
@@ -249,7 +245,10 @@ export function ContentCalendarEnhanced({
     };
 
     const filteredEntries = entries.filter((entry) => {
-        if (platformFilter && (entry as any).marketing_post_variants?.platform !== platformFilter) {
+        if (
+            platformFilter &&
+            (entry as any).marketing_post_variants?.platform !== platformFilter
+        ) {
             return false;
         }
         if (statusFilter && entry.publish_status !== statusFilter) {
@@ -346,7 +345,9 @@ export function ContentCalendarEnhanced({
                     <select
                         value={platformFilter || "all"}
                         onChange={(e) =>
-                            setPlatformFilter(e.target.value === "all" ? null : e.target.value)
+                            setPlatformFilter(
+                                e.target.value === "all" ? null : e.target.value
+                            )
                         }
                         className="text-sm rounded-md border border-gray-300 px-2 py-1"
                     >
@@ -360,7 +361,9 @@ export function ContentCalendarEnhanced({
                     <select
                         value={statusFilter || "all"}
                         onChange={(e) =>
-                            setStatusFilter(e.target.value === "all" ? null : e.target.value)
+                            setStatusFilter(
+                                e.target.value === "all" ? null : e.target.value
+                            )
                         }
                         className="text-sm rounded-md border border-gray-300 px-2 py-1"
                     >
@@ -451,26 +454,30 @@ export function ContentCalendarEnhanced({
                                             </div>
                                             {hasEntries && (
                                                 <div className="space-y-1">
-                                                    {dayEntries.slice(0, 2).map((entry) => {
-                                                        const variant = (entry as any)
-                                                            .marketing_post_variants;
-                                                        return (
-                                                            <div
-                                                                key={entry.id}
-                                                                className="text-xs truncate flex items-center gap-1"
-                                                            >
-                                                                <span>
-                                                                    {platformIcons[
-                                                                        variant?.platform
-                                                                    ] || "📝"}
-                                                                </span>
-                                                                {entry.publish_status ===
-                                                                "published"
-                                                                    ? "✅"
-                                                                    : "🕐"}
-                                                            </div>
-                                                        );
-                                                    })}
+                                                    {dayEntries
+                                                        .slice(0, 2)
+                                                        .map((entry) => {
+                                                            const variant = (
+                                                                entry as any
+                                                            ).marketing_post_variants;
+                                                            return (
+                                                                <div
+                                                                    key={entry.id}
+                                                                    className="text-xs truncate flex items-center gap-1"
+                                                                >
+                                                                    <span>
+                                                                        {platformIcons[
+                                                                            variant
+                                                                                ?.platform
+                                                                        ] || "📝"}
+                                                                    </span>
+                                                                    {entry.publish_status ===
+                                                                    "published"
+                                                                        ? "✅"
+                                                                        : "🕐"}
+                                                                </div>
+                                                            );
+                                                        })}
                                                     {dayEntries.length > 2 && (
                                                         <div className="text-xs text-gray-600">
                                                             +{dayEntries.length - 2}
@@ -505,7 +512,9 @@ export function ContentCalendarEnhanced({
                                 >
                                     <Checkbox
                                         checked={selectedEntries.includes(entry.id)}
-                                        onCheckedChange={() => toggleSelectEntry(entry.id)}
+                                        onCheckedChange={() =>
+                                            toggleSelectEntry(entry.id)
+                                        }
                                     />
                                     <div className="flex-1">
                                         <div className="flex items-center gap-2 mb-1">
@@ -543,7 +552,9 @@ export function ContentCalendarEnhanced({
                                             </Button>
                                         )}
                                         <Button
-                                            onClick={() => handleCancelScheduled(entry.id)}
+                                            onClick={() =>
+                                                handleCancelScheduled(entry.id)
+                                            }
                                             variant="ghost"
                                             size="sm"
                                         >
@@ -653,7 +664,9 @@ export function ContentCalendarEnhanced({
                                 >
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2">
-                                            <span>{platformIcons[variant?.platform]}</span>
+                                            <span>
+                                                {platformIcons[variant?.platform]}
+                                            </span>
                                             <span className="text-sm font-medium">
                                                 {scheduledDate.toLocaleString()}
                                             </span>
@@ -664,7 +677,9 @@ export function ContentCalendarEnhanced({
                                             )}
                                         </div>
                                         <Button
-                                            onClick={() => handleCancelScheduled(entry.id)}
+                                            onClick={() =>
+                                                handleCancelScheduled(entry.id)
+                                            }
                                             variant="ghost"
                                             size="sm"
                                         >
@@ -703,4 +718,3 @@ export function ContentCalendarEnhanced({
         </div>
     );
 }
-

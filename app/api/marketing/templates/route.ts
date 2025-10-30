@@ -83,7 +83,10 @@ export async function POST(request: NextRequest) {
 
         const body = await request.json();
 
-        logger.info({ userId: user.id, templateName: body.name }, "Template creation requested");
+        logger.info(
+            { userId: user.id, templateName: body.name },
+            "Template creation requested"
+        );
 
         const mockTemplate = {
             id: `tmpl_${Date.now()}`,
@@ -110,4 +113,3 @@ export async function POST(request: NextRequest) {
         );
     }
 }
-

@@ -167,8 +167,10 @@ export function PostVariantCardEnhanced({
         });
     };
 
-    const ApprovalIcon = approvalStatusConfig[variant.approval_status || "pending"]?.icon || Clock;
-    const approvalColor = approvalStatusConfig[variant.approval_status || "pending"]?.color;
+    const ApprovalIcon =
+        approvalStatusConfig[variant.approval_status || "pending"]?.icon || Clock;
+    const approvalColor =
+        approvalStatusConfig[variant.approval_status || "pending"]?.color;
 
     return (
         <>
@@ -330,11 +332,7 @@ export function PostVariantCardEnhanced({
                             <Eye className="h-3 w-3 mr-1" />
                             Preview
                         </Button>
-                        <Button
-                            onClick={onSchedule}
-                            variant="outline"
-                            size="sm"
-                        >
+                        <Button onClick={onSchedule} variant="outline" size="sm">
                             <Calendar className="h-3 w-3 mr-1" />
                             Schedule
                         </Button>
@@ -370,4 +368,3 @@ export function PostVariantCardEnhanced({
         </>
     );
 }
-

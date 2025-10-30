@@ -143,12 +143,9 @@ export function TrendExplorerEnhanced({
 
     const handleUnsaveTrend = async (trendId: string) => {
         try {
-            const response = await fetch(
-                `/api/marketing/trends/saved/${trendId}`,
-                {
-                    method: "DELETE",
-                }
-            );
+            const response = await fetch(`/api/marketing/trends/saved/${trendId}`, {
+                method: "DELETE",
+            });
 
             const data = await response.json();
 
@@ -535,14 +532,16 @@ export function TrendExplorerEnhanced({
                                         Example Posts Using This Trend
                                     </h4>
                                     <div className="space-y-2">
-                                        {selectedTrend.example_posts.map((post, index) => (
-                                            <div
-                                                key={index}
-                                                className="p-3 bg-gray-50 rounded text-xs text-gray-700"
-                                            >
-                                                {post}
-                                            </div>
-                                        ))}
+                                        {selectedTrend.example_posts.map(
+                                            (post, index) => (
+                                                <div
+                                                    key={index}
+                                                    className="p-3 bg-gray-50 rounded text-xs text-gray-700"
+                                                >
+                                                    {post}
+                                                </div>
+                                            )
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -596,4 +595,3 @@ export function TrendExplorerEnhanced({
         </div>
     );
 }
-

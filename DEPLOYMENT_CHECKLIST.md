@@ -508,8 +508,8 @@ Before marking as deployed:
 
 When all checkboxes above are complete:
 
-**Deployed By**: ********\_******** **Date**: ********\_******** **Environment**: [ ]
-Staging [ ] Production **Verified By**: ********\_********
+**Deployed By**: **\*\*\*\***\_**\*\*\*\*** **Date**: **\*\*\*\***\_**\*\*\*\***
+**Environment**: [ ] Staging [ ] Production **Verified By**: **\*\*\*\***\_**\*\*\*\***
 
 **Notes**:
 

@@ -89,9 +89,7 @@ export function VariantInlineEditor({
     const [approvalStatus, setApprovalStatus] = useState(
         variant.approval_status || "pending"
     );
-    const [approvalNotes, setApprovalNotes] = useState(
-        variant.approval_notes || ""
-    );
+    const [approvalNotes, setApprovalNotes] = useState(variant.approval_notes || "");
 
     // Character Count
     const characterCount = copyText.length;
@@ -229,7 +227,9 @@ export function VariantInlineEditor({
                             <div className="flex items-center justify-between mb-2">
                                 <Label>Copy Text</Label>
                                 <div className="flex items-center gap-3">
-                                    <TokenInsertionMenu onInsertToken={handleInsertToken} />
+                                    <TokenInsertionMenu
+                                        onInsertToken={handleInsertToken}
+                                    />
                                     <span
                                         className={`text-sm ${
                                             charError
@@ -273,7 +273,11 @@ export function VariantInlineEditor({
                                     placeholder="Add hashtag"
                                     className="flex-1"
                                 />
-                                <Button onClick={addHashtag} variant="outline" size="sm">
+                                <Button
+                                    onClick={addHashtag}
+                                    variant="outline"
+                                    size="sm"
+                                >
                                     Add
                                 </Button>
                             </div>
@@ -326,7 +330,9 @@ export function VariantInlineEditor({
                                             <button
                                                 onClick={() =>
                                                     setMediaUrls(
-                                                        mediaUrls.filter((_, i) => i !== index)
+                                                        mediaUrls.filter(
+                                                            (_, i) => i !== index
+                                                        )
                                                     )
                                                 }
                                                 className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
@@ -374,7 +380,9 @@ export function VariantInlineEditor({
                             <div className="space-y-3">
                                 <div className="grid grid-cols-2 gap-3">
                                     <div>
-                                        <Label className="text-sm mb-1 block">CTA Text</Label>
+                                        <Label className="text-sm mb-1 block">
+                                            CTA Text
+                                        </Label>
                                         <Input
                                             value={ctaText}
                                             onChange={(e) => setCtaText(e.target.value)}
@@ -382,25 +390,33 @@ export function VariantInlineEditor({
                                         />
                                     </div>
                                     <div>
-                                        <Label className="text-sm mb-1 block">CTA Type</Label>
+                                        <Label className="text-sm mb-1 block">
+                                            CTA Type
+                                        </Label>
                                         <select
                                             value={ctaType}
                                             onChange={(e) => setCtaType(e.target.value)}
                                             className="w-full rounded-md border border-gray-300 px-3 py-2"
                                         >
                                             <option value="bio_link">Bio Link</option>
-                                            <option value="dm_keyword">DM Keyword</option>
+                                            <option value="dm_keyword">
+                                                DM Keyword
+                                            </option>
                                             <option value="comment_trigger">
                                                 Comment Trigger
                                             </option>
-                                            <option value="external_url">External URL</option>
+                                            <option value="external_url">
+                                                External URL
+                                            </option>
                                         </select>
                                     </div>
                                 </div>
 
                                 {ctaType === "external_url" && (
                                     <div>
-                                        <Label className="text-sm mb-1 block">CTA URL</Label>
+                                        <Label className="text-sm mb-1 block">
+                                            CTA URL
+                                        </Label>
                                         <Input
                                             value={ctaUrl}
                                             onChange={(e) => setCtaUrl(e.target.value)}
@@ -416,7 +432,9 @@ export function VariantInlineEditor({
                                         </Label>
                                         <Input
                                             value={dmKeyword}
-                                            onChange={(e) => setDmKeyword(e.target.value)}
+                                            onChange={(e) =>
+                                                setDmKeyword(e.target.value)
+                                            }
                                             placeholder="e.g., REGISTER"
                                         />
                                     </div>
@@ -429,7 +447,9 @@ export function VariantInlineEditor({
                                         </Label>
                                         <Input
                                             value={commentTrigger}
-                                            onChange={(e) => setCommentTrigger(e.target.value)}
+                                            onChange={(e) =>
+                                                setCommentTrigger(e.target.value)
+                                            }
                                             placeholder="e.g., Type INFO below"
                                         />
                                     </div>
@@ -443,7 +463,9 @@ export function VariantInlineEditor({
                             <UTMBuilder
                                 baseUrl={primaryUrl}
                                 onUrlChange={setPrimaryUrl}
-                                defaultCampaign={(variant as any).content_brief?.name || ""}
+                                defaultCampaign={
+                                    (variant as any).content_brief?.name || ""
+                                }
                             />
                         </div>
 
@@ -457,7 +479,9 @@ export function VariantInlineEditor({
                                     </Label>
                                     <select
                                         value={approvalStatus}
-                                        onChange={(e) => setApprovalStatus(e.target.value)}
+                                        onChange={(e) =>
+                                            setApprovalStatus(e.target.value)
+                                        }
                                         className="w-full rounded-md border border-gray-300 px-3 py-2"
                                     >
                                         <option value="pending">Pending Review</option>
@@ -472,7 +496,9 @@ export function VariantInlineEditor({
                                     </Label>
                                     <Textarea
                                         value={approvalNotes}
-                                        onChange={(e) => setApprovalNotes(e.target.value)}
+                                        onChange={(e) =>
+                                            setApprovalNotes(e.target.value)
+                                        }
                                         placeholder="Add notes about this variant..."
                                         rows={2}
                                     />
@@ -481,10 +507,7 @@ export function VariantInlineEditor({
                         </div>
 
                         {/* Preflight Validation */}
-                        <ComplianceValidator
-                            variantId={variant.id}
-                            embedded={true}
-                        />
+                        <ComplianceValidator variantId={variant.id} embedded={true} />
                     </div>
 
                     {/* Footer Actions */}
@@ -549,4 +572,3 @@ export function VariantInlineEditor({
         </>
     );
 }
-

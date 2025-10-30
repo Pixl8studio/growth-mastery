@@ -13,14 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { useToast } from "@/components/ui/use-toast";
 import { logger } from "@/lib/client-logger";
-import {
-    Calendar,
-    Clock,
-    Repeat,
-    Sparkles,
-    AlertTriangle,
-    X,
-} from "lucide-react";
+import { Calendar, Clock, Repeat, Sparkles, AlertTriangle, X } from "lucide-react";
 
 interface SchedulingModalProps {
     isOpen: boolean;
@@ -202,14 +195,18 @@ export function SchedulingModal({
                             <div className="flex gap-2">
                                 <Button
                                     onClick={() => setSpace("sandbox")}
-                                    variant={space === "sandbox" ? "default" : "outline"}
+                                    variant={
+                                        space === "sandbox" ? "default" : "outline"
+                                    }
                                     className="flex-1"
                                 >
                                     Sandbox (Testing)
                                 </Button>
                                 <Button
                                     onClick={() => setSpace("production")}
-                                    variant={space === "production" ? "default" : "outline"}
+                                    variant={
+                                        space === "production" ? "default" : "outline"
+                                    }
                                     className="flex-1"
                                 >
                                     Production (Live)
@@ -222,7 +219,9 @@ export function SchedulingModal({
                             <div className="flex items-center gap-2">
                                 <Repeat className="h-5 w-5 text-purple-500" />
                                 <div>
-                                    <Label className="font-medium">Recurring Post</Label>
+                                    <Label className="font-medium">
+                                        Recurring Post
+                                    </Label>
                                     <p className="text-xs text-gray-600">
                                         Schedule this post to repeat
                                     </p>
@@ -243,8 +242,8 @@ export function SchedulingModal({
                                         High Volume Warning
                                     </h4>
                                     <p className="text-sm text-yellow-800">
-                                        You have 3 other posts scheduled within 1 hour of
-                                        this time. Consider spacing them out.
+                                        You have 3 other posts scheduled within 1 hour
+                                        of this time. Consider spacing them out.
                                     </p>
                                 </div>
                             </div>
@@ -252,7 +251,11 @@ export function SchedulingModal({
 
                         {/* Actions */}
                         <div className="flex gap-3 pt-4 border-t">
-                            <Button onClick={onClose} variant="outline" className="flex-1">
+                            <Button
+                                onClick={onClose}
+                                variant="outline"
+                                className="flex-1"
+                            >
                                 Cancel
                             </Button>
                             <Button
@@ -270,4 +273,3 @@ export function SchedulingModal({
         </div>
     );
 }
-

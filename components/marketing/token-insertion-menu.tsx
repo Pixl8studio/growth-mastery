@@ -16,7 +16,11 @@ interface TokenInsertionMenuProps {
 }
 
 const AVAILABLE_TOKENS = [
-    { token: "{first_name}", description: "Contact's first name", category: "Personal" },
+    {
+        token: "{first_name}",
+        description: "Contact's first name",
+        category: "Personal",
+    },
     { token: "{last_name}", description: "Contact's last name", category: "Personal" },
     { token: "{email}", description: "Contact's email address", category: "Personal" },
     { token: "{company_name}", description: "Contact's company", category: "Personal" },
@@ -25,15 +29,43 @@ const AVAILABLE_TOKENS = [
     { token: "{state}", description: "Contact's state/region", category: "Location" },
     { token: "{country}", description: "Contact's country", category: "Location" },
     { token: "{webinar_title}", description: "Name of the webinar", category: "Event" },
-    { token: "{watch_percentage}", description: "% of webinar watched", category: "Event" },
-    { token: "{registration_date}", description: "When they registered", category: "Event" },
+    {
+        token: "{watch_percentage}",
+        description: "% of webinar watched",
+        category: "Event",
+    },
+    {
+        token: "{registration_date}",
+        description: "When they registered",
+        category: "Event",
+    },
     { token: "{offer_name}", description: "Name of your offer", category: "Offer" },
     { token: "{offer_price}", description: "Price of the offer", category: "Offer" },
-    { token: "{discount_amount}", description: "Current discount value", category: "Offer" },
-    { token: "{discount_percentage}", description: "Discount percentage", category: "Offer" },
-    { token: "{deadline_date}", description: "Offer deadline date", category: "Urgency" },
-    { token: "{deadline_time}", description: "Time remaining until deadline", category: "Urgency" },
-    { token: "{hours_remaining}", description: "Hours until deadline", category: "Urgency" },
+    {
+        token: "{discount_amount}",
+        description: "Current discount value",
+        category: "Offer",
+    },
+    {
+        token: "{discount_percentage}",
+        description: "Discount percentage",
+        category: "Offer",
+    },
+    {
+        token: "{deadline_date}",
+        description: "Offer deadline date",
+        category: "Urgency",
+    },
+    {
+        token: "{deadline_time}",
+        description: "Time remaining until deadline",
+        category: "Urgency",
+    },
+    {
+        token: "{hours_remaining}",
+        description: "Hours until deadline",
+        category: "Urgency",
+    },
     { token: "{sender_name}", description: "Your name/brand name", category: "Sender" },
     { token: "{sender_email}", description: "Your email address", category: "Sender" },
 ];
@@ -51,9 +83,7 @@ export function TokenInsertionMenu({
             token.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const categories = Array.from(
-        new Set(AVAILABLE_TOKENS.map((t) => t.category))
-    );
+    const categories = Array.from(new Set(AVAILABLE_TOKENS.map((t) => t.category)));
 
     const handleInsert = (token: string) => {
         onInsertToken(token);
@@ -160,4 +190,3 @@ export function TokenInsertionMenu({
         </div>
     );
 }
-

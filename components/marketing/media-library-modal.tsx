@@ -167,9 +167,7 @@ export function MediaLibraryModal({
                 });
                 setMediaItems(
                     mediaItems.map((item) =>
-                        item.id === id
-                            ? { ...item, alt_text: altTextValue }
-                            : item
+                        item.id === id ? { ...item, alt_text: altTextValue } : item
                     )
                 );
                 setEditingAltText(null);
@@ -313,7 +311,9 @@ export function MediaLibraryModal({
                                             <button
                                                 onClick={() => {
                                                     setEditingAltText(item.id);
-                                                    setAltTextValue(item.alt_text || "");
+                                                    setAltTextValue(
+                                                        item.alt_text || ""
+                                                    );
                                                 }}
                                                 className="text-white hover:text-blue-300"
                                             >
@@ -374,10 +374,7 @@ export function MediaLibraryModal({
                 {/* Footer */}
                 {selectedItems.length > 0 && (
                     <div className="p-6 border-t flex justify-end gap-3">
-                        <Button
-                            onClick={() => setSelectedItems([])}
-                            variant="outline"
-                        >
+                        <Button onClick={() => setSelectedItems([])} variant="outline">
                             Clear Selection
                         </Button>
                         <Button onClick={handleConfirmSelection}>
@@ -390,4 +387,3 @@ export function MediaLibraryModal({
         </div>
     );
 }
-

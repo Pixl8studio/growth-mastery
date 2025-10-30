@@ -68,8 +68,7 @@ export function PlatformPreviewModal({
                             alt="Post media"
                             className="w-full h-full object-cover"
                             onError={(e) => {
-                                (e.target as HTMLImageElement).style.display =
-                                    "none";
+                                (e.target as HTMLImageElement).style.display = "none";
                             }}
                         />
                         {!content.media_urls[0] && (
@@ -93,9 +92,7 @@ export function PlatformPreviewModal({
                     <div className="space-y-2">
                         <div className="text-sm">
                             <span className="font-semibold">Your Brand </span>
-                            <span className="text-gray-900">
-                                {content.copy_text}
-                            </span>
+                            <span className="text-gray-900">{content.copy_text}</span>
                         </div>
 
                         {/* Hashtags */}
@@ -107,11 +104,7 @@ export function PlatformPreviewModal({
 
                         {/* CTA */}
                         {content.cta_text && (
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-full mt-2"
-                            >
+                            <Button variant="outline" size="sm" className="w-full mt-2">
                                 {content.cta_text}
                             </Button>
                         )}
@@ -122,9 +115,7 @@ export function PlatformPreviewModal({
                         <div className="text-xs text-gray-500">
                             View all 24 comments
                         </div>
-                        <div className="text-xs text-gray-400 mt-1">
-                            2 hours ago
-                        </div>
+                        <div className="text-xs text-gray-400 mt-1">2 hours ago</div>
                     </div>
                 </div>
             </div>
@@ -219,4 +210,3 @@ function ImageIcon({ className }: { className?: string }) {
         </svg>
     );
 }
-

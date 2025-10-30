@@ -48,7 +48,9 @@ export function UTMBuilder({
         if (utmContent) params.append("utm_content", utmContent);
 
         const separator = baseUrl.includes("?") ? "&" : "?";
-        return params.toString() ? `${baseUrl}${separator}${params.toString()}` : baseUrl;
+        return params.toString()
+            ? `${baseUrl}${separator}${params.toString()}`
+            : baseUrl;
     };
 
     const finalUrl = buildFinalUrl();
@@ -187,4 +189,3 @@ export function UTMBuilder({
         </Card>
     );
 }
-

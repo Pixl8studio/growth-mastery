@@ -81,9 +81,7 @@ export function StoryAngleSelector({
         <div className="space-y-4">
             <div className="flex items-center justify-between">
                 <div>
-                    <h3 className="text-lg font-semibold">
-                        Choose Your Story Angle
-                    </h3>
+                    <h3 className="text-lg font-semibold">Choose Your Story Angle</h3>
                     <p className="text-sm text-gray-600">
                         Select the angle that best fits your message
                     </p>
@@ -203,8 +201,8 @@ export function StoryAngleSelector({
                                 Selected: {selectedAngle.angle}
                             </h4>
                             <p className="text-sm text-blue-800">
-                                Content will be generated using this angle. You can change
-                                your selection at any time.
+                                Content will be generated using this angle. You can
+                                change your selection at any time.
                             </p>
                         </div>
                     </div>
@@ -213,4 +211,3 @@ export function StoryAngleSelector({
         </div>
     );
 }
-

@@ -53,14 +53,10 @@ export function ExperimentCreatorModal({
     const [autoDeclareWinner, setAutoDeclareWinner] = useState(true);
 
     // Platform & Scheduling
-    const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([
-        "instagram",
-    ]);
+    const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>(["instagram"]);
     const [startDate, setStartDate] = useState("");
     const [startTime, setStartTime] = useState("09:00");
-    const [testSpace, setTestSpace] = useState<"sandbox" | "production">(
-        "sandbox"
-    );
+    const [testSpace, setTestSpace] = useState<"sandbox" | "production">("sandbox");
 
     const handleCreateExperiment = async () => {
         if (!experimentName || !baseVariantId) {
@@ -168,7 +164,8 @@ export function ExperimentCreatorModal({
 
                             <div>
                                 <Label className="mb-2 block">
-                                    Experiment Name <span className="text-red-500">*</span>
+                                    Experiment Name{" "}
+                                    <span className="text-red-500">*</span>
                                 </Label>
                                 <Input
                                     value={experimentName}
@@ -256,7 +253,9 @@ export function ExperimentCreatorModal({
 
                         {/* Section 2: Test Configuration */}
                         <div className="space-y-4 pt-6 border-t">
-                            <h3 className="font-semibold text-lg">Test Configuration</h3>
+                            <h3 className="font-semibold text-lg">
+                                Test Configuration
+                            </h3>
 
                             <div>
                                 <div className="flex justify-between mb-2">
@@ -278,7 +277,8 @@ export function ExperimentCreatorModal({
                                 <div className="flex justify-between mb-2">
                                     <Label>Distribution Split (A vs B)</Label>
                                     <span className="text-sm text-gray-600">
-                                        {distributionSplit}% / {100 - distributionSplit}%
+                                        {distributionSplit}% / {100 - distributionSplit}
+                                        %
                                     </span>
                                 </div>
                                 <Slider
@@ -302,7 +302,9 @@ export function ExperimentCreatorModal({
                                     <option value="engagement">
                                         Engagement Rate (Likes, Comments, Shares)
                                     </option>
-                                    <option value="opt_ins">Opt-ins / Registrations</option>
+                                    <option value="opt_ins">
+                                        Opt-ins / Registrations
+                                    </option>
                                     <option value="clicks">Link Clicks</option>
                                     <option value="oi_1000">O/I-1000 Score</option>
                                 </select>
@@ -323,12 +325,15 @@ export function ExperimentCreatorModal({
                                     step={1}
                                 />
                                 <p className="text-xs text-gray-600 mt-1">
-                                    Winner declared only when this confidence level is reached
+                                    Winner declared only when this confidence level is
+                                    reached
                                 </p>
                             </div>
 
                             <div>
-                                <Label className="mb-2 block">Test Duration (Days)</Label>
+                                <Label className="mb-2 block">
+                                    Test Duration (Days)
+                                </Label>
                                 <Input
                                     type="number"
                                     min="1"
@@ -346,7 +351,8 @@ export function ExperimentCreatorModal({
                                         Auto-Declare Winner
                                     </Label>
                                     <p className="text-xs text-gray-600">
-                                        Automatically declare winner when confidence is reached
+                                        Automatically declare winner when confidence is
+                                        reached
                                     </p>
                                 </div>
                                 <Switch
@@ -366,9 +372,21 @@ export function ExperimentCreatorModal({
                                 <Label className="mb-2 block">Test Platforms</Label>
                                 <div className="grid grid-cols-4 gap-3">
                                     {[
-                                        { id: "instagram", label: "Instagram", icon: "📸" },
-                                        { id: "facebook", label: "Facebook", icon: "👍" },
-                                        { id: "linkedin", label: "LinkedIn", icon: "💼" },
+                                        {
+                                            id: "instagram",
+                                            label: "Instagram",
+                                            icon: "📸",
+                                        },
+                                        {
+                                            id: "facebook",
+                                            label: "Facebook",
+                                            icon: "👍",
+                                        },
+                                        {
+                                            id: "linkedin",
+                                            label: "LinkedIn",
+                                            icon: "💼",
+                                        },
                                         { id: "twitter", label: "Twitter", icon: "🐦" },
                                     ].map((platform) => (
                                         <div
@@ -420,7 +438,9 @@ export function ExperimentCreatorModal({
                                     <Button
                                         onClick={() => setTestSpace("sandbox")}
                                         variant={
-                                            testSpace === "sandbox" ? "default" : "outline"
+                                            testSpace === "sandbox"
+                                                ? "default"
+                                                : "outline"
                                         }
                                         size="sm"
                                         className="flex-1"
@@ -451,11 +471,13 @@ export function ExperimentCreatorModal({
                             <div className="space-y-1 text-sm text-purple-800">
                                 <div>
                                     • Test {sampleSize} posts per variant (
-                                    {distributionSplit}% / {100 - distributionSplit}% split)
+                                    {distributionSplit}% / {100 - distributionSplit}%
+                                    split)
                                 </div>
                                 <div>• Run for {testDuration} days</div>
                                 <div>
-                                    • Measure success by {successMetric.replace("_", " ")}
+                                    • Measure success by{" "}
+                                    {successMetric.replace("_", " ")}
                                 </div>
                                 <div>
                                     • Declare winner at {minConfidence}% confidence
@@ -468,7 +490,11 @@ export function ExperimentCreatorModal({
 
                         {/* Actions */}
                         <div className="flex gap-3 pt-4 border-t">
-                            <Button onClick={onClose} variant="outline" className="flex-1">
+                            <Button
+                                onClick={onClose}
+                                variant="outline"
+                                className="flex-1"
+                            >
                                 Cancel
                             </Button>
                             <Button variant="outline" className="flex-1">
@@ -500,4 +526,3 @@ export function ExperimentCreatorModal({
         </div>
     );
 }
-

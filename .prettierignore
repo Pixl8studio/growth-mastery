@@ -24,3 +24,7 @@ coverage
 .vscode
 .idea
 
+# Reference files
+resources
+docs/reference-design
+

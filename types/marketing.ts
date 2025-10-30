@@ -354,6 +354,7 @@ export interface FormatPerformance {
     carousel: { conversion_rate: number; sample_size: number };
     reel: { conversion_rate: number; sample_size: number };
     story: { conversion_rate: number; sample_size: number };
+    article: { conversion_rate: number; sample_size: number };
 }
 
 export interface BestTimes {

@@ -110,14 +110,15 @@ export async function learnFromPerformance(
         const supabase = await createClient();
 
         // Get or create model
-        const { data: model, error } = await supabase
+        let model;
+        const { data: existingModel, error } = await supabase
             .from("marketing_niche_models")
             .select("*")
             .eq("user_id", userId)
             .eq("niche", niche)
             .single();
 
-        if (error || !model) {
+        if (error || !existingModel) {
             // Create new model
             const { data: newModel, error: createError } = await supabase
                 .from("marketing_niche_models")
@@ -137,6 +138,8 @@ export async function learnFromPerformance(
             }
 
             model = newModel;
+        } else {
+            model = existingModel;
         }
 
         const nicheModel = model as NicheModel;

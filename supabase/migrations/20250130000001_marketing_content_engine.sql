@@ -444,7 +444,8 @@ CREATE TABLE IF NOT EXISTS public.marketing_niche_models (
     "post": {"conversion_rate": 0, "sample_size": 0},
     "carousel": {"conversion_rate": 0, "sample_size": 0},
     "reel": {"conversion_rate": 0, "sample_size": 0},
-    "story": {"conversion_rate": 0, "sample_size": 0}
+    "story": {"conversion_rate": 0, "sample_size": 0},
+    "article": {"conversion_rate": 0, "sample_size": 0}
   }',
 
   -- Best times to post per platform

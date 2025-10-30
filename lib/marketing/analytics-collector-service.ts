@@ -7,7 +7,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { learnFromPerformance } from "./niche-model-service";
-import type { AnalyticsDashboard, MarketingPlatform } from "@/types/marketing";
+import type {
+    AnalyticsDashboard,
+    MarketingPlatform,
+    MarketingStoryFramework,
+} from "@/types/marketing";
 
 /**
  * Record an opt-in conversion from a marketing post
@@ -22,7 +26,7 @@ export async function recordOptIn(
         const supabase = await createClient();
 
         // Get or create analytics record
-        const { data: analytics, error: fetchError } = await supabase
+        let { data: analytics, error: fetchError } = await supabase
             .from("marketing_analytics")
             .select("*")
             .eq("post_variant_id", postVariantId)
@@ -347,7 +351,7 @@ function aggregateAnalytics(variants: any[]): AnalyticsDashboard {
 
         // By framework
         if (variant.story_framework) {
-            const framework = variant.story_framework;
+            const framework = variant.story_framework as MarketingStoryFramework;
             if (!dashboard.by_framework[framework]) {
                 dashboard.by_framework[framework] = {
                     posts: 0,
@@ -392,13 +396,15 @@ function aggregateAnalytics(variants: any[]): AnalyticsDashboard {
     });
 
     // Calculate framework O/I-1000
-    Object.keys(dashboard.by_framework).forEach((framework) => {
-        const frameworkData = dashboard.by_framework[framework as any];
-        if (frameworkData.impressions > 0) {
-            frameworkData.oi_1000 =
-                (frameworkData.opt_ins / frameworkData.impressions) * 1000;
+    (Object.keys(dashboard.by_framework) as MarketingStoryFramework[]).forEach(
+        (framework) => {
+            const frameworkData = dashboard.by_framework[framework];
+            if (frameworkData.impressions > 0) {
+                frameworkData.oi_1000 =
+                    (frameworkData.opt_ins / frameworkData.impressions) * 1000;
+            }
         }
-    });
+    );
 
     // Sort top performers
     dashboard.top_performers.sort((a, b) => b.oi_1000 - a.oi_1000);

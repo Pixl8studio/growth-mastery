@@ -70,6 +70,8 @@ const envSchema = z.object({
     INSTAGRAM_CLIENT_SECRET: z.string().optional(),
     TWITTER_CLIENT_ID: z.string().optional(),
     TWITTER_CLIENT_SECRET: z.string().optional(),
+    LINKEDIN_CLIENT_ID: z.string().optional(),
+    LINKEDIN_CLIENT_SECRET: z.string().optional(),
 
     // ===========================================
     // Google OAuth (Gmail & Calendar)

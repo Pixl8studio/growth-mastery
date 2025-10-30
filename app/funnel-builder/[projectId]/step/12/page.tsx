@@ -38,7 +38,6 @@ export default function Step12Page({
 }: {
     params: Promise<{ projectId: string }>;
 }) {
-    const router = useRouter();
     const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
     const [marketingEnabled, setMarketingEnabled] = useState(false);

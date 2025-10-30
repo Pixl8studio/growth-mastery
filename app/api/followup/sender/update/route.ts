@@ -9,7 +9,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { AuthenticationError, ValidationError } from "@/lib/errors";
-import { updateSenderInfo } from "@/lib/followup/sendgrid-domain-service";
 
 export async function POST(request: NextRequest) {
     try {
@@ -52,23 +51,26 @@ export async function POST(request: NextRequest) {
             "✏️  Updating sender info via API"
         );
 
-        // Update sender information
-        const result = await updateSenderInfo(body.agent_config_id, {
-            sender_name: body.sender_name,
-            sender_email: body.sender_email,
-            sms_sender_id: body.sms_sender_id,
-        });
+        // Update sender information directly in database
+        const { error: updateError } = await supabase
+            .from("followup_agent_configs")
+            .update({
+                sender_name: body.sender_name,
+                sender_email: body.sender_email,
+                sms_sender_id: body.sms_sender_id,
+            })
+            .eq("id", body.agent_config_id);
 
-        if (!result.success) {
+        if (updateError) {
+            logger.error({ updateError }, "Failed to update sender info");
             return NextResponse.json(
-                { success: false, error: result.error },
+                { success: false, error: "Failed to update sender information" },
                 { status: 400 }
             );
         }
 
         return NextResponse.json({
             success: true,
-            domain: result.domain,
             message: "Sender information updated successfully",
         });
     } catch (error) {

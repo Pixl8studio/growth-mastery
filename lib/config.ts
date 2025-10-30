@@ -10,7 +10,7 @@ export const APP_CONFIG = {
 } as const;
 
 export const FUNNEL_CONFIG = {
-    totalSteps: 12,
+    totalSteps: 13,
     stepNames: [
         "AI Intake Call",
         "Define Offer",
@@ -23,6 +23,7 @@ export const FUNNEL_CONFIG = {
         "Registration Page",
         "Flow Configuration",
         "AI Follow-Up",
+        "Marketing Content",
         "Analytics",
     ],
     deckStructure: {

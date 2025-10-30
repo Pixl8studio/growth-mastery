@@ -35,7 +35,6 @@ import { SequenceBuilder } from "@/components/followup/sequence-builder";
 import { MessageTemplateEditor } from "@/components/followup/message-template-editor";
 import { StoryLibrary } from "@/components/followup/story-library";
 import { AnalyticsDashboard } from "@/components/followup/analytics-dashboard";
-import { OnboardingBanner } from "@/components/followup/onboarding-banner";
 import { SenderSetupTab } from "@/components/followup/sender-setup-tab";
 import { TestMessageModal } from "@/components/followup/test-message-modal";
 
@@ -279,17 +278,6 @@ export default function Step11Page({
     }, [selectedSequenceId, sequences, agentConfig?.id]);
 
     const handleEnableFollowup = async (enabled: boolean) => {
-        // Check if sender domain is verified before enabling
-        if (enabled && !agentConfig?.sender_verified) {
-            toast({
-                title: "Domain Not Verified",
-                description:
-                    "Please verify your sender domain in the Sender Setup tab first.",
-                variant: "destructive",
-            });
-            return;
-        }
-
         setFollowupEnabled(enabled);
 
         if (enabled && !agentConfig) {
@@ -910,16 +898,9 @@ export default function Step11Page({
             currentStep={11}
             projectId={projectId}
             completedSteps={completedSteps}
-            nextLabel="Continue to Analytics"
+            nextLabel="Continue to Marketing"
         >
             <div className="space-y-6">
-                {/* Onboarding Banner - shows for first-time users */}
-                <OnboardingBanner
-                    senderVerified={agentConfig?.sender_verified || false}
-                    hasSequences={sequences.length > 0}
-                    hasMessages={messages.length > 0}
-                />
-
                 {/* Enable/Disable Section */}
                 <Card className="p-6 bg-gradient-to-r from-purple-50 to-blue-50">
                     <div className="flex items-center justify-between">
@@ -938,67 +919,53 @@ export default function Step11Page({
                         <Switch
                             checked={followupEnabled}
                             onCheckedChange={handleEnableFollowup}
-                            disabled={!agentConfig?.sender_verified}
                         />
                     </div>
 
-                    {/* Warning if domain not verified */}
-                    {!agentConfig?.sender_verified && (
-                        <div className="mt-4 bg-amber-50 border-2 border-amber-200 rounded-lg p-4">
-                            <p className="text-sm text-amber-800">
-                                ⚠️ Please verify your sender domain in the{" "}
-                                <button
-                                    onClick={() => setActiveTab("sender")}
-                                    className="font-semibold underline hover:text-amber-900"
-                                >
-                                    Sender Setup
-                                </button>{" "}
-                                tab before enabling follow-up automation.
-                            </p>
-                        </div>
-                    )}
-
                     {followupEnabled && (
-                        <div className="mt-6 grid grid-cols-5 gap-4 text-sm">
-                            <div className="text-center p-3 bg-white rounded-lg">
-                                <div className="text-2xl font-bold text-purple-600">
-                                    {sequences.length}
+                        <>
+                            <div className="mt-6 grid grid-cols-4 gap-4 text-sm">
+                                <div className="text-center p-3 bg-white rounded-lg">
+                                    <div className="text-2xl font-bold text-purple-600">
+                                        {sequences.length}
+                                    </div>
+                                    <div className="text-gray-600">Sequences</div>
                                 </div>
-                                <div className="text-gray-600">Sequences</div>
-                            </div>
-                            <div className="text-center p-3 bg-white rounded-lg">
-                                <div className="text-2xl font-bold text-blue-600">
-                                    {messages.length}
+                                <div className="text-center p-3 bg-white rounded-lg">
+                                    <div className="text-2xl font-bold text-blue-600">
+                                        {messages.length}
+                                    </div>
+                                    <div className="text-gray-600">Templates</div>
                                 </div>
-                                <div className="text-gray-600">Templates</div>
-                            </div>
-                            <div className="text-center p-3 bg-white rounded-lg">
-                                <div className="text-xl font-bold">
-                                    {agentConfig?.sender_verified ? (
-                                        <span className="text-green-600">
-                                            ✅ Verified
-                                        </span>
-                                    ) : (
-                                        <span className="text-amber-600">
-                                            ⚠️ Pending
-                                        </span>
-                                    )}
+                                <div className="text-center p-3 bg-white rounded-lg">
+                                    <div className="text-2xl font-bold text-orange-600">
+                                        {queuedCount}
+                                    </div>
+                                    <div className="text-gray-600">Queued</div>
                                 </div>
-                                <div className="text-gray-600">Domain</div>
-                            </div>
-                            <div className="text-center p-3 bg-white rounded-lg">
-                                <div className="text-2xl font-bold text-orange-600">
-                                    {queuedCount}
+                                <div className="text-center p-3 bg-white rounded-lg">
+                                    <div className="text-sm font-bold text-indigo-600">
+                                        {nextScheduledTime || "None"}
+                                    </div>
+                                    <div className="text-gray-600">Next Send</div>
                                 </div>
-                                <div className="text-gray-600">Queued</div>
                             </div>
-                            <div className="text-center p-3 bg-white rounded-lg">
-                                <div className="text-sm font-bold text-indigo-600">
-                                    {nextScheduledTime || "None"}
+
+                            {/* Test Message Button */}
+                            {agentConfig?.id && (
+                                <div className="mt-4 flex justify-end">
+                                    <Button
+                                        onClick={() => setTestModalOpen(true)}
+                                        variant="outline"
+                                        size="sm"
+                                        className="gap-2"
+                                    >
+                                        <MessageSquare className="h-4 w-4" />
+                                        Test Message to Self
+                                    </Button>
                                 </div>
-                                <div className="text-gray-600">Next Send</div>
-                            </div>
-                        </div>
+                            )}
+                        </>
                     )}
                 </Card>
 
@@ -1055,10 +1022,8 @@ export default function Step11Page({
                                     currentSenderName={agentConfig?.sender_name}
                                     currentSenderEmail={agentConfig?.sender_email}
                                     currentSMSSenderId={agentConfig?.sms_sender_id}
-                                    domainVerificationStatus={
-                                        agentConfig?.domain_verification_status
-                                    }
-                                    dnsRecords={agentConfig?.sendgrid_dns_records || []}
+                                    emailProviderType={agentConfig?.email_provider_type}
+                                    gmailUserEmail={agentConfig?.gmail_user_email}
                                     onUpdate={async () => {
                                         // Reload data after sender updates
                                         if (!projectId) return;
@@ -1244,28 +1209,14 @@ export default function Step11Page({
                 )}
             </div>
 
-            {/* Test Message to Self Floating Button */}
-            {followupEnabled && agentConfig?.id && (
-                <>
-                    <div className="fixed bottom-8 right-8 z-50">
-                        <Button
-                            onClick={() => setTestModalOpen(true)}
-                            size="lg"
-                            className="shadow-2xl hover:shadow-3xl transition-shadow"
-                        >
-                            <MessageSquare className="mr-2 h-5 w-5" />
-                            Test Message to Self
-                        </Button>
-                    </div>
-
-                    {/* Test Message Modal */}
-                    <TestMessageModal
-                        open={testModalOpen}
-                        onClose={() => setTestModalOpen(false)}
-                        agentConfigId={agentConfig.id}
-                        userEmail={agentConfig.sender_email || undefined}
-                    />
-                </>
+            {/* Test Message Modal */}
+            {agentConfig?.id && (
+                <TestMessageModal
+                    open={testModalOpen}
+                    onClose={() => setTestModalOpen(false)}
+                    agentConfigId={agentConfig.id}
+                    userEmail={agentConfig.sender_email || undefined}
+                />
             )}
         </StepLayout>
     );

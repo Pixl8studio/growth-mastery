@@ -29,7 +29,8 @@ const STEPS: Step[] = [
     { number: 9, title: "Registration", shortTitle: "Register" },
     { number: 10, title: "Flow Setup", shortTitle: "Flow" },
     { number: 11, title: "AI Follow-Up", shortTitle: "Follow-Up" },
-    { number: 12, title: "Analytics", shortTitle: "Analytics" },
+    { number: 12, title: "Marketing Content", shortTitle: "Marketing" },
+    { number: 13, title: "Analytics", shortTitle: "Analytics" },
 ];
 
 interface HorizontalProgressProps {

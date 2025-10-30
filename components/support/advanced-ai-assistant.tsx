@@ -281,10 +281,10 @@ export function AdvancedAIAssistant() {
                 className={cn(
                     "fixed bottom-6 right-6 z-50",
                     "h-14 w-14 rounded-full",
-                    "bg-gradient-to-r from-blue-600 to-purple-600",
-                    "text-white shadow-lg",
-                    "hover:shadow-xl hover:scale-110",
-                    "transition-all duration-200",
+                    "gradient-emerald",
+                    "text-primary-foreground shadow-soft",
+                    "hover:shadow-glow hover:scale-110",
+                    "transition-smooth",
                     "flex items-center justify-center",
                     "animate-pulse"
                 )}

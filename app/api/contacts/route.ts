@@ -252,7 +252,10 @@ export async function POST(request: NextRequest) {
                             : undefined,
                     });
 
-                    await sendWebhook(project.user_id, webhookPayload);
+                    await sendWebhook(project.user_id, webhookPayload, {
+                        pageId: registrationPageId || undefined,
+                        pageType: registrationPageId ? "registration" : undefined,
+                    });
                     requestLogger.info(
                         { contactId: contact.id },
                         "Webhook sent for new contact"

@@ -4,6 +4,20 @@
 
 export type PageType = "enrollment" | "watch" | "registration";
 
+export interface PageWebhookConfig {
+    webhook_enabled: boolean | null;
+    webhook_url: string | null;
+    webhook_secret: string | null;
+    webhook_inherit_global: boolean;
+}
+
+export interface EffectiveWebhookConfig {
+    enabled: boolean;
+    url: string | null;
+    secret: string | null;
+    isInherited: boolean;
+}
+
 export interface PageListItem {
     id: string;
     type: PageType;
@@ -14,6 +28,10 @@ export interface PageListItem {
     vanity_slug: string | null;
     created_at: string;
     updated_at: string;
+    webhook_enabled?: boolean | null;
+    webhook_url?: string | null;
+    webhook_secret?: string | null;
+    webhook_inherit_global?: boolean;
 }
 
 export interface PageFilters {

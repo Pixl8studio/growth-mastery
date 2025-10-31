@@ -1,18 +1,129 @@
 /**
  * Webhook Service
  * Send data to user-configured CRM webhooks with retry logic
+ * Supports both page-level and global webhook configuration
  */
 
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { retry } from "@/lib/utils";
 import { WEBHOOK_CONFIG } from "@/lib/config";
+import type { PageType } from "@/types/pages";
 import crypto from "crypto";
 
 interface WebhookPayload {
     event: string;
     timestamp: string;
     data: Record<string, unknown>;
+}
+
+interface WebhookConfiguration {
+    enabled: boolean;
+    url: string | null;
+    secret: string | null;
+    isInherited: boolean;
+}
+
+/**
+ * Get effective webhook configuration for a page
+ * Checks page-level settings first, falls back to global if inherit_global is true
+ */
+export async function getWebhookConfig(
+    userId: string,
+    pageId?: string,
+    pageType?: PageType
+): Promise<WebhookConfiguration> {
+    const supabase = await createClient();
+    const requestLogger = logger.child({
+        handler: "get-webhook-config",
+        userId,
+        pageId,
+        pageType,
+    });
+
+    try {
+        // Get global webhook settings
+        const { data: profile, error: profileError } = await supabase
+            .from("user_profiles")
+            .select("webhook_enabled, crm_webhook_url, webhook_secret")
+            .eq("id", userId)
+            .single();
+
+        if (profileError || !profile) {
+            requestLogger.warn("User profile not found");
+            return {
+                enabled: false,
+                url: null,
+                secret: null,
+                isInherited: false,
+            };
+        }
+
+        // If no page context provided, return global config
+        if (!pageId || !pageType) {
+            return {
+                enabled: profile.webhook_enabled || false,
+                url: profile.crm_webhook_url || null,
+                secret: profile.webhook_secret || null,
+                isInherited: false,
+            };
+        }
+
+        // Get page-level webhook settings
+        const tableName =
+            pageType === "registration"
+                ? "registration_pages"
+                : pageType === "enrollment"
+                  ? "enrollment_pages"
+                  : "watch_pages";
+
+        const { data: pageData, error: pageError } = await supabase
+            .from(tableName)
+            .select(
+                "webhook_enabled, webhook_url, webhook_secret, webhook_inherit_global"
+            )
+            .eq("id", pageId)
+            .single();
+
+        if (pageError || !pageData) {
+            requestLogger.warn(
+                { error: pageError },
+                "Page not found, using global config"
+            );
+            return {
+                enabled: profile.webhook_enabled || false,
+                url: profile.crm_webhook_url || null,
+                secret: profile.webhook_secret || null,
+                isInherited: true,
+            };
+        }
+
+        // If page inherits from global or has no explicit config
+        if (pageData.webhook_inherit_global || pageData.webhook_enabled === null) {
+            return {
+                enabled: profile.webhook_enabled || false,
+                url: profile.crm_webhook_url || null,
+                secret: profile.webhook_secret || null,
+                isInherited: true,
+            };
+        }
+
+        // Use page-specific configuration
+        return {
+            enabled: pageData.webhook_enabled || false,
+            url: pageData.webhook_url || null,
+            secret: pageData.webhook_secret || null,
+            isInherited: false,
+        };
+    } catch (error) {
+        requestLogger.error({ error }, "Failed to get webhook config");
+        return {
+            enabled: false,
+            url: null,
+            secret: null,
+            isInherited: false,
+        };
+    }
 }
 
 /**
@@ -145,10 +256,15 @@ export async function sendWebhookDirect(
 
 /**
  * Send webhook to user's CRM
+ * Supports page-level webhook configuration with global fallback
  */
 export async function sendWebhook(
     userId: string,
-    payload: WebhookPayload
+    payload: WebhookPayload,
+    options?: {
+        pageId?: string;
+        pageType?: PageType;
+    }
 ): Promise<{
     success: boolean;
     statusCode?: number;
@@ -159,35 +275,31 @@ export async function sendWebhook(
         handler: "send-webhook",
         userId,
         event: payload.event,
+        pageId: options?.pageId,
+        pageType: options?.pageType,
     });
 
     try {
         requestLogger.info("Sending webhook");
 
-        // Get user's webhook configuration
-        const supabase = await createClient();
+        // Get effective webhook configuration (page-level or global)
+        const config = await getWebhookConfig(
+            userId,
+            options?.pageId,
+            options?.pageType
+        );
 
-        const { data: profile, error: profileError } = await supabase
-            .from("user_profiles")
-            .select("webhook_enabled, crm_webhook_url, webhook_secret")
-            .eq("id", userId)
-            .single();
-
-        if (profileError || !profile) {
-            throw new Error("User profile not found");
-        }
-
-        // Check if webhook is enabled
-        if (!profile.webhook_enabled || !profile.crm_webhook_url) {
-            const errorMsg = !profile.webhook_enabled
+        // Check if webhook is enabled and configured
+        if (!config.enabled || !config.url) {
+            const errorMsg = !config.enabled
                 ? "Webhook is not enabled. Please enable it in your settings."
                 : "Webhook URL is not configured. Please set your webhook URL in settings.";
-            requestLogger.info(errorMsg);
+            requestLogger.info({ config }, errorMsg);
             return { success: false, notConfigured: true, error: errorMsg };
         }
 
-        const webhookUrl = profile.crm_webhook_url;
-        const webhookSecret = profile.webhook_secret;
+        const webhookUrl = config.url;
+        const webhookSecret = config.secret;
 
         // Generate HMAC signature if secret is configured
         const signature = webhookSecret

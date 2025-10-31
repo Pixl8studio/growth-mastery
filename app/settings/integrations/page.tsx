@@ -241,11 +241,11 @@ export default function IntegrationsSettingsPage() {
                     <div className="mb-4 flex items-center justify-between">
                         <div>
                             <h3 className="text-lg font-semibold text-foreground">
-                                CRM Webhook
+                                Global Webhook Settings
                             </h3>
                             <p className="text-sm text-muted-foreground">
-                                Automatically send lead data to your CRM when users
-                                register
+                                Default webhook for all pages. Can be overridden
+                                per-page.
                             </p>
                         </div>
                         <button
@@ -326,6 +326,21 @@ export default function IntegrationsSettingsPage() {
                                 />
                                 <p className="mt-1 text-xs text-muted-foreground">
                                     Used to sign requests with HMAC for verification
+                                </p>
+                            </div>
+
+                            {/* Page-Level Webhooks Info */}
+                            <div className="rounded-md border border-blue-200 bg-blue-50 p-4 dark:border-blue-800 dark:bg-blue-900/20">
+                                <h4 className="mb-2 text-sm font-semibold text-blue-900 dark:text-blue-100">
+                                    💡 Page-Level Webhooks
+                                </h4>
+                                <p className="text-xs text-blue-800 dark:text-blue-200">
+                                    Individual pages (registration, watch, enrollment)
+                                    can override these global settings with their own
+                                    custom webhooks. This is useful when you want
+                                    different pages to send data to different CRMs or
+                                    automation workflows. Configure page-specific
+                                    webhooks in each page's settings.
                                 </p>
                             </div>
 

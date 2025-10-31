@@ -13,7 +13,30 @@ registers through your Genie AI funnel. This allows you to:
 - Track lead sources and UTM parameters
 - Build custom integrations with tools like Make.com or Zapier
 
-## Setup
+## Webhook Configuration Levels
+
+Genie AI supports two levels of webhook configuration:
+
+### Global Webhooks (Default)
+
+Set up a default webhook in **Settings → Integrations** that applies to all pages. This
+is the simplest approach when you want all leads to go to the same CRM or automation
+platform.
+
+### Page-Level Webhooks (Override)
+
+Configure custom webhooks for individual pages (registration, watch, enrollment). This
+is useful when:
+
+- Different funnels send leads to different CRMs
+- You want to trigger different automation workflows per page
+- A/B testing different integration approaches
+- Separating leads by product or offer
+
+Page-level webhooks **override** the global webhook settings. When a page has its own
+webhook configured, the global webhook is ignored for that page.
+
+## Setup: Global Webhooks
 
 ### 1. Navigate to Settings
 
@@ -40,6 +63,36 @@ HMAC-SHA256, allowing you to verify the webhook came from Genie AI.
 ### 5. Test Your Webhook
 
 Click "Send test webhook" to verify your endpoint receives data correctly.
+
+## Setup: Page-Level Webhooks
+
+### 1. Navigate to Page Settings
+
+Go to the specific page (registration, watch, or enrollment) you want to configure.
+
+### 2. Access Webhook Settings
+
+Find the "Webhooks" section in the page settings or editor.
+
+### 3. Disable "Use Global Webhook Settings"
+
+Uncheck the "Inherit from global" toggle to configure a custom webhook for this page.
+
+### 4. Enable and Configure
+
+- Toggle on "Enable Webhook for This Page"
+- Enter the webhook URL specific to this page
+- (Optional) Add a webhook secret
+- Test the webhook to verify it works
+
+### 5. Inheritance Behavior
+
+Pages with "Inherit from global" enabled (default) will use the global webhook settings.
+This means you can:
+
+- Start with global settings for all pages
+- Customize individual pages as needed
+- Fall back to global settings by re-enabling "Inherit from global"
 
 ## Webhook Payload
 

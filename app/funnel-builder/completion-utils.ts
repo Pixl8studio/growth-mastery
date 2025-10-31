@@ -10,6 +10,43 @@ import { logger } from "@/lib/logger";
 import type { StepCompletion } from "./completion-types";
 
 /**
+ * Check if intake has been completed for a project
+ * Returns true if at least one intake session exists
+ */
+export async function hasCompletedIntake(projectId: string): Promise<boolean> {
+    const requestLogger = logger.child({
+        handler: "has-completed-intake",
+        projectId,
+    });
+
+    try {
+        const supabase = await createClient();
+
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+            return false;
+        }
+
+        const { count } = await supabase
+            .from("vapi_transcripts")
+            .select("id", { count: "exact", head: true })
+            .eq("funnel_project_id", projectId)
+            .eq("user_id", user.id);
+
+        const hasIntake = (count ?? 0) > 0;
+        requestLogger.info({ hasIntake }, "Intake completion checked");
+
+        return hasIntake;
+    } catch (error) {
+        requestLogger.error({ error }, "Failed to check intake completion");
+        return false;
+    }
+}
+
+/**
  * Check completion status for all 12 steps
  * Returns which steps have actual generated content
  */

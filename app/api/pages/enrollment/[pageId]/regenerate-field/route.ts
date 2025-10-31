@@ -79,6 +79,7 @@ export async function POST(
             fieldId,
             fieldContext,
             {
+                id: page.offers.id,
                 name: page.offers.name,
                 tagline: page.offers.tagline,
                 description: page.offers.description,

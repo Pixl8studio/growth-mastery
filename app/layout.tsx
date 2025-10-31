@@ -21,6 +21,27 @@ export const metadata: Metadata = {
     title: "GrowthMastery.ai - AI-Powered Funnel Builder",
     description:
         "The world's first done-for-you go-to-market engine that designs, builds, and deploys your entire funnel in hours. Automate sales, scale intelligently with AI.",
+    openGraph: {
+        title: "GrowthMastery.ai - AI-Powered Funnel Builder",
+        description:
+            "The world's first done-for-you go-to-market engine that designs, builds, and deploys your entire funnel in hours. Automate sales, scale intelligently with AI.",
+        images: [
+            {
+                url: "/icon.png",
+                width: 512,
+                height: 512,
+                alt: "GrowthMastery.ai Logo",
+            },
+        ],
+        type: "website",
+    },
+    twitter: {
+        card: "summary",
+        title: "GrowthMastery.ai - AI-Powered Funnel Builder",
+        description:
+            "The world's first done-for-you go-to-market engine that designs, builds, and deploys your entire funnel in hours. Automate sales, scale intelligently with AI.",
+        images: ["/icon.png"],
+    },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

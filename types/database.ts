@@ -14,8 +14,39 @@ export type Json =
 
 export interface Database {
     public: {
-        // eslint-disable-next-line @typescript-eslint/no-empty-object-type
         Tables: {
+            referral_codes: {
+                Row: {
+                    id: string;
+                    code: string;
+                    description: string | null;
+                    is_active: boolean;
+                    max_uses: number | null;
+                    current_uses: number;
+                    created_at: string;
+                    updated_at: string;
+                };
+                Insert: {
+                    id?: string;
+                    code: string;
+                    description?: string | null;
+                    is_active?: boolean;
+                    max_uses?: number | null;
+                    current_uses?: number;
+                    created_at?: string;
+                    updated_at?: string;
+                };
+                Update: {
+                    id?: string;
+                    code?: string;
+                    description?: string | null;
+                    is_active?: boolean;
+                    max_uses?: number | null;
+                    current_uses?: number;
+                    created_at?: string;
+                    updated_at?: string;
+                };
+            };
             // Add your tables here as you create them in Supabase
             // Example:
             // users: {

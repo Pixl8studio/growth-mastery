@@ -29,9 +29,28 @@ const Pricing = () => {
                                 Profit
                             </span>
                         </h2>
-                        <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+                        <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-6">
                             We grow when you grow. Your success funds our mission.
                         </p>
+
+                        {/* Pre-Launch Banner */}
+                        <div className="max-w-xl mx-auto mt-8">
+                            <div className="relative p-5 rounded-2xl bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500/50 shadow-glow">
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-yellow-500 text-black text-sm font-bold">
+                                    🎉 PRE-LAUNCH SPECIAL
+                                </div>
+                                <p className="text-xl font-bold text-foreground mb-1">
+                                    Save $2,000 Today!
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                    Use code{" "}
+                                    <span className="font-mono font-bold text-yellow-500 bg-black/30 px-2 py-0.5 rounded">
+                                        PRELAUNCH2000
+                                    </span>{" "}
+                                    at checkout
+                                </p>
+                            </div>
+                        </div>
                     </div>
 
                     {/* Pricing Card */}
@@ -43,14 +62,17 @@ const Pricing = () => {
                                 <h3 className="text-3xl font-display font-bold mb-2">
                                     The Growth Partnership Plan
                                 </h3>
-                                <div className="flex items-baseline justify-center gap-2 mb-4">
+                                <div className="flex items-baseline justify-center gap-3 mb-2">
+                                    <span className="text-2xl text-muted-foreground line-through">
+                                        $2,997
+                                    </span>
                                     <span className="text-5xl md:text-6xl font-bold text-primary">
                                         $997
                                     </span>
-                                    <span className="text-xl text-muted-foreground">
-                                        refundable deposit
-                                    </span>
                                 </div>
+                                <p className="text-xl text-muted-foreground mb-2">
+                                    refundable deposit
+                                </p>
                                 <p className="text-muted-foreground">
                                     Covers the AI & API resources that build your system
                                 </p>
@@ -140,8 +162,8 @@ const Pricing = () => {
                                     className="w-full md:w-auto text-lg px-12 py-6 group"
                                     asChild
                                 >
-                                    <a href="https://buy.stripe.com/aFa3cu98fdarc4gh2Q0oM0d">
-                                        Get Started
+                                    <a href="https://buy.stripe.com/3cIfZgbgn3zR5FS8wk0oM0e">
+                                        Get Started - Save $2,000
                                         <span className="ml-2 group-hover:translate-x-1 transition-transform">
                                             →
                                         </span>

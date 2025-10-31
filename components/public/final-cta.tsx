@@ -34,10 +34,32 @@ const FinalCTA = () => {
                         cold traffic into customers in 30 days or less.
                     </p>
 
+                    {/* Pre-Launch Special Banner */}
+                    <div
+                        className="max-w-xl mx-auto animate-fade-in"
+                        style={{ animationDelay: "0.3s" }}
+                    >
+                        <div className="relative p-5 rounded-2xl bg-gradient-to-r from-yellow-500/30 to-orange-500/30 border-2 border-yellow-400 shadow-glow backdrop-blur-sm">
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-yellow-400 text-black text-sm font-bold">
+                                🎉 PRE-LAUNCH SPECIAL
+                            </div>
+                            <p className="text-xl font-bold text-primary-foreground mb-1">
+                                Save $2,000 Today!
+                            </p>
+                            <p className="text-sm text-primary-foreground/80">
+                                Use code{" "}
+                                <span className="font-mono font-bold text-yellow-400 bg-black/50 px-2 py-0.5 rounded">
+                                    PRELAUNCH2000
+                                </span>{" "}
+                                at checkout
+                            </p>
+                        </div>
+                    </div>
+
                     {/* CTA Button */}
                     <div
                         className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-6 animate-fade-in"
-                        style={{ animationDelay: "0.4s" }}
+                        style={{ animationDelay: "0.5s" }}
                     >
                         <Button
                             variant="premium"
@@ -45,8 +67,8 @@ const FinalCTA = () => {
                             className="group text-lg px-12 py-6 shadow-glow"
                             asChild
                         >
-                            <a href="https://buy.stripe.com/aFa3cu98fdarc4gh2Q0oM0d">
-                                Start Now
+                            <a href="https://buy.stripe.com/3cIfZgbgn3zR5FS8wk0oM0e">
+                                Start Now - Save $2,000
                                 <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
                             </a>
                         </Button>

@@ -59,10 +59,32 @@ const Hero = () => {
                         automate sales in hours, not months.
                     </p>
 
+                    {/* Pre-Launch Special Banner */}
+                    <div
+                        className="animate-fade-in max-w-2xl mx-auto"
+                        style={{ animationDelay: "0.3s" }}
+                    >
+                        <div className="relative p-6 rounded-2xl bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500/50 shadow-glow">
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-yellow-500 text-black text-sm font-bold">
+                                🎉 PRE-LAUNCH SPECIAL
+                            </div>
+                            <p className="text-2xl font-bold text-foreground mb-2">
+                                Save $2,000 Today!
+                            </p>
+                            <p className="text-muted-foreground">
+                                Use code{" "}
+                                <span className="font-mono font-bold text-yellow-500 bg-black/30 px-3 py-1 rounded">
+                                    PRELAUNCH2000
+                                </span>{" "}
+                                at checkout
+                            </p>
+                        </div>
+                    </div>
+
                     {/* CTA Buttons */}
                     <div
                         className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in"
-                        style={{ animationDelay: "0.4s" }}
+                        style={{ animationDelay: "0.5s" }}
                     >
                         <Button
                             size="lg"
@@ -70,7 +92,7 @@ const Hero = () => {
                             className="group text-lg px-8 py-6"
                             asChild
                         >
-                            <a href="https://buy.stripe.com/aFa3cu98fdarc4gh2Q0oM0d">
+                            <a href="https://buy.stripe.com/3cIfZgbgn3zR5FS8wk0oM0e">
                                 🚀 Start Now
                                 <ArrowRight className="ml-2 group-hover:translate-x-1 transition-transform" />
                             </a>

@@ -86,8 +86,8 @@ export async function POST(
                 promise: page.offers.promise,
                 person: page.offers.person,
                 process: page.offers.process,
-                features: page.offers.features,
-                bonuses: page.offers.bonuses,
+                features: page.offers.features as any,
+                bonuses: page.offers.bonuses as any,
                 guarantee: page.offers.guarantee,
             },
             {

@@ -112,6 +112,7 @@ export async function POST(
 
         // Generate new HTML using the HTML generator with AI-generated content
         const newHtml = generateRegistrationHTML({
+            projectId: page.funnel_project_id,
             deckStructure: {
                 id: deckStructure?.id || "",
                 slides: deckSlides,
@@ -132,7 +133,23 @@ export async function POST(
                 mainProblem: intakeData.mainProblem,
                 desiredOutcome: intakeData.desiredOutcome,
             },
-            offerData: offer,
+            offerData: offer
+                ? {
+                      id: offer.id,
+                      name: offer.name,
+                      tagline: offer.tagline,
+                      description: offer.description,
+                      price: offer.price,
+                      currency: offer.currency,
+                      features: offer.features,
+                      bonuses: offer.bonuses,
+                      guarantee: offer.guarantee,
+                      promise: offer.promise,
+                      person: offer.person,
+                      process: offer.process,
+                      purpose: offer.purpose,
+                  }
+                : null,
         });
 
         // Handle preserving edited fields if requested

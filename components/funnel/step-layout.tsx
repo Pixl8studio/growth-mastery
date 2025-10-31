@@ -4,6 +4,7 @@ import { ReactNode } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, LayoutDashboard } from "lucide-react";
 import { StepperNav } from "./stepper-nav";
+import { GenerationProgressTracker } from "@/components/layout/generation-progress-tracker";
 
 interface StepLayoutProps {
     children: ReactNode;
@@ -193,6 +194,9 @@ export function StepLayout({
                     </div>
                 </div>
             </div>
+
+            {/* Global Generation Progress Tracker */}
+            <GenerationProgressTracker projectId={projectId} />
         </div>
     );
 }

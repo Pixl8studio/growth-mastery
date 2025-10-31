@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import {
     Phone,
@@ -22,6 +22,10 @@ import { PasteIntake } from "@/components/intake/paste-intake";
 import { UploadIntake } from "@/components/intake/upload-intake";
 import { ScrapeIntake } from "@/components/intake/scrape-intake";
 import { AutoGenerationModal } from "@/components/funnel/auto-generation-modal";
+import {
+    AutoGenerationProgress,
+    type GenerationProgressItem,
+} from "@/components/funnel/auto-generation-progress";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
@@ -65,6 +69,15 @@ export default function Step1Page({
         "generate"
     );
     const [hasExistingContent, setHasExistingContent] = useState(false);
+    const [isPolling, setIsPolling] = useState(false);
+    const [generationProgress, setGenerationProgress] = useState<
+        GenerationProgressItem[]
+    >([]);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [currentGeneratingStep, setCurrentGeneratingStep] = useState<number | null>(
+        null
+    );
+    const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
     // Load completion status
     const { completedSteps, refreshCompletion } = useStepCompletion(projectId);
@@ -146,6 +159,84 @@ export default function Step1Page({
         }
     }, [completedSteps]);
 
+    // Poll for generation status
+    const pollGenerationStatus = async () => {
+        if (!projectId) return;
+
+        try {
+            const response = await fetch(
+                `/api/generate/generation-status?projectId=${projectId}`
+            );
+
+            if (!response.ok) {
+                logger.error("Failed to fetch generation status");
+                return;
+            }
+
+            const data = await response.json();
+
+            setIsGenerating(data.isGenerating);
+            setCurrentGeneratingStep(data.currentStep);
+            setGenerationProgress(data.progress || []);
+
+            // If generation is complete, stop polling and refresh
+            if (!data.isGenerating && isPolling) {
+                setIsPolling(false);
+                if (pollingIntervalRef.current) {
+                    clearInterval(pollingIntervalRef.current);
+                    pollingIntervalRef.current = null;
+                }
+                refreshCompletion();
+
+                toast({
+                    title: "Generation Complete! ✨",
+                    description: `Successfully generated ${data.completedSteps.length} steps`,
+                });
+            }
+        } catch (error) {
+            logger.error({ error }, "Error polling generation status");
+        }
+    };
+
+    // Start polling when component mounts or projectId changes
+    useEffect(() => {
+        if (!projectId) return;
+
+        // Check initial status
+        pollGenerationStatus();
+
+        // Cleanup function
+        return () => {
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+            }
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [projectId]);
+
+    // Start/stop polling based on generation status
+    useEffect(() => {
+        if (isGenerating && !pollingIntervalRef.current) {
+            // Start polling every 2.5 seconds
+            pollingIntervalRef.current = setInterval(pollGenerationStatus, 2500);
+            setIsPolling(true);
+        } else if (!isGenerating && pollingIntervalRef.current) {
+            // Stop polling
+            clearInterval(pollingIntervalRef.current);
+            pollingIntervalRef.current = null;
+            setIsPolling(false);
+        }
+
+        return () => {
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+            }
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isGenerating]);
+
     const hasCompletedIntake = intakeSessions.length > 0;
 
     const handleGenerateAll = () => {
@@ -162,6 +253,15 @@ export default function Step1Page({
         try {
             const mostRecentIntake = intakeSessions[0];
 
+            setShowGenerationModal(false);
+            setIsGenerating(true);
+
+            toast({
+                title: "Starting Generation...",
+                description:
+                    "Your content is being generated. This may take a few minutes.",
+            });
+
             const response = await fetch("/api/generate/auto-generate-all", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -173,23 +273,20 @@ export default function Step1Page({
             });
 
             if (!response.ok) {
-                throw new Error("Failed to generate content");
+                throw new Error("Failed to start generation");
             }
 
-            const result = await response.json();
-
-            toast({
-                title: "Generation Complete",
-                description: `Successfully generated ${result.completedSteps.length} steps`,
-            });
-
-            // Refresh completion status
-            refreshCompletion();
+            // Start polling for progress
+            if (!pollingIntervalRef.current) {
+                pollingIntervalRef.current = setInterval(pollGenerationStatus, 2500);
+                setIsPolling(true);
+            }
         } catch (error) {
-            logger.error({ error }, "Failed to generate content");
+            logger.error({ error }, "Failed to start generation");
+            setIsGenerating(false);
             toast({
                 title: "Generation Failed",
-                description: "Failed to generate content. Please try again.",
+                description: "Failed to start content generation. Please try again.",
                 variant: "destructive",
             });
         }
@@ -273,6 +370,17 @@ export default function Step1Page({
             stepDescription="Provide your business information through voice, documents, or other methods"
         >
             <div className="space-y-8">
+                {/* Generation Progress - Show if generating or has progress */}
+                {(isGenerating || generationProgress.length > 0) && (
+                    <AutoGenerationProgress
+                        projectId={projectId}
+                        progress={generationProgress}
+                        isGenerating={isGenerating}
+                        currentStep={currentGeneratingStep}
+                        onClose={() => setGenerationProgress([])}
+                    />
+                )}
+
                 {/* Method Selector or Active Method Interface */}
                 {!selectedMethod ? (
                     <IntakeMethodSelector

@@ -6,7 +6,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import * as Sentry from "@sentry/nextjs";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -118,10 +117,6 @@ export async function POST(request: NextRequest) {
                 { error: uploadError, storagePath },
                 "Failed to upload image"
             );
-            Sentry.captureException(uploadError, {
-                tags: { handler: "upload-image", action: "upload" },
-                extra: { projectId, storagePath },
-            });
             return NextResponse.json(
                 { error: "Failed to upload image" },
                 { status: 500 }
@@ -178,10 +173,6 @@ export async function POST(request: NextRequest) {
                 "Failed to save media metadata"
             );
             // Don't fail the request - image is already uploaded
-            Sentry.captureException(dbError, {
-                tags: { handler: "upload-image", action: "save-metadata" },
-                extra: { projectId, storagePath },
-            });
         }
 
         requestLogger.info(
@@ -202,10 +193,6 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         requestLogger.error({ error }, "Image upload failed");
-
-        Sentry.captureException(error, {
-            tags: { handler: "upload-image" },
-        });
 
         return NextResponse.json(
             {

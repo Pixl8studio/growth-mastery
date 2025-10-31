@@ -7,7 +7,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { generateImageWithAI } from "@/lib/ai/client";
-import * as Sentry from "@sentry/nextjs";
 
 const MAX_PROMPT_LENGTH = 4000;
 
@@ -121,10 +120,6 @@ export async function POST(request: NextRequest) {
                 { error: uploadError, storagePath },
                 "Failed to upload image"
             );
-            Sentry.captureException(uploadError, {
-                tags: { handler: "generate-image", action: "upload" },
-                extra: { projectId, storagePath },
-            });
             return NextResponse.json(
                 { error: "Failed to upload generated image" },
                 { status: 500 }
@@ -163,10 +158,6 @@ export async function POST(request: NextRequest) {
                 "Failed to save media metadata"
             );
             // Don't fail the request - image is already uploaded
-            Sentry.captureException(dbError, {
-                tags: { handler: "generate-image", action: "save-metadata" },
-                extra: { projectId, storagePath },
-            });
         }
 
         requestLogger.info(
@@ -187,10 +178,6 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         requestLogger.error({ error }, "Image generation failed");
-
-        Sentry.captureException(error, {
-            tags: { handler: "generate-image" },
-        });
 
         return NextResponse.json(
             {

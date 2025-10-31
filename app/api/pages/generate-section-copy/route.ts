@@ -7,7 +7,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { generateSectionCopy } from "@/lib/pages/section-copy-generator";
-import * as Sentry from "@sentry/nextjs";
 import type { PageType } from "@/types/pages";
 
 interface GenerateSectionCopyRequest {
@@ -121,10 +120,6 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         requestLogger.error({ error }, "Section copy generation failed");
-
-        Sentry.captureException(error, {
-            tags: { handler: "generate-section-copy" },
-        });
 
         return NextResponse.json(
             {

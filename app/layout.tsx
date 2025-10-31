@@ -20,7 +20,7 @@ const poppins = Poppins({
 export const metadata: Metadata = {
     title: "GrowthMastery.ai - AI-Powered Funnel Builder",
     description:
-        "The world's first go-to-market engine that designs, builds, and deploys your entire funnel and marketing assets so you can automate sales in hours, not months.",
+        "The world's first done-for-you go-to-market engine that designs, builds, and deploys your entire funnel in hours. Automate sales, scale intelligently with AI.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

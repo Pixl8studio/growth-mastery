@@ -60,7 +60,7 @@ const Hero = () => {
 
                     {/* CTA Buttons */}
                     <div
-                        className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in"
+                        className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in pb-6 md:pb-8"
                         style={{ animationDelay: "0.3s" }}
                     >
                         <Button
@@ -86,7 +86,7 @@ const Hero = () => {
 
                     {/* Pre-Launch Special Banner */}
                     <div
-                        className="animate-fade-in max-w-2xl mx-auto px-4 mt-8"
+                        className="animate-fade-in max-w-2xl mx-auto px-4 mt-6 md:mt-12"
                         style={{ animationDelay: "0.4s" }}
                     >
                         <div className="relative p-4 md:p-6 rounded-2xl bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500/50 shadow-glow">

@@ -93,6 +93,7 @@ export default async function EnrollmentPageEditor({
     return (
         <EditorPageWrapper
             pageId={pageId}
+            projectId={projectId}
             pageType="enrollment"
             htmlContent={page.html_content}
             theme={theme}

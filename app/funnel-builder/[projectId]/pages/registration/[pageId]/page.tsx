@@ -94,6 +94,7 @@ export default async function RegistrationPageEditor({
     return (
         <EditorPageWrapper
             pageId={pageId}
+            projectId={projectId}
             pageType="registration"
             htmlContent={page.html_content}
             theme={theme}

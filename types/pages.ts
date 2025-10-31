@@ -45,3 +45,35 @@ export interface FunnelOption {
     id: string;
     name: string;
 }
+
+// Page media types
+export type PageMediaType = "uploaded_image" | "ai_generated_image" | "pitch_video";
+
+export interface PageMedia {
+    id: string;
+    funnel_project_id: string;
+    page_id: string | null;
+    user_id: string;
+    media_type: PageMediaType;
+    storage_path: string;
+    public_url: string;
+    prompt: string | null;
+    metadata: {
+        width?: number;
+        height?: number;
+        file_size?: number;
+        mime_type?: string;
+        original_filename?: string;
+    };
+    created_at: string;
+    updated_at: string;
+}
+
+export interface PitchVideo {
+    id: string;
+    title: string;
+    video_id: string;
+    thumbnail_url: string | null;
+    duration: number | null;
+    created_at: string;
+}

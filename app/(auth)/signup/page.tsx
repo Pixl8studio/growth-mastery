@@ -18,6 +18,7 @@ export default function SignupPage() {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [fullName, setFullName] = useState("");
+    const [referralCode, setReferralCode] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -25,6 +26,14 @@ export default function SignupPage() {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
+
+        // Validate referral code is provided
+        const sanitizedReferralCode = referralCode.trim().toUpperCase();
+        if (!sanitizedReferralCode) {
+            setError("Referral code is required");
+            setIsLoading(false);
+            return;
+        }
 
         // Validate passwords match
         if (password !== confirmPassword) {
@@ -41,6 +50,23 @@ export default function SignupPage() {
         }
 
         try {
+            // Validate referral code before creating account
+            const validationResponse = await fetch("/api/auth/validate-referral", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ code: sanitizedReferralCode }),
+            });
+
+            const validationData = await validationResponse.json();
+
+            if (!validationData.valid) {
+                setError(validationData.message || "Invalid or inactive referral code");
+                setIsLoading(false);
+                return;
+            }
+
             const supabase = createClient();
 
             const { data, error: signUpError } = await supabase.auth.signUp({
@@ -49,6 +75,7 @@ export default function SignupPage() {
                 options: {
                     data: {
                         full_name: fullName,
+                        referral_code: sanitizedReferralCode,
                     },
                 },
             });
@@ -57,7 +84,10 @@ export default function SignupPage() {
                 throw signUpError;
             }
 
-            logger.info({ userId: data.user?.id }, "User signed up successfully");
+            logger.info(
+                { userId: data.user?.id, referralCode: sanitizedReferralCode },
+                "User signed up successfully"
+            );
 
             // Redirect to dashboard (user profile will be auto-created via trigger)
             router.push("/funnel-builder");
@@ -110,6 +140,29 @@ export default function SignupPage() {
                         className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-soft placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                         placeholder="John Doe"
                     />
+                </div>
+
+                <div>
+                    <label
+                        htmlFor="referralCode"
+                        className="block text-sm font-medium text-foreground"
+                    >
+                        Referral Code
+                    </label>
+                    <input
+                        id="referralCode"
+                        name="referralCode"
+                        type="text"
+                        required
+                        value={referralCode}
+                        onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                        className="mt-1 block w-full rounded-md border border-border bg-background px-3 py-2 text-foreground shadow-soft placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 uppercase"
+                        placeholder="Enter your code"
+                        maxLength={50}
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                        A referral code is required to create an account
+                    </p>
                 </div>
 
                 <div>

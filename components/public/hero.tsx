@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, LogIn } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { CountdownDealBanner } from "./countdown-deal-banner";
 
 const Hero = () => {
     return (
@@ -84,27 +85,8 @@ const Hero = () => {
                         </Button>
                     </div>
 
-                    {/* Pre-Launch Special Banner */}
-                    <div
-                        className="animate-fade-in max-w-2xl mx-auto px-4 mt-6 md:mt-12"
-                        style={{ animationDelay: "0.4s" }}
-                    >
-                        <div className="relative p-4 md:p-6 rounded-2xl bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500/50 shadow-glow">
-                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 md:px-4 py-1 rounded-full bg-yellow-500 text-black text-xs md:text-sm font-bold whitespace-nowrap">
-                                🎉 PRE-LAUNCH SPECIAL
-                            </div>
-                            <p className="text-xl md:text-2xl font-bold text-foreground mb-1 md:mb-2">
-                                Save $2,000 Today!
-                            </p>
-                            <p className="text-sm md:text-base text-muted-foreground">
-                                Use code{" "}
-                                <span className="font-mono font-bold text-yellow-500 bg-black/30 px-2 md:px-3 py-1 rounded text-xs md:text-sm">
-                                    PRELAUNCH2000
-                                </span>{" "}
-                                at checkout
-                            </p>
-                        </div>
-                    </div>
+                    {/* Pre-Launch Special Banner with Countdown */}
+                    <CountdownDealBanner />
 
                     {/* Social Proof */}
                     <div

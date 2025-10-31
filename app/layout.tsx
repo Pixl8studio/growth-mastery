@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <body className={`${inter.variable} ${poppins.variable} font-sans`}>
                 {children}
                 <Toaster />
-                <AdvancedAIAssistant />
+                {/* <AdvancedAIAssistant /> */}
             </body>
         </html>
     );

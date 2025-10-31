@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
-import { ArrowRight, Play } from "lucide-react";
+import { ArrowRight, Play, LogIn } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 
 const Hero = () => {
     return (
@@ -12,6 +13,20 @@ const Hero = () => {
                     className="absolute bottom-20 right-10 w-96 h-96 bg-accent/20 rounded-full blur-3xl animate-float"
                     style={{ animationDelay: "2s" }}
                 />
+            </div>
+
+            {/* Login button in top-right corner */}
+            <div className="absolute top-6 right-6 z-10 animate-fade-in">
+                <Button
+                    variant="outline"
+                    className="backdrop-blur-sm bg-green-600 hover:bg-yellow-500 text-white hover:text-black border-green-700 hover:border-yellow-600 font-semibold shadow-lg transition-all"
+                    asChild
+                >
+                    <Link href="/login">
+                        <LogIn className="mr-2 h-4 w-4" />
+                        Login
+                    </Link>
+                </Button>
             </div>
 
             <div className="container relative mx-auto px-6 py-20 lg:py-32">

@@ -16,6 +16,7 @@ export interface GenerationProgress {
     stepName: string;
     status: "pending" | "in_progress" | "completed" | "failed";
     error?: string;
+    completedAt?: string;
 }
 
 export interface GenerationResult {
@@ -94,6 +95,9 @@ export async function generateAllFromIntake(
         await updateGenerationStatus(supabase, projectId, {
             is_generating: true,
             intake_id_used: intakeId,
+            current_step: null,
+            progress,
+            started_at: new Date().toISOString(),
         });
 
         // Step 0: Fetch intake data
@@ -112,6 +116,10 @@ export async function generateAllFromIntake(
         // Step 2: Generate Offer
         try {
             progress[0].status = "in_progress";
+            await updateGenerationStatus(supabase, projectId, {
+                current_step: 2,
+                progress,
+            });
             requestLogger.info("Generating offer...");
 
             const offerResult = await generateOffer(
@@ -122,7 +130,12 @@ export async function generateAllFromIntake(
             );
             if (offerResult) {
                 progress[0].status = "completed";
+                progress[0].completedAt = new Date().toISOString();
                 completedSteps.push(2);
+                await updateGenerationStatus(supabase, projectId, {
+                    progress,
+                    generated_steps: completedSteps,
+                });
                 requestLogger.info({ offerId: offerResult.id }, "✅ Offer generated");
             }
         } catch (error) {
@@ -130,12 +143,20 @@ export async function generateAllFromIntake(
             progress[0].error =
                 error instanceof Error ? error.message : "Unknown error";
             failedSteps.push({ step: 2, error: progress[0].error });
+            await updateGenerationStatus(supabase, projectId, {
+                progress,
+                generation_errors: failedSteps,
+            });
             requestLogger.error({ error }, "❌ Failed to generate offer");
         }
 
         // Step 3: Generate Deck Structure
         try {
             progress[1].status = "in_progress";
+            await updateGenerationStatus(supabase, projectId, {
+                current_step: 3,
+                progress,
+            });
             requestLogger.info("Generating deck structure...");
 
             const deckResult = await generateDeckStructure(
@@ -146,7 +167,12 @@ export async function generateAllFromIntake(
             );
             if (deckResult) {
                 progress[1].status = "completed";
+                progress[1].completedAt = new Date().toISOString();
                 completedSteps.push(3);
+                await updateGenerationStatus(supabase, projectId, {
+                    progress,
+                    generated_steps: completedSteps,
+                });
                 requestLogger.info(
                     { deckId: deckResult.id },
                     "✅ Deck structure generated"
@@ -157,6 +183,10 @@ export async function generateAllFromIntake(
             progress[1].error =
                 error instanceof Error ? error.message : "Unknown error";
             failedSteps.push({ step: 3, error: progress[1].error });
+            await updateGenerationStatus(supabase, projectId, {
+                progress,
+                generation_errors: failedSteps,
+            });
             requestLogger.error({ error }, "❌ Failed to generate deck structure");
         }
 
@@ -183,6 +213,10 @@ export async function generateAllFromIntake(
         if (offer && deckStructure) {
             try {
                 progress[2].status = "in_progress";
+                await updateGenerationStatus(supabase, projectId, {
+                    current_step: 5,
+                    progress,
+                });
                 requestLogger.info("Generating enrollment page...");
 
                 await generateEnrollmentPage(
@@ -193,48 +227,82 @@ export async function generateAllFromIntake(
                     deckStructure
                 );
                 progress[2].status = "completed";
+                progress[2].completedAt = new Date().toISOString();
                 completedSteps.push(5);
+                await updateGenerationStatus(supabase, projectId, {
+                    progress,
+                    generated_steps: completedSteps,
+                });
                 requestLogger.info("✅ Enrollment page generated");
             } catch (error) {
                 progress[2].status = "failed";
                 progress[2].error =
                     error instanceof Error ? error.message : "Unknown error";
                 failedSteps.push({ step: 5, error: progress[2].error });
+                await updateGenerationStatus(supabase, projectId, {
+                    progress,
+                    generation_errors: failedSteps,
+                });
                 requestLogger.error({ error }, "❌ Failed to generate enrollment page");
             }
         } else {
             progress[2].status = "failed";
             progress[2].error = "Missing offer or deck structure";
             failedSteps.push({ step: 5, error: progress[2].error });
+            await updateGenerationStatus(supabase, projectId, {
+                progress,
+                generation_errors: failedSteps,
+            });
         }
 
         // Step 8: Generate Watch Pages (requires deck)
         if (deckStructure) {
             try {
                 progress[3].status = "in_progress";
+                await updateGenerationStatus(supabase, projectId, {
+                    current_step: 8,
+                    progress,
+                });
                 requestLogger.info("Generating watch page...");
 
                 await generateWatchPage(supabase, projectId, userId, deckStructure);
                 progress[3].status = "completed";
+                progress[3].completedAt = new Date().toISOString();
                 completedSteps.push(8);
+                await updateGenerationStatus(supabase, projectId, {
+                    progress,
+                    generated_steps: completedSteps,
+                });
                 requestLogger.info("✅ Watch page generated");
             } catch (error) {
                 progress[3].status = "failed";
                 progress[3].error =
                     error instanceof Error ? error.message : "Unknown error";
                 failedSteps.push({ step: 8, error: progress[3].error });
+                await updateGenerationStatus(supabase, projectId, {
+                    progress,
+                    generation_errors: failedSteps,
+                });
                 requestLogger.error({ error }, "❌ Failed to generate watch page");
             }
         } else {
             progress[3].status = "failed";
             progress[3].error = "Missing deck structure";
             failedSteps.push({ step: 8, error: progress[3].error });
+            await updateGenerationStatus(supabase, projectId, {
+                progress,
+                generation_errors: failedSteps,
+            });
         }
 
         // Step 9: Generate Registration Pages (requires deck + intake)
         if (deckStructure) {
             try {
                 progress[4].status = "in_progress";
+                await updateGenerationStatus(supabase, projectId, {
+                    current_step: 9,
+                    progress,
+                });
                 requestLogger.info("Generating registration page...");
 
                 await generateRegistrationPage(
@@ -246,13 +314,22 @@ export async function generateAllFromIntake(
                     offer
                 );
                 progress[4].status = "completed";
+                progress[4].completedAt = new Date().toISOString();
                 completedSteps.push(9);
+                await updateGenerationStatus(supabase, projectId, {
+                    progress,
+                    generated_steps: completedSteps,
+                });
                 requestLogger.info("✅ Registration page generated");
             } catch (error) {
                 progress[4].status = "failed";
                 progress[4].error =
                     error instanceof Error ? error.message : "Unknown error";
                 failedSteps.push({ step: 9, error: progress[4].error });
+                await updateGenerationStatus(supabase, projectId, {
+                    progress,
+                    generation_errors: failedSteps,
+                });
                 requestLogger.error(
                     { error },
                     "❌ Failed to generate registration page"
@@ -262,23 +339,40 @@ export async function generateAllFromIntake(
             progress[4].status = "failed";
             progress[4].error = "Missing deck structure";
             failedSteps.push({ step: 9, error: progress[4].error });
+            await updateGenerationStatus(supabase, projectId, {
+                progress,
+                generation_errors: failedSteps,
+            });
         }
 
         // Step 11: Generate AI Followup (requires offer)
         if (offer) {
             try {
                 progress[5].status = "in_progress";
+                await updateGenerationStatus(supabase, projectId, {
+                    current_step: 11,
+                    progress,
+                });
                 requestLogger.info("Generating AI followup sequence...");
 
                 await generateFollowupSequence(supabase, projectId, userId, offer);
                 progress[5].status = "completed";
+                progress[5].completedAt = new Date().toISOString();
                 completedSteps.push(11);
+                await updateGenerationStatus(supabase, projectId, {
+                    progress,
+                    generated_steps: completedSteps,
+                });
                 requestLogger.info("✅ AI followup sequence generated");
             } catch (error) {
                 progress[5].status = "failed";
                 progress[5].error =
                     error instanceof Error ? error.message : "Unknown error";
                 failedSteps.push({ step: 11, error: progress[5].error });
+                await updateGenerationStatus(supabase, projectId, {
+                    progress,
+                    generation_errors: failedSteps,
+                });
                 requestLogger.error(
                     { error },
                     "❌ Failed to generate followup sequence"
@@ -288,11 +382,19 @@ export async function generateAllFromIntake(
             progress[5].status = "failed";
             progress[5].error = "Missing offer";
             failedSteps.push({ step: 11, error: progress[5].error });
+            await updateGenerationStatus(supabase, projectId, {
+                progress,
+                generation_errors: failedSteps,
+            });
         }
 
         // Marketing Profile: Initialize from intake
         try {
             progress[6].status = "in_progress";
+            await updateGenerationStatus(supabase, projectId, {
+                current_step: 0,
+                progress,
+            });
             requestLogger.info("Initializing marketing profile...");
 
             const marketingResult = await initializeFromIntake(
@@ -303,6 +405,10 @@ export async function generateAllFromIntake(
 
             if (marketingResult.success) {
                 progress[6].status = "completed";
+                progress[6].completedAt = new Date().toISOString();
+                await updateGenerationStatus(supabase, projectId, {
+                    progress,
+                });
                 requestLogger.info(
                     { profileId: marketingResult.profileId },
                     "✅ Marketing profile initialized"
@@ -316,6 +422,9 @@ export async function generateAllFromIntake(
             progress[6].status = "failed";
             progress[6].error =
                 error instanceof Error ? error.message : "Unknown error";
+            await updateGenerationStatus(supabase, projectId, {
+                progress,
+            });
             // Don't add to failedSteps - marketing is optional
             requestLogger.error({ error }, "❌ Failed to initialize marketing profile");
         }
@@ -323,10 +432,12 @@ export async function generateAllFromIntake(
         // Update final generation status
         await updateGenerationStatus(supabase, projectId, {
             is_generating: false,
+            current_step: null,
             last_generated_at: new Date().toISOString(),
             generated_steps: completedSteps,
             generation_errors: failedSteps,
             regeneration_count: 0,
+            progress,
         });
 
         requestLogger.info(
@@ -452,12 +563,31 @@ async function updateGenerationStatus(
         generated_steps: number[];
         regeneration_count: number;
         generation_errors: Array<{ step: number; error: string }>;
+        current_step: number | null;
+        progress: GenerationProgress[];
+        started_at: string;
     }>
 ) {
+    // Get current status to merge with updates
+    const { data: currentProject } = await supabase
+        .from("funnel_projects")
+        .select("auto_generation_status")
+        .eq("id", projectId)
+        .single();
+
+    const currentStatus =
+        (currentProject?.auto_generation_status as Record<string, unknown>) || {};
+
+    // Merge updates with current status
+    const mergedStatus = {
+        ...currentStatus,
+        ...updates,
+    };
+
     const { error } = await supabase
         .from("funnel_projects")
         .update({
-            auto_generation_status: updates as unknown as Record<string, unknown>,
+            auto_generation_status: mergedStatus as unknown as Record<string, unknown>,
         })
         .eq("id", projectId);
 

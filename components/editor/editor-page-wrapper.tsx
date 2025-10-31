@@ -7,12 +7,18 @@
  */
 
 import Script from "next/script";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { logger } from "@/lib/client-logger";
 import { PageRegenerateButton } from "@/components/pages/page-regenerate-button";
+import { ImageGenerationModal } from "@/components/pages/image-generation-modal";
+import { ImageUploadButton } from "@/components/pages/image-upload-button";
+import { VideoSelectorModal } from "@/components/pages/video-selector-modal";
+import { SectionBlockGenerator } from "@/components/pages/section-block-generator";
+import type { PitchVideo } from "@/types/pages";
 
 interface EditorPageWrapperProps {
     pageId: string;
+    projectId: string;
     pageType: "registration" | "watch" | "enrollment";
     htmlContent: string;
     theme: {
@@ -26,11 +32,17 @@ interface EditorPageWrapperProps {
 
 export function EditorPageWrapper({
     pageId,
+    projectId,
     pageType,
     htmlContent,
     theme,
     isEditMode,
 }: EditorPageWrapperProps) {
+    // Modal states for new features
+    const [isImageGenModalOpen, setIsImageGenModalOpen] = useState(false);
+    const [isVideoSelectorOpen, setIsVideoSelectorOpen] = useState(false);
+    const [isSectionGeneratorOpen, setIsSectionGeneratorOpen] = useState(false);
+
     useEffect(() => {
         if (!isEditMode) return;
 
@@ -59,13 +71,74 @@ export function EditorPageWrapper({
         });
 
         logger.info(
-            { pageId, pageType, isEditMode },
+            { pageId, projectId, pageType, isEditMode },
             "📝 Editor page wrapper mounted - loading editor scripts"
         );
 
         // Debug log for theme
         logger.info({ theme }, "🎨 Theme CSS variables injected");
-    }, [isEditMode, theme, pageId, pageType]);
+
+        // Expose modal openers to window for vanilla JS integration
+        window.openImageGenerationModal = () => setIsImageGenModalOpen(true);
+        window.openVideoSelectorModal = () => setIsVideoSelectorOpen(true);
+        window.openSectionGeneratorModal = () => setIsSectionGeneratorOpen(true);
+
+        logger.info({}, "✅ React modal handlers exposed to window");
+
+        return () => {
+            // Cleanup
+            delete window.openImageGenerationModal;
+            delete window.openVideoSelectorModal;
+            delete window.openSectionGeneratorModal;
+        };
+    }, [isEditMode, theme, pageId, projectId, pageType]);
+
+    // Handler for AI-generated image
+    const handleImageGenerated = (imageUrl: string, mediaId: string) => {
+        logger.info({ imageUrl, mediaId }, "AI image generated, inserting into editor");
+
+        // Call vanilla JS editor function to insert image
+        if (window.visualEditor && window.visualEditor.insertAIImage) {
+            window.visualEditor.insertAIImage(imageUrl, mediaId);
+        }
+    };
+
+    // Handler for uploaded image
+    const handleImageUploaded = (
+        imageUrl: string,
+        mediaId: string,
+        filename: string
+    ) => {
+        logger.info(
+            { imageUrl, mediaId, filename },
+            "Image uploaded, inserting into editor"
+        );
+
+        // Call vanilla JS editor function to insert image
+        if (window.visualEditor && window.visualEditor.insertUploadedImage) {
+            window.visualEditor.insertUploadedImage(imageUrl, mediaId, filename);
+        }
+    };
+
+    // Handler for video selection
+    const handleVideoSelected = (video: PitchVideo) => {
+        logger.info({ video }, "Video selected, inserting into editor");
+
+        // Call vanilla JS editor function to insert video
+        if (window.visualEditor && window.visualEditor.insertVideoBlock) {
+            window.visualEditor.insertVideoBlock(video);
+        }
+    };
+
+    // Handler for generated section
+    const handleSectionGenerated = (sectionType: string, copy: any) => {
+        logger.info({ sectionType, copy }, "Section generated, inserting into editor");
+
+        // Call vanilla JS editor function to insert section
+        if (window.visualEditor && window.visualEditor.insertGeneratedSection) {
+            window.visualEditor.insertGeneratedSection(sectionType, copy);
+        }
+    };
 
     // If not in edit mode, just render the HTML content
     if (!isEditMode) {
@@ -529,6 +602,30 @@ export function EditorPageWrapper({
                     }, 15000);
                 `}
             </Script>
+
+            {/* New Feature Modals */}
+            <ImageGenerationModal
+                isOpen={isImageGenModalOpen}
+                onClose={() => setIsImageGenModalOpen(false)}
+                onImageGenerated={handleImageGenerated}
+                projectId={projectId}
+                pageId={pageId}
+            />
+
+            <VideoSelectorModal
+                isOpen={isVideoSelectorOpen}
+                onClose={() => setIsVideoSelectorOpen(false)}
+                onVideoSelected={handleVideoSelected}
+                projectId={projectId}
+            />
+
+            <SectionBlockGenerator
+                isOpen={isSectionGeneratorOpen}
+                onClose={() => setIsSectionGeneratorOpen(false)}
+                onSectionGenerated={handleSectionGenerated}
+                projectId={projectId}
+                pageId={pageId}
+            />
         </>
     );
 }

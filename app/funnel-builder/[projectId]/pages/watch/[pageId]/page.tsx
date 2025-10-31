@@ -90,6 +90,7 @@ export default async function WatchPageEditor({ params, searchParams }: PageProp
     return (
         <EditorPageWrapper
             pageId={pageId}
+            projectId={projectId}
             pageType="watch"
             htmlContent={page.html_content}
             theme={theme}

@@ -8,7 +8,11 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { retry } from "@/lib/utils";
 import { AI_CONFIG } from "@/lib/config";
-import type { AIGenerationOptions } from "./types";
+import type {
+    AIGenerationOptions,
+    ImageGenerationOptions,
+    GeneratedImage,
+} from "./types";
 
 let openaiInstance: OpenAI | null = null;
 
@@ -149,6 +153,76 @@ export async function generateTextWithAI(
         );
         throw new Error(
             `AI text generation failed: ${error instanceof Error ? error.message : "Unknown error"}`
+        );
+    }
+}
+
+/**
+ * Generate image with DALL-E
+ * Uses DALL-E 3 for high-quality image generation
+ */
+export async function generateImageWithAI(
+    prompt: string,
+    options?: ImageGenerationOptions
+): Promise<GeneratedImage> {
+    const size = options?.size || "1024x1024";
+    const quality = options?.quality || "standard";
+    const style = options?.style || "vivid";
+
+    const requestLogger = logger.child({ model: "dall-e-3", size, quality, style });
+    requestLogger.info(
+        { prompt: prompt.substring(0, 100) },
+        "Generating image with DALL-E"
+    );
+
+    try {
+        const result = await retry(
+            async () => {
+                const response = await openai.images.generate({
+                    model: "dall-e-3",
+                    prompt,
+                    n: 1,
+                    size,
+                    quality,
+                    style,
+                });
+
+                if (!response.data || response.data.length === 0) {
+                    throw new Error("No image returned from DALL-E");
+                }
+
+                const image = response.data[0];
+                if (!image.url) {
+                    throw new Error("No image URL in DALL-E response");
+                }
+
+                requestLogger.info(
+                    {
+                        revisedPrompt: image.revised_prompt?.substring(0, 100),
+                    },
+                    "DALL-E image generation successful"
+                );
+
+                return {
+                    url: image.url,
+                    revisedPrompt: image.revised_prompt,
+                };
+            },
+            {
+                maxAttempts: 2, // DALL-E is slower, reduce retries
+                delayMs: 2000,
+                backoffMultiplier: 2,
+            }
+        );
+
+        return result;
+    } catch (error) {
+        requestLogger.error(
+            { error, prompt: prompt.substring(0, 100) },
+            "Failed to generate image with DALL-E"
+        );
+        throw new Error(
+            `Image generation failed: ${error instanceof Error ? error.message : "Unknown error"}`
         );
     }
 }

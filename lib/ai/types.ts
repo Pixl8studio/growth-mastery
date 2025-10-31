@@ -104,3 +104,18 @@ export interface TranscriptData {
     transcript_text: string;
     extracted_data?: Record<string, unknown>;
 }
+
+// Image generation types
+export type ImageSize = "1024x1024" | "1792x1024" | "1024x1792";
+export type ImageQuality = "standard" | "hd";
+
+export interface ImageGenerationOptions {
+    size?: ImageSize;
+    quality?: ImageQuality;
+    style?: "vivid" | "natural";
+}
+
+export interface GeneratedImage {
+    url: string;
+    revisedPrompt?: string;
+}

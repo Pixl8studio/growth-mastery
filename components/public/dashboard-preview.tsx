@@ -112,7 +112,7 @@ const DashboardPreview = () => {
 
                     {/* CTA */}
                     <Button variant="premium" size="lg" className="group" asChild>
-                        <a href="https://buy.stripe.com/aFa3cu98fdarc4gh2Q0oM0d">
+                        <a href="#pricing" className="scroll-smooth">
                             Start Now
                             <span className="ml-2 group-hover:translate-x-1 transition-transform">
                                 →

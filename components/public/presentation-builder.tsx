@@ -66,7 +66,7 @@ const PresentationBuilder = () => {
                                     className="group"
                                     asChild
                                 >
-                                    <a href="https://buy.stripe.com/aFa3cu98fdarc4gh2Q0oM0d">
+                                    <a href="#pricing" className="scroll-smooth">
                                         Create My Presentation
                                         <span className="ml-2 group-hover:translate-x-1 transition-transform">
                                             →

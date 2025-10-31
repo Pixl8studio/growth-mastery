@@ -169,7 +169,7 @@ export default function Step1Page({
             );
 
             if (!response.ok) {
-                logger.error("Failed to fetch generation status");
+                logger.error({}, "Failed to fetch generation status");
                 return;
             }
 

@@ -16,6 +16,7 @@ export interface GenerationProgress {
     stepName: string;
     status: "pending" | "in_progress" | "completed" | "failed";
     error?: string;
+    completedAt?: string;
 }
 
 export interface GenerationResult {

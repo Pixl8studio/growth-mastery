@@ -67,3 +67,53 @@ export async function PATCH(
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
+
+export async function PUT(
+    request: NextRequest,
+    { params }: { params: Promise<{ pageId: string }> }
+) {
+    try {
+        const { user } = await getCurrentUserWithProfile();
+        const { pageId } = await params;
+        const body = await request.json();
+        const { html_content } = body;
+
+        if (!html_content) {
+            return NextResponse.json(
+                { error: "html_content is required" },
+                { status: 400 }
+            );
+        }
+
+        const supabase = await createClient();
+
+        const { data: page, error } = await supabase
+            .from("enrollment_pages")
+            .update({ html_content, updated_at: new Date().toISOString() })
+            .eq("id", pageId)
+            .eq("user_id", user.id)
+            .select()
+            .single();
+
+        if (error) {
+            logger.error(
+                { error, pageId },
+                "Failed to update enrollment page HTML content"
+            );
+            return NextResponse.json(
+                { error: "Failed to update page" },
+                { status: 500 }
+            );
+        }
+
+        logger.info(
+            { pageId, userId: user.id },
+            "Enrollment page HTML content updated"
+        );
+
+        return NextResponse.json({ success: true, page });
+    } catch (error) {
+        logger.error({ error }, "Error updating enrollment page HTML content");
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    }
+}

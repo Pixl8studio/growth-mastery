@@ -9,6 +9,7 @@
 import Script from "next/script";
 import { useEffect } from "react";
 import { logger } from "@/lib/client-logger";
+import { PageRegenerateButton } from "@/components/pages/page-regenerate-button";
 
 interface EditorPageWrapperProps {
     pageId: string;
@@ -179,6 +180,26 @@ export function EditorPageWrapper({
             <div id="editor-interface" className="editor-interface">
                 <div id="editor-toolbar" className="editor-toolbar">
                     {/* Populated by visual-editor.js setupToolbar() */}
+                    {/* Regenerate button - positioned at top of toolbar */}
+                    <div
+                        style={{
+                            position: "absolute",
+                            top: "10px",
+                            right: "10px",
+                            zIndex: 100,
+                        }}
+                    >
+                        <PageRegenerateButton
+                            pageId={pageId}
+                            pageType={pageType}
+                            onRegenerate={() => {
+                                logger.info(
+                                    { pageId, pageType },
+                                    "Page regenerated via button"
+                                );
+                            }}
+                        />
+                    </div>
                 </div>
             </div>
             <div id="block-settings" className="block-settings">
@@ -272,7 +293,7 @@ export function EditorPageWrapper({
                             if (window.visualEditor.isEditMode === false) {
                                 window.visualEditor.toggleEditMode();
                             }
-                            
+
                             // CRITICAL: Hook auto-save into editor events
                             // Override the editor's save function to use our database save
                             const originalSave = window.visualEditor.savePage || function() {};
@@ -282,7 +303,7 @@ export function EditorPageWrapper({
                                     window.saveToDatabase();
                                 }
                             };
-                            
+
                             // Auto-save on content changes
                             document.addEventListener('input', function(e) {
                                 if (e.target.hasAttribute('data-editable') || e.target.closest('[data-editable]')) {
@@ -292,7 +313,7 @@ export function EditorPageWrapper({
                                     }
                                 }
                             });
-                            
+
                             // Auto-save on drag/drop
                             document.addEventListener('dragend', function() {
                                 console.log('🔀 Block reordered - scheduling auto-save...');
@@ -300,7 +321,7 @@ export function EditorPageWrapper({
                                     window.scheduleAutoSave();
                                 }
                             });
-                            
+
                             // Auto-save on block deletion
                             document.addEventListener('click', function(e) {
                                 if (e.target.closest('.delete-section-btn')) {
@@ -312,7 +333,7 @@ export function EditorPageWrapper({
                                     }, 500); // Delay to let delete complete
                                 }
                             });
-                            
+
                             console.log('🎨 Editor is now active and ready to use!');
                             console.log('📊 Toolbar should contain buttons, undo/redo, theme switcher');
                             console.log('💾 Auto-save hooks installed - edits will save in 3 seconds');
@@ -370,6 +391,142 @@ export function EditorPageWrapper({
                     };
 
                     console.log('✅ Auto-save system initialized for ${pageType} page ${pageId}');
+                `}
+            </Script>
+
+            {/* Per-field regeneration system */}
+            <Script id="field-regeneration" strategy="afterInteractive">
+                {`
+                    // Add regenerate icons to editable fields
+                    function addRegenerateIcons() {
+                        const editableElements = document.querySelectorAll('[data-editable="true"]');
+                        let fieldIdCounter = 0;
+
+                        editableElements.forEach((element) => {
+                            // Skip if already has regenerate button
+                            if (element.querySelector('.field-regenerate-btn')) {
+                                return;
+                            }
+
+                            // Generate field ID if not present
+                            if (!element.getAttribute('data-field-id')) {
+                                const blockType = element.closest('[data-block-type]')?.getAttribute('data-block-type') || 'unknown';
+                                const fieldId = blockType + '-field-' + (fieldIdCounter++);
+                                element.setAttribute('data-field-id', fieldId);
+                            }
+
+                            // Create regenerate button
+                            const regenBtn = document.createElement('button');
+                            regenBtn.className = 'field-regenerate-btn';
+                            regenBtn.innerHTML = '✨';
+                            regenBtn.title = 'Regenerate this field with AI';
+                            regenBtn.style.cssText = \`
+                                position: absolute;
+                                top: 5px;
+                                right: 5px;
+                                width: 28px;
+                                height: 28px;
+                                border-radius: 6px;
+                                background: rgba(37, 99, 235, 0.95);
+                                color: white;
+                                border: none;
+                                cursor: pointer;
+                                font-size: 14px;
+                                display: none;
+                                align-items: center;
+                                justify-content: center;
+                                z-index: 1000;
+                                box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+                                transition: all 0.2s;
+                            \`;
+
+                            regenBtn.addEventListener('click', async (e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+
+                                const fieldId = element.getAttribute('data-field-id');
+                                const fieldContext = element.textContent || element.innerText;
+
+                                console.log('🔄 Regenerating field:', fieldId);
+
+                                // Show loading state
+                                regenBtn.innerHTML = '⏳';
+                                regenBtn.disabled = true;
+
+                                try {
+                                    const response = await fetch('/api/pages/${pageType}/${pageId}/regenerate-field', {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({
+                                            fieldId: fieldId,
+                                            fieldContext: fieldContext
+                                        })
+                                    });
+
+                                    const data = await response.json();
+
+                                    if (data.success && data.newContent) {
+                                        // Update the field content
+                                        element.textContent = data.newContent;
+                                        console.log('✅ Field regenerated:', fieldId);
+
+                                        // Flash success
+                                        element.style.background = '#dcfce7';
+                                        setTimeout(() => {
+                                            element.style.background = '';
+                                        }, 1000);
+
+                                        // Trigger auto-save
+                                        if (window.scheduleAutoSave) {
+                                            window.scheduleAutoSave();
+                                        }
+                                    } else {
+                                        throw new Error(data.error || 'Failed to regenerate field');
+                                    }
+                                } catch (error) {
+                                    console.error('❌ Field regeneration error:', error);
+                                    alert('Failed to regenerate field: ' + error.message);
+                                } finally {
+                                    regenBtn.innerHTML = '✨';
+                                    regenBtn.disabled = false;
+                                }
+                            });
+
+                            // Make element position relative to contain absolute button
+                            const currentPosition = window.getComputedStyle(element).position;
+                            if (currentPosition === 'static') {
+                                element.style.position = 'relative';
+                            }
+
+                            // Show/hide button on hover
+                            element.addEventListener('mouseenter', () => {
+                                if (window.visualEditor && window.visualEditor.isEditMode) {
+                                    regenBtn.style.display = 'flex';
+                                }
+                            });
+
+                            element.addEventListener('mouseleave', () => {
+                                regenBtn.style.display = 'none';
+                            });
+
+                            element.appendChild(regenBtn);
+                        });
+
+                        console.log('✨ Regenerate icons added to', editableElements.length, 'fields');
+                    }
+
+                    // Wait for editor to be ready, then add regenerate icons
+                    const checkEditorReady = setInterval(() => {
+                        if (window.visualEditor && document.querySelectorAll('[data-editable="true"]').length > 0) {
+                            clearInterval(checkEditorReady);
+                            setTimeout(addRegenerateIcons, 1000); // Small delay to ensure editor is fully initialized
+                        }
+                    }, 500);
+
+                    // Timeout after 15 seconds
+                    setTimeout(() => {
+                        clearInterval(checkEditorReady);
+                    }, 15000);
                 `}
             </Script>
         </>

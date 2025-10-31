@@ -29,19 +29,19 @@ describe("HorizontalProgress", () => {
         completedSteps: [1, 2],
     };
 
-    it("renders all 12 steps", () => {
+    it("renders all 13 steps", () => {
         render(<HorizontalProgress {...defaultProps} />);
 
-        // Check that we have 12 links (one for each step)
+        // Check that we have 13 links (one for each step, including Analytics)
         const links = screen.getAllByRole("link");
-        expect(links).toHaveLength(12);
+        expect(links).toHaveLength(13);
     });
 
     it("displays correct completion percentage", () => {
         render(<HorizontalProgress {...defaultProps} />);
 
-        // 2 completed out of 12 = 17%
-        expect(screen.getByText("17%")).toBeInTheDocument();
+        // 2 completed out of 13 = 15%
+        expect(screen.getByText("15%")).toBeInTheDocument();
     });
 
     it("shows step numbers for non-completed steps", () => {
@@ -67,7 +67,7 @@ describe("HorizontalProgress", () => {
 
         expect(screen.getByText("2 completed")).toBeInTheDocument();
         expect(screen.getByText("1 active")).toBeInTheDocument();
-        expect(screen.getByText("9 remaining")).toBeInTheDocument();
+        expect(screen.getByText("10 remaining")).toBeInTheDocument();
     });
 
     it("generates correct links for each step", () => {
@@ -98,16 +98,16 @@ describe("HorizontalProgress", () => {
     });
 
     it("handles 100% completion", () => {
-        const allSteps = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+        const allSteps = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13];
         render(
             <HorizontalProgress
                 projectId="test-id"
-                currentStep={12}
+                currentStep={13}
                 completedSteps={allSteps}
             />
         );
 
         expect(screen.getByText("100%")).toBeInTheDocument();
-        expect(screen.getByText("12 completed")).toBeInTheDocument();
+        expect(screen.getByText("13 completed")).toBeInTheDocument();
     });
 });

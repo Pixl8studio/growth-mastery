@@ -10,6 +10,8 @@ import {
     FileText,
     Globe,
     Cloud,
+    Sparkles,
+    RefreshCw,
 } from "lucide-react";
 import { VapiCallWidget } from "@/components/funnel/vapi-call-widget";
 import {
@@ -19,9 +21,12 @@ import {
 import { PasteIntake } from "@/components/intake/paste-intake";
 import { UploadIntake } from "@/components/intake/upload-intake";
 import { ScrapeIntake } from "@/components/intake/scrape-intake";
+import { AutoGenerationModal } from "@/components/funnel/auto-generation-modal";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
+import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
 
 interface IntakeSession {
     id: string;
@@ -48,12 +53,18 @@ export default function Step1Page({
 }: {
     params: Promise<{ projectId: string }>;
 }) {
+    const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<FunnelProject | null>(null);
     const [userId, setUserId] = useState("");
     const [intakeSessions, setIntakeSessions] = useState<IntakeSession[]>([]);
     const [isLoadingSessions, setIsLoadingSessions] = useState(true);
     const [selectedMethod, setSelectedMethod] = useState<IntakeMethod | null>(null);
+    const [showGenerationModal, setShowGenerationModal] = useState(false);
+    const [generationMode, setGenerationMode] = useState<"generate" | "regenerate">(
+        "generate"
+    );
+    const [hasExistingContent, setHasExistingContent] = useState(false);
 
     // Load completion status
     const { completedSteps, refreshCompletion } = useStepCompletion(projectId);
@@ -123,7 +134,66 @@ export default function Step1Page({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [projectId]);
 
+    // Check for existing content
+    useEffect(() => {
+        const checkExistingContent = () => {
+            const hasContent = completedSteps.some((step) => step >= 2 && step <= 11);
+            setHasExistingContent(hasContent);
+        };
+
+        if (completedSteps.length > 0) {
+            checkExistingContent();
+        }
+    }, [completedSteps]);
+
     const hasCompletedIntake = intakeSessions.length > 0;
+
+    const handleGenerateAll = () => {
+        setGenerationMode("generate");
+        setShowGenerationModal(true);
+    };
+
+    const handleRegenerateAll = () => {
+        setGenerationMode("regenerate");
+        setShowGenerationModal(true);
+    };
+
+    const handleConfirmGeneration = async () => {
+        try {
+            const mostRecentIntake = intakeSessions[0];
+
+            const response = await fetch("/api/generate/auto-generate-all", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    projectId,
+                    intakeId: mostRecentIntake.id,
+                    regenerate: generationMode === "regenerate",
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to generate content");
+            }
+
+            const result = await response.json();
+
+            toast({
+                title: "Generation Complete",
+                description: `Successfully generated ${result.completedSteps.length} steps`,
+            });
+
+            // Refresh completion status
+            refreshCompletion();
+        } catch (error) {
+            logger.error({ error }, "Failed to generate content");
+            toast({
+                title: "Generation Failed",
+                description: "Failed to generate content. Please try again.",
+                variant: "destructive",
+            });
+        }
+    };
 
     const handleIntakeComplete = () => {
         setSelectedMethod(null); // Reset method selection
@@ -383,6 +453,72 @@ export default function Step1Page({
                     </div>
                 )}
 
+                {/* Auto-Generation Section */}
+                {hasCompletedIntake && (
+                    <div className="rounded-lg border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-purple-500/5 p-6">
+                        <div className="mb-4 flex items-start justify-between">
+                            <div>
+                                <h3 className="mb-2 flex items-center text-lg font-semibold text-foreground">
+                                    <Sparkles className="mr-2 h-5 w-5 text-primary" />
+                                    Auto-Generate All Content
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                    {hasExistingContent
+                                        ? "Regenerate all funnel content based on your intake data. This will overwrite existing content."
+                                        : "Generate all funnel content automatically based on your intake. Recommended to get started quickly!"}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="mb-4 rounded-lg bg-card p-4">
+                            <p className="mb-2 text-sm font-medium text-foreground">
+                                This will generate:
+                            </p>
+                            <div className="grid grid-cols-2 gap-2 text-sm text-muted-foreground">
+                                <div>• Step 2: Offer</div>
+                                <div>• Step 3: Deck Structure</div>
+                                <div>• Step 5: Enrollment Page</div>
+                                <div>• Step 8: Watch Page</div>
+                                <div>• Step 9: Registration Page</div>
+                                <div>• Step 11: AI Followup</div>
+                            </div>
+                            <p className="mt-3 text-xs text-muted-foreground">
+                                Plus: Marketing profile initialization
+                            </p>
+                        </div>
+
+                        <div className="flex gap-3">
+                            {!hasExistingContent ? (
+                                <Button
+                                    onClick={handleGenerateAll}
+                                    className="flex-1"
+                                    size="lg"
+                                >
+                                    <Sparkles className="mr-2 h-4 w-4" />
+                                    Generate All Content
+                                </Button>
+                            ) : (
+                                <Button
+                                    onClick={handleRegenerateAll}
+                                    variant="outline"
+                                    className="flex-1"
+                                    size="lg"
+                                >
+                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                    Regenerate All Content
+                                </Button>
+                            )}
+                        </div>
+
+                        {hasExistingContent && (
+                            <p className="mt-3 text-xs text-amber-600">
+                                ⚠️ Warning: Regeneration will overwrite all existing
+                                content
+                            </p>
+                        )}
+                    </div>
+                )}
+
                 {/* What's Next */}
                 <div className="rounded-lg border border-border bg-muted/50 p-6">
                     <h3 className="mb-3 flex items-center text-sm font-semibold text-foreground">
@@ -401,6 +537,15 @@ export default function Step1Page({
                     </ul>
                 </div>
             </div>
+
+            {/* Auto-Generation Modal */}
+            <AutoGenerationModal
+                isOpen={showGenerationModal}
+                onClose={() => setShowGenerationModal(false)}
+                onConfirm={handleConfirmGeneration}
+                mode={generationMode}
+                hasExistingContent={hasExistingContent}
+            />
         </StepLayout>
     );
 }

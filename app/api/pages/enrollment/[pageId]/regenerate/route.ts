@@ -77,7 +77,6 @@ export async function POST(
         // Generate new content with AI using enrollment framework prompts
         const prompt = createFullPageEnrollmentPrompt(
             {
-                id: page.offers.id,
                 name: page.offers.name,
                 tagline: page.offers.tagline,
                 description: page.offers.description,

@@ -7,6 +7,7 @@
 import type { Slide } from "@/lib/ai/types";
 
 interface OfferData {
+    id?: string;
     name: string;
     tagline?: string | null;
     description?: string | null;

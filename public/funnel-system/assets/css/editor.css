@@ -620,39 +620,39 @@
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .range-input-wrapper {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .range-value {
     align-self: flex-end;
     min-width: auto;
   }
-  
+
   .settings-actions {
     flex-direction: column;
   }
-  
+
   .reset-btn,
   .copy-btn,
   .paste-btn {
     flex: none;
   }
-  
+
   .management-stats {
     flex-direction: column;
   }
-  
+
   .stat-badge {
     justify-content: center;
   }
-  
+
   .management-actions {
     gap: 12px;
   }
-  
+
   .management-btn {
     padding: 14px 20px;
     font-size: 16px;
@@ -937,49 +937,49 @@ body.resizing .hero-content {
         gap: 16px;
         padding: 0 16px;
     }
-    
+
     .toolbar-section {
         gap: 8px;
     }
-    
+
     .toolbar-left {
         padding-left: 0;
         border-right: 1px solid #4b5563;
     }
-    
+
     .toolbar-center {
         padding: 0 16px;
         border-right: 1px solid #4b5563;
     }
-    
+
     .toolbar-right {
         padding-right: 0;
         /* No border - this is the last section */
     }
-    
+
     .component-library {
         flex-wrap: wrap;
     }
-    
+
     .quick-add-icons {
         gap: 3px;
     }
-    
+
     .quick-add-btn {
         min-width: 42px;
         height: 36px;
         gap: 1px;
         padding: 4px 3px;
     }
-    
+
     .quick-label {
         font-size: 8px;
     }
-    
+
     .quick-icon {
         font-size: 16px;
     }
-    
+
     .block-settings {
         width: 280px;
         right: 12px;
@@ -990,14 +990,14 @@ body.resizing .hero-content {
   .editor-interface {
     padding: 8px 12px;
   }
-  
+
   .editor-toolbar {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
     padding: 0 12px;
   }
-  
+
   .toolbar-section {
     border-right: none;
     border-bottom: 1px solid #4b5563;
@@ -1006,7 +1006,7 @@ body.resizing .hero-content {
     flex-wrap: wrap;
     flex: none;
   }
-  
+
   .toolbar-left,
   .toolbar-center,
   .toolbar-right {
@@ -1015,49 +1015,49 @@ body.resizing .hero-content {
     padding: 8px 0;
     border-right: none;
   }
-  
+
   .toolbar-section:last-child {
     border-bottom: none;
   }
-  
+
   .quick-add-section {
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .quick-add-label {
     font-size: 10px !important;
   }
-  
+
   .quick-add-icons {
     justify-content: center;
     gap: 6px;
     flex-wrap: wrap;
   }
-  
+
   .quick-add-btn {
     min-width: 50px;
     height: 44px;
     gap: 2px;
   }
-  
+
   .quick-label {
     font-size: 9px;
   }
-  
+
   .quick-icon {
     font-size: 20px;
   }
-    
+
     .component-library {
         justify-content: center;
     }
-    
+
     .component-btn {
         min-width: 60px;
         padding: 10px 6px;
     }
-    
+
     .block-settings {
         position: fixed;
         top: auto;
@@ -1072,20 +1072,20 @@ body.resizing .hero-content {
         transform: none !important;
         resize: none;
     }
-    
+
     .settings-panel-header {
         cursor: default;
         border-radius: 16px 16px 0 0;
     }
-    
+
     .panel-title {
         font-size: 14px;
     }
-    
+
     .settings-panel-content {
         max-height: calc(60vh - 60px);
     }
-    
+
     @keyframes slideInUp {
         from {
             transform: translateY(100%);
@@ -1094,14 +1094,14 @@ body.resizing .hero-content {
             transform: translateY(0);
         }
     }
-    
+
     .block-handle {
         position: static;
         display: inline-block;
         margin: 8px;
         font-size: 10px;
     }
-    
+
     #toggle-editor {
         width: 56px;
         height: 56px;
@@ -1116,16 +1116,16 @@ body.resizing .hero-content {
         padding: 8px 12px;
         font-size: 12px;
     }
-    
+
     .btn-text {
         display: none;
     }
-    
+
     .component-btn {
         min-width: 50px;
         padding: 8px 4px;
     }
-    
+
     .component-name {
         font-size: 9px;
     }
@@ -1427,18 +1427,18 @@ body.resizing .hero-content {
         right: auto;
         transform: translateX(-50%);
     }
-    
+
     .element-controls-panel {
         padding: 8px;
         gap: 4px;
     }
-    
+
     .element-btn {
         width: 36px;
         height: 36px;
         font-size: 16px;
     }
-    
+
     .management-btn {
         padding: 12px 20px;
         font-size: 16px;
@@ -1450,12 +1450,12 @@ body.resizing .hero-content {
         outline: 1px dashed rgba(79, 70, 229, 0.3);
         outline-offset: 2px;
     }
-    
+
     .element-controls-panel {
         padding: 6px;
         gap: 3px;
     }
-    
+
     .element-btn {
         width: 32px;
         height: 32px;
@@ -2432,108 +2432,108 @@ body.resizing .hero-content {
         max-height: 95vh;
         border-radius: 20px;
     }
-    
+
     .theme-grid {
         grid-template-columns: 1fr;
         gap: 16px;
         padding: 20px 16px;
     }
-    
+
     .theme-modal-header {
         padding: 20px;
     }
-    
+
     .theme-modal-header h3 {
         font-size: 20px;
     }
-    
+
     .theme-subtitle {
         font-size: 13px;
     }
-    
+
     .theme-footer-actions {
         flex-direction: column;
         gap: 12px;
     }
-    
+
     .theme-action-btn {
         width: 100%;
         justify-content: center;
     }
-    
+
     .theme-card {
         min-height: 180px;
     }
-    
+
     .theme-info {
         padding: 20px 16px 16px 16px;
     }
-    
+
     .theme-name {
         font-size: 16px;
     }
-    
+
     .theme-description {
         font-size: 13px;
     }
-    
+
     .theme-colors {
         padding: 12px 16px;
     }
-    
+
     .color-dot {
         width: 20px;
         height: 20px;
     }
-    
+
     .theme-actions {
         padding: 16px;
     }
-    
+
     /* Custom Color Editor Mobile */
     .custom-color-content {
         max-width: 95vw;
         margin: 10px;
         max-height: 95vh;
     }
-    
+
     .custom-color-header {
         padding: 20px;
     }
-    
+
     .custom-color-header h3 {
         font-size: 20px;
     }
-    
+
     .custom-subtitle {
         font-size: 13px;
     }
-    
+
     .custom-color-body {
         grid-template-columns: 1fr;
         gap: 20px;
         padding: 20px;
     }
-    
+
     .color-section {
         padding: 20px;
     }
-    
+
     .color-input-group {
         flex-direction: column;
         align-items: stretch;
         gap: 8px;
     }
-    
+
     .color-preview {
         align-self: center;
     }
-    
+
     .custom-footer-actions {
         flex-direction: column;
         gap: 12px;
     }
-    
+
     .custom-action-btn {
         width: 100%;
         justify-content: center;
@@ -2553,12 +2553,12 @@ body.resizing .hero-content {
     .theme-selector-modal {
         display: none !important;
     }
-    
+
     .block[data-editor-mode="true"] {
         border: none !important;
         background: transparent !important;
     }
-    
+
     .manageable-element {
         outline: none !important;
     }
@@ -3024,27 +3024,27 @@ body.resizing .hero-content {
         gap: var(--social-proof-gap-mobile, 1.5rem);
         align-items: center;
     }
-    
+
     .social-proof-card {
         min-width: 200px;
         max-width: 280px;
         width: 100%;
     }
-    
+
     .social-proof-number {
         font-size: 2rem;
     }
-    
+
     .social-proof-title {
         font-size: 1.25rem;
     }
-    
+
     /* Cards per row responsive behavior - force single column on mobile */
     .cards-per-row-responsive {
         --cards-per-row: 1 !important;
         grid-template-columns: 1fr !important;
     }
-    
+
     /* Social proof strip override for mobile ONLY */
     .social-proof-strip.cards-per-row-responsive {
         display: flex !important;

@@ -211,17 +211,31 @@ export function ContextAwareHelpWidget() {
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={cn(
-                    "fixed bottom-6 right-6 z-50",
+                    "fixed bottom-6 right-6 z-[9999]",
                     "h-14 w-14 rounded-full",
                     "bg-gradient-to-r from-primary to-purple-600",
                     "text-white shadow-float",
-                    "hover:shadow-xl hover:scale-110",
-                    "transition-all duration-200",
+                    "hover:shadow-xl",
                     "flex items-center justify-center"
                 )}
+                style={{
+                    backfaceVisibility: "hidden",
+                    transform: "translate3d(0, 0, 0)",
+                    WebkitFontSmoothing: "antialiased",
+                    transition: "box-shadow 0.2s ease-in-out",
+                }}
                 aria-label="Help"
             >
-                {isOpen ? <X className="h-6 w-6" /> : <Sparkles className="h-6 w-6" />}
+                <span
+                    className="flex items-center justify-center"
+                    style={{ transition: "none" }}
+                >
+                    {isOpen ? (
+                        <X className="h-6 w-6" />
+                    ) : (
+                        <Sparkles className="h-6 w-6" />
+                    )}
+                </span>
             </button>
 
             {/* Chat Panel */}

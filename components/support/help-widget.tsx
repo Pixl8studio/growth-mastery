@@ -110,14 +110,25 @@ export function HelpWidget() {
             {/* Floating Button */}
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg transition-all hover:bg-primary/50"
+                className="fixed bottom-6 right-6 z-[9999] flex h-14 w-14 items-center justify-center rounded-full bg-primary text-white shadow-lg hover:shadow-xl"
+                style={{
+                    backfaceVisibility: "hidden",
+                    transform: "translate3d(0, 0, 0)",
+                    WebkitFontSmoothing: "antialiased",
+                    transition: "box-shadow 0.2s ease-in-out",
+                }}
                 aria-label="Toggle help menu"
             >
-                {isOpen ? (
-                    <X className="h-6 w-6" />
-                ) : (
-                    <MessageCircle className="h-6 w-6" />
-                )}
+                <span
+                    className="flex items-center justify-center"
+                    style={{ transition: "none" }}
+                >
+                    {isOpen ? (
+                        <X className="h-6 w-6" />
+                    ) : (
+                        <MessageCircle className="h-6 w-6" />
+                    )}
+                </span>
             </button>
 
             {/* Help Menu/Chat Panel */}

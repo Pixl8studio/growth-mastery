@@ -15,23 +15,10 @@ const Hero = () => {
                 />
             </div>
 
-            {/* Login button in top-right corner */}
-            <div className="absolute top-6 right-6 z-10 animate-fade-in">
-                <Button
-                    variant="outline"
-                    className="backdrop-blur-sm bg-green-600 hover:bg-yellow-500 text-white hover:text-black border-green-700 hover:border-yellow-600 font-semibold shadow-lg transition-all"
-                    asChild
-                >
-                    <Link href="/login">
-                        <LogIn className="mr-2 h-4 w-4" />
-                        Login
-                    </Link>
-                </Button>
-            </div>
-
-            <div className="container relative mx-auto px-6 py-20 lg:py-32">
-                {/* Logo */}
-                <div className="flex justify-center mb-12 animate-fade-in">
+            <div className="container relative mx-auto px-6 py-12 lg:py-16">
+                {/* Logo and Login Button Row */}
+                <div className="flex justify-between items-center mb-8 animate-fade-in max-w-5xl mx-auto">
+                    <div className="flex-1" />
                     <Image
                         src="/assets/growth-mastery-logo.png"
                         alt="GrowthMastery.ai"
@@ -39,10 +26,22 @@ const Hero = () => {
                         height={80}
                         className="animate-float"
                     />
+                    <div className="flex-1 flex justify-end">
+                        <Button
+                            variant="outline"
+                            className="backdrop-blur-sm bg-green-600 hover:bg-yellow-500 text-white hover:text-black border-green-700 hover:border-yellow-600 font-semibold shadow-lg transition-all"
+                            asChild
+                        >
+                            <Link href="/login">
+                                <LogIn className="mr-2 h-4 w-4" />
+                                Login
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Hero Content */}
-                <div className="max-w-5xl mx-auto text-center space-y-8">
+                <div className="max-w-5xl mx-auto text-center space-y-6">
                     <h1 className="text-5xl md:text-7xl lg:text-8xl font-display font-bold tracking-tight animate-fade-in">
                         Launch in a Day.{" "}
                         <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent animate-glow">
@@ -59,32 +58,10 @@ const Hero = () => {
                         automate sales in hours, not months.
                     </p>
 
-                    {/* Pre-Launch Special Banner */}
-                    <div
-                        className="animate-fade-in max-w-2xl mx-auto"
-                        style={{ animationDelay: "0.3s" }}
-                    >
-                        <div className="relative p-6 rounded-2xl bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500/50 shadow-glow">
-                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-yellow-500 text-black text-sm font-bold">
-                                🎉 PRE-LAUNCH SPECIAL
-                            </div>
-                            <p className="text-2xl font-bold text-foreground mb-2">
-                                Save $2,000 Today!
-                            </p>
-                            <p className="text-muted-foreground">
-                                Use code{" "}
-                                <span className="font-mono font-bold text-yellow-500 bg-black/30 px-3 py-1 rounded">
-                                    PRELAUNCH2000
-                                </span>{" "}
-                                at checkout
-                            </p>
-                        </div>
-                    </div>
-
                     {/* CTA Buttons */}
                     <div
                         className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in"
-                        style={{ animationDelay: "0.5s" }}
+                        style={{ animationDelay: "0.3s" }}
                     >
                         <Button
                             size="lg"
@@ -107,9 +84,31 @@ const Hero = () => {
                         </Button>
                     </div>
 
+                    {/* Pre-Launch Special Banner */}
+                    <div
+                        className="animate-fade-in max-w-2xl mx-auto px-4 mt-8"
+                        style={{ animationDelay: "0.4s" }}
+                    >
+                        <div className="relative p-4 md:p-6 rounded-2xl bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500/50 shadow-glow">
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 md:px-4 py-1 rounded-full bg-yellow-500 text-black text-xs md:text-sm font-bold whitespace-nowrap">
+                                🎉 PRE-LAUNCH SPECIAL
+                            </div>
+                            <p className="text-xl md:text-2xl font-bold text-foreground mb-1 md:mb-2">
+                                Save $2,000 Today!
+                            </p>
+                            <p className="text-sm md:text-base text-muted-foreground">
+                                Use code{" "}
+                                <span className="font-mono font-bold text-yellow-500 bg-black/30 px-2 md:px-3 py-1 rounded text-xs md:text-sm">
+                                    PRELAUNCH2000
+                                </span>{" "}
+                                at checkout
+                            </p>
+                        </div>
+                    </div>
+
                     {/* Social Proof */}
                     <div
-                        className="pt-12 animate-fade-in"
+                        className="pt-8 animate-fade-in"
                         style={{ animationDelay: "0.6s" }}
                     >
                         <p className="text-sm text-muted-foreground mb-6 uppercase tracking-wide">

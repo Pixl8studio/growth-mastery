@@ -36,19 +36,19 @@ const FinalCTA = () => {
 
                     {/* Pre-Launch Special Banner */}
                     <div
-                        className="max-w-xl mx-auto animate-fade-in"
+                        className="max-w-xl mx-auto animate-fade-in px-4"
                         style={{ animationDelay: "0.3s" }}
                     >
-                        <div className="relative p-5 rounded-2xl bg-gradient-to-r from-yellow-500/30 to-orange-500/30 border-2 border-yellow-400 shadow-glow backdrop-blur-sm">
-                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-yellow-400 text-black text-sm font-bold">
+                        <div className="relative p-4 md:p-5 rounded-2xl bg-gradient-to-r from-yellow-500/30 to-orange-500/30 border-2 border-yellow-400 shadow-glow backdrop-blur-sm">
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 md:px-4 py-1 rounded-full bg-yellow-400 text-black text-xs md:text-sm font-bold whitespace-nowrap">
                                 🎉 PRE-LAUNCH SPECIAL
                             </div>
-                            <p className="text-xl font-bold text-primary-foreground mb-1">
+                            <p className="text-lg md:text-xl font-bold text-primary-foreground mb-1">
                                 Save $2,000 Today!
                             </p>
-                            <p className="text-sm text-primary-foreground/80">
+                            <p className="text-xs md:text-sm text-primary-foreground/80">
                                 Use code{" "}
-                                <span className="font-mono font-bold text-yellow-400 bg-black/50 px-2 py-0.5 rounded">
+                                <span className="font-mono font-bold text-yellow-400 bg-black/50 px-2 py-0.5 rounded text-xs md:text-sm">
                                     PRELAUNCH2000
                                 </span>{" "}
                                 at checkout

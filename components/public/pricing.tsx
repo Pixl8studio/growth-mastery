@@ -34,17 +34,17 @@ const Pricing = () => {
                         </p>
 
                         {/* Pre-Launch Banner */}
-                        <div className="max-w-xl mx-auto mt-8">
-                            <div className="relative p-5 rounded-2xl bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500/50 shadow-glow">
-                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-yellow-500 text-black text-sm font-bold">
+                        <div className="max-w-xl mx-auto mt-8 px-4">
+                            <div className="relative p-4 md:p-5 rounded-2xl bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border-2 border-yellow-500/50 shadow-glow">
+                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 md:px-4 py-1 rounded-full bg-yellow-500 text-black text-xs md:text-sm font-bold whitespace-nowrap">
                                     🎉 PRE-LAUNCH SPECIAL
                                 </div>
-                                <p className="text-xl font-bold text-foreground mb-1">
+                                <p className="text-lg md:text-xl font-bold text-foreground mb-1">
                                     Save $2,000 Today!
                                 </p>
-                                <p className="text-sm text-muted-foreground">
+                                <p className="text-xs md:text-sm text-muted-foreground">
                                     Use code{" "}
-                                    <span className="font-mono font-bold text-yellow-500 bg-black/30 px-2 py-0.5 rounded">
+                                    <span className="font-mono font-bold text-yellow-500 bg-black/30 px-2 py-0.5 rounded text-xs md:text-sm">
                                         PRELAUNCH2000
                                     </span>{" "}
                                     at checkout

@@ -201,7 +201,11 @@ async function updateContactEngagement(
                             watchDuration: duration,
                             funnelProjectId: contact.funnel_project_id,
                             pageId: typedEventData?.pageId || "",
-                        })
+                        }),
+                        {
+                            pageId: typedEventData?.pageId,
+                            pageType: "watch",
+                        }
                     );
                 }
                 break;
@@ -221,7 +225,11 @@ async function updateContactEngagement(
                         funnelProjectId: contact.funnel_project_id,
                         offerId: typedEventData?.offerId || "",
                         pageId: typedEventData?.pageId || "",
-                    })
+                    }),
+                    {
+                        pageId: typedEventData?.pageId,
+                        pageType: "enrollment",
+                    }
                 );
                 break;
 

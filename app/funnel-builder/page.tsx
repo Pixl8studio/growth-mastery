@@ -46,12 +46,11 @@ export default async function FunnelBuilderPage() {
                 {/* Hero Section */}
                 <div className="mb-12 text-center">
                     <h1 className="mb-4 text-4xl font-bold text-foreground">
-                        Create your AI-powered magnetic masterclass funnel
+                        Create Your AI-Powered Magnetic Masterclass Funnel.
                     </h1>
                     <p className="mx-auto mb-8 max-w-2xl text-xl text-muted-foreground">
-                        From conversation to conversion in under 45 minutes. Create
-                        complete sales funnels with AI-generated content, pitch videos,
-                        and optimized pages.
+                        Create complete sales funnels with AI-generated content, pitch
+                        videos, and optimized pages.
                     </p>
 
                     <div className="flex items-center justify-center gap-4">

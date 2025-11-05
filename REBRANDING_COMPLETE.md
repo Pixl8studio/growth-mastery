@@ -303,7 +303,7 @@ All pages compiled without errors:
 
 All CTAs throughout the site link to:
 
-- **Stripe Payment:** `https://buy.stripe.com/aFa3cu98fdarc4gh2Q0oM0d`
+- **Stripe Payment:** `https://buy.stripe.com/3cIfZgbgn3zR5FS8wk0oM0e`
 - **Support Email:** `joe@growthmastery.ai`
 
 ---

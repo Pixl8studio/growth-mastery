@@ -25,6 +25,7 @@ const eslintConfig = [
             "public/funnel-system/**", // Vanilla JS editor from genie-v1
             "resources/**", // Local resources
             "docs/reference-design/**", // Reference design from Lovable
+            "OLD-APPDOCS-ONLY-REFERENCE/**", // Old reference docs that shouldn't be linted or compiled
         ],
     },
     ...compat.extends("next/core-web-vitals", "next/typescript"),

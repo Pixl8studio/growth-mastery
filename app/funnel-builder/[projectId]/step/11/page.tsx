@@ -311,40 +311,47 @@ export default function Step11Page({
                     blacklist_topics: "",
                 };
 
-                // Populate from intake data
+                // Build BusinessContext and ProductKnowledge for brand voice generation
+                const businessContext: any = {
+                    business_name: "",
+                    industry: "",
+                    target_audience: "",
+                    main_challenge: "",
+                    desired_outcome: "",
+                };
+
+                const productKnowledge: any = {
+                    product_name: "",
+                    tagline: "",
+                    promise: "",
+                    features: [],
+                    guarantee: "",
+                };
+
+                // Populate business context from intake data
                 if (intakeData?.extracted_data) {
                     const extracted = intakeData.extracted_data as any;
-                    const businessContext = [];
-
-                    if (extracted.businessName) {
-                        businessContext.push(`Business: ${extracted.businessName}`);
-                    }
-                    if (extracted.industry) {
-                        businessContext.push(`Industry: ${extracted.industry}`);
-                    }
-                    if (extracted.targetAudience) {
-                        businessContext.push(
-                            `Target Audience: ${extracted.targetAudience}`
-                        );
-                    }
-                    if (extracted.mainProblem) {
-                        businessContext.push(
-                            `Main Challenge: ${extracted.mainProblem}`
-                        );
-                    }
-                    if (extracted.desiredOutcome) {
-                        businessContext.push(
-                            `Desired Outcome: ${extracted.desiredOutcome}`
-                        );
-                    }
-
-                    knowledgeBase.brand_voice = businessContext.join("\n");
+                    businessContext.business_name = extracted.businessName || "";
+                    businessContext.industry = extracted.industry || "";
+                    businessContext.target_audience = extracted.targetAudience || "";
+                    businessContext.main_challenge = extracted.mainProblem || "";
+                    businessContext.desired_outcome = extracted.desiredOutcome || "";
                 }
 
-                // Populate from offer data
+                // Populate product knowledge from offer data
                 if (offerData) {
-                    const productDetails = [];
+                    productKnowledge.product_name = offerData.name || "";
+                    productKnowledge.tagline = offerData.tagline || "";
+                    productKnowledge.promise = offerData.promise || "";
+                    productKnowledge.features = Array.isArray(offerData.features)
+                        ? offerData.features.map((f: any) =>
+                              typeof f === "string" ? f : f.title || ""
+                          )
+                        : [];
+                    productKnowledge.guarantee = offerData.guarantee || "";
 
+                    // Build product knowledge text for knowledge base
+                    const productDetails = [];
                     productDetails.push(`Product: ${offerData.name}`);
                     if (offerData.tagline) {
                         productDetails.push(`Tagline: ${offerData.tagline}`);
@@ -399,6 +406,53 @@ export default function Step11Page({
                         );
                     }
                     knowledgeBase.objection_responses = objections.join("\n\n");
+                }
+
+                // Generate brand voice guidelines using AI
+                try {
+                    const brandVoiceResponse = await fetch(
+                        "/api/followup/generate-brand-voice",
+                        {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                businessContext,
+                                productKnowledge,
+                            }),
+                        }
+                    );
+
+                    if (brandVoiceResponse.ok) {
+                        const brandVoiceData = await brandVoiceResponse.json();
+                        if (brandVoiceData.success && brandVoiceData.brandVoice) {
+                            knowledgeBase.brand_voice = brandVoiceData.brandVoice;
+                            logger.info(
+                                {},
+                                "✅ Brand voice guidelines auto-populated"
+                            );
+                        }
+                    }
+                } catch (brandVoiceError) {
+                    logger.error(
+                        { error: brandVoiceError },
+                        "Failed to auto-generate brand voice, using fallback"
+                    );
+                    // Fallback: use basic brand voice guidelines
+                    knowledgeBase.brand_voice =
+                        `Brand Voice Guidelines:
+
+Tone: Professional yet approachable, empathetic to customer challenges.
+
+Key Themes:
+- Focus on the transformation and results
+${businessContext.main_challenge ? `- Lead with empathy for ${businessContext.main_challenge}` : ""}
+${productKnowledge.product_name ? `- Emphasize the value of ${productKnowledge.product_name}` : ""}
+
+Approach:
+- Use clear, jargon-free language
+- Share authentic stories and experiences
+- Always connect features to benefits
+- End with clear calls-to-action`;
                 }
 
                 const response = await fetch("/api/followup/agent-configs", {
@@ -1048,31 +1102,6 @@ export default function Step11Page({
                                 <AgentConfigForm
                                     config={agentConfig}
                                     onSave={handleSaveAgentConfig}
-                                />
-                            </TabsContent>
-                                <SenderSetupTab
-                                    agentConfigId={agentConfig?.id}
-                                    currentSenderName={agentConfig?.sender_name}
-                                    currentSenderEmail={agentConfig?.sender_email}
-                                    currentSMSSenderId={agentConfig?.sms_sender_id}
-                                    emailProviderType={agentConfig?.email_provider_type}
-                                    gmailUserEmail={agentConfig?.gmail_user_email}
-                                    onUpdate={async () => {
-                                        // Reload data after sender updates
-                                        if (!projectId) return;
-                                        const configRes = await fetch(
-                                            `/api/followup/agent-configs?funnel_project_id=${projectId}`
-                                        );
-                                        if (configRes.ok) {
-                                            const configData = await configRes.json();
-                                            if (
-                                                configData.configs &&
-                                                configData.configs.length > 0
-                                            ) {
-                                                setAgentConfig(configData.configs[0]);
-                                            }
-                                        }
-                                    }}
                                 />
                             </TabsContent>
 

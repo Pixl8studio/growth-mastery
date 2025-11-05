@@ -55,7 +55,15 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json({ authUrl });
     } catch (error) {
-        logger.error({ error }, "❌ Gmail connect error");
+        logger.error(
+            {
+                error,
+                errorMessage:
+                    error instanceof Error ? error.message : "Unknown error",
+                errorStack: error instanceof Error ? error.stack : undefined,
+            },
+            "❌ Gmail connect error"
+        );
 
         if (error instanceof AuthenticationError || error instanceof ValidationError) {
             return NextResponse.json(
@@ -64,6 +72,20 @@ export async function GET(request: NextRequest) {
             );
         }
 
+        // Check for specific Gmail OAuth configuration errors
+        if (
+            error instanceof Error &&
+            error.message.includes("GOOGLE_CLIENT_ID")
+        ) {
+            return NextResponse.json(
+                {
+                    error: "Gmail OAuth not configured. Please contact support.",
+                },
+                { status: 503 }
+            );
+        }
+
+        // Generic error for other cases
         return NextResponse.json(
             { error: "Failed to initiate Gmail connection" },
             { status: 500 }

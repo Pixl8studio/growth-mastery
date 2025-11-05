@@ -130,7 +130,7 @@ export async function initializeProfile(
 /**
  * Generate brand voice guidelines using AI
  */
-async function generateBrandVoiceGuidelines(
+export async function generateBrandVoiceGuidelines(
     businessContext: BusinessContext,
     productKnowledge: ProductKnowledge
 ): Promise<string> {

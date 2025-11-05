@@ -94,11 +94,7 @@ export async function scrapeAndExtractContent(
         }
 
         // Parse content based on platform type
-        const content = await parseContentForPlatform(
-            platform,
-            rawText,
-            url
-        );
+        const content = await parseContentForPlatform(platform, rawText, url);
 
         if (content.length === 0) {
             return {
@@ -133,7 +129,10 @@ export async function scrapeAndExtractContent(
 
         // Provide helpful error messages
         if (error instanceof Error) {
-            if (error.message.includes("HTTP 403") || error.message.includes("HTTP 401")) {
+            if (
+                error.message.includes("HTTP 403") ||
+                error.message.includes("HTTP 401")
+            ) {
                 return {
                     success: false,
                     error: "This profile appears to be private or requires authentication. Please paste content manually.",
@@ -197,8 +196,13 @@ async function parseContentForPlatform(
                 const hasEmojis = /[\u{1F300}-\u{1F9FF}]/u.test(p);
 
                 return (
-                    (length >= 50 && length <= 5000) &&
-                    (hasHashtags || hasMentions || hasLinks || hasEmojis || length > 100)
+                    length >= 50 &&
+                    length <= 5000 &&
+                    (hasHashtags ||
+                        hasMentions ||
+                        hasLinks ||
+                        hasEmojis ||
+                        length > 100)
                 );
             });
 
@@ -216,13 +220,10 @@ async function parseContentForPlatform(
         });
 
         // Return up to 10 paragraphs, prioritizing longer ones
-        return meaningfulParagraphs
-            .sort((a, b) => b.length - a.length)
-            .slice(0, 10);
+        return meaningfulParagraphs.sort((a, b) => b.length - a.length).slice(0, 10);
     } catch (error) {
         logger.error({ error, platform }, "Error parsing content for platform");
         // Fallback: return raw text as single content item
         return [rawText.substring(0, 5000)];
     }
 }
-

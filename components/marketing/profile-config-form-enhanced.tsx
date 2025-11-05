@@ -373,7 +373,8 @@ export function ProfileConfigFormEnhanced({
         } catch {
             toast({
                 title: "Invalid URL",
-                description: "Please enter a valid URL (e.g., https://instagram.com/username)",
+                description:
+                    "Please enter a valid URL (e.g., https://instagram.com/username)",
                 variant: "destructive",
             });
             return;
@@ -632,9 +633,7 @@ export function ProfileConfigFormEnhanced({
                                 </Label>
                                 <Textarea
                                     value={sampleContent}
-                                    onChange={(e) =>
-                                        setSampleContent(e.target.value)
-                                    }
+                                    onChange={(e) => setSampleContent(e.target.value)}
                                     placeholder="Paste 3-5 existing social posts (separate with double line breaks)..."
                                     className="min-h-[150px]"
                                 />
@@ -647,9 +646,7 @@ export function ProfileConfigFormEnhanced({
                                     <RefreshCw
                                         className={`h-4 w-4 mr-2 ${calibrating ? "animate-spin" : ""}`}
                                     />
-                                    {calibrating
-                                        ? "Analyzing..."
-                                        : "Calibrate Voice"}
+                                    {calibrating ? "Analyzing..." : "Calibrate Voice"}
                                 </Button>
                             </div>
                         )}
@@ -673,7 +670,9 @@ export function ProfileConfigFormEnhanced({
                                         />
                                         <Button
                                             onClick={handleAnalyzeUrl}
-                                            disabled={analyzingUrl || !analyzeUrl.trim()}
+                                            disabled={
+                                                analyzingUrl || !analyzeUrl.trim()
+                                            }
                                             size="default"
                                         >
                                             <RefreshCw
@@ -686,9 +685,9 @@ export function ProfileConfigFormEnhanced({
                                     </div>
                                     <p className="text-xs text-muted-foreground mt-2">
                                         Paste a social media profile URL (Instagram,
-                                        LinkedIn, Twitter, Facebook) or website to analyze
-                                        your writing style. Note: Private profiles may
-                                        require manual content paste.
+                                        LinkedIn, Twitter, Facebook) or website to
+                                        analyze your writing style. Note: Private
+                                        profiles may require manual content paste.
                                     </p>
                                 </div>
 
@@ -714,8 +713,8 @@ export function ProfileConfigFormEnhanced({
                                             {previewParagraph}
                                         </p>
                                         <p className="text-xs text-blue-700 mt-2">
-                                            This preview demonstrates your detected voice
-                                            characteristics
+                                            This preview demonstrates your detected
+                                            voice characteristics
                                         </p>
                                     </div>
                                 )}

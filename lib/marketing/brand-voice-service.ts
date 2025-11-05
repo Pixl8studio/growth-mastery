@@ -296,8 +296,10 @@ Signature phrases are unique expressions this person uses repeatedly.`;
         logger.info({ profileId }, "Echo Mode profile generated");
 
         // Generate style summary and preview paragraph
-        const { styleSummary, previewParagraph } =
-            await generateVoiceStyleSummary(echoConfig, sampleContent);
+        const { styleSummary, previewParagraph } = await generateVoiceStyleSummary(
+            echoConfig,
+            sampleContent
+        );
 
         return {
             success: true,
@@ -334,7 +336,10 @@ Voice Analysis:
 - Signature Phrases: ${config.signature_phrases.join(", ") || "None detected"}
 
 Sample Content:
-${sampleContent.slice(0, 3).map((c, i) => `Example ${i + 1}:\n${c.substring(0, 300)}`).join("\n\n")}
+${sampleContent
+    .slice(0, 3)
+    .map((c, i) => `Example ${i + 1}:\n${c.substring(0, 300)}`)
+    .join("\n\n")}
 
 Return as JSON:
 {
@@ -365,7 +370,8 @@ Return as JSON:
         );
 
         return {
-            styleSummary: result.styleSummary || "Voice analysis completed successfully.",
+            styleSummary:
+                result.styleSummary || "Voice analysis completed successfully.",
             previewParagraph:
                 result.previewParagraph ||
                 "This is a preview of content written in your detected voice style.",

@@ -426,10 +426,7 @@ export default function Step11Page({
                         const brandVoiceData = await brandVoiceResponse.json();
                         if (brandVoiceData.success && brandVoiceData.brandVoice) {
                             knowledgeBase.brand_voice = brandVoiceData.brandVoice;
-                            logger.info(
-                                {},
-                                "✅ Brand voice guidelines auto-populated"
-                            );
+                            logger.info({}, "✅ Brand voice guidelines auto-populated");
                         }
                     }
                 } catch (brandVoiceError) {
@@ -438,8 +435,7 @@ export default function Step11Page({
                         "Failed to auto-generate brand voice, using fallback"
                     );
                     // Fallback: use basic brand voice guidelines
-                    knowledgeBase.brand_voice =
-                        `Brand Voice Guidelines:
+                    knowledgeBase.brand_voice = `Brand Voice Guidelines:
 
 Tone: Professional yet approachable, empathetic to customer challenges.
 

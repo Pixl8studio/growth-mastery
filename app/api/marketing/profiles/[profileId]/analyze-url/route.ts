@@ -67,8 +67,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         if (content.length === 0) {
             return NextResponse.json(
                 {
-                    error:
-                        "No content extracted from this URL. Please try pasting content manually.",
+                    error: "No content extracted from this URL. Please try pasting content manually.",
                 },
                 { status: 400 }
             );
@@ -80,11 +79,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         );
 
         // Generate Echo Mode profile
-        const result = await generateEchoModeProfile(
-            profileId,
-            content,
-            body.url
-        );
+        const result = await generateEchoModeProfile(profileId, content, body.url);
 
         if (!result.success) {
             return NextResponse.json(
@@ -98,8 +93,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
                 profileId,
                 platform,
                 contentCount: content.length,
-                characteristicsCount:
-                    result.config?.voice_characteristics.length || 0,
+                characteristicsCount: result.config?.voice_characteristics.length || 0,
             },
             "Voice profile generated from URL"
         );
@@ -126,10 +120,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
             return NextResponse.json({ error: error.message }, { status: 400 });
         }
 
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
-

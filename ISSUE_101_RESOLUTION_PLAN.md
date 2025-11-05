@@ -2,9 +2,11 @@
 
 ## Issue Summary
 
-**Error:** "Upload failed: Failed to generate upload URL — Cloudflare credentials not configured."
+**Error:** "Upload failed: Failed to generate upload URL — Cloudflare credentials not
+configured."
 
 **Requirements:**
+
 1. Verify Cloudflare Account ID and Stream API token in environment variables
 2. Ensure users can upload and preview recorded videos successfully
 
@@ -13,7 +15,8 @@
 ### Current Implementation
 
 1. **Error Location:** `lib/cloudflare/client.ts:32-35`
-   - Throws error when `CLOUDFLARE_ACCOUNT_ID` or `CLOUDFLARE_STREAM_API_TOKEN` are missing
+   - Throws error when `CLOUDFLARE_ACCOUNT_ID` or `CLOUDFLARE_STREAM_API_TOKEN` are
+     missing
    - Error message is technical and not user-friendly
 
 2. **Environment Variables:** `lib/env.ts:51-52`
@@ -82,16 +85,17 @@
 - Include setup instructions in error message
 
 **Changes:**
+
 ```typescript
 if (!accountId || !apiToken) {
-    const missing = [];
-    if (!accountId) missing.push("CLOUDFLARE_ACCOUNT_ID");
-    if (!apiToken) missing.push("CLOUDFLARE_STREAM_API_TOKEN");
+  const missing = [];
+  if (!accountId) missing.push("CLOUDFLARE_ACCOUNT_ID");
+  if (!apiToken) missing.push("CLOUDFLARE_STREAM_API_TOKEN");
 
-    throw new Error(
-        `Cloudflare credentials not configured. Missing: ${missing.join(", ")}. ` +
-        `Please set these environment variables. See env.example for details.`
-    );
+  throw new Error(
+    `Cloudflare credentials not configured. Missing: ${missing.join(", ")}. ` +
+      `Please set these environment variables. See env.example for details.`
+  );
 }
 ```
 
@@ -104,6 +108,7 @@ if (!accountId || !apiToken) {
 - Include setup guidance in error response
 
 **Changes:**
+
 - Add structured error logging with credential status
 - Return detailed error message with setup instructions
 - Include link to documentation if available
@@ -117,6 +122,7 @@ if (!accountId || !apiToken) {
 - Provide setup instructions or links
 
 **Changes:**
+
 - Detect credential errors and show helpful message
 - Add "Setup Required" state when Cloudflare is not configured
 - Include link to settings or documentation
@@ -178,12 +184,10 @@ if (!accountId || !apiToken) {
 
 ## Success Criteria
 
-✅ Users see clear, actionable error messages when credentials are missing
-✅ Error messages include setup instructions
-✅ Frontend displays user-friendly error text
-✅ Documentation is updated with setup steps
-✅ Tests cover error scenarios
-✅ Upload works correctly when credentials are configured
+✅ Users see clear, actionable error messages when credentials are missing ✅ Error
+messages include setup instructions ✅ Frontend displays user-friendly error text ✅
+Documentation is updated with setup steps ✅ Tests cover error scenarios ✅ Upload works
+correctly when credentials are configured
 
 ## Risk Assessment
 
@@ -208,4 +212,3 @@ if (!accountId || !apiToken) {
 5. Create pull request
 6. Wait for CI and code review
 7. Merge when all checks pass
-

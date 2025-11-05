@@ -58,8 +58,7 @@ export async function GET(request: NextRequest) {
         logger.error(
             {
                 error,
-                errorMessage:
-                    error instanceof Error ? error.message : "Unknown error",
+                errorMessage: error instanceof Error ? error.message : "Unknown error",
                 errorStack: error instanceof Error ? error.stack : undefined,
             },
             "❌ Gmail connect error"
@@ -73,10 +72,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Check for specific Gmail OAuth configuration errors
-        if (
-            error instanceof Error &&
-            error.message.includes("GOOGLE_CLIENT_ID")
-        ) {
+        if (error instanceof Error && error.message.includes("GOOGLE_CLIENT_ID")) {
             return NextResponse.json(
                 {
                     error: "Gmail OAuth not configured. Please contact support.",

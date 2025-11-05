@@ -68,6 +68,11 @@ export function ProfileConfigFormEnhanced({
     const [voiceStrength, setVoiceStrength] = useState(75);
     const [vocabularyLevel, setVocabularyLevel] = useState<string>("intermediate");
     const [sampleContent, setSampleContent] = useState("");
+    const [analyzeUrl, setAnalyzeUrl] = useState("");
+    const [analyzingUrl, setAnalyzingUrl] = useState(false);
+    const [inputMethod, setInputMethod] = useState<"manual" | "url">("manual");
+    const [styleSummary, setStyleSummary] = useState<string | null>(null);
+    const [previewParagraph, setPreviewParagraph] = useState<string | null>(null);
 
     // Section 4: Tone Console (8 sliders)
     const [toneSettings, setToneSettings] = useState({
@@ -352,6 +357,72 @@ export function ProfileConfigFormEnhanced({
         }
     };
 
+    const handleAnalyzeUrl = async () => {
+        if (!analyzeUrl.trim()) {
+            toast({
+                title: "URL Required",
+                description: "Please enter a social media profile URL or website",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        // Basic URL validation
+        try {
+            new URL(analyzeUrl);
+        } catch {
+            toast({
+                title: "Invalid URL",
+                description: "Please enter a valid URL (e.g., https://instagram.com/username)",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setAnalyzingUrl(true);
+        setStyleSummary(null);
+        setPreviewParagraph(null);
+
+        try {
+            const response = await fetch(
+                `/api/marketing/profiles/${profile.id}/analyze-url`,
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        url: analyzeUrl,
+                    }),
+                }
+            );
+
+            const data = await response.json();
+
+            if (data.success) {
+                setStyleSummary(data.styleSummary || null);
+                setPreviewParagraph(data.previewParagraph || null);
+                toast({
+                    title: "Analysis Complete",
+                    description: `Voice profile generated from ${data.platform} content (${data.sampleCount} samples)`,
+                });
+                onUpdate();
+            } else {
+                throw new Error(data.error || "Failed to analyze URL");
+            }
+        } catch (error) {
+            logger.error({ error, url: analyzeUrl }, "Failed to analyze URL");
+            toast({
+                title: "Analysis Failed",
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Unable to analyze this URL. Please try pasting content manually.",
+                variant: "destructive",
+            });
+        } finally {
+            setAnalyzingUrl(false);
+        }
+    };
+
     const toggleStoryTheme = (theme: string) => {
         if (storyThemes.includes(theme)) {
             setStoryThemes(storyThemes.filter((t) => t !== theme));
@@ -527,28 +598,129 @@ export function ProfileConfigFormEnhanced({
 
                 {echoModeEnabled && (
                     <div className="space-y-4">
-                        <div>
-                            <Label className="mb-2 block">
-                                Sample Content for Calibration
-                            </Label>
-                            <Textarea
-                                value={sampleContent}
-                                onChange={(e) => setSampleContent(e.target.value)}
-                                placeholder="Paste 3-5 existing social posts (separate with double line breaks)..."
-                                className="min-h-[150px]"
-                            />
-                            <Button
-                                onClick={handleCalibrateVoice}
-                                disabled={calibrating}
-                                className="mt-2"
-                                size="sm"
+                        {/* Input Method Toggle */}
+                        <div className="flex gap-2 border-b border-border pb-2">
+                            <button
+                                type="button"
+                                onClick={() => setInputMethod("manual")}
+                                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                                    inputMethod === "manual"
+                                        ? "bg-purple-100 text-purple-700"
+                                        : "text-muted-foreground hover:text-foreground"
+                                }`}
                             >
-                                <RefreshCw
-                                    className={`h-4 w-4 mr-2 ${calibrating ? "animate-spin" : ""}`}
-                                />
-                                {calibrating ? "Analyzing..." : "Calibrate Voice"}
-                            </Button>
+                                Manual Input
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setInputMethod("url")}
+                                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+                                    inputMethod === "url"
+                                        ? "bg-purple-100 text-purple-700"
+                                        : "text-muted-foreground hover:text-foreground"
+                                }`}
+                            >
+                                Analyze from URL
+                            </button>
                         </div>
+
+                        {/* Manual Input Section */}
+                        {inputMethod === "manual" && (
+                            <div>
+                                <Label className="mb-2 block">
+                                    Sample Content for Calibration
+                                </Label>
+                                <Textarea
+                                    value={sampleContent}
+                                    onChange={(e) =>
+                                        setSampleContent(e.target.value)
+                                    }
+                                    placeholder="Paste 3-5 existing social posts (separate with double line breaks)..."
+                                    className="min-h-[150px]"
+                                />
+                                <Button
+                                    onClick={handleCalibrateVoice}
+                                    disabled={calibrating}
+                                    className="mt-2"
+                                    size="sm"
+                                >
+                                    <RefreshCw
+                                        className={`h-4 w-4 mr-2 ${calibrating ? "animate-spin" : ""}`}
+                                    />
+                                    {calibrating
+                                        ? "Analyzing..."
+                                        : "Calibrate Voice"}
+                                </Button>
+                            </div>
+                        )}
+
+                        {/* URL Analysis Section */}
+                        {inputMethod === "url" && (
+                            <div className="space-y-4">
+                                <div>
+                                    <Label className="mb-2 block">
+                                        Social Media Profile or Website URL
+                                    </Label>
+                                    <div className="flex gap-2">
+                                        <Input
+                                            type="url"
+                                            value={analyzeUrl}
+                                            onChange={(e) =>
+                                                setAnalyzeUrl(e.target.value)
+                                            }
+                                            placeholder="https://instagram.com/username or https://linkedin.com/in/username or website URL"
+                                            className="flex-1"
+                                        />
+                                        <Button
+                                            onClick={handleAnalyzeUrl}
+                                            disabled={analyzingUrl || !analyzeUrl.trim()}
+                                            size="default"
+                                        >
+                                            <RefreshCw
+                                                className={`h-4 w-4 mr-2 ${analyzingUrl ? "animate-spin" : ""}`}
+                                            />
+                                            {analyzingUrl
+                                                ? "Analyzing..."
+                                                : "Analyze URL"}
+                                        </Button>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mt-2">
+                                        Paste a social media profile URL (Instagram,
+                                        LinkedIn, Twitter, Facebook) or website to analyze
+                                        your writing style. Note: Private profiles may
+                                        require manual content paste.
+                                    </p>
+                                </div>
+
+                                {/* Style Summary Display */}
+                                {styleSummary && (
+                                    <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+                                        <Label className="text-sm font-medium mb-2 block">
+                                            Detected Writing Style
+                                        </Label>
+                                        <p className="text-sm text-purple-900">
+                                            {styleSummary}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Preview Paragraph Display */}
+                                {previewParagraph && (
+                                    <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                                        <Label className="text-sm font-medium mb-2 block">
+                                            Preview Paragraph
+                                        </Label>
+                                        <p className="text-sm text-blue-900 italic">
+                                            {previewParagraph}
+                                        </p>
+                                        <p className="text-xs text-blue-700 mt-2">
+                                            This preview demonstrates your detected voice
+                                            characteristics
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         <div>
                             <div className="flex justify-between mb-2">

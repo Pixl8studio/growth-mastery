@@ -1,0 +1,75 @@
+{
+  "$schema": "https://cursor.com/schemas/bugbot.json",
+  "enabled": true,
+  "autoReview": true,
+  "reviewDrafts": false,
+  "excludePatterns": [
+    "**/*.test.ts",
+    "**/*.test.tsx",
+    "**/*.spec.ts",
+    "**/*.spec.tsx",
+    "**/dist/**",
+    "**/build/**",
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/coverage/**",
+    "**/*.config.ts",
+    "**/*.config.js",
+    "**/*.config.mjs",
+    "**/package-lock.json",
+    "**/pnpm-lock.yaml",
+    "**/yarn.lock"
+  ],
+  "includePatterns": [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.js",
+    "**/*.jsx",
+    "**/*.py",
+    "**/*.md"
+  ],
+  "severityThreshold": "warning",
+  "checks": {
+    "security": true,
+    "performance": true,
+    "bestPractices": true,
+    "typeErrors": true,
+    "stylistic": false
+  },
+  "customRules": ".cursor/rules/",
+  "maxCommentsPerPR": 10,
+  "commentStyle": "grouped",
+  "frameworks": {
+    "nextjs": {
+      "version": "15",
+      "features": ["app-router", "server-components", "server-actions"]
+    },
+    "react": {
+      "version": "19"
+    },
+    "typescript": {
+      "strictMode": true
+    },
+    "supabase": {
+      "enabled": true
+    }
+  },
+  "rules": {
+    "no-console": {
+      "severity": "error",
+      "message": "Use structured logging with Pino logger instead of console.log"
+    },
+    "no-any-type": {
+      "severity": "warning",
+      "message": "Avoid using 'any' type without justification"
+    },
+    "require-error-handling": {
+      "severity": "error",
+      "message": "Use custom error classes from lib/errors.ts"
+    },
+    "prefer-server-components": {
+      "severity": "info",
+      "message": "Consider using Server Components for data fetching"
+    }
+  }
+}

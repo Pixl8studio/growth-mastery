@@ -70,6 +70,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
         return NextResponse.json({
             success: true,
             echo_mode_config: result.config,
+            styleSummary: result.styleSummary,
+            previewParagraph: result.previewParagraph,
         });
     } catch (error) {
         logger.error(

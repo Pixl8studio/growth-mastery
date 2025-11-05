@@ -247,10 +247,11 @@ export function validateMigrationFiles(): ValidationResult {
             const lowercaseContent = content.toLowerCase();
 
             // Warn about missing transactions (best practice)
-            if (
-                !lowercaseContent.includes("begin") &&
-                !lowercaseContent.includes("commit")
-            ) {
+            // Check if BOTH BEGIN and COMMIT are present
+            const hasBegin = lowercaseContent.includes("begin");
+            const hasCommit = lowercaseContent.includes("commit");
+
+            if (!hasBegin || !hasCommit) {
                 result.warnings.push(
                     `⚠️  ${file}: Consider wrapping in transaction (BEGIN/COMMIT)`
                 );

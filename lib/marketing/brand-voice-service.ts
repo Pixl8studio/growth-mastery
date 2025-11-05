@@ -206,8 +206,15 @@ Approach:
  */
 export async function generateEchoModeProfile(
     profileId: string,
-    sampleContent: string[]
-): Promise<{ success: boolean; config?: EchoModeConfig; error?: string }> {
+    sampleContent: string[],
+    sourceUrl?: string
+): Promise<{
+    success: boolean;
+    config?: EchoModeConfig;
+    styleSummary?: string;
+    previewParagraph?: string;
+    error?: string;
+}> {
     try {
         if (sampleContent.length === 0) {
             return {
@@ -287,12 +294,89 @@ Signature phrases are unique expressions this person uses repeatedly.`;
         }
 
         logger.info({ profileId }, "Echo Mode profile generated");
-        return { success: true, config: echoConfig };
+
+        // Generate style summary and preview paragraph
+        const { styleSummary, previewParagraph } =
+            await generateVoiceStyleSummary(echoConfig, sampleContent);
+
+        return {
+            success: true,
+            config: echoConfig,
+            styleSummary,
+            previewParagraph,
+        };
     } catch (error) {
         logger.error({ error, profileId }, "Error generating Echo Mode profile");
         return {
             success: false,
             error: error instanceof Error ? error.message : "Unknown error",
+        };
+    }
+}
+
+/**
+ * Generate a readable style summary and preview paragraph
+ * Describes the detected tone and style in user-friendly language
+ */
+async function generateVoiceStyleSummary(
+    config: EchoModeConfig,
+    sampleContent: string[]
+): Promise<{ styleSummary: string; previewParagraph: string }> {
+    try {
+        const prompt = `Based on the following voice analysis, create:
+1. A concise style summary (2-3 sentences) describing the writing style
+2. A preview paragraph (3-4 sentences) written in this exact voice
+
+Voice Analysis:
+- Characteristics: ${config.voice_characteristics.join(", ")}
+- Pacing: ${config.pacing}
+- Cadence: ${config.cadence}
+- Signature Phrases: ${config.signature_phrases.join(", ") || "None detected"}
+
+Sample Content:
+${sampleContent.slice(0, 3).map((c, i) => `Example ${i + 1}:\n${c.substring(0, 300)}`).join("\n\n")}
+
+Return as JSON:
+{
+  "styleSummary": "A 2-3 sentence summary of the writing style",
+  "previewParagraph": "A 3-4 sentence paragraph written in this exact voice demonstrating the detected characteristics"
+}`;
+
+        const result = await generateWithAI<{
+            styleSummary: string;
+            previewParagraph: string;
+        }>(
+            [
+                {
+                    role: "system",
+                    content:
+                        "You are an expert in voice analysis and writing style. Generate clear, accurate summaries and demonstrate voice characteristics through example writing.",
+                },
+                {
+                    role: "user",
+                    content: prompt,
+                },
+            ],
+            {
+                model: "gpt-4o",
+                temperature: 0.5,
+                maxTokens: 500,
+            }
+        );
+
+        return {
+            styleSummary: result.styleSummary || "Voice analysis completed successfully.",
+            previewParagraph:
+                result.previewParagraph ||
+                "This is a preview of content written in your detected voice style.",
+        };
+    } catch (error) {
+        logger.error({ error }, "Failed to generate voice style summary");
+        // Return fallback summary
+        const characteristics = config.voice_characteristics.join(", ");
+        return {
+            styleSummary: `Writing style characterized by: ${characteristics}. Pacing is ${config.pacing} with a ${config.cadence} cadence.`,
+            previewParagraph: `This preview demonstrates your unique voice characteristics including ${config.voice_characteristics[0] || "distinctive patterns"}. The ${config.pacing} pacing and ${config.cadence} cadence create an authentic, recognizable style that resonates with your audience.`,
         };
     }
 }

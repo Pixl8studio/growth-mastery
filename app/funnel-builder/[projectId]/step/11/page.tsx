@@ -48,7 +48,7 @@ export default function Step11Page({
     const [projectId, setProjectId] = useState("");
     const [followupEnabled, setFollowupEnabled] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState("agent");
+    const [activeTab, setActiveTab] = useState("sender");
 
     // State for all follow-up data
     const [agentConfig, setAgentConfig] = useState<any>(null);
@@ -985,13 +985,13 @@ export default function Step11Page({
                             className="w-full"
                         >
                             <TabsList className="grid w-full grid-cols-7">
-                                <TabsTrigger value="agent">
-                                    <Sparkles className="h-4 w-4 mr-2" />
-                                    Agent
-                                </TabsTrigger>
                                 <TabsTrigger value="sender">
                                     <Mail className="h-4 w-4 mr-2" />
                                     Sender
+                                </TabsTrigger>
+                                <TabsTrigger value="agent">
+                                    <Sparkles className="h-4 w-4 mr-2" />
+                                    Agent
                                 </TabsTrigger>
                                 <TabsTrigger value="sequences">
                                     <Target className="h-4 w-4 mr-2" />
@@ -1015,6 +1015,34 @@ export default function Step11Page({
                                 </TabsTrigger>
                             </TabsList>
 
+                            {/* Sender Setup Tab */}
+                            <TabsContent value="sender" className="mt-6">
+                                <SenderSetupTab
+                                    agentConfigId={agentConfig?.id}
+                                    currentSenderName={agentConfig?.sender_name}
+                                    currentSenderEmail={agentConfig?.sender_email}
+                                    currentSMSSenderId={agentConfig?.sms_sender_id}
+                                    emailProviderType={agentConfig?.email_provider_type}
+                                    gmailUserEmail={agentConfig?.gmail_user_email}
+                                    onUpdate={async () => {
+                                        // Reload data after sender updates
+                                        if (!projectId) return;
+                                        const configRes = await fetch(
+                                            `/api/followup/agent-configs?funnel_project_id=${projectId}`
+                                        );
+                                        if (configRes.ok) {
+                                            const configData = await configRes.json();
+                                            if (
+                                                configData.configs &&
+                                                configData.configs.length > 0
+                                            ) {
+                                                setAgentConfig(configData.configs[0]);
+                                            }
+                                        }
+                                    }}
+                                />
+                            </TabsContent>
+
                             {/* Agent Configuration Tab */}
                             <TabsContent value="agent" className="mt-6">
                                 <AgentConfigForm
@@ -1022,9 +1050,6 @@ export default function Step11Page({
                                     onSave={handleSaveAgentConfig}
                                 />
                             </TabsContent>
-
-                            {/* Sender Setup Tab */}
-                            <TabsContent value="sender" className="mt-6">
                                 <SenderSetupTab
                                     agentConfigId={agentConfig?.id}
                                     currentSenderName={agentConfig?.sender_name}

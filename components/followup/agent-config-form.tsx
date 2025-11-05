@@ -147,7 +147,7 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
             </div>
 
             <Tabs defaultValue="voice" className="w-full">
-                <TabsList className="grid w-full grid-cols-5">
+                <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="voice">
                         <Brain className="h-4 w-4 mr-2" />
                         Voice
@@ -160,7 +160,6 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                         <Target className="h-4 w-4 mr-2" />
                         Scoring
                     </TabsTrigger>
-                    <TabsTrigger value="sender">📧 Sender</TabsTrigger>
                     <TabsTrigger value="preview">
                         <Sparkles className="h-4 w-4 mr-2" />
                         Preview
@@ -563,158 +562,6 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                                 />
                             </div>
                         </div>
-                    </div>
-                </TabsContent>
-
-                {/* Sender Configuration */}
-                <TabsContent value="sender" className="space-y-4 mt-4">
-                    <p className="text-sm text-muted-foreground mb-4">
-                        Configure sender identity and Twilio SMS integration for
-                        follow-up messages.
-                    </p>
-
-                    <div className="space-y-4 p-4 bg-primary/5 border border-primary/20 rounded-lg">
-                        <h4 className="font-semibold text-primary flex items-center gap-2">
-                            📧 Email Sender Identity
-                        </h4>
-
-                        <div>
-                            <Label>From Name</Label>
-                            <Input
-                                type="text"
-                                placeholder="Your Name or Company"
-                                className="mt-2"
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                                The name that appears in the "From" field of emails
-                            </p>
-                        </div>
-
-                        <div>
-                            <Label>From Email</Label>
-                            <Input
-                                type="email"
-                                placeholder="noreply@yourdomain.com"
-                                className="mt-2"
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Must be a verified domain.{" "}
-                                <a href="#" className="text-primary hover:underline">
-                                    Learn about DNS setup →
-                                </a>
-                            </p>
-                        </div>
-
-                        <div className="p-3 bg-yellow-50 border border-yellow-200 rounded">
-                            <p className="text-sm text-yellow-800">
-                                ⚠️ <strong>Domain Verification Required:</strong> Before
-                                sending emails, you need to verify your domain by adding
-                                SPF, DKIM, and DMARC records to your DNS settings.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="space-y-4 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                        <h4 className="font-semibold text-purple-900 flex items-center gap-2">
-                            📱 Twilio SMS Configuration
-                        </h4>
-
-                        <div>
-                            <Label>Twilio Account SID</Label>
-                            <Input
-                                type="text"
-                                placeholder="ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                                className="mt-2 font-mono text-sm"
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Find this in your{" "}
-                                <a
-                                    href="https://console.twilio.com"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-purple-600 hover:underline"
-                                >
-                                    Twilio Console
-                                </a>
-                            </p>
-                        </div>
-
-                        <div>
-                            <Label>Twilio Auth Token</Label>
-                            <Input
-                                type="password"
-                                placeholder="••••••••••••••••••••••••••••••••"
-                                className="mt-2 font-mono text-sm"
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Keep this secret - never share your auth token
-                            </p>
-                        </div>
-
-                        <div>
-                            <Label>Twilio Phone Number</Label>
-                            <Input
-                                type="tel"
-                                placeholder="+1 234 567 8900"
-                                className="mt-2"
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Your Twilio phone number in E.164 format (e.g.,
-                                +12345678900)
-                            </p>
-                        </div>
-
-                        <Button variant="outline" className="w-full">
-                            Test Connection
-                        </Button>
-
-                        <div className="p-3 bg-primary/5 border border-primary/20 rounded">
-                            <p className="text-sm text-primary">
-                                💡 <strong>Don't have Twilio yet?</strong> Sign up at{" "}
-                                <a
-                                    href="https://www.twilio.com/try-twilio"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="text-primary hover:underline"
-                                >
-                                    twilio.com
-                                </a>{" "}
-                                to get started with SMS messaging.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="p-4 bg-muted/50 border border-border rounded-lg">
-                        <h4 className="font-semibold text-foreground mb-3">
-                            📋 Quick Setup Checklist
-                        </h4>
-                        <ul className="space-y-2 text-sm text-foreground">
-                            <li className="flex items-start gap-2">
-                                <span className="text-green-600 mt-0.5">□</span>
-                                <span>
-                                    Configure email sender identity (name & email)
-                                </span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="text-green-600 mt-0.5">□</span>
-                                <span>
-                                    Verify your email domain with SPF/DKIM/DMARC records
-                                </span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="text-green-600 mt-0.5">□</span>
-                                <span>
-                                    Add Twilio credentials (Account SID, Auth Token,
-                                    Phone Number)
-                                </span>
-                            </li>
-                            <li className="flex items-start gap-2">
-                                <span className="text-green-600 mt-0.5">□</span>
-                                <span>
-                                    Test connection to verify credentials work correctly
-                                </span>
-                            </li>
-                        </ul>
                     </div>
                 </TabsContent>
 

@@ -349,4 +349,4 @@ pnpm dev      # Start developing
 
 ---
 
-_Deployment test - $(date +%Y-%m-%d)_
+_Deployment test - 2025-11-12_

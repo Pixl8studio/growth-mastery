@@ -104,10 +104,13 @@ describe("CreateFunnelPage", () => {
         expect(createButton).toBeDisabled();
 
         // Type name
+        await user.clear(nameInput);
         await user.type(nameInput, "My Test Funnel");
 
-        // Should be enabled
-        expect(createButton).toBeEnabled();
+        // Wait for button to be enabled after state update
+        await waitFor(() => {
+            expect(createButton).toBeEnabled();
+        });
     });
 
     it("should call Supabase with only name and slug on submission", async () => {
@@ -142,9 +145,16 @@ describe("CreateFunnelPage", () => {
         render(<CreateFunnelPage />);
 
         const nameInput = screen.getByLabelText(/funnel name/i);
+        // Clear and type to ensure clean input
+        await user.clear(nameInput);
         await user.type(nameInput, "My Test Funnel");
 
+        // Wait for button to be enabled before clicking
         const createButton = screen.getByRole("button", { name: /create funnel/i });
+        await waitFor(() => {
+            expect(createButton).toBeEnabled();
+        });
+
         await user.click(createButton);
 
         await waitFor(() => {

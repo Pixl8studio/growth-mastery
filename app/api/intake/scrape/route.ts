@@ -40,11 +40,31 @@ export async function POST(request: NextRequest) {
         try {
             scrapedText = await extractTextFromUrl(url);
         } catch (error) {
-            logger.error({ error, url }, "Failed to scrape URL");
-            return NextResponse.json(
-                { error: "Failed to scrape URL. Please check the URL and try again." },
-                { status: 500 }
+            logger.error(
+                {
+                    error,
+                    url,
+                    errorMessage:
+                        error instanceof Error ? error.message : String(error),
+                    errorStack: error instanceof Error ? error.stack : undefined,
+                },
+                "Failed to scrape URL"
             );
+
+            // Provide more specific error messages
+            let errorMessage =
+                "Failed to scrape URL. Please check the URL and try again.";
+            if (error instanceof Error) {
+                if (error.message.includes("HTTP")) {
+                    errorMessage = `Failed to access URL: ${error.message}. Please ensure the URL is accessible and try again.`;
+                } else if (error.message.includes("fetch")) {
+                    errorMessage = `Failed to fetch URL. Please check your internet connection and ensure the URL is correct.`;
+                } else {
+                    errorMessage = `Failed to scrape URL: ${error.message}`;
+                }
+            }
+
+            return NextResponse.json({ error: errorMessage }, { status: 500 });
         }
 
         // Validate scraped content
@@ -86,9 +106,19 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (dbError) {
-            logger.error({ error: dbError, projectId }, "Failed to save scraped data");
+            logger.error(
+                {
+                    error: dbError,
+                    projectId,
+                    errorMessage: dbError.message,
+                    errorCode: dbError.code,
+                },
+                "Failed to save scraped data"
+            );
             return NextResponse.json(
-                { error: "Failed to save scraped data" },
+                {
+                    error: "Failed to save scraped data. Please try again.",
+                },
                 { status: 500 }
             );
         }

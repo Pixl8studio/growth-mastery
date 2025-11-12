@@ -51,9 +51,18 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (error) {
-            logger.error({ error, projectId }, "Failed to save pasted content");
+            logger.error(
+                {
+                    error,
+                    projectId,
+                    errorMessage:
+                        error instanceof Error ? error.message : String(error),
+                    errorCode: (error as { code?: string })?.code,
+                },
+                "Failed to save pasted content"
+            );
             return NextResponse.json(
-                { error: "Failed to save content" },
+                { error: "Failed to save content. Please try again." },
                 { status: 500 }
             );
         }

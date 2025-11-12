@@ -12,6 +12,9 @@ import {
     Cloud,
     Sparkles,
     RefreshCw,
+    Edit2,
+    Check,
+    X,
 } from "lucide-react";
 import { VapiCallWidget } from "@/components/funnel/vapi-call-widget";
 import {
@@ -78,6 +81,9 @@ export default function Step1Page({
         null
     );
     const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+    const [editingSessionName, setEditingSessionName] = useState<string>("");
+    const [isRenaming, setIsRenaming] = useState(false);
 
     // Load completion status
     const { completedSteps, refreshCompletion } = useStepCompletion(projectId);
@@ -251,8 +257,6 @@ export default function Step1Page({
 
     const handleConfirmGeneration = async () => {
         try {
-            const mostRecentIntake = intakeSessions[0];
-
             setShowGenerationModal(false);
             setIsGenerating(true);
 
@@ -267,13 +271,45 @@ export default function Step1Page({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     projectId,
-                    intakeId: mostRecentIntake.id,
+                    // Don't pass intakeId - API will fetch all intake records and combine them
                     regenerate: generationMode === "regenerate",
                 }),
             });
 
+            const data = await response.json();
+
             if (!response.ok) {
-                throw new Error("Failed to start generation");
+                const errorMessage =
+                    data.error ||
+                    `Failed to start generation: ${response.status} ${response.statusText}`;
+                logger.error(
+                    {
+                        error: errorMessage,
+                        status: response.status,
+                        statusText: response.statusText,
+                        projectId,
+                        intakeSessionCount: intakeSessions.length,
+                    },
+                    "Failed to start generation"
+                );
+                throw new Error(errorMessage);
+            }
+
+            // Check if generation started successfully
+            if (!data.success && data.failedSteps && data.failedSteps.length > 0) {
+                logger.warn(
+                    {
+                        failedSteps: data.failedSteps,
+                        completedSteps: data.completedSteps,
+                        projectId,
+                    },
+                    "Generation started but some steps failed immediately"
+                );
+                toast({
+                    title: "Generation Started with Warnings",
+                    description: `Some steps failed: ${data.failedSteps.map((f: { step: number; error: string }) => `Step ${f.step}: ${f.error}`).join(", ")}`,
+                    variant: "destructive",
+                });
             }
 
             // Start polling for progress
@@ -281,12 +317,30 @@ export default function Step1Page({
                 pollingIntervalRef.current = setInterval(pollGenerationStatus, 2500);
                 setIsPolling(true);
             }
+
+            toast({
+                title: "Generation Started",
+                description:
+                    "Your content is being generated. This may take a few minutes.",
+            });
         } catch (error) {
-            logger.error({ error }, "Failed to start generation");
+            logger.error(
+                {
+                    error,
+                    errorMessage:
+                        error instanceof Error ? error.message : String(error),
+                    projectId,
+                    intakeSessionCount: intakeSessions.length,
+                },
+                "Failed to start generation"
+            );
             setIsGenerating(false);
             toast({
                 title: "Generation Failed",
-                description: "Failed to start content generation. Please try again.",
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to start content generation. Please try again.",
                 variant: "destructive",
             });
         }
@@ -296,6 +350,84 @@ export default function Step1Page({
         setSelectedMethod(null); // Reset method selection
         loadIntakeSessions();
         refreshCompletion();
+    };
+
+    const handleStartRename = (session: IntakeSession) => {
+        setEditingSessionId(session.id);
+        setEditingSessionName(session.session_name || formatDate(session.created_at));
+    };
+
+    const handleCancelRename = () => {
+        setEditingSessionId(null);
+        setEditingSessionName("");
+    };
+
+    const handleSaveRename = async (sessionId: string) => {
+        if (!editingSessionName.trim()) {
+            toast({
+                title: "Invalid name",
+                description: "Session name cannot be empty.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setIsRenaming(true);
+
+        try {
+            const response = await fetch("/api/intake/rename", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    intakeId: sessionId,
+                    sessionName: editingSessionName.trim(),
+                    projectId,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Failed to rename session");
+            }
+
+            logger.info(
+                { intakeId: sessionId, newSessionName: editingSessionName.trim() },
+                "Session renamed successfully"
+            );
+
+            toast({
+                title: "Session renamed",
+                description: "Session name has been updated successfully.",
+            });
+
+            // Reload sessions to reflect the change
+            await loadIntakeSessions();
+
+            // Reset editing state
+            setEditingSessionId(null);
+            setEditingSessionName("");
+        } catch (error) {
+            logger.error(
+                {
+                    error,
+                    errorMessage:
+                        error instanceof Error ? error.message : String(error),
+                    intakeId: sessionId,
+                },
+                "Failed to rename session"
+            );
+            toast({
+                title: "Rename failed",
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to rename session. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsRenaming(false);
+        }
     };
 
     const formatDuration = (seconds: number) => {
@@ -363,9 +495,7 @@ export default function Step1Page({
             funnelName={project?.name}
             completedSteps={completedSteps}
             nextDisabled={!hasCompletedIntake}
-            nextLabel={
-                hasCompletedIntake ? "Generate Deck Structure" : "Complete Intake First"
-            }
+            nextLabel={hasCompletedIntake ? "Define Offer" : "Complete Intake First"}
             stepTitle="Intake"
             stepDescription="Provide your business information through voice, documents, or other methods"
         >
@@ -479,9 +609,9 @@ export default function Step1Page({
                                         className="rounded-lg border border-border bg-muted/50 p-4 transition-all hover:border-border hover:bg-muted"
                                     >
                                         <div className="mb-3 flex items-center justify-between">
-                                            <div className="flex items-center space-x-3">
+                                            <div className="flex items-center space-x-3 flex-1">
                                                 <div
-                                                    className={`h-3 w-3 rounded-full ${
+                                                    className={`h-3 w-3 rounded-full flex-shrink-0 ${
                                                         session.call_status ===
                                                         "completed"
                                                             ? "bg-green-500"
@@ -494,10 +624,60 @@ export default function Step1Page({
                                                 {getMethodIcon(
                                                     session.intake_method || "voice"
                                                 )}
-                                                <span className="font-medium text-foreground">
-                                                    {session.session_name ||
-                                                        formatDate(session.created_at)}
-                                                </span>
+                                                {editingSessionId === session.id ? (
+                                                    <div className="flex items-center space-x-2 flex-1">
+                                                        <input
+                                                            type="text"
+                                                            value={editingSessionName}
+                                                            onChange={(e) =>
+                                                                setEditingSessionName(
+                                                                    e.target.value
+                                                                )
+                                                            }
+                                                            onKeyDown={(e) => {
+                                                                if (e.key === "Enter") {
+                                                                    handleSaveRename(
+                                                                        session.id
+                                                                    );
+                                                                } else if (
+                                                                    e.key === "Escape"
+                                                                ) {
+                                                                    handleCancelRename();
+                                                                }
+                                                            }}
+                                                            className="flex-1 rounded-md border border-border px-2 py-1 text-sm focus:border-primary focus:outline-none focus:ring-primary"
+                                                            autoFocus
+                                                            disabled={isRenaming}
+                                                        />
+                                                        <button
+                                                            onClick={() =>
+                                                                handleSaveRename(
+                                                                    session.id
+                                                                )
+                                                            }
+                                                            disabled={isRenaming}
+                                                            className="p-1 text-green-600 hover:text-green-700 disabled:opacity-50"
+                                                            title="Save"
+                                                        >
+                                                            <Check className="h-4 w-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={handleCancelRename}
+                                                            disabled={isRenaming}
+                                                            className="p-1 text-red-600 hover:text-red-700 disabled:opacity-50"
+                                                            title="Cancel"
+                                                        >
+                                                            <X className="h-4 w-4" />
+                                                        </button>
+                                                    </div>
+                                                ) : (
+                                                    <span className="font-medium text-foreground">
+                                                        {session.session_name ||
+                                                            formatDate(
+                                                                session.created_at
+                                                            )}
+                                                    </span>
+                                                )}
                                             </div>
                                             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
                                                 <span className="rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
@@ -516,6 +696,17 @@ export default function Step1Page({
                                                             </span>
                                                         </div>
                                                     )}
+                                                {editingSessionId !== session.id && (
+                                                    <button
+                                                        onClick={() =>
+                                                            handleStartRename(session)
+                                                        }
+                                                        className="p-1 text-muted-foreground hover:text-foreground"
+                                                        title="Rename session"
+                                                    >
+                                                        <Edit2 className="h-4 w-4" />
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
 
@@ -593,6 +784,19 @@ export default function Step1Page({
                             <p className="mt-3 text-xs text-muted-foreground">
                                 Plus: Marketing profile initialization
                             </p>
+                            {intakeSessions.length > 1 && (
+                                <div className="mt-3 rounded-lg bg-primary/10 p-3 border border-primary/20">
+                                    <p className="text-xs font-medium text-primary">
+                                        📋 Using {intakeSessions.length} intake session
+                                        {intakeSessions.length > 1 ? "s" : ""} combined
+                                    </p>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        All your intake methods (documents, URLs, pasted
+                                        content, voice calls) will be combined for
+                                        generation.
+                                    </p>
+                                </div>
+                            )}
                         </div>
 
                         <div className="flex gap-3">

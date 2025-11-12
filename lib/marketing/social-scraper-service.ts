@@ -169,7 +169,7 @@ export async function scrapeAndExtractContent(
 async function parseContentForPlatform(
     platform: PlatformType,
     rawText: string,
-    url: string
+    _url: string
 ): Promise<string[]> {
     try {
         // For now, use basic text parsing

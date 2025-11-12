@@ -37,7 +37,7 @@ export async function scanTrends(
                 .single();
 
             if (profile && profile.business_context) {
-                const context = profile.business_context as any;
+                const context = profile.business_context as { industry?: string };
                 userNiche = context.industry || "business";
             }
         }
@@ -60,7 +60,7 @@ export async function scanTrends(
 /**
  * Generate sample trends (placeholder for real trend discovery)
  */
-async function generateSampleTrends(niche: string): Promise<TrendSignal[]> {
+async function generateSampleTrends(_niche: string): Promise<TrendSignal[]> {
     // In production, this would be replaced with real trend data
     // For now, return empty array
     return [];
@@ -141,7 +141,7 @@ Return as JSON:
 export async function rankTrendRelevance(
     trendTopic: string,
     userNiche: string,
-    businessContext?: any
+    businessContext?: Record<string, unknown>
 ): Promise<{ success: boolean; score?: number; reasoning?: string; error?: string }> {
     try {
         const contextInfo = businessContext

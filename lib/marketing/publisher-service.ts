@@ -12,12 +12,26 @@ import type {
     MarketingPlatform,
     ContentCalendar,
 } from "@/types/marketing";
+import type { SocialConnection } from "@/types/integrations";
 
 interface PublishResult {
     success: boolean;
     providerPostId?: string;
     error?: string;
     platformUrl?: string;
+}
+
+interface RetryConfig {
+    attempt_count: number;
+    max_attempts: number;
+    last_error?: string | null;
+}
+
+interface CalendarEntryWithVariant {
+    id: string;
+    user_id: string;
+    retry_config: RetryConfig | null;
+    marketing_post_variants: PostVariant | PostVariant[] | null;
 }
 
 /**
@@ -63,16 +77,28 @@ export async function publishNow(
 
         switch (platform) {
             case "instagram":
-                result = await publishToInstagram(variant as any, connection);
+                result = await publishToInstagram(
+                    variant as PostVariant,
+                    connection as SocialConnection
+                );
                 break;
             case "facebook":
-                result = await publishToFacebook(variant as any, connection);
+                result = await publishToFacebook(
+                    variant as PostVariant,
+                    connection as SocialConnection
+                );
                 break;
             case "linkedin":
-                result = await publishToLinkedIn(variant as any, connection);
+                result = await publishToLinkedIn(
+                    variant as PostVariant,
+                    connection as SocialConnection
+                );
                 break;
             case "twitter":
-                result = await publishToTwitter(variant as any, connection);
+                result = await publishToTwitter(
+                    variant as PostVariant,
+                    connection as SocialConnection
+                );
                 break;
             default:
                 return { success: false, error: `Unsupported platform: ${platform}` };
@@ -155,10 +181,10 @@ export async function schedulePost(
  */
 async function publishToInstagram(
     variant: PostVariant,
-    connection: any
+    connection: SocialConnection
 ): Promise<PublishResult> {
     try {
-        const accessToken = decryptToken(connection.access_token);
+        const _accessToken = decryptToken(connection.access_token);
         const accountId = connection.account_id;
 
         // Instagram API endpoint (via Facebook Graph API)
@@ -192,10 +218,10 @@ async function publishToInstagram(
  */
 async function publishToFacebook(
     variant: PostVariant,
-    connection: any
+    connection: SocialConnection
 ): Promise<PublishResult> {
     try {
-        const accessToken = decryptToken(connection.access_token);
+        const _accessToken = decryptToken(connection.access_token);
         const pageId = connection.account_id;
 
         // Facebook Graph API endpoint
@@ -226,10 +252,10 @@ async function publishToFacebook(
  */
 async function publishToLinkedIn(
     variant: PostVariant,
-    connection: any
+    connection: SocialConnection
 ): Promise<PublishResult> {
     try {
-        const accessToken = decryptToken(connection.access_token);
+        const _accessToken = decryptToken(connection.access_token);
         const personUrn = connection.account_id; // LinkedIn person URN
 
         // LinkedIn API endpoint
@@ -260,10 +286,10 @@ async function publishToLinkedIn(
  */
 async function publishToTwitter(
     variant: PostVariant,
-    connection: any
+    connection: SocialConnection
 ): Promise<PublishResult> {
     try {
-        const accessToken = decryptToken(connection.access_token);
+        const _accessToken = decryptToken(connection.access_token);
 
         // Twitter API v2 endpoint
         // https://developer.twitter.com/en/docs/twitter-api/tweets/manage-tweets/api-reference/post-tweets
@@ -308,15 +334,21 @@ export async function retryFailedPost(
             return { success: false, error: "Calendar entry not found" };
         }
 
+        const entryWithVariant = entry as unknown as CalendarEntryWithVariant;
+
         // Check retry config
-        const retryConfig = entry.retry_config as any;
+        const retryConfig = (entryWithVariant.retry_config as RetryConfig | null) || {
+            attempt_count: 0,
+            max_attempts: 3,
+        };
         if (retryConfig.attempt_count >= retryConfig.max_attempts) {
             return { success: false, error: "Max retry attempts reached" };
         }
 
         // Get variant
-        const variant = (entry as any).marketing_post_variants;
-        if (!variant) {
+        const variantData = entryWithVariant.marketing_post_variants;
+        const variant = Array.isArray(variantData) ? variantData[0] : variantData;
+        if (!variant || !variant.id || !variant.platform) {
             return { success: false, error: "Variant not found" };
         }
 
@@ -455,7 +487,7 @@ export async function getPublishingQueue(): Promise<{
             return { success: false, error: error.message };
         }
 
-        return { success: true, entries: (entries as any) || [] };
+        return { success: true, entries: (entries as ContentCalendar[]) || [] };
     } catch (error) {
         logger.error({ error }, "Error getting publishing queue");
         return {

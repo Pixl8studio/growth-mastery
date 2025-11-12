@@ -346,3 +346,7 @@ pnpm dev      # Start developing
 ```
 
 🔍 Elementary! The tooling is operational.
+
+---
+
+_Test branch build - verifying Vercel deployment_

@@ -1,0 +1,1 @@
+../.claude/commands/test-integration.md

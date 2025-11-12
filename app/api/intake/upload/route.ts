@@ -74,11 +74,25 @@ export async function POST(request: NextRequest) {
         try {
             extractedText = await extractTextFromFile(file);
         } catch (error) {
-            logger.error({ error, fileName: file.name }, "Failed to extract text");
-            return NextResponse.json(
-                { error: "Failed to extract text from file" },
-                { status: 500 }
+            logger.error(
+                {
+                    error,
+                    fileName: file.name,
+                    fileSize: file.size,
+                    fileType: file.type,
+                    errorMessage:
+                        error instanceof Error ? error.message : String(error),
+                },
+                "Failed to extract text from file"
             );
+
+            // Pass through the detailed error message from the extraction function
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "Failed to extract text from file. Please ensure the file is a valid document.";
+
+            return NextResponse.json({ error: errorMessage }, { status: 500 });
         }
 
         // Validate extracted content

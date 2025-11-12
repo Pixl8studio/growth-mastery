@@ -60,17 +60,19 @@ const DEFAULT_THEME = {
 
 /**
  * Main orchestrator for generating all content from intake
+ * Can accept either an intakeId (string) or combined intake data (IntakeData object)
  */
 export async function generateAllFromIntake(
     projectId: string,
     userId: string,
-    intakeId: string
+    intakeIdOrData: string | IntakeData
 ): Promise<GenerationResult> {
     const requestLogger = logger.child({
         handler: "generate-all-from-intake",
         projectId,
         userId,
-        intakeId,
+        intakeIdOrData:
+            typeof intakeIdOrData === "string" ? intakeIdOrData : intakeIdOrData.id,
     });
 
     requestLogger.info("🎨 Starting auto-generation from intake");
@@ -91,26 +93,63 @@ export async function generateAllFromIntake(
     try {
         const supabase = await createClient();
 
-        // Update generation status
-        await updateGenerationStatus(supabase, projectId, {
-            is_generating: true,
-            intake_id_used: intakeId,
-            current_step: null,
-            progress,
-            started_at: new Date().toISOString(),
-        });
+        // Determine if we received an intakeId (string) or combined intake data (object)
+        let intakeData: IntakeData;
+        const intakeId =
+            typeof intakeIdOrData === "string" ? intakeIdOrData : intakeIdOrData.id;
 
-        // Step 0: Fetch intake data
-        const { data: intakeData, error: intakeError } = await supabase
-            .from("vapi_transcripts")
-            .select("*")
-            .eq("id", intakeId)
-            .eq("user_id", userId)
-            .single();
+        if (typeof intakeIdOrData === "string") {
+            // Fetch intake data from database
+            // Update generation status
+            await updateGenerationStatus(supabase, projectId, {
+                is_generating: true,
+                intake_id_used: intakeId,
+                current_step: null,
+                progress,
+                started_at: new Date().toISOString(),
+            });
 
-        if (intakeError || !intakeData) {
-            requestLogger.error({ error: intakeError }, "Failed to fetch intake data");
-            throw new Error("Failed to fetch intake data");
+            const { data: fetchedIntakeData, error: intakeError } = await supabase
+                .from("vapi_transcripts")
+                .select("*")
+                .eq("id", intakeId)
+                .eq("user_id", userId)
+                .single();
+
+            if (intakeError || !fetchedIntakeData) {
+                requestLogger.error(
+                    { error: intakeError },
+                    "Failed to fetch intake data"
+                );
+                throw new Error("Failed to fetch intake data");
+            }
+
+            intakeData = fetchedIntakeData;
+        } else {
+            // Use the provided combined intake data
+            // Update generation status
+            await updateGenerationStatus(supabase, projectId, {
+                is_generating: true,
+                intake_id_used: intakeId,
+                current_step: null,
+                progress,
+                started_at: new Date().toISOString(),
+            });
+
+            intakeData = intakeIdOrData;
+
+            // Log that we're using combined intake data
+            const combinedCount =
+                (intakeData.metadata as { combined_from_count?: number })
+                    ?.combined_from_count || 1;
+            requestLogger.info(
+                {
+                    intakeId,
+                    combinedCount,
+                    combinedTextLength: intakeData.transcript_text?.length || 0,
+                },
+                "Using combined intake data from multiple sessions"
+            );
         }
 
         // Step 2: Generate Offer
@@ -137,17 +176,36 @@ export async function generateAllFromIntake(
                     generated_steps: completedSteps,
                 });
                 requestLogger.info({ offerId: offerResult.id }, "✅ Offer generated");
+            } else {
+                throw new Error("Offer generation returned no result");
             }
         } catch (error) {
+            const errorMessage =
+                error instanceof Error ? error.message : "Unknown error occurred";
+            const errorStack = error instanceof Error ? error.stack : undefined;
+
             progress[0].status = "failed";
-            progress[0].error =
-                error instanceof Error ? error.message : "Unknown error";
-            failedSteps.push({ step: 2, error: progress[0].error });
+            progress[0].error = errorMessage;
+            failedSteps.push({ step: 2, error: errorMessage });
+
             await updateGenerationStatus(supabase, projectId, {
                 progress,
                 generation_errors: failedSteps,
             });
-            requestLogger.error({ error }, "❌ Failed to generate offer");
+
+            requestLogger.error(
+                {
+                    error,
+                    errorMessage,
+                    errorStack,
+                    step: 2,
+                    stepName: "Offer",
+                    projectId,
+                    userId,
+                    intakeId,
+                },
+                "❌ Failed to generate offer"
+            );
         }
 
         // Step 3: Generate Deck Structure
@@ -177,17 +235,36 @@ export async function generateAllFromIntake(
                     { deckId: deckResult.id },
                     "✅ Deck structure generated"
                 );
+            } else {
+                throw new Error("Deck structure generation returned no result");
             }
         } catch (error) {
+            const errorMessage =
+                error instanceof Error ? error.message : "Unknown error occurred";
+            const errorStack = error instanceof Error ? error.stack : undefined;
+
             progress[1].status = "failed";
-            progress[1].error =
-                error instanceof Error ? error.message : "Unknown error";
-            failedSteps.push({ step: 3, error: progress[1].error });
+            progress[1].error = errorMessage;
+            failedSteps.push({ step: 3, error: errorMessage });
+
             await updateGenerationStatus(supabase, projectId, {
                 progress,
                 generation_errors: failedSteps,
             });
-            requestLogger.error({ error }, "❌ Failed to generate deck structure");
+
+            requestLogger.error(
+                {
+                    error,
+                    errorMessage,
+                    errorStack,
+                    step: 3,
+                    stepName: "Deck Structure",
+                    projectId,
+                    userId,
+                    intakeId,
+                },
+                "❌ Failed to generate deck structure"
+            );
         }
 
         // Fetch the generated offer and deck for subsequent steps
@@ -235,24 +312,47 @@ export async function generateAllFromIntake(
                 });
                 requestLogger.info("✅ Enrollment page generated");
             } catch (error) {
+                const errorMessage =
+                    error instanceof Error ? error.message : "Unknown error occurred";
+                const errorStack = error instanceof Error ? error.stack : undefined;
+
                 progress[2].status = "failed";
-                progress[2].error =
-                    error instanceof Error ? error.message : "Unknown error";
-                failedSteps.push({ step: 5, error: progress[2].error });
+                progress[2].error = errorMessage;
+                failedSteps.push({ step: 5, error: errorMessage });
+
                 await updateGenerationStatus(supabase, projectId, {
                     progress,
                     generation_errors: failedSteps,
                 });
-                requestLogger.error({ error }, "❌ Failed to generate enrollment page");
+
+                requestLogger.error(
+                    {
+                        error,
+                        errorMessage,
+                        errorStack,
+                        step: 5,
+                        stepName: "Enrollment Page",
+                        projectId,
+                        userId,
+                        intakeId,
+                    },
+                    "❌ Failed to generate enrollment page"
+                );
             }
         } else {
+            const errorMessage =
+                "Missing offer or deck structure (prerequisites not met)";
             progress[2].status = "failed";
-            progress[2].error = "Missing offer or deck structure";
-            failedSteps.push({ step: 5, error: progress[2].error });
+            progress[2].error = errorMessage;
+            failedSteps.push({ step: 5, error: errorMessage });
             await updateGenerationStatus(supabase, projectId, {
                 progress,
                 generation_errors: failedSteps,
             });
+            requestLogger.warn(
+                { step: 5, stepName: "Enrollment Page", projectId, userId },
+                "Skipped enrollment page generation: missing prerequisites"
+            );
         }
 
         // Step 8: Generate Watch Pages (requires deck)
@@ -275,24 +375,46 @@ export async function generateAllFromIntake(
                 });
                 requestLogger.info("✅ Watch page generated");
             } catch (error) {
+                const errorMessage =
+                    error instanceof Error ? error.message : "Unknown error occurred";
+                const errorStack = error instanceof Error ? error.stack : undefined;
+
                 progress[3].status = "failed";
-                progress[3].error =
-                    error instanceof Error ? error.message : "Unknown error";
-                failedSteps.push({ step: 8, error: progress[3].error });
+                progress[3].error = errorMessage;
+                failedSteps.push({ step: 8, error: errorMessage });
+
                 await updateGenerationStatus(supabase, projectId, {
                     progress,
                     generation_errors: failedSteps,
                 });
-                requestLogger.error({ error }, "❌ Failed to generate watch page");
+
+                requestLogger.error(
+                    {
+                        error,
+                        errorMessage,
+                        errorStack,
+                        step: 8,
+                        stepName: "Watch Page",
+                        projectId,
+                        userId,
+                        intakeId,
+                    },
+                    "❌ Failed to generate watch page"
+                );
             }
         } else {
+            const errorMessage = "Missing deck structure (prerequisite not met)";
             progress[3].status = "failed";
-            progress[3].error = "Missing deck structure";
-            failedSteps.push({ step: 8, error: progress[3].error });
+            progress[3].error = errorMessage;
+            failedSteps.push({ step: 8, error: errorMessage });
             await updateGenerationStatus(supabase, projectId, {
                 progress,
                 generation_errors: failedSteps,
             });
+            requestLogger.warn(
+                { step: 8, stepName: "Watch Page", projectId, userId },
+                "Skipped watch page generation: missing deck structure"
+            );
         }
 
         // Step 9: Generate Registration Pages (requires deck + intake)
@@ -322,27 +444,46 @@ export async function generateAllFromIntake(
                 });
                 requestLogger.info("✅ Registration page generated");
             } catch (error) {
+                const errorMessage =
+                    error instanceof Error ? error.message : "Unknown error occurred";
+                const errorStack = error instanceof Error ? error.stack : undefined;
+
                 progress[4].status = "failed";
-                progress[4].error =
-                    error instanceof Error ? error.message : "Unknown error";
-                failedSteps.push({ step: 9, error: progress[4].error });
+                progress[4].error = errorMessage;
+                failedSteps.push({ step: 9, error: errorMessage });
+
                 await updateGenerationStatus(supabase, projectId, {
                     progress,
                     generation_errors: failedSteps,
                 });
+
                 requestLogger.error(
-                    { error },
+                    {
+                        error,
+                        errorMessage,
+                        errorStack,
+                        step: 9,
+                        stepName: "Registration Page",
+                        projectId,
+                        userId,
+                        intakeId,
+                    },
                     "❌ Failed to generate registration page"
                 );
             }
         } else {
+            const errorMessage = "Missing deck structure (prerequisite not met)";
             progress[4].status = "failed";
-            progress[4].error = "Missing deck structure";
-            failedSteps.push({ step: 9, error: progress[4].error });
+            progress[4].error = errorMessage;
+            failedSteps.push({ step: 9, error: errorMessage });
             await updateGenerationStatus(supabase, projectId, {
                 progress,
                 generation_errors: failedSteps,
             });
+            requestLogger.warn(
+                { step: 9, stepName: "Registration Page", projectId, userId },
+                "Skipped registration page generation: missing deck structure"
+            );
         }
 
         // Step 11: Generate AI Followup (requires offer)
@@ -365,27 +506,46 @@ export async function generateAllFromIntake(
                 });
                 requestLogger.info("✅ AI followup sequence generated");
             } catch (error) {
+                const errorMessage =
+                    error instanceof Error ? error.message : "Unknown error occurred";
+                const errorStack = error instanceof Error ? error.stack : undefined;
+
                 progress[5].status = "failed";
-                progress[5].error =
-                    error instanceof Error ? error.message : "Unknown error";
-                failedSteps.push({ step: 11, error: progress[5].error });
+                progress[5].error = errorMessage;
+                failedSteps.push({ step: 11, error: errorMessage });
+
                 await updateGenerationStatus(supabase, projectId, {
                     progress,
                     generation_errors: failedSteps,
                 });
+
                 requestLogger.error(
-                    { error },
+                    {
+                        error,
+                        errorMessage,
+                        errorStack,
+                        step: 11,
+                        stepName: "AI Followup",
+                        projectId,
+                        userId,
+                        intakeId,
+                    },
                     "❌ Failed to generate followup sequence"
                 );
             }
         } else {
+            const errorMessage = "Missing offer (prerequisite not met)";
             progress[5].status = "failed";
-            progress[5].error = "Missing offer";
-            failedSteps.push({ step: 11, error: progress[5].error });
+            progress[5].error = errorMessage;
+            failedSteps.push({ step: 11, error: errorMessage });
             await updateGenerationStatus(supabase, projectId, {
                 progress,
                 generation_errors: failedSteps,
             });
+            requestLogger.warn(
+                { step: 11, stepName: "AI Followup", projectId, userId },
+                "Skipped followup sequence generation: missing offer"
+            );
         }
 
         // Marketing Profile: Initialize from intake
@@ -419,14 +579,29 @@ export async function generateAllFromIntake(
                 );
             }
         } catch (error) {
+            const errorMessage =
+                error instanceof Error ? error.message : "Unknown error occurred";
+            const errorStack = error instanceof Error ? error.stack : undefined;
+
             progress[6].status = "failed";
-            progress[6].error =
-                error instanceof Error ? error.message : "Unknown error";
+            progress[6].error = errorMessage;
             await updateGenerationStatus(supabase, projectId, {
                 progress,
             });
             // Don't add to failedSteps - marketing is optional
-            requestLogger.error({ error }, "❌ Failed to initialize marketing profile");
+            requestLogger.error(
+                {
+                    error,
+                    errorMessage,
+                    errorStack,
+                    step: 0,
+                    stepName: "Marketing Profile",
+                    projectId,
+                    userId,
+                    intakeId,
+                },
+                "❌ Failed to initialize marketing profile"
+            );
         }
 
         // Update final generation status
@@ -455,7 +630,23 @@ export async function generateAllFromIntake(
             progress,
         };
     } catch (error) {
-        requestLogger.error({ error }, "Fatal error in auto-generation");
+        const errorMessage =
+            error instanceof Error ? error.message : "Unknown error occurred";
+        const errorStack = error instanceof Error ? error.stack : undefined;
+
+        requestLogger.error(
+            {
+                error,
+                errorMessage,
+                errorStack,
+                projectId,
+                userId,
+                intakeId,
+                completedSteps: completedSteps.length,
+                failedSteps: failedSteps.length,
+            },
+            "Fatal error in auto-generation"
+        );
 
         // Update generation status with error
         try {
@@ -465,13 +656,21 @@ export async function generateAllFromIntake(
                 generation_errors: [
                     {
                         step: 0,
-                        error: error instanceof Error ? error.message : "Unknown error",
+                        error: errorMessage,
                     },
                 ],
             });
         } catch (updateError) {
             requestLogger.error(
-                { error: updateError },
+                {
+                    error: updateError,
+                    errorMessage:
+                        updateError instanceof Error
+                            ? updateError.message
+                            : String(updateError),
+                    projectId,
+                    userId,
+                },
                 "Failed to update error status"
             );
         }
@@ -482,7 +681,7 @@ export async function generateAllFromIntake(
             failedSteps: [
                 {
                     step: 0,
-                    error: error instanceof Error ? error.message : "Unknown error",
+                    error: errorMessage,
                 },
             ],
             progress,

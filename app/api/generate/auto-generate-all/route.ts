@@ -72,52 +72,156 @@ export async function POST(request: NextRequest) {
 
         let result;
 
-        if (regenerate) {
-            // Regenerate from most recent intake
-            requestLogger.info("🔄 Starting regeneration");
-            result = await regenerateAllFromIntake(projectId, user.id);
-        } else {
-            // Generate from specified intake
-            if (!intakeId) {
-                throw new ValidationError(
-                    "intakeId is required for initial generation"
+        try {
+            if (regenerate) {
+                // Regenerate from most recent intake
+                requestLogger.info("🔄 Starting regeneration");
+                result = await regenerateAllFromIntake(projectId, user.id);
+            } else {
+                // Generate from all intake records for the project
+                // Fetch all intake records for this project
+                const { data: allIntakes, error: intakesError } = await supabase
+                    .from("vapi_transcripts")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .eq("user_id", user.id)
+                    .eq("call_status", "completed")
+                    .order("created_at", { ascending: false });
+
+                if (intakesError) {
+                    requestLogger.error(
+                        {
+                            error: intakesError,
+                            projectId,
+                            userId: user.id,
+                        },
+                        "Failed to fetch intake records"
+                    );
+                    throw new ValidationError("Failed to fetch intake records");
+                }
+
+                if (!allIntakes || allIntakes.length === 0) {
+                    requestLogger.error(
+                        { projectId, userId: user.id },
+                        "No intake records found"
+                    );
+                    throw new ValidationError(
+                        "No intake records found. Please complete at least one intake session first."
+                    );
+                }
+
+                // Combine all intake transcript_text into a single aggregated text
+                const combinedTranscript = allIntakes
+                    .map((intake) => {
+                        if (!intake.transcript_text) return "";
+                        // Add a separator and session info for each intake
+                        const sessionInfo = intake.session_name
+                            ? `\n\n--- ${intake.session_name} (${intake.intake_method || "unknown"}) ---\n\n`
+                            : `\n\n--- Intake from ${new Date(intake.created_at).toLocaleDateString()} (${intake.intake_method || "unknown"}) ---\n\n`;
+                        return sessionInfo + intake.transcript_text;
+                    })
+                    .filter(Boolean)
+                    .join("\n\n");
+
+                // Create a combined intake data object using the most recent intake as base
+                const mostRecentIntake = allIntakes[0];
+                const combinedIntakeData = {
+                    ...mostRecentIntake,
+                    transcript_text: combinedTranscript,
+                    id: mostRecentIntake.id, // Use most recent intake ID for tracking
+                    metadata: {
+                        ...mostRecentIntake.metadata,
+                        combined_from_count: allIntakes.length,
+                        combined_from_ids: allIntakes.map((i) => i.id),
+                        combined_at: new Date().toISOString(),
+                    },
+                };
+
+                requestLogger.info(
+                    {
+                        projectId,
+                        userId: user.id,
+                        intakeCount: allIntakes.length,
+                        combinedTextLength: combinedTranscript.length,
+                        intakeMethods: allIntakes.map((i) => i.intake_method),
+                    },
+                    "✨ Starting initial generation from combined intake sessions"
+                );
+
+                // Pass the combined intake data to the orchestrator
+                // We'll modify generateAllFromIntake to accept combined intake data directly
+                result = await generateAllFromIntake(
+                    projectId,
+                    user.id,
+                    combinedIntakeData
                 );
             }
 
-            // Verify intake ownership
-            const { data: intake, error: intakeError } = await supabase
-                .from("vapi_transcripts")
-                .select("id")
-                .eq("id", intakeId)
-                .eq("user_id", user.id)
-                .eq("funnel_project_id", projectId)
-                .single();
+            requestLogger.info(
+                {
+                    success: result.success,
+                    completedSteps: result.completedSteps.length,
+                    failedSteps: result.failedSteps.length,
+                    progressSteps: result.progress.length,
+                },
+                "Auto-generation completed"
+            );
 
-            if (intakeError || !intake) {
-                throw new ValidationError("Intake not found or access denied");
+            // Check if there were any failed steps
+            if (result.failedSteps.length > 0) {
+                requestLogger.warn(
+                    {
+                        failedSteps: result.failedSteps,
+                        completedSteps: result.completedSteps,
+                    },
+                    "Auto-generation completed with some failed steps"
+                );
             }
 
-            requestLogger.info("✨ Starting initial generation");
-            result = await generateAllFromIntake(projectId, user.id, intakeId);
-        }
-
-        requestLogger.info(
-            {
+            return NextResponse.json({
                 success: result.success,
-                completedSteps: result.completedSteps.length,
-                failedSteps: result.failedSteps.length,
-            },
-            "Auto-generation completed"
-        );
+                completedSteps: result.completedSteps,
+                failedSteps: result.failedSteps,
+                progress: result.progress,
+            });
+        } catch (error) {
+            // Re-throw AuthenticationError and ValidationError to be handled below
+            if (
+                error instanceof AuthenticationError ||
+                error instanceof ValidationError
+            ) {
+                throw error;
+            }
 
-        return NextResponse.json({
-            success: result.success,
-            completedSteps: result.completedSteps,
-            failedSteps: result.failedSteps,
-            progress: result.progress,
-        });
+            // Log detailed error information
+            requestLogger.error(
+                {
+                    error,
+                    errorMessage:
+                        error instanceof Error ? error.message : String(error),
+                    errorStack: error instanceof Error ? error.stack : undefined,
+                    projectId,
+                    userId: user.id,
+                    intakeId,
+                    regenerate,
+                },
+                "Error during auto-generation"
+            );
+
+            // Wrap unknown errors in a user-friendly message
+            throw new Error(
+                `Failed to generate content: ${error instanceof Error ? error.message : "Unknown error occurred"}`
+            );
+        }
     } catch (error) {
-        logger.error({ error }, "Error in POST /api/generate/auto-generate-all");
+        logger.error(
+            {
+                error,
+                errorMessage: error instanceof Error ? error.message : String(error),
+                errorStack: error instanceof Error ? error.stack : undefined,
+            },
+            "Error in POST /api/generate/auto-generate-all"
+        );
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });
@@ -127,9 +231,12 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: error.message }, { status: 400 });
         }
 
-        return NextResponse.json(
-            { error: "Failed to generate content" },
-            { status: 500 }
-        );
+        // Return detailed error message if available
+        const errorMessage =
+            error instanceof Error
+                ? error.message
+                : "Failed to generate content. Please try again or contact support if the issue persists.";
+
+        return NextResponse.json({ error: errorMessage }, { status: 500 });
     }
 }

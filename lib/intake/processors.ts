@@ -47,22 +47,129 @@ export async function extractTextFromPDF(file: File): Promise<string> {
  * Uses mammoth library for extraction.
  */
 export async function extractTextFromDocx(file: File): Promise<string> {
+    const fileName = file.name;
+    const fileSize = file.size;
+
     try {
+        // Validate file size
+        if (fileSize === 0) {
+            logger.error({ fileName, fileSize }, "DOCX file is empty");
+            throw new Error(
+                `File "${fileName}" is empty. Please upload a valid DOCX file.`
+            );
+        }
+
+        // Validate file type by checking file extension
+        const ext = fileName.split(".").pop()?.toLowerCase();
+        if (ext !== "docx" && ext !== "doc") {
+            logger.error({ fileName, ext }, "Invalid file extension for DOCX");
+            throw new Error(
+                `File "${fileName}" does not have a valid DOCX extension. Expected .docx or .doc`
+            );
+        }
+
         // Dynamic import
         const mammoth = await import("mammoth");
 
-        const arrayBuffer = await file.arrayBuffer();
-        const result = await mammoth.extractRawText({ arrayBuffer });
+        // Convert file to ArrayBuffer
+        let arrayBuffer: ArrayBuffer;
+        try {
+            arrayBuffer = await file.arrayBuffer();
+        } catch (error) {
+            logger.error({ error, fileName }, "Failed to read file as ArrayBuffer");
+            throw new Error(
+                `Failed to read file "${fileName}". The file may be corrupted or inaccessible.`
+            );
+        }
 
-        logger.info({ length: result.value.length }, "Extracted text from DOCX");
+        // Validate ArrayBuffer
+        if (!arrayBuffer || arrayBuffer.byteLength === 0) {
+            logger.error(
+                { fileName, bufferSize: arrayBuffer?.byteLength },
+                "Empty ArrayBuffer"
+            );
+            throw new Error(
+                `File "${fileName}" could not be processed. The file may be corrupted.`
+            );
+        }
 
-        return result.value;
+        // Extract text using mammoth
+        let result;
+        try {
+            result = await mammoth.extractRawText({ arrayBuffer });
+        } catch (error) {
+            logger.error(
+                { error, fileName, fileSize, bufferSize: arrayBuffer.byteLength },
+                "Mammoth failed to extract text from DOCX"
+            );
+
+            // Provide more specific error messages based on error type
+            if (error instanceof Error) {
+                if (error.message.includes("not a valid")) {
+                    throw new Error(
+                        `File "${fileName}" is not a valid DOCX file. Please ensure the file is a properly formatted Word document.`
+                    );
+                }
+                if (
+                    error.message.includes("corrupted") ||
+                    error.message.includes("corrupt")
+                ) {
+                    throw new Error(
+                        `File "${fileName}" appears to be corrupted. Please try re-saving the file and uploading again.`
+                    );
+                }
+            }
+
+            throw new Error(
+                `Failed to extract text from "${fileName}". ${error instanceof Error ? error.message : "The file format may not be supported."}`
+            );
+        }
+
+        // Validate extracted text
+        if (!result || !result.value) {
+            logger.error({ fileName }, "Mammoth returned empty result");
+            throw new Error(
+                `No text content found in "${fileName}". The document may be empty or contain only images.`
+            );
+        }
+
+        const extractedText = result.value.trim();
+
+        // Check if extracted text is too short (likely an error)
+        if (extractedText.length === 0) {
+            logger.warn({ fileName, fileSize }, "Extracted text is empty");
+            throw new Error(
+                `No readable text found in "${fileName}". The document may contain only images, or the text may be in an unsupported format.`
+            );
+        }
+
+        logger.info(
+            { fileName, fileSize, textLength: extractedText.length },
+            "Successfully extracted text from DOCX"
+        );
+
+        return extractedText;
     } catch (error) {
+        // If error is already a user-friendly Error, re-throw it
+        if (error instanceof Error && error.message.includes(fileName)) {
+            throw error;
+        }
+
+        // Otherwise, wrap it in a user-friendly error
         logger.error(
-            { error, fileName: file.name },
+            {
+                error,
+                fileName,
+                fileSize,
+                errorMessage: error instanceof Error ? error.message : String(error),
+                errorStack: error instanceof Error ? error.stack : undefined,
+            },
             "Failed to extract text from DOCX"
         );
-        throw new Error("Failed to extract text from DOCX");
+
+        throw new Error(
+            `Failed to extract text from "${fileName}". ${error instanceof Error ? error.message : "Please ensure the file is a valid DOCX document and try again."}`
+        );
     }
 }
 

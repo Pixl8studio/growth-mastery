@@ -131,7 +131,7 @@ export function DeckStructureEditor({
                         </div>
 
                         {/* Slides in this section */}
-                        {sectionSlides.map((slide, idx) => {
+                        {sectionSlides.map((slide) => {
                             const slideIndex = slides.findIndex(
                                 (s) => s.slideNumber === slide.slideNumber
                             );

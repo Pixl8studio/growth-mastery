@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,11 +56,7 @@ export function TrendExplorerEnhanced({
     const [selectedTrend, setSelectedTrend] = useState<Trend | null>(null);
     const [creatingBrief, setCreatingBrief] = useState(false);
 
-    useEffect(() => {
-        loadSavedTrends();
-    }, [funnelProjectId]);
-
-    const loadSavedTrends = async () => {
+    const loadSavedTrends = useCallback(async () => {
         try {
             const response = await fetch(
                 `/api/marketing/trends/saved?funnel_project_id=${funnelProjectId}`
@@ -73,7 +69,11 @@ export function TrendExplorerEnhanced({
         } catch (error) {
             logger.error({ error }, "Failed to load saved trends");
         }
-    };
+    }, [funnelProjectId]);
+
+    useEffect(() => {
+        loadSavedTrends();
+    }, [loadSavedTrends]);
 
     const handleSearch = async () => {
         if (!searchTerm && selectedPlatforms.length === 0) {

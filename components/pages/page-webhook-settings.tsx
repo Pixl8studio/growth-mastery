@@ -5,11 +5,10 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { logger } from "@/lib/client-logger";
 import type {
     PageType,
-    PageWebhookConfig,
     EffectiveWebhookConfig,
 } from "@/types/pages";
 import { Button } from "@/components/ui/button";
@@ -43,27 +42,9 @@ export function PageWebhookSettings({ pageId, pageType }: PageWebhookSettingsPro
 
     useEffect(() => {
         loadWebhookConfig();
-    }, [pageId, pageType]);
+    }, [pageId, pageType, loadWebhookConfig]);
 
-    useEffect(() => {
-        const hasChanges =
-            inheritGlobal !== originalInheritGlobal ||
-            webhookEnabled !== originalWebhookEnabled ||
-            webhookUrl !== originalWebhookUrl ||
-            webhookSecret !== originalWebhookSecret;
-        setHasUnsavedChanges(hasChanges);
-    }, [
-        inheritGlobal,
-        webhookEnabled,
-        webhookUrl,
-        webhookSecret,
-        originalInheritGlobal,
-        originalWebhookEnabled,
-        originalWebhookUrl,
-        originalWebhookSecret,
-    ]);
-
-    const loadWebhookConfig = async () => {
+    const loadWebhookConfig = useCallback(async () => {
         try {
             setLoading(true);
             setError(null);
@@ -97,7 +78,25 @@ export function PageWebhookSettings({ pageId, pageType }: PageWebhookSettingsPro
         } finally {
             setLoading(false);
         }
-    };
+    }, [pageId, pageType]);
+
+    useEffect(() => {
+        const hasChanges =
+            inheritGlobal !== originalInheritGlobal ||
+            webhookEnabled !== originalWebhookEnabled ||
+            webhookUrl !== originalWebhookUrl ||
+            webhookSecret !== originalWebhookSecret;
+        setHasUnsavedChanges(hasChanges);
+    }, [
+        inheritGlobal,
+        webhookEnabled,
+        webhookUrl,
+        webhookSecret,
+        originalInheritGlobal,
+        originalWebhookEnabled,
+        originalWebhookUrl,
+        originalWebhookSecret,
+    ]);
 
     const handleSave = async () => {
         try {

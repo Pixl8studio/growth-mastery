@@ -38,7 +38,7 @@ export default async function PublicPageBySlug({ params }: PageProps) {
 
     // Try to find the page in each table by vanity_slug
     // Check registration pages
-    const { data: registrationPage, error: regError } = await supabase
+    const { data: registrationPage } = await supabase
         .from("registration_pages")
         .select("*, funnel_projects(*)")
         .eq("user_id", userId)
@@ -62,7 +62,7 @@ export default async function PublicPageBySlug({ params }: PageProps) {
     }
 
     // Check watch pages
-    const { data: watchPage, error: watchError } = await supabase
+    const { data: watchPage } = await supabase
         .from("watch_pages")
         .select("*, funnel_projects(*), pitch_videos(*)")
         .eq("user_id", userId)
@@ -86,7 +86,7 @@ export default async function PublicPageBySlug({ params }: PageProps) {
     }
 
     // Check enrollment pages
-    const { data: enrollmentPage, error: enrollError } = await supabase
+    const { data: enrollmentPage } = await supabase
         .from("enrollment_pages")
         .select("*, funnel_projects(*), offers(*)")
         .eq("user_id", userId)

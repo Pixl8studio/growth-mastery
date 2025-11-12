@@ -6,12 +6,12 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/client-logger";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ExternalLink, Edit, Eye } from "lucide-react";
+import { ExternalLink, Edit } from "lucide-react";
 import Link from "next/link";
 
 interface Page {
@@ -33,11 +33,7 @@ export function FunnelPagesView({ projectId, username }: FunnelPagesViewProps) {
     const [pages, setPages] = useState<Page[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        loadPages();
-    }, [projectId]);
-
-    const loadPages = async () => {
+    const loadPages = useCallback(async () => {
         setLoading(true);
         try {
             const supabase = createClient();
@@ -94,7 +90,11 @@ export function FunnelPagesView({ projectId, username }: FunnelPagesViewProps) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [projectId]);
+
+    useEffect(() => {
+        loadPages();
+    }, [loadPages]);
 
     const getPageUrl = (page: Page): string => {
         if (page.vanity_slug) {

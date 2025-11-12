@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import { AuthenticationError, ValidationError, NotFoundError } from "@/lib/errors";
+import { AuthenticationError, NotFoundError } from "@/lib/errors";
 
 type RouteContext = {
     params: Promise<{ sequenceId: string; messageId: string }>;

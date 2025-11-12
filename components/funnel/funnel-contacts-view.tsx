@@ -6,12 +6,12 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/client-logger";
 import { ContactsStats } from "@/components/contacts/contacts-stats";
 import { Badge } from "@/components/ui/badge";
-import { Users, Eye, CheckCircle, CreditCard } from "lucide-react";
+import { Users } from "lucide-react";
 import Link from "next/link";
 
 interface Contact {
@@ -47,11 +47,7 @@ export function FunnelContactsView({ projectId }: FunnelContactsViewProps) {
     const [loading, setLoading] = useState(true);
     const [stageFilter, setStageFilter] = useState<string>("all");
 
-    useEffect(() => {
-        loadData();
-    }, [projectId, stageFilter]);
-
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         setLoading(true);
         try {
             const supabase = createClient();
@@ -103,7 +99,11 @@ export function FunnelContactsView({ projectId }: FunnelContactsViewProps) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [projectId, stageFilter]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     const getStageBadge = (stage: string) => {
         const badges = {

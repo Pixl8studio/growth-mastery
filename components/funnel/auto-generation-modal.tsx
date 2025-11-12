@@ -92,7 +92,7 @@ export function AutoGenerationModal({
             }
 
             setIsComplete(true);
-        } catch (error) {
+        } catch (_error) {
             setFailedCount((prev) => prev + 1);
         } finally {
             setIsGenerating(false);

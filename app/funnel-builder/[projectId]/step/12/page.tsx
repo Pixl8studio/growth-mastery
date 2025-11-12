@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { Card } from "@/components/ui/card";
@@ -73,46 +73,7 @@ export default function Step12Page({
         resolveParams();
     }, [params]);
 
-    // Load marketing data
-    useEffect(() => {
-        const loadData = async () => {
-            if (!projectId) return;
-
-            try {
-                setLoading(true);
-
-                // Load profile
-                const profileRes = await fetch(
-                    `/api/marketing/profiles?funnel_project_id=${projectId}`
-                );
-
-                if (profileRes.ok) {
-                    const profileData = await profileRes.json();
-                    if (profileData.profiles && profileData.profiles.length > 0) {
-                        setProfile(profileData.profiles[0]);
-                        setMarketingEnabled(true);
-                        logger.info(
-                            { profileId: profileData.profiles[0].id },
-                            "Marketing profile loaded"
-                        );
-                    }
-                }
-
-                // Load stats if enabled
-                if (profile) {
-                    await loadStats();
-                }
-            } catch (error) {
-                logger.error({ error }, "Failed to load marketing data");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadData();
-    }, [projectId]);
-
-    const loadStats = async () => {
+    const loadStats = useCallback(async () => {
         try {
             // Get posts this month
             const monthStart = new Date();
@@ -174,7 +135,46 @@ export default function Step12Page({
         } catch (error) {
             logger.error({ error }, "Failed to load stats");
         }
-    };
+    }, [projectId]);
+
+    // Load marketing data
+    useEffect(() => {
+        const loadData = async () => {
+            if (!projectId) return;
+
+            try {
+                setLoading(true);
+
+                // Load profile
+                const profileRes = await fetch(
+                    `/api/marketing/profiles?funnel_project_id=${projectId}`
+                );
+
+                if (profileRes.ok) {
+                    const profileData = await profileRes.json();
+                    if (profileData.profiles && profileData.profiles.length > 0) {
+                        setProfile(profileData.profiles[0]);
+                        setMarketingEnabled(true);
+                        logger.info(
+                            { profileId: profileData.profiles[0].id },
+                            "Marketing profile loaded"
+                        );
+                    }
+                }
+
+                // Load stats if enabled
+                if (profile) {
+                    await loadStats();
+                }
+            } catch (error) {
+                logger.error({ error }, "Failed to load marketing data");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+    }, [projectId, profile, loadStats]);
 
     const handleEnableMarketing = async (enabled: boolean) => {
         setMarketingEnabled(enabled);

@@ -6,10 +6,7 @@
  */
 
 import { logger } from "@/lib/logger";
-import {
-    selectStoriesForProspect,
-    getRecommendedStoryTypes,
-} from "./content-selector-service";
+import { selectStoriesForProspect } from "./content-selector-service";
 import { findMatchingStories, recordStoryUsage } from "./story-library-service";
 import type { FollowupProspect } from "@/types/followup";
 import type { StoryLibraryEntry } from "./story-library-service";

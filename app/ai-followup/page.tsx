@@ -16,7 +16,7 @@ export const metadata = {
 };
 
 export default async function AIFollowupPage() {
-    const { user, profile } = await getCurrentUserWithProfile();
+    const { user } = await getCurrentUserWithProfile();
 
     if (!user) {
         redirect("/login");

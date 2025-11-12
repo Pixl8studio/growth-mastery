@@ -75,7 +75,7 @@ export function HorizontalProgress({
 
                 {/* Steps Grid */}
                 <div className="relative flex justify-between gap-2">
-                    {STEPS.map((step, index) => {
+                    {STEPS.map((step) => {
                         const isCompleted = completedSteps.includes(step.number);
                         const isActive = step.number === currentStep;
                         const href = `/funnel-builder/${projectId}/step/${step.number}`;

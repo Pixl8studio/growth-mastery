@@ -24,7 +24,7 @@ interface PagesTableProps {
 
 export function PagesTable({ pages, username }: PagesTableProps) {
     const router = useRouter();
-    const [refreshKey, setRefreshKey] = useState(0);
+    const [_refreshKey, setRefreshKey] = useState(0);
     const [deletingId, setDeletingId] = useState<string | null>(null);
 
     if (pages.length === 0) {

@@ -349,4 +349,4 @@ pnpm dev      # Start developing
 
 ---
 
-_Deployment test - 2025-11-12 - Testing Vercel reconnection after fork setup_
+_Deployment test - 2025-11-12 - Testing Vercel deployment with genie-v4 repository_

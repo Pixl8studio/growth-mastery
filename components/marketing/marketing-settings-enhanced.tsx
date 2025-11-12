@@ -103,9 +103,9 @@ export function MarketingSettingsEnhanced({
         } finally {
             setLoading(false);
         }
-    };
+    }, [funnelProjectId]);
 
-    const loadActivityLog = async () => {
+    const loadActivityLog = useCallback(async () => {
         try {
             const response = await fetch(
                 `/api/marketing/activity-log?funnel_project_id=${funnelProjectId}&limit=20`

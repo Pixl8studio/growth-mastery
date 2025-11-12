@@ -349,4 +349,4 @@ pnpm dev      # Start developing
 
 ---
 
-_Deployment test - 2025-11-12 - Vercel trigger attempt_
+_Deployment test - 2025-11-12 - Testing new branch deployment_

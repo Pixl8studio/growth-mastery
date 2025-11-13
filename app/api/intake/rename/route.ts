@@ -62,15 +62,7 @@ export async function PATCH(request: NextRequest) {
             throw new ValidationError("Intake not found or access denied");
         }
 
-        // Type assertion for session_name field
-        const intakeWithSessionName = intake as {
-            id: string;
-            user_id: string;
-            funnel_project_id: string;
-            session_name: string | null;
-        };
-        const oldSessionName = intakeWithSessionName.session_name;
-
+        const oldSessionName = intake.session_name;
         // Update session name
         const { data: updatedIntake, error: updateError } = await supabase
             .from("vapi_transcripts")
@@ -105,16 +97,10 @@ export async function PATCH(request: NextRequest) {
             "Session name updated successfully"
         );
 
-        // Type assertion for updated intake with session_name
-        const updatedIntakeWithSessionName = updatedIntake as {
-            id: string;
-            session_name: string | null;
-        };
-
         return NextResponse.json({
             success: true,
-            intakeId: updatedIntakeWithSessionName.id,
-            sessionName: updatedIntakeWithSessionName.session_name,
+            intakeId: updatedIntake.id,
+            sessionName: updatedIntake.session_name,
         });
     } catch (error) {
         logger.error(

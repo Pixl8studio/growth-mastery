@@ -1,74 +1,79 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import GammaThemeSelector from "@/components/funnel/gamma-theme-selector";
-import {
-    Rocket,
-    Presentation,
-    Link as LinkIcon,
-    Trash2,
-    Eye,
-    Pencil,
-    Check,
-    X,
-    FileDown,
-    FileText,
-} from "lucide-react";
+import { DeckStructureEditor } from "@/components/funnel/deck-structure-editor";
+import { Sparkles, FileText, Trash2, Pencil, Download, Copy } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
-import { useToast } from "@/components/ui/use-toast";
+import { useIsMobile } from "@/lib/mobile-utils.client";
 
 interface DeckStructure {
     id: string;
     title: string;
     slideCount: number;
-    slides: unknown[];
-    created_at: string;
-}
-
-interface GammaDeck {
-    id: string;
-    title: string;
     status: "generating" | "completed" | "failed";
-    gamma_session_id?: string;
-    deck_url?: string;
-    deck_data?: Record<string, unknown>;
-    settings: {
-        theme: string;
-        style: string;
-        length: string;
-    };
+    slides: Array<{
+        slideNumber: number;
+        title: string;
+        description: string;
+        section: string;
+    }>;
+    version: number;
     created_at: string;
+    presentation_type?: "webinar" | "vsl" | "sales_page";
+    template_type?: string;
+    sections?: any;
 }
 
-export default function Step4Page({
+interface VapiTranscript {
+    id: string;
+    transcript_text: string;
+    created_at: string;
+    intake_method?: string;
+    session_name?: string;
+}
+
+export default function Step3Page({
     params,
 }: {
     params: Promise<{ projectId: string }>;
 }) {
+    const router = useRouter();
+    const isMobile = useIsMobile("lg");
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationProgress, setGenerationProgress] = useState(0);
-    const [selectedDeckId, setSelectedDeckId] = useState("");
+    const [selectedTranscript, setSelectedTranscript] = useState("");
+    const [transcripts, setTranscripts] = useState<VapiTranscript[]>([]);
     const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
-    const [gammaDecks, setGammaDecks] = useState<GammaDeck[]>([]);
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [editingName, setEditingName] = useState("");
-
-    const [settings, setSettings] = useState({
-        theme: "nebulae",
-        style: "professional",
-        length: "full",
-    });
-
-    const { toast } = useToast();
+    const [selectedDeck, setSelectedDeck] = useState<DeckStructure | null>(null);
+    const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
+    const [editingDeckName, setEditingDeckName] = useState("");
+    const [slideCount, setSlideCount] = useState<"5" | "55">("55");
+    const [presentationType, setPresentationType] = useState<
+        "webinar" | "vsl" | "sales_page"
+    >("webinar");
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
+
+    // Redirect mobile users to desktop-required page
+    useEffect(() => {
+        if (isMobile && projectId) {
+            const params = new URLSearchParams({
+                feature: "Deck Structure Editor",
+                description:
+                    "The deck structure editor requires a desktop computer for drag-and-drop editing and managing complex slide layouts.",
+                returnPath: `/funnel-builder/${projectId}`,
+            });
+            router.push(`/desktop-required?${params.toString()}`);
+        }
+    }, [isMobile, projectId, router]);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -101,6 +106,36 @@ export default function Step4Page({
     }, [projectId]);
 
     useEffect(() => {
+        const loadTranscripts = async () => {
+            if (!projectId) return;
+
+            try {
+                const supabase = createClient();
+                const { data: transcriptData, error: transcriptError } = await supabase
+                    .from("vapi_transcripts")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (transcriptError) throw transcriptError;
+                setTranscripts(transcriptData || []);
+
+                if (
+                    transcriptData &&
+                    transcriptData.length > 0 &&
+                    !selectedTranscript
+                ) {
+                    setSelectedTranscript(transcriptData[0].id);
+                }
+            } catch (error) {
+                logger.error({ error }, "Failed to load transcripts");
+            }
+        };
+
+        loadTranscripts();
+    }, [projectId, selectedTranscript]);
+
+    useEffect(() => {
         const loadDeckStructures = async () => {
             if (!projectId) return;
 
@@ -116,223 +151,236 @@ export default function Step4Page({
 
                 const transformed = (deckData || []).map((deck: any) => ({
                     id: deck.id,
-                    title: deck.title || "Untitled Deck",
-                    slideCount: Array.isArray(deck.slides) ? deck.slides.length : 55,
+                    title: deck.metadata?.title || "Untitled Presentation",
+                    slideCount: Array.isArray(deck.slides)
+                        ? deck.slides.length
+                        : deck.total_slides || 55,
+                    status: "completed" as const,
                     slides: deck.slides || [],
+                    version: 1,
                     created_at: deck.created_at,
+                    presentation_type: deck.presentation_type || "webinar",
+                    template_type: deck.template_type,
+                    sections: deck.sections,
                 }));
                 setDeckStructures(transformed);
-
-                if (transformed.length > 0 && !selectedDeckId) {
-                    setSelectedDeckId(transformed[0].id);
-                }
             } catch (error) {
                 logger.error({ error }, "Failed to load deck structures");
             }
         };
 
         loadDeckStructures();
-    }, [projectId, selectedDeckId]);
-
-    useEffect(() => {
-        const loadGammaDecks = async () => {
-            if (!projectId) return;
-
-            try {
-                const supabase = createClient();
-                const { data: gammaData, error: gammaError } = await supabase
-                    .from("gamma_decks")
-                    .select("*")
-                    .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false });
-
-                if (gammaError) throw gammaError;
-                setGammaDecks(gammaData || []);
-            } catch (error) {
-                logger.error({ error }, "Failed to load gamma decks");
-            }
-        };
-
-        loadGammaDecks();
     }, [projectId]);
 
-    const handleGenerateGammaDeck = async () => {
+    const handleGenerateDeck = async () => {
+        if (!selectedTranscript) {
+            alert("Please select an intake call first");
+            return;
+        }
+
         setIsGenerating(true);
         setGenerationProgress(0);
 
         try {
-            setGenerationProgress(20);
+            const progressSteps = [5, 15, 30, 45, 60, 75, 85, 95, 100];
+            let currentStep = 0;
 
-            const response = await fetch("/api/generate/gamma-decks", {
+            const progressInterval = setInterval(() => {
+                if (currentStep < progressSteps.length) {
+                    setGenerationProgress(progressSteps[currentStep]);
+                    currentStep++;
+                } else {
+                    clearInterval(progressInterval);
+                }
+            }, 3000);
+
+            const response = await fetch("/api/generate/deck-structure", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     projectId,
-                    deckStructureId: selectedDeckId,
-                    settings,
+                    transcriptId: selectedTranscript,
+                    slideCount,
+                    presentationType,
                 }),
             });
 
-            setGenerationProgress(80);
+            clearInterval(progressInterval);
+            setGenerationProgress(100);
 
             if (!response.ok) {
-                throw new Error("Failed to generate Gamma deck");
+                throw new Error("Failed to generate deck structure");
             }
 
             const result = await response.json();
-            setGammaDecks((prev) => [result.gammaDeck, ...prev]);
-            setGenerationProgress(100);
+            const newDeck: DeckStructure = {
+                id: result.deckStructure.id,
+                title: result.deckStructure.title || "Presentation Structure",
+                slideCount: result.deckStructure.slides?.length || 55,
+                status: "completed",
+                slides: result.deckStructure.slides || [],
+                version: 1,
+                created_at: result.deckStructure.created_at,
+                presentation_type:
+                    result.deckStructure.presentation_type || presentationType,
+                template_type: result.deckStructure.template_type,
+                sections: result.deckStructure.sections,
+            };
+
+            setDeckStructures((prev) => [newDeck, ...prev]);
 
             setTimeout(() => {
                 setIsGenerating(false);
                 setGenerationProgress(0);
             }, 1000);
         } catch (error) {
-            logger.error({ error }, "Failed to generate Gamma deck");
+            logger.error({ error }, "Failed to generate deck structure");
             setIsGenerating(false);
             setGenerationProgress(0);
-            alert("Failed to generate Gamma deck. Please try again.");
+            alert("Failed to generate deck structure. Please try again.");
         }
     };
 
+    const handleViewDeck = (deck: DeckStructure) => {
+        setSelectedDeck(deck);
+    };
+
+    const handleDownloadDeck = (deck: DeckStructure) => {
+        const content = JSON.stringify(deck.slides, null, 2);
+        const blob = new Blob([content], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `${deck.title.replace(/[^a-zA-Z0-9]/g, "_")}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
     const handleDeleteDeck = async (deckId: string) => {
-        if (!confirm("Delete this Gamma deck?")) return;
+        if (!confirm("Delete this presentation structure?")) return;
 
         try {
             const supabase = createClient();
             const { error } = await supabase
-                .from("gamma_decks")
+                .from("deck_structures")
                 .delete()
                 .eq("id", deckId);
 
             if (!error) {
-                setGammaDecks((prev) => prev.filter((d) => d.id !== deckId));
+                setDeckStructures((prev) => prev.filter((d) => d.id !== deckId));
+                if (selectedDeck?.id === deckId) {
+                    setSelectedDeck(null);
+                }
             }
         } catch (error) {
-            logger.error({ error }, "Failed to delete Gamma deck");
+            logger.error({ error }, "Failed to delete presentation structure");
         }
     };
 
-    const handleExportPDF = async (deck: GammaDeck) => {
-        try {
-            logger.info({ deckId: deck.id }, "Opening deck for PDF export");
-
-            if (!deck.deck_url) {
-                toast({
-                    title: "❌ Deck URL not available",
-                    description: "This deck doesn't have a valid URL",
-                    variant: "destructive",
-                });
-                return;
-            }
-
-            window.open(deck.deck_url, "_blank", "noopener,noreferrer");
-
-            setTimeout(() => {
-                toast({
-                    title: "📄 Exporting to PDF",
-                    description: (
-                        <div className="space-y-2 text-sm">
-                            <p className="font-medium">Deck opened in Gamma!</p>
-                            <ol className="ml-4 list-decimal space-y-1">
-                                <li>Click the 'Share' button (top right)</li>
-                                <li>Select 'Export'</li>
-                                <li>Choose 'PDF'</li>
-                                <li>Your PDF will download automatically</li>
-                            </ol>
-                        </div>
-                    ),
-                    duration: 10000,
-                });
-            }, 1000);
-        } catch (error) {
-            logger.error(
-                { error, deckId: deck.id },
-                "Failed to open deck for PDF export"
-            );
-            toast({
-                title: "❌ Export failed",
-                description: "Failed to open deck. Please try again.",
-                variant: "destructive",
-            });
-        }
-    };
-
-    const handleExportGoogleSlides = async (deck: GammaDeck) => {
-        try {
-            logger.info({ deckId: deck.id }, "Opening deck for Google Slides export");
-
-            if (!deck.deck_url) {
-                toast({
-                    title: "❌ Deck URL not available",
-                    description: "This deck doesn't have a valid URL",
-                    variant: "destructive",
-                });
-                return;
-            }
-
-            window.open(deck.deck_url, "_blank", "noopener,noreferrer");
-
-            setTimeout(() => {
-                toast({
-                    title: "📊 Exporting to Google Slides",
-                    description: (
-                        <div className="space-y-2 text-sm">
-                            <p className="font-medium">Deck opened in Gamma!</p>
-                            <ol className="ml-4 list-decimal space-y-1">
-                                <li>Click the 'Share' button (top right)</li>
-                                <li>Select 'Export'</li>
-                                <li>Choose 'Google Slides'</li>
-                                <li>The deck will open in your Google account</li>
-                            </ol>
-                        </div>
-                    ),
-                    duration: 10000,
-                });
-            }, 1000);
-        } catch (error) {
-            logger.error(
-                { error, deckId: deck.id },
-                "Failed to open deck for Google Slides export"
-            );
-            toast({
-                title: "❌ Export failed",
-                description: "Failed to open deck. Please try again.",
-                variant: "destructive",
-            });
-        }
-    };
-
-    const handleEditSave = async (deckId: string) => {
+    const handleDuplicateDeck = async (deck: DeckStructure) => {
         try {
             const supabase = createClient();
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+            if (!user) throw new Error("Not authenticated");
+
+            const duplicatedMetadata = {
+                title: `${deck.title} (Copy)`,
+            };
+
+            const { data: newDeck, error } = await supabase
+                .from("deck_structures")
+                .insert({
+                    funnel_project_id: projectId,
+                    user_id: user.id,
+                    template_type: deck.template_type,
+                    total_slides: deck.slideCount,
+                    slides: deck.slides,
+                    sections: deck.sections || {},
+                    metadata: duplicatedMetadata,
+                    presentation_type: deck.presentation_type || "webinar",
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            // Refresh deck list
+            const { data: deckData } = await supabase
+                .from("deck_structures")
+                .select("*")
+                .eq("funnel_project_id", projectId)
+                .order("created_at", { ascending: false });
+
+            if (deckData) {
+                const transformed = deckData.map((d: any) => ({
+                    id: d.id,
+                    title: d.metadata?.title || "Untitled Presentation",
+                    slideCount: Array.isArray(d.slides)
+                        ? d.slides.length
+                        : d.total_slides || 55,
+                    status: "completed" as const,
+                    slides: d.slides || [],
+                    version: 1,
+                    created_at: d.created_at,
+                    presentation_type: d.presentation_type || "webinar",
+                    template_type: d.template_type,
+                    sections: d.sections,
+                }));
+                setDeckStructures(transformed);
+            }
+
+            logger.info({ deckId: newDeck.id }, "Presentation structure duplicated");
+        } catch (error) {
+            logger.error({ error }, "Failed to duplicate presentation structure");
+            alert("Failed to duplicate. Please try again.");
+        }
+    };
+
+    const startEditingName = (deck: DeckStructure) => {
+        setEditingDeckId(deck.id);
+        setEditingDeckName(deck.title);
+    };
+
+    const saveDeckName = async (deckId: string) => {
+        try {
+            const supabase = createClient();
+
+            // Get the current deck to update metadata
+            const { data: currentDeck } = await supabase
+                .from("deck_structures")
+                .select("metadata")
+                .eq("id", deckId)
+                .single();
+
+            const updatedMetadata = {
+                ...(currentDeck?.metadata || {}),
+                title: editingDeckName.trim(),
+            };
+
             const { error } = await supabase
-                .from("gamma_decks")
-                .update({ title: editingName.trim() })
+                .from("deck_structures")
+                .update({ metadata: updatedMetadata })
                 .eq("id", deckId);
 
             if (!error) {
-                setGammaDecks((prev) =>
+                setDeckStructures((prev) =>
                     prev.map((d) =>
-                        d.id === deckId ? { ...d, title: editingName.trim() } : d
+                        d.id === deckId ? { ...d, title: editingDeckName.trim() } : d
                     )
                 );
-                setEditingId(null);
-                setEditingName("");
+                setEditingDeckId(null);
+                setEditingDeckName("");
             }
         } catch (error) {
-            logger.error({ error }, "Failed to update deck name");
+            logger.error({ error }, "Failed to update presentation name");
         }
     };
 
-    const hasCompletedGammaDeck = gammaDecks.some((d) => d.status === "completed");
-
-    const getGenerationSubstatus = (progress: number): string => {
-        if (progress <= 30) return "Analyzing content structure...";
-        if (progress <= 60) return "Generating slide designs...";
-        if (progress <= 90) return "Adding visual elements...";
-        return "Finalizing presentation...";
-    };
+    const hasCompletedDeck = deckStructures.some((d) => d.status === "completed");
 
     if (!projectId) {
         return (
@@ -346,128 +394,247 @@ export default function Step4Page({
         <StepLayout
             currentStep={4}
             projectId={projectId}
-            completedSteps={completedSteps}
             funnelName={project?.name}
-            nextDisabled={!hasCompletedGammaDeck}
+            completedSteps={completedSteps}
+            nextDisabled={!hasCompletedDeck}
             nextLabel={
-                hasCompletedGammaDeck ? "Create Enrollment Page" : "Generate Deck First"
+                hasCompletedDeck ? "Create Presentation" : "Generate Structure First"
             }
-            stepTitle="Create Presentation"
-            stepDescription="Generate beautiful slides with Gamma AI"
+            stepTitle="Presentation Structure"
+            stepDescription="AI generates your presentation outline"
         >
             <div className="space-y-8">
                 {/* Dependency Warning */}
-                {deckStructures.length === 0 && (
+                {transcripts.length === 0 && (
                     <DependencyWarning
-                        message="You need to create a deck structure first before generating Gamma slides."
-                        requiredStep={3}
-                        requiredStepName="Deck Structure"
+                        message="You need to complete your AI intake call first to generate a presentation structure."
+                        requiredStep={1}
+                        requiredStepName="AI Intake Call"
                         projectId={projectId}
                     />
                 )}
 
                 {/* Generation Interface */}
                 {!isGenerating ? (
-                    <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-pink-50 p-6">
-                        <div className="mb-6 space-y-6">
-                            <div className="mx-auto max-w-md">
+                    <div className="rounded-lg border border-primary/10 bg-gradient-to-br from-primary/5 to-emerald-light/5 p-8">
+                        <div className="mx-auto mb-6 max-w-md space-y-4">
+                            <div>
                                 <label className="mb-2 block text-sm font-medium text-foreground">
-                                    Select Deck Structure
+                                    Presentation Type
+                                </label>
+                                <div className="grid grid-cols-3 gap-3">
+                                    <button
+                                        onClick={() => setPresentationType("webinar")}
+                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
+                                            presentationType === "webinar"
+                                                ? "border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20"
+                                                : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5"
+                                        }`}
+                                    >
+                                        <div className="font-semibold">Webinar</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            Full 55-slide framework
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={() => setPresentationType("vsl")}
+                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
+                                            presentationType === "vsl"
+                                                ? "border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20"
+                                                : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5"
+                                        }`}
+                                    >
+                                        <div className="font-semibold">VSL</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            5-10 slide short script
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={() =>
+                                            setPresentationType("sales_page")
+                                        }
+                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
+                                            presentationType === "sales_page"
+                                                ? "border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20"
+                                                : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5"
+                                        }`}
+                                    >
+                                        <div className="font-semibold">Sales Page</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            Pitch video script
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-foreground">
+                                    Select Intake Session
                                 </label>
                                 <select
-                                    value={selectedDeckId}
-                                    onChange={(e) => setSelectedDeckId(e.target.value)}
-                                    disabled={deckStructures.length === 0}
-                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:bg-muted"
+                                    value={selectedTranscript}
+                                    onChange={(e) =>
+                                        setSelectedTranscript(e.target.value)
+                                    }
+                                    disabled={transcripts.length === 0}
+                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:bg-muted"
                                 >
-                                    {deckStructures.length === 0 ? (
+                                    {transcripts.length === 0 ? (
                                         <option value="">
-                                            No deck structures available
+                                            No intake sessions available
                                         </option>
                                     ) : (
                                         <>
                                             <option value="">
-                                                Select a deck structure...
+                                                Select an intake session...
                                             </option>
-                                            {deckStructures.map((deck) => (
-                                                <option key={deck.id} value={deck.id}>
-                                                    {deck.title} ({deck.slideCount}{" "}
-                                                    slides)
-                                                </option>
-                                            ))}
+                                            {transcripts.map((transcript) => {
+                                                const methodIcons: Record<
+                                                    string,
+                                                    string
+                                                > = {
+                                                    voice: "📞",
+                                                    upload: "📄",
+                                                    paste: "📝",
+                                                    scrape: "🌐",
+                                                    google_drive: "☁️",
+                                                };
+                                                const icon =
+                                                    methodIcons[
+                                                        transcript.intake_method ||
+                                                            "voice"
+                                                    ] || "📞";
+                                                const displayName =
+                                                    transcript.session_name ||
+                                                    `${transcript.intake_method === "voice" ? "Call" : "Session"} from ${new Date(transcript.created_at).toLocaleDateString()}`;
+
+                                                return (
+                                                    <option
+                                                        key={transcript.id}
+                                                        value={transcript.id}
+                                                    >
+                                                        {icon} {displayName}
+                                                    </option>
+                                                );
+                                            })}
                                         </>
                                     )}
                                 </select>
 
-                                {deckStructures.length === 0 && (
+                                {transcripts.length === 0 && (
                                     <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-600">
-                                        💡 Complete Step 3 first to create deck
-                                        structures
+                                        💡 Complete Step 1 first to create intake
+                                        sessions
                                     </p>
                                 )}
                             </div>
 
-                            <div className="-mx-6 px-6 py-6 bg-card/50 rounded-lg">
-                                <GammaThemeSelector
-                                    selectedTheme={settings.theme}
-                                    onThemeChange={(theme) =>
-                                        setSettings({ ...settings, theme })
-                                    }
-                                />
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-foreground">
+                                    Deck Size
+                                </label>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <button
+                                        onClick={() => setSlideCount("5")}
+                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
+                                            slideCount === "5"
+                                                ? "border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20"
+                                                : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5"
+                                        }`}
+                                    >
+                                        <div className="font-semibold">5 Slides</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            Test Mode (~30s)
+                                        </div>
+                                    </button>
+                                    <button
+                                        onClick={() => setSlideCount("55")}
+                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
+                                            slideCount === "55"
+                                                ? "border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20"
+                                                : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5"
+                                        }`}
+                                    >
+                                        <div className="font-semibold">55 Slides</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            Full Deck (~3-5 min)
+                                        </div>
+                                    </button>
+                                </div>
+                                <p className="mt-2 text-xs text-muted-foreground">
+                                    {slideCount === "5"
+                                        ? "🚀 Quick test with first 5 slides from the framework"
+                                        : "📊 Complete Magnetic Masterclass Framework (recommended)"}
+                                </p>
                             </div>
                         </div>
 
                         <div className="text-center">
                             <button
-                                onClick={handleGenerateGammaDeck}
-                                disabled={!selectedDeckId}
+                                onClick={handleGenerateDeck}
+                                disabled={!selectedTranscript}
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
-                                    selectedDeckId
-                                        ? "bg-purple-600 text-white hover:bg-purple-700"
+                                    selectedTranscript
+                                        ? "bg-primary text-white hover:bg-primary/90 shadow-md"
                                         : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                 }`}
                             >
-                                <Rocket className="h-6 w-6" />
-                                {selectedDeckId
-                                    ? "Generate Gamma Deck"
-                                    : "Select Deck Structure First"}
+                                <Sparkles className="h-6 w-6" />
+                                {!selectedTranscript
+                                    ? "Select Session First"
+                                    : "Generate Deck Structure"}
                             </button>
 
                             <div className="mt-4 space-y-1 text-sm text-muted-foreground">
-                                <p>⚡ Generation time: ~2-3 minutes</p>
-                                <p>🎨 Creates professionally designed slides</p>
+                                <p>
+                                    ⚡ Generation time:{" "}
+                                    {slideCount === "5"
+                                        ? "~30 seconds"
+                                        : "~3-5 minutes"}
+                                </p>
+                                <p>
+                                    📊 Creates {slideCount} slides using{" "}
+                                    {presentationType === "webinar"
+                                        ? "Magnetic Masterclass Framework"
+                                        : presentationType === "vsl"
+                                          ? "VSL Framework"
+                                          : "Sales Page Pitch Framework"}
+                                </p>
                             </div>
                         </div>
                     </div>
                 ) : (
-                    <div className="rounded-lg border border-purple-200 bg-purple-50 p-6">
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-6">
                         <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-purple-100">
-                                <Rocket className="h-6 w-6 text-purple-600" />
+                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-primary/10">
+                                <Sparkles className="h-6 w-6 text-primary" />
                             </div>
-                            <h3 className="mb-2 text-xl font-semibold text-purple-900">
-                                Creating Your Presentation
+                            <h3 className="mb-2 text-xl font-semibold text-primary">
+                                Generating Presentation Outline...
                             </h3>
-                            <p className="text-purple-700">
-                                Generation time ≈ 2-3 minutes
+                            <p className="text-primary">
+                                AI is analyzing your intake call and creating your
+                                structure
                             </p>
-                            <p className="mt-2 text-sm text-purple-600">
-                                {getGenerationSubstatus(generationProgress)}
-                            </p>
+                        </div>
+
+                        <div className="mx-auto mb-4 max-w-md rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                            ⚠ Please do not close this page while your outline is
+                            generating.
                         </div>
 
                         <div className="mx-auto max-w-md">
                             <div className="mb-2 flex items-center justify-between">
-                                <span className="text-sm font-medium text-purple-700">
+                                <span className="text-sm font-medium text-primary">
                                     Progress
                                 </span>
-                                <span className="text-sm text-purple-600">
+                                <span className="text-sm text-primary">
                                     {generationProgress}%
                                 </span>
                             </div>
-                            <div className="h-3 w-full rounded-full bg-purple-200">
+                            <div className="h-3 w-full rounded-full bg-primary/20">
                                 <div
-                                    className="h-3 rounded-full bg-purple-600 transition-all duration-500 ease-out"
+                                    className="h-3 rounded-full bg-primary transition-all duration-500 ease-out"
                                     style={{ width: `${generationProgress}%` }}
                                 />
                             </div>
@@ -475,82 +642,66 @@ export default function Step4Page({
                     </div>
                 )}
 
-                {/* Generated Gamma Decks */}
+                {/* Generated Presentation Structures */}
                 <div className="rounded-lg border border-border bg-card shadow-soft">
                     <div className="border-b border-border p-6">
                         <div className="flex items-center justify-between">
                             <h3 className="text-xl font-semibold text-foreground">
-                                Your Presentations
+                                Your Presentation Structures
                             </h3>
                             <span className="text-sm text-muted-foreground">
-                                {gammaDecks.length} created
+                                {deckStructures.length} created
                             </span>
                         </div>
                     </div>
 
                     <div className="p-6">
-                        {gammaDecks.length === 0 ? (
+                        {deckStructures.length === 0 ? (
                             <div className="py-12 text-center text-muted-foreground">
-                                <Presentation className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                                <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
                                 <p>
-                                    No Gamma presentations yet. Generate your first one
-                                    above!
+                                    No presentation structures yet. Generate your first
+                                    one above!
                                 </p>
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {gammaDecks.map((deck) => (
+                                {deckStructures.map((deck) => (
                                     <div
                                         key={deck.id}
-                                        onClick={(e) => {
-                                            if (
-                                                deck.deck_url &&
-                                                !(e.target as HTMLElement).closest(
-                                                    "button"
-                                                ) &&
-                                                !(e.target as HTMLElement).closest(
-                                                    "input"
-                                                ) &&
-                                                !(e.target as HTMLElement).closest("a")
-                                            ) {
-                                                window.open(
-                                                    deck.deck_url,
-                                                    "_blank",
-                                                    "noopener,noreferrer"
-                                                );
-                                            }
-                                        }}
-                                        className={`rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md ${
-                                            deck.deck_url ? "cursor-pointer" : ""
-                                        }`}
+                                        onClick={() => handleViewDeck(deck)}
+                                        className="cursor-pointer rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
                                     >
-                                        <div className="flex items-start justify-between">
+                                        <div
+                                            className="flex items-start justify-between"
+                                            onClick={(e) => e.stopPropagation()}
+                                        >
                                             <div className="flex-1">
                                                 <div className="mb-2 flex items-center gap-3">
-                                                    {editingId === deck.id ? (
+                                                    {editingDeckId === deck.id ? (
                                                         <div className="flex flex-1 items-center gap-2">
                                                             <input
                                                                 type="text"
-                                                                value={editingName}
+                                                                value={editingDeckName}
                                                                 onChange={(e) =>
-                                                                    setEditingName(
+                                                                    setEditingDeckName(
                                                                         e.target.value
                                                                     )
                                                                 }
-                                                                className="flex-1 rounded border border-purple-300 px-2 py-1 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                                className="flex-1 rounded border border-primary/30 px-2 py-1 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
                                                                 onKeyDown={(e) => {
                                                                     if (
                                                                         e.key ===
                                                                         "Enter"
                                                                     )
-                                                                        handleEditSave(
+                                                                        saveDeckName(
                                                                             deck.id
                                                                         );
                                                                     if (
                                                                         e.key ===
                                                                         "Escape"
                                                                     )
-                                                                        setEditingId(
+                                                                        setEditingDeckId(
                                                                             null
                                                                         );
                                                                 }}
@@ -558,38 +709,46 @@ export default function Step4Page({
                                                             />
                                                             <button
                                                                 onClick={() =>
-                                                                    handleEditSave(
+                                                                    saveDeckName(
                                                                         deck.id
                                                                     )
                                                                 }
-                                                                className="rounded bg-purple-600 px-2 py-1 text-sm text-white hover:bg-purple-700"
+                                                                className="rounded bg-primary px-2 py-1 text-sm text-white hover:bg-primary/90"
                                                             >
-                                                                <Check className="h-4 w-4" />
+                                                                Save
                                                             </button>
                                                             <button
                                                                 onClick={() =>
-                                                                    setEditingId(null)
+                                                                    setEditingDeckId(
+                                                                        null
+                                                                    )
                                                                 }
                                                                 className="rounded bg-gray-300 px-2 py-1 text-sm text-foreground hover:bg-gray-400"
                                                             >
-                                                                <X className="h-4 w-4" />
+                                                                Cancel
                                                             </button>
                                                         </div>
                                                     ) : (
                                                         <>
-                                                            <h4 className="text-lg font-semibold text-foreground">
+                                                            <h4
+                                                                className="cursor-pointer text-lg font-semibold text-foreground hover:text-primary"
+                                                                onDoubleClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    startEditingName(
+                                                                        deck
+                                                                    );
+                                                                }}
+                                                            >
                                                                 {deck.title}
                                                             </h4>
                                                             <button
-                                                                onClick={() => {
-                                                                    setEditingId(
-                                                                        deck.id
-                                                                    );
-                                                                    setEditingName(
-                                                                        deck.title
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    startEditingName(
+                                                                        deck
                                                                     );
                                                                 }}
-                                                                className="rounded p-1 text-purple-600 hover:bg-purple-50"
+                                                                className="rounded p-1 text-primary hover:bg-primary/5"
                                                             >
                                                                 <Pencil className="h-4 w-4" />
                                                             </button>
@@ -597,21 +756,9 @@ export default function Step4Page({
                                                     )}
                                                 </div>
 
-                                                <div className="mb-3 flex items-center gap-4 text-sm text-muted-foreground">
-                                                    <span
-                                                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                                            deck.status === "completed"
-                                                                ? "bg-green-100 text-green-800"
-                                                                : deck.status ===
-                                                                    "generating"
-                                                                  ? "bg-yellow-100 text-yellow-800"
-                                                                  : "bg-red-100 text-red-800"
-                                                        }`}
-                                                    >
-                                                        {deck.status}
-                                                    </span>
+                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                                     <span>
-                                                        🎨 {deck.settings.theme}
+                                                        📊 {deck.slideCount} slides
                                                     </span>
                                                     <span>
                                                         📅{" "}
@@ -620,62 +767,45 @@ export default function Step4Page({
                                                         ).toLocaleDateString()}
                                                     </span>
                                                 </div>
-
-                                                {deck.deck_url && (
-                                                    <a
-                                                        href={deck.deck_url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="inline-flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700"
-                                                    >
-                                                        <LinkIcon className="h-4 w-4" />
-                                                        Open in Gamma
-                                                    </a>
-                                                )}
                                             </div>
 
                                             <div className="flex items-center gap-2">
-                                                {deck.deck_url && (
-                                                    <>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleExportPDF(deck);
-                                                            }}
-                                                            className="rounded p-2 text-primary hover:bg-primary/5"
-                                                            title="Export to PDF"
-                                                        >
-                                                            <FileDown className="h-4 w-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleExportGoogleSlides(
-                                                                    deck
-                                                                );
-                                                            }}
-                                                            className="rounded p-2 text-green-600 hover:bg-green-50"
-                                                            title="Export to Google Slides"
-                                                        >
-                                                            <FileText className="h-4 w-4" />
-                                                        </button>
-                                                        <a
-                                                            href={deck.deck_url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="rounded p-2 text-purple-600 hover:bg-purple-50"
-                                                            title="Open in Gamma"
-                                                        >
-                                                            <Eye className="h-4 w-4" />
-                                                        </a>
-                                                    </>
-                                                )}
                                                 <button
-                                                    onClick={() =>
-                                                        handleDeleteDeck(deck.id)
-                                                    }
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleViewDeck(deck);
+                                                    }}
+                                                    className="rounded p-2 text-primary hover:bg-primary/5"
+                                                >
+                                                    View
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDownloadDeck(deck);
+                                                    }}
+                                                    className="rounded p-2 text-muted-foreground hover:bg-muted/50"
+                                                    title="Download JSON"
+                                                >
+                                                    <Download className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDuplicateDeck(deck);
+                                                    }}
+                                                    className="rounded p-2 text-muted-foreground hover:bg-muted/50"
+                                                    title="Duplicate"
+                                                >
+                                                    <Copy className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteDeck(deck.id);
+                                                    }}
                                                     className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
-                                                    title="Delete deck"
+                                                    title="Delete"
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </button>
@@ -688,6 +818,86 @@ export default function Step4Page({
                     </div>
                 </div>
             </div>
+
+            {/* Deck Editor Modal */}
+            {selectedDeck && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+                    <div className="flex h-[90vh] w-full max-w-6xl flex-col rounded-lg bg-card shadow-2xl">
+                        <div className="rounded-t-lg border-b border-border bg-muted/50 p-6">
+                            <div className="flex items-center justify-between">
+                                <h2 className="text-2xl font-bold text-foreground">
+                                    {selectedDeck.title}
+                                </h2>
+                                <button
+                                    onClick={() => setSelectedDeck(null)}
+                                    className="text-2xl font-bold text-muted-foreground hover:text-muted-foreground"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-scroll p-6">
+                            <DeckStructureEditor
+                                initialSlides={selectedDeck.slides}
+                                onSave={async (slides) => {
+                                    try {
+                                        const supabase = createClient();
+                                        const { error } = await supabase
+                                            .from("deck_structures")
+                                            .update({ slides })
+                                            .eq("id", selectedDeck.id);
+
+                                        if (!error) {
+                                            const { data: deckData } = await supabase
+                                                .from("deck_structures")
+                                                .select("*")
+                                                .eq("funnel_project_id", projectId)
+                                                .order("created_at", {
+                                                    ascending: false,
+                                                });
+
+                                            if (deckData) {
+                                                const transformed = deckData.map(
+                                                    (deck: any) => ({
+                                                        id: deck.id,
+                                                        title:
+                                                            deck.metadata?.title ||
+                                                            "Untitled Presentation",
+                                                        slideCount: Array.isArray(
+                                                            deck.slides
+                                                        )
+                                                            ? deck.slides.length
+                                                            : deck.total_slides || 55,
+                                                        status: "completed" as const,
+                                                        slides: deck.slides || [],
+                                                        version: 1,
+                                                        created_at: deck.created_at,
+                                                        presentation_type:
+                                                            deck.presentation_type ||
+                                                            "webinar",
+                                                        template_type:
+                                                            deck.template_type,
+                                                        sections: deck.sections,
+                                                    })
+                                                );
+                                                setDeckStructures(transformed);
+                                            }
+                                            setSelectedDeck(null);
+                                        }
+                                    } catch (error) {
+                                        logger.error(
+                                            { error },
+                                            "Failed to save deck structure"
+                                        );
+                                        throw error;
+                                    }
+                                }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </StepLayout>
     );
 }

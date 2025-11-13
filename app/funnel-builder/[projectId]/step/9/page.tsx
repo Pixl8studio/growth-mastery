@@ -1,17 +1,19 @@
 "use client";
 
 /**
- * Step 9: Registration Pages
- * Create and manage registration pages with visual editor integration
+ * Step 8: Watch Pages
+ * Create and manage watch pages with visual editor integration
  */
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import { FileText, PlusCircle, Eye, Pencil, Trash2, X } from "lucide-react";
+import { useIsMobile } from "@/lib/mobile-utils.client";
+import { Video, PlusCircle, Eye, Pencil, Trash2, X } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
-import { generateRegistrationHTML } from "@/lib/generators/registration-page-generator";
+import { generateWatchPageHTML } from "@/lib/generators/watch-page-generator";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { Switch } from "@/components/ui/switch";
 
@@ -25,32 +27,57 @@ interface DeckStructure {
     created_at: string;
 }
 
-interface RegistrationPage {
+interface PitchVideo {
+    id: string;
+    video_url: string;
+    thumbnail_url: string | null;
+    video_duration: number;
+    created_at: string;
+}
+
+interface WatchPage {
     id: string;
     headline: string;
     subheadline: string;
     html_content: string;
     theme: any;
     is_published: boolean;
-    vanity_slug: string | null;
+    pitch_video_id: string | null;
     created_at: string;
 }
 
-export default function Step9RegistrationPage({
+export default function Step8WatchPage({
     params,
 }: {
     params: Promise<{ projectId: string }>;
 }) {
+    const router = useRouter();
+    const isMobile = useIsMobile("lg");
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
     const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
-    const [registrationPages, setRegistrationPages] = useState<RegistrationPage[]>([]);
+    const [pitchVideos, setPitchVideos] = useState<PitchVideo[]>([]);
+    const [watchPages, setWatchPages] = useState<WatchPage[]>([]);
     const [isCreating, setIsCreating] = useState(false);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [formData, setFormData] = useState({
         headline: "",
         deckStructureId: "",
+        videoId: "",
     });
+
+    // Redirect mobile users to desktop-required page
+    useEffect(() => {
+        if (isMobile && projectId) {
+            const params = new URLSearchParams({
+                feature: "Watch Page Editor",
+                description:
+                    "The watch page editor requires a desktop computer for creating and customizing video watch pages with visual editing tools.",
+                returnPath: `/funnel-builder/${projectId}`,
+            });
+            router.push(`/desktop-required?${params.toString()}`);
+        }
+    }, [isMobile, projectId, router]);
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
@@ -102,34 +129,56 @@ export default function Step9RegistrationPage({
                 if (deckError) throw deckError;
                 setDeckStructures(deckData || []);
 
-                // Auto-select first deck
-                if (deckData && deckData.length > 0 && !formData.deckStructureId) {
+                // Load pitch videos
+                const { data: videoData, error: videoError } = await supabase
+                    .from("pitch_videos")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (videoError) throw videoError;
+                setPitchVideos(videoData || []);
+
+                // Auto-select first deck and video
+                if (deckData && deckData.length > 0) {
                     setFormData((prev) => ({
                         ...prev,
                         deckStructureId: deckData[0].id,
                     }));
                 }
+                if (videoData && videoData.length > 0) {
+                    setFormData((prev) => ({
+                        ...prev,
+                        videoId: videoData[0].id,
+                    }));
+                }
 
-                // Load registration pages
+                // Load watch pages
                 const { data: pagesData, error: pagesError } = await supabase
-                    .from("registration_pages")
+                    .from("watch_pages")
                     .select("*")
                     .eq("funnel_project_id", projectId)
                     .order("created_at", { ascending: false });
 
                 if (pagesError) throw pagesError;
-                setRegistrationPages(pagesData || []);
+                setWatchPages(pagesData || []);
             } catch (error) {
                 logger.error({ error }, "Failed to load data");
             }
         };
 
         loadData();
-    }, [projectId, formData.deckStructureId]);
+    }, [projectId]);
 
     const handleCreate = async () => {
-        if (!formData.headline.trim() || !formData.deckStructureId) {
-            alert("Please provide a headline and select a deck structure");
+        if (
+            !formData.headline.trim() ||
+            !formData.deckStructureId ||
+            !formData.videoId
+        ) {
+            alert(
+                "Please provide a headline, select a deck structure, and select a video"
+            );
             return;
         }
 
@@ -144,29 +193,13 @@ export default function Step9RegistrationPage({
             } = await supabase.auth.getUser();
             if (!user) throw new Error("Not authenticated");
 
-            // Get selected deck structure
+            // Get selected deck structure and video
             const deckStructure = deckStructures.find(
                 (d) => d.id === formData.deckStructureId
             );
-            if (!deckStructure) throw new Error("Deck structure not found");
+            const video = pitchVideos.find((v) => v.id === formData.videoId);
 
-            // Fetch intake data (Step 1)
-            const { data: intakeData } = await supabase
-                .from("vapi_transcripts")
-                .select("extracted_data, transcript_text")
-                .eq("funnel_project_id", projectId)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .single();
-
-            // Fetch offer data (Step 2)
-            const { data: offerData } = await supabase
-                .from("offers")
-                .select("*")
-                .eq("funnel_project_id", projectId)
-                .order("created_at", { ascending: false })
-                .limit(1)
-                .single();
+            if (!deckStructure || !video) throw new Error("Deck or video not found");
 
             // Get theme from project or use defaults
             const theme = project?.settings?.theme || {
@@ -176,26 +209,26 @@ export default function Step9RegistrationPage({
                 text: "#1f2937",
             };
 
-            // Generate HTML using the generator with all available data
-            const htmlContent = generateRegistrationHTML({
+            // Generate HTML using the generator
+            const htmlContent = generateWatchPageHTML({
                 projectId,
                 deckStructure,
+                videoUrl: video.video_url,
                 headline: formData.headline,
                 theme,
-                intakeData: intakeData?.extracted_data || null,
-                offerData: offerData || null,
             });
 
             // Extract subheadline from deck
             const subheadline =
-                deckStructure.metadata?.title || "Join this exclusive training";
+                deckStructure.metadata?.title || "Watch this exclusive training";
 
-            // Create registration page
+            // Create watch page
             const { data: newPage, error: createError } = await supabase
-                .from("registration_pages")
+                .from("watch_pages")
                 .insert({
                     funnel_project_id: projectId,
                     user_id: user.id,
+                    pitch_video_id: video.id,
                     headline: formData.headline,
                     subheadline,
                     html_content: htmlContent,
@@ -208,18 +241,19 @@ export default function Step9RegistrationPage({
             if (createError) throw createError;
 
             // Add to list
-            setRegistrationPages((prev) => [newPage, ...prev]);
+            setWatchPages((prev) => [newPage, ...prev]);
 
             // Reset form
             setFormData({
                 headline: "",
                 deckStructureId: deckStructures[0]?.id || "",
+                videoId: pitchVideos[0]?.id || "",
             });
             setShowCreateForm(false);
 
-            logger.info({ pageId: newPage.id }, "Registration page created");
+            logger.info({ pageId: newPage.id }, "Watch page created");
         } catch (error) {
-            logger.error({ error }, "Failed to create registration page");
+            logger.error({ error }, "Failed to create watch page");
             alert("Failed to create page. Please try again.");
         } finally {
             setIsCreating(false);
@@ -227,62 +261,72 @@ export default function Step9RegistrationPage({
     };
 
     const handleEdit = (pageId: string) => {
-        // Open editor in new tab
-        const editorUrl = `/funnel-builder/${projectId}/pages/registration/${pageId}?edit=true`;
+        const editorUrl = `/funnel-builder/${projectId}/pages/watch/${pageId}?edit=true`;
         window.open(editorUrl, "_blank");
     };
 
     const handlePreview = (pageId: string) => {
-        // Open preview (without edit mode)
-        const previewUrl = `/funnel-builder/${projectId}/pages/registration/${pageId}`;
+        const previewUrl = `/funnel-builder/${projectId}/pages/watch/${pageId}`;
         window.open(previewUrl, "_blank");
     };
 
-    const handleTogglePublish = async (pageId: string, currentStatus: boolean) => {
-        try {
-            const supabase = createClient();
-            const { error } = await supabase
-                .from("registration_pages")
-                .update({ is_published: !currentStatus })
-                .eq("id", pageId);
-
-            if (!error) {
-                setRegistrationPages((prev) =>
-                    prev.map((p) =>
-                        p.id === pageId ? { ...p, is_published: !currentStatus } : p
-                    )
-                );
-                logger.info(
-                    { pageId, newStatus: !currentStatus },
-                    "Registration page publish status updated"
-                );
-            }
-        } catch (error) {
-            logger.error({ error }, "Failed to update publish status");
-        }
-    };
-
     const handleDelete = async (pageId: string) => {
-        if (!confirm("Delete this registration page?")) return;
+        if (!confirm("Delete this watch page?")) return;
 
         try {
             const supabase = createClient();
             const { error } = await supabase
-                .from("registration_pages")
+                .from("watch_pages")
                 .delete()
                 .eq("id", pageId);
 
             if (!error) {
-                setRegistrationPages((prev) => prev.filter((p) => p.id !== pageId));
-                logger.info({ pageId }, "Registration page deleted");
+                setWatchPages((prev) => prev.filter((p) => p.id !== pageId));
+                logger.info({ pageId }, "Watch page deleted");
             }
         } catch (error) {
-            logger.error({ error }, "Failed to delete registration page");
+            logger.error({ error }, "Failed to delete watch page");
+        }
+    };
+
+    const handlePublishToggle = async (pageId: string, currentStatus: boolean) => {
+        try {
+            const supabase = createClient();
+            const newStatus = !currentStatus;
+
+            const { error } = await supabase
+                .from("watch_pages")
+                .update({ is_published: newStatus })
+                .eq("id", pageId);
+
+            if (error) throw error;
+
+            setWatchPages((prev) =>
+                prev.map((p) =>
+                    p.id === pageId ? { ...p, is_published: newStatus } : p
+                )
+            );
+
+            logger.info(
+                { pageId, isPublished: newStatus },
+                "Watch page publish status updated"
+            );
+
+            alert(
+                newStatus
+                    ? "Page published successfully!"
+                    : "Page unpublished successfully!"
+            );
+        } catch (error) {
+            logger.error({ error }, "Failed to update publish status");
+            alert("Failed to update publish status. Please try again.");
         }
     };
 
     const hasDeckStructure = deckStructures.length > 0;
-    const hasRegistrationPage = registrationPages.length > 0;
+    const hasPitchVideo = pitchVideos.length > 0;
+    const hasWatchPage = watchPages.length > 0;
+    const canCreatePage = hasDeckStructure && hasPitchVideo;
 
     if (!projectId) {
         return (
@@ -298,39 +342,47 @@ export default function Step9RegistrationPage({
             projectId={projectId}
             completedSteps={completedSteps}
             funnelName={project?.name}
-            nextDisabled={!hasRegistrationPage}
-            nextLabel={hasRegistrationPage ? "Setup Your Flow" : "Create Page First"}
-            stepTitle="Registration Pages"
-            stepDescription="Create high-converting registration pages with visual editor"
+            nextDisabled={!hasWatchPage}
+            nextLabel={hasWatchPage ? "Create Registration Page" : "Create Page First"}
+            stepTitle="Watch Pages"
+            stepDescription="Create engaging video watch pages with visual editor"
         >
             <div className="space-y-8">
-                {/* Dependency Warning */}
+                {/* Dependency Warnings */}
                 {!hasDeckStructure && (
                     <DependencyWarning
-                        message="You need to create a deck structure first before generating registration pages."
-                        requiredStep={3}
+                        message="You need to create a deck structure first."
+                        requiredStep={4}
                         requiredStepName="Deck Structure"
+                        projectId={projectId}
+                    />
+                )}
+                {!hasPitchVideo && (
+                    <DependencyWarning
+                        message="You need to upload a pitch video first."
+                        requiredStep={8}
+                        requiredStepName="Upload Video"
                         projectId={projectId}
                     />
                 )}
 
                 {/* Create New Page Button */}
                 {!showCreateForm ? (
-                    <div className="rounded-lg border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-8">
+                    <div className="rounded-lg border border-cyan-100 bg-gradient-to-br from-cyan-50 to-primary/5 p-8">
                         <div className="text-center">
                             <button
                                 onClick={() => setShowCreateForm(true)}
-                                disabled={!hasDeckStructure}
+                                disabled={!canCreatePage}
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
-                                    hasDeckStructure
-                                        ? "bg-green-600 text-white hover:bg-green-700"
+                                    canCreatePage
+                                        ? "bg-cyan-600 text-white hover:bg-cyan-700"
                                         : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                 }`}
                             >
                                 <PlusCircle className="h-6 w-6" />
-                                {hasDeckStructure
-                                    ? "Create New Registration Page"
-                                    : "Complete Step 3 First"}
+                                {canCreatePage
+                                    ? "Create New Watch Page"
+                                    : "Complete Prerequisites First"}
                             </button>
                         </div>
                     </div>
@@ -338,7 +390,7 @@ export default function Step9RegistrationPage({
                     <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
                         <div className="mb-6 flex items-center justify-between">
                             <h3 className="text-xl font-semibold text-foreground">
-                                Create Registration Page
+                                Create Watch Page
                             </h3>
                             <button
                                 onClick={() => setShowCreateForm(false)}
@@ -362,8 +414,8 @@ export default function Step9RegistrationPage({
                                             headline: e.target.value,
                                         })
                                     }
-                                    placeholder="e.g., Master AI Sales in 90 Minutes"
-                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    placeholder="e.g., Watch: AI Sales Masterclass"
+                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                                 />
                             </div>
 
@@ -379,7 +431,7 @@ export default function Step9RegistrationPage({
                                             deckStructureId: e.target.value,
                                         })
                                     }
-                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500"
+                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
                                 >
                                     {deckStructures.map((deck) => (
                                         <option key={deck.id} value={deck.id}>
@@ -388,8 +440,33 @@ export default function Step9RegistrationPage({
                                         </option>
                                     ))}
                                 </select>
+                            </div>
+
+                            <div>
+                                <label className="mb-2 block text-sm font-medium text-foreground">
+                                    Pitch Video
+                                </label>
+                                <select
+                                    value={formData.videoId}
+                                    onChange={(e) =>
+                                        setFormData({
+                                            ...formData,
+                                            videoId: e.target.value,
+                                        })
+                                    }
+                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                                >
+                                    {pitchVideos.map((video) => (
+                                        <option key={video.id} value={video.id}>
+                                            Video from{" "}
+                                            {new Date(
+                                                video.created_at
+                                            ).toLocaleDateString()}
+                                        </option>
+                                    ))}
+                                </select>
                                 <p className="mt-1 text-sm text-muted-foreground">
-                                    Content will be pulled from this deck structure
+                                    This video will be embedded in the page
                                 </p>
                             </div>
 
@@ -402,10 +479,16 @@ export default function Step9RegistrationPage({
                                 </button>
                                 <button
                                     onClick={handleCreate}
-                                    disabled={!formData.headline.trim() || isCreating}
+                                    disabled={
+                                        !formData.headline.trim() ||
+                                        !formData.videoId ||
+                                        isCreating
+                                    }
                                     className={`rounded-lg px-6 py-2 font-semibold ${
-                                        formData.headline.trim() && !isCreating
-                                            ? "bg-green-600 text-white hover:bg-green-700"
+                                        formData.headline.trim() &&
+                                        formData.videoId &&
+                                        !isCreating
+                                            ? "bg-cyan-600 text-white hover:bg-cyan-700"
                                             : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                     }`}
                                 >
@@ -421,29 +504,26 @@ export default function Step9RegistrationPage({
                     <div className="border-b border-border p-6">
                         <div className="flex items-center justify-between">
                             <h3 className="text-xl font-semibold text-foreground">
-                                Your Registration Pages
+                                Your Watch Pages
                             </h3>
                             <span className="text-sm text-muted-foreground">
-                                {registrationPages.length} created
+                                {watchPages.length} created
                             </span>
                         </div>
                     </div>
 
                     <div className="p-6">
-                        {registrationPages.length === 0 ? (
+                        {watchPages.length === 0 ? (
                             <div className="py-12 text-center text-muted-foreground">
-                                <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
-                                <p>
-                                    No registration pages yet. Create your first one
-                                    above!
-                                </p>
+                                <Video className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                                <p>No watch pages yet. Create your first one above!</p>
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {registrationPages.map((page) => (
+                                {watchPages.map((page) => (
                                     <div
                                         key={page.id}
-                                        className="rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-green-300 hover:shadow-md"
+                                        className="rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-cyan-300 hover:shadow-md"
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
@@ -475,9 +555,6 @@ export default function Step9RegistrationPage({
                                                             page.created_at
                                                         ).toLocaleDateString()}
                                                     </span>
-                                                    {page.vanity_slug && (
-                                                        <span>/{page.vanity_slug}</span>
-                                                    )}
                                                 </div>
                                             </div>
 
@@ -491,7 +568,7 @@ export default function Step9RegistrationPage({
                                                     <Switch
                                                         checked={page.is_published}
                                                         onCheckedChange={() =>
-                                                            handleTogglePublish(
+                                                            handlePublishToggle(
                                                                 page.id,
                                                                 page.is_published
                                                             )
@@ -514,7 +591,7 @@ export default function Step9RegistrationPage({
                                                         onClick={() =>
                                                             handleEdit(page.id)
                                                         }
-                                                        className="rounded p-2 text-green-600 hover:bg-green-50"
+                                                        className="rounded p-2 text-cyan-600 hover:bg-cyan-50"
                                                         title="Edit with Visual Editor"
                                                     >
                                                         <Pencil className="h-4 w-4" />
@@ -542,17 +619,14 @@ export default function Step9RegistrationPage({
                 {/* Helper Info */}
                 <div className="rounded-lg border border-primary/10 bg-primary/5 p-6">
                     <h4 className="mb-3 font-semibold text-primary">
-                        💡 Registration Page Tips
+                        💡 Watch Page Tips
                     </h4>
                     <ul className="space-y-2 text-sm text-primary">
+                        <li>• The video block is protected and can't be deleted</li>
                         <li>
-                            • Use the Visual Editor to customize all content, colors,
-                            and layout
+                            • Use the Visual Editor to customize surrounding content
                         </li>
-                        <li>• Add/remove sections using the component library</li>
-                        <li>
-                            • Content is automatically pulled from your deck structure
-                        </li>
+                        <li>• Add engagement elements like progress bars and CTAs</li>
                         <li>• Changes auto-save every 3 seconds</li>
                     </ul>
                 </div>

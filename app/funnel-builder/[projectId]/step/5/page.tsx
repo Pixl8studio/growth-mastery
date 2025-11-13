@@ -1,113 +1,88 @@
 "use client";
 
-/**
- * Step 5: Enrollment Pages
- * Create and manage enrollment/sales pages with visual editor integration
- */
-
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
+import GammaThemeSelector from "@/components/funnel/gamma-theme-selector";
+import { useIsMobile } from "@/lib/mobile-utils.client";
 import {
-    ShoppingCart,
-    PlusCircle,
+    Rocket,
+    Presentation,
+    Link as LinkIcon,
+    Trash2,
     Eye,
     Pencil,
-    Trash2,
+    Check,
     X,
-    Loader2,
-    HelpCircle,
+    FileDown,
+    FileText,
 } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
-import { generateEnrollmentHTML } from "@/lib/generators/enrollment-page-generator";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { useToast } from "@/components/ui/use-toast";
-import { ToastAction } from "@/components/ui/toast";
-import { Switch } from "@/components/ui/switch";
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipProvider,
-    TooltipTrigger,
-} from "@/components/ui/tooltip";
 
 interface DeckStructure {
     id: string;
-    slides: any[];
-    metadata?: {
-        title?: string;
+    title: string;
+    slideCount: number;
+    slides: unknown[];
+    created_at: string;
+}
+
+interface GammaDeck {
+    id: string;
+    title: string;
+    status: "generating" | "completed" | "failed";
+    gamma_session_id?: string;
+    deck_url?: string;
+    deck_data?: Record<string, unknown>;
+    settings: {
+        theme: string;
+        style: string;
+        length: string;
     };
-    total_slides: number;
     created_at: string;
 }
 
-interface Offer {
-    id: string;
-    name: string;
-    tagline: string | null;
-    description: string | null;
-    price: number;
-    currency: string;
-    features: any;
-    created_at: string;
-}
-
-interface EnrollmentPage {
-    id: string;
-    headline: string;
-    subheadline: string;
-    html_content: string;
-    theme: any;
-    is_published: boolean;
-    offer_id: string | null;
-    page_type: string;
-    created_at: string;
-}
-
-const TEMPLATE_OPTIONS = [
-    {
-        value: "urgency-convert",
-        label: "Urgency Convert",
-        description:
-            "High-energy sales page with countdown timers and scarcity messaging. Best for time-sensitive offers and launches.",
-    },
-    {
-        value: "premium-elegant",
-        label: "Premium Elegant",
-        description:
-            "Sophisticated design with refined styling. Ideal for high-ticket offers and luxury positioning.",
-    },
-    {
-        value: "value-focused",
-        label: "Value Focused",
-        description:
-            "Emphasizes benefits and ROI. Perfect for educational products and value-driven buyers.",
-    },
-] as const;
-
-export default function Step5EnrollmentPage({
+export default function Step4Page({
     params,
 }: {
     params: Promise<{ projectId: string }>;
 }) {
-    const { toast } = useToast();
+    const router = useRouter();
+    const isMobile = useIsMobile("lg");
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generationProgress, setGenerationProgress] = useState(0);
+    const [selectedDeckId, setSelectedDeckId] = useState("");
     const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
-    const [offers, setOffers] = useState<Offer[]>([]);
-    const [enrollmentPages, setEnrollmentPages] = useState<EnrollmentPage[]>([]);
-    const [isCreating, setIsCreating] = useState(false);
-    const [creationProgress, setCreationProgress] = useState("");
-    const [showCreateForm, setShowCreateForm] = useState(false);
-    const [formData, setFormData] = useState({
-        deckStructureId: "",
-        offerId: "",
-        templateType: "urgency-convert" as
-            | "urgency-convert"
-            | "premium-elegant"
-            | "value-focused",
+    const [gammaDecks, setGammaDecks] = useState<GammaDeck[]>([]);
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingName, setEditingName] = useState("");
+
+    const [settings, setSettings] = useState({
+        theme: "nebulae",
+        style: "professional",
+        length: "full",
     });
+
+    // Redirect mobile users to desktop-required page
+    useEffect(() => {
+        if (isMobile && projectId) {
+            const params = new URLSearchParams({
+                feature: "Presentation Builder",
+                description:
+                    "The presentation builder requires a desktop computer for creating and managing complex slide presentations with Gamma integration.",
+                returnPath: `/funnel-builder/${projectId}`,
+            });
+            router.push(`/desktop-required?${params.toString()}`);
+        }
+    }, [isMobile, projectId, router]);
+
+    const { toast } = useToast();
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
@@ -143,13 +118,11 @@ export default function Step5EnrollmentPage({
     }, [projectId]);
 
     useEffect(() => {
-        const loadData = async () => {
+        const loadDeckStructures = async () => {
             if (!projectId) return;
 
             try {
                 const supabase = createClient();
-
-                // Load deck structures
                 const { data: deckData, error: deckError } = await supabase
                     .from("deck_structures")
                     .select("*")
@@ -157,315 +130,226 @@ export default function Step5EnrollmentPage({
                     .order("created_at", { ascending: false });
 
                 if (deckError) throw deckError;
-                setDeckStructures(deckData || []);
 
-                // Load offers
-                const { data: offerData, error: offerError } = await supabase
-                    .from("offers")
-                    .select("*")
-                    .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false });
+                const transformed = (deckData || []).map((deck: any) => ({
+                    id: deck.id,
+                    title: deck.title || "Untitled Deck",
+                    slideCount: Array.isArray(deck.slides) ? deck.slides.length : 55,
+                    slides: deck.slides || [],
+                    created_at: deck.created_at,
+                }));
+                setDeckStructures(transformed);
 
-                if (offerError) throw offerError;
-                setOffers(offerData || []);
-
-                // Auto-select first deck and offer
-                if (deckData && deckData.length > 0) {
-                    setFormData((prev) => ({
-                        ...prev,
-                        deckStructureId: deckData[0].id,
-                    }));
+                if (transformed.length > 0 && !selectedDeckId) {
+                    setSelectedDeckId(transformed[0].id);
                 }
-                if (offerData && offerData.length > 0) {
-                    setFormData((prev) => ({
-                        ...prev,
-                        offerId: offerData[0].id,
-                    }));
-                }
-
-                // Load enrollment pages
-                const { data: pagesData, error: pagesError } = await supabase
-                    .from("enrollment_pages")
-                    .select("*")
-                    .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false });
-
-                if (pagesError) throw pagesError;
-                setEnrollmentPages(pagesData || []);
             } catch (error) {
-                logger.error({ error }, "Failed to load data");
+                logger.error({ error }, "Failed to load deck structures");
             }
         };
 
-        loadData();
+        loadDeckStructures();
+    }, [projectId, selectedDeckId]);
+
+    useEffect(() => {
+        const loadGammaDecks = async () => {
+            if (!projectId) return;
+
+            try {
+                const supabase = createClient();
+                const { data: gammaData, error: gammaError } = await supabase
+                    .from("gamma_decks")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (gammaError) throw gammaError;
+                setGammaDecks(gammaData || []);
+            } catch (error) {
+                logger.error({ error }, "Failed to load gamma decks");
+            }
+        };
+
+        loadGammaDecks();
     }, [projectId]);
 
-    const handleCreate = async () => {
-        if (!formData.deckStructureId || !formData.offerId) {
-            toast({
-                variant: "destructive",
-                title: "Missing Information",
-                description: "Please select both a deck structure and an offer",
-            });
-            return;
-        }
-
-        setIsCreating(true);
-        setCreationProgress("Initializing...");
+    const handleGenerateGammaDeck = async () => {
+        setIsGenerating(true);
+        setGenerationProgress(0);
 
         try {
-            const supabase = createClient();
+            setGenerationProgress(20);
 
-            // Get current user
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
-            if (!user) throw new Error("Not authenticated");
-
-            // Get selected deck structure and offer
-            const deckStructure = deckStructures.find(
-                (d) => d.id === formData.deckStructureId
-            );
-            const offer = offers.find((o) => o.id === formData.offerId);
-
-            if (!deckStructure || !offer) {
-                throw new Error("Deck or offer not found");
-            }
-
-            // Log creation attempt to funnel_flows
-            await supabase.from("funnel_flows").insert({
-                funnel_project_id: projectId,
-                user_id: user.id,
-                step_number: 5,
-                action: "create_enrollment_page_attempt",
-                metadata: {
-                    offer_id: offer.id,
-                    deck_structure_id: deckStructure.id,
-                    template_type: formData.templateType,
-                },
-            });
-
-            // Auto-generate headline and subheadline from offer
-            const autoHeadline = offer.name;
-            const autoSubheadline =
-                offer.tagline ||
-                offer.description ||
-                "Transform your business with our proven system";
-
-            // Get theme from project or use defaults
-            const theme = project?.settings?.theme || {
-                primary: "#2563eb",
-                secondary: "#10b981",
-                background: "#ffffff",
-                text: "#1f2937",
-            };
-
-            setCreationProgress("Generating page content...");
-
-            // Generate HTML using the generator
-            const htmlContent = generateEnrollmentHTML({
-                projectId,
-                offer,
-                deckStructure,
-                theme,
-                templateType: formData.templateType,
-            });
-
-            setCreationProgress("Saving to database...");
-
-            // Create enrollment page
-            const { data: newPage, error: createError } = await supabase
-                .from("enrollment_pages")
-                .insert({
-                    funnel_project_id: projectId,
-                    user_id: user.id,
-                    offer_id: offer.id,
-                    headline: autoHeadline,
-                    subheadline: autoSubheadline,
-                    html_content: htmlContent,
-                    theme,
-                    is_published: false,
-                    page_type: "direct_purchase",
-                })
-                .select()
-                .single();
-
-            if (createError) throw createError;
-
-            // Log success to funnel_flows
-            await supabase.from("funnel_flows").insert({
-                funnel_project_id: projectId,
-                user_id: user.id,
-                step_number: 5,
-                action: "create_enrollment_page_success",
-                metadata: {
-                    page_id: newPage.id,
-                    offer_id: offer.id,
-                },
-            });
-
-            setCreationProgress("Complete!");
-
-            // Add to list
-            setEnrollmentPages((prev) => [newPage, ...prev]);
-
-            // Reset form
-            setFormData({
-                deckStructureId: deckStructures[0]?.id || "",
-                offerId: offers[0]?.id || "",
-                templateType: "urgency-convert",
-            });
-            setShowCreateForm(false);
-
-            logger.info({ pageId: newPage.id }, "✅ Enrollment page created");
-
-            // Show success toast with action
-            toast({
-                title: "Success! 🎉",
-                description: "Enrollment page created successfully",
-                action: (
-                    <ToastAction
-                        altText="Preview page"
-                        onClick={() => handlePreview(newPage.id)}
-                    >
-                        Preview
-                    </ToastAction>
-                ),
-            });
-        } catch (error: any) {
-            const supabase = createClient();
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
-
-            // Log error details
-            logger.error(
-                {
-                    error,
-                    errorMessage: error?.message,
-                    errorCode: error?.code,
-                    errorDetails: error?.details,
-                    errorHint: error?.hint,
-                    formData,
+            const response = await fetch("/api/generate/gamma-decks", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
                     projectId,
-                },
-                "❌ Failed to create enrollment page"
-            );
+                    deckStructureId: selectedDeckId,
+                    settings,
+                }),
+            });
 
-            // Log failure to funnel_flows
-            if (user) {
-                await supabase.from("funnel_flows").insert({
-                    funnel_project_id: projectId,
-                    user_id: user.id,
-                    step_number: 5,
-                    action: "create_enrollment_page_error",
-                    metadata: {
-                        error_message: error?.message,
-                        error_code: error?.code,
-                        error_details: error?.details,
-                    },
-                });
+            setGenerationProgress(80);
+
+            if (!response.ok) {
+                throw new Error("Failed to generate Gamma deck");
             }
 
-            // Show error toast
-            toast({
-                variant: "destructive",
-                title: "Failed to create page",
-                description:
-                    error?.message ||
-                    "An error occurred. Please try again or contact support.",
-            });
-        } finally {
-            setIsCreating(false);
-            setCreationProgress("");
+            const result = await response.json();
+            setGammaDecks((prev) => [result.gammaDeck, ...prev]);
+            setGenerationProgress(100);
+
+            setTimeout(() => {
+                setIsGenerating(false);
+                setGenerationProgress(0);
+            }, 1000);
+        } catch (error) {
+            logger.error({ error }, "Failed to generate Gamma deck");
+            setIsGenerating(false);
+            setGenerationProgress(0);
+            alert("Failed to generate Gamma deck. Please try again.");
         }
     };
 
-    const handleEdit = (pageId: string) => {
-        const editorUrl = `/funnel-builder/${projectId}/pages/enrollment/${pageId}?edit=true`;
-        window.open(editorUrl, "_blank");
-    };
-
-    const handlePreview = (pageId: string) => {
-        const previewUrl = `/funnel-builder/${projectId}/pages/enrollment/${pageId}`;
-        window.open(previewUrl, "_blank");
-    };
-
-    const handleDelete = async (pageId: string) => {
-        if (!confirm("Delete this enrollment page?")) return;
+    const handleDeleteDeck = async (deckId: string) => {
+        if (!confirm("Delete this Gamma deck?")) return;
 
         try {
             const supabase = createClient();
             const { error } = await supabase
-                .from("enrollment_pages")
+                .from("gamma_decks")
                 .delete()
-                .eq("id", pageId);
+                .eq("id", deckId);
 
-            if (error) throw error;
+            if (!error) {
+                setGammaDecks((prev) => prev.filter((d) => d.id !== deckId));
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to delete Gamma deck");
+        }
+    };
 
-            setEnrollmentPages((prev) => prev.filter((p) => p.id !== pageId));
-            logger.info({ pageId }, "Enrollment page deleted");
+    const handleExportPDF = async (deck: GammaDeck) => {
+        try {
+            logger.info({ deckId: deck.id }, "Opening deck for PDF export");
 
+            if (!deck.deck_url) {
+                toast({
+                    title: "❌ Deck URL not available",
+                    description: "This deck doesn't have a valid URL",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            window.open(deck.deck_url, "_blank", "noopener,noreferrer");
+
+            setTimeout(() => {
+                toast({
+                    title: "📄 Exporting to PDF",
+                    description: (
+                        <div className="space-y-2 text-sm">
+                            <p className="font-medium">Deck opened in Gamma!</p>
+                            <ol className="ml-4 list-decimal space-y-1">
+                                <li>Click the 'Share' button (top right)</li>
+                                <li>Select 'Export'</li>
+                                <li>Choose 'PDF'</li>
+                                <li>Your PDF will download automatically</li>
+                            </ol>
+                        </div>
+                    ),
+                    duration: 10000,
+                });
+            }, 1000);
+        } catch (error) {
+            logger.error(
+                { error, deckId: deck.id },
+                "Failed to open deck for PDF export"
+            );
             toast({
-                title: "Page Deleted",
-                description: "Enrollment page has been removed",
-            });
-        } catch (error: any) {
-            logger.error({ error }, "Failed to delete enrollment page");
-            toast({
+                title: "❌ Export failed",
+                description: "Failed to open deck. Please try again.",
                 variant: "destructive",
-                title: "Delete Failed",
-                description:
-                    error?.message || "Could not delete the page. Please try again.",
             });
         }
     };
 
-    const handlePublishToggle = async (pageId: string, currentStatus: boolean) => {
+    const handleExportGoogleSlides = async (deck: GammaDeck) => {
+        try {
+            logger.info({ deckId: deck.id }, "Opening deck for Google Slides export");
+
+            if (!deck.deck_url) {
+                toast({
+                    title: "❌ Deck URL not available",
+                    description: "This deck doesn't have a valid URL",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            window.open(deck.deck_url, "_blank", "noopener,noreferrer");
+
+            setTimeout(() => {
+                toast({
+                    title: "📊 Exporting to Google Slides",
+                    description: (
+                        <div className="space-y-2 text-sm">
+                            <p className="font-medium">Deck opened in Gamma!</p>
+                            <ol className="ml-4 list-decimal space-y-1">
+                                <li>Click the 'Share' button (top right)</li>
+                                <li>Select 'Export'</li>
+                                <li>Choose 'Google Slides'</li>
+                                <li>The deck will open in your Google account</li>
+                            </ol>
+                        </div>
+                    ),
+                    duration: 10000,
+                });
+            }, 1000);
+        } catch (error) {
+            logger.error(
+                { error, deckId: deck.id },
+                "Failed to open deck for Google Slides export"
+            );
+            toast({
+                title: "❌ Export failed",
+                description: "Failed to open deck. Please try again.",
+                variant: "destructive",
+            });
+        }
+    };
+
+    const handleEditSave = async (deckId: string) => {
         try {
             const supabase = createClient();
-            const newStatus = !currentStatus;
-
             const { error } = await supabase
-                .from("enrollment_pages")
-                .update({ is_published: newStatus })
-                .eq("id", pageId);
+                .from("gamma_decks")
+                .update({ title: editingName.trim() })
+                .eq("id", deckId);
 
-            if (error) throw error;
-
-            setEnrollmentPages((prev) =>
-                prev.map((p) =>
-                    p.id === pageId ? { ...p, is_published: newStatus } : p
-                )
-            );
-
-            logger.info(
-                { pageId, isPublished: newStatus },
-                "Enrollment page publish status updated"
-            );
-
-            toast({
-                title: newStatus ? "Page Published" : "Page Unpublished",
-                description: newStatus
-                    ? "Your enrollment page is now live and visible to the public"
-                    : "Your enrollment page is now in draft mode",
-            });
-        } catch (error: any) {
-            logger.error({ error }, "Failed to update publish status");
-            toast({
-                variant: "destructive",
-                title: "Update Failed",
-                description:
-                    error?.message ||
-                    "Could not update publish status. Please try again.",
-            });
+            if (!error) {
+                setGammaDecks((prev) =>
+                    prev.map((d) =>
+                        d.id === deckId ? { ...d, title: editingName.trim() } : d
+                    )
+                );
+                setEditingId(null);
+                setEditingName("");
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to update deck name");
         }
     };
 
-    const hasDeckStructure = deckStructures.length > 0;
-    const hasOffer = offers.length > 0;
-    const hasEnrollmentPage = enrollmentPages.length > 0;
-    const canCreatePage = hasDeckStructure && hasOffer;
+    const hasCompletedGammaDeck = gammaDecks.some((d) => d.status === "completed");
+
+    const getGenerationSubstatus = (progress: number): string => {
+        if (progress <= 30) return "Analyzing content structure...";
+        if (progress <= 60) return "Generating slide designs...";
+        if (progress <= 90) return "Adding visual elements...";
+        return "Finalizing presentation...";
+    };
 
     if (!projectId) {
         return (
@@ -481,338 +365,337 @@ export default function Step5EnrollmentPage({
             projectId={projectId}
             completedSteps={completedSteps}
             funnelName={project?.name}
-            nextDisabled={!hasEnrollmentPage}
-            nextLabel={hasEnrollmentPage ? "Create Talk Track" : "Create Page First"}
-            stepTitle="Enrollment Pages"
-            stepDescription="Create high-converting sales pages with visual editor"
+            nextDisabled={!hasCompletedGammaDeck}
+            nextLabel={
+                hasCompletedGammaDeck ? "Create Enrollment Page" : "Generate Deck First"
+            }
+            stepTitle="Create Presentation"
+            stepDescription="Generate beautiful slides with Gamma AI"
         >
             <div className="space-y-8">
-                {/* Dependency Warnings */}
-                {!hasDeckStructure && (
+                {/* Dependency Warning */}
+                {deckStructures.length === 0 && (
                     <DependencyWarning
-                        message="You need to create a presentation structure first."
-                        requiredStep={3}
-                        requiredStepName="Presentation Structure"
-                        projectId={projectId}
-                    />
-                )}
-                {!hasOffer && (
-                    <DependencyWarning
-                        message="You need to create an offer first."
-                        requiredStep={2}
-                        requiredStepName="Define Offer"
+                        message="You need to create a deck structure first before generating Gamma slides."
+                        requiredStep={4}
+                        requiredStepName="Deck Structure"
                         projectId={projectId}
                     />
                 )}
 
-                {/* Create New Page Button */}
-                {!showCreateForm ? (
-                    <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-primary/5 p-8">
+                {/* Generation Interface */}
+                {!isGenerating ? (
+                    <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-pink-50 p-6">
+                        <div className="mb-6 space-y-6">
+                            <div className="mx-auto max-w-md">
+                                <label className="mb-2 block text-sm font-medium text-foreground">
+                                    Select Deck Structure
+                                </label>
+                                <select
+                                    value={selectedDeckId}
+                                    onChange={(e) => setSelectedDeckId(e.target.value)}
+                                    disabled={deckStructures.length === 0}
+                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:bg-muted"
+                                >
+                                    {deckStructures.length === 0 ? (
+                                        <option value="">
+                                            No deck structures available
+                                        </option>
+                                    ) : (
+                                        <>
+                                            <option value="">
+                                                Select a deck structure...
+                                            </option>
+                                            {deckStructures.map((deck) => (
+                                                <option key={deck.id} value={deck.id}>
+                                                    {deck.title} ({deck.slideCount}{" "}
+                                                    slides)
+                                                </option>
+                                            ))}
+                                        </>
+                                    )}
+                                </select>
+
+                                {deckStructures.length === 0 && (
+                                    <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-600">
+                                        💡 Complete Step 3 first to create deck
+                                        structures
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="-mx-6 px-6 py-6 bg-card/50 rounded-lg">
+                                <GammaThemeSelector
+                                    selectedTheme={settings.theme}
+                                    onThemeChange={(theme) =>
+                                        setSettings({ ...settings, theme })
+                                    }
+                                />
+                            </div>
+                        </div>
+
                         <div className="text-center">
                             <button
-                                onClick={() => setShowCreateForm(true)}
-                                disabled={!canCreatePage}
+                                onClick={handleGenerateGammaDeck}
+                                disabled={!selectedDeckId}
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
-                                    canCreatePage
+                                    selectedDeckId
                                         ? "bg-purple-600 text-white hover:bg-purple-700"
                                         : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                 }`}
                             >
-                                <PlusCircle className="h-6 w-6" />
-                                {canCreatePage
-                                    ? "Generate Enrollment Page"
-                                    : "Complete Prerequisites First"}
+                                <Rocket className="h-6 w-6" />
+                                {selectedDeckId
+                                    ? "Generate Gamma Deck"
+                                    : "Select Deck Structure First"}
                             </button>
+
+                            <div className="mt-4 space-y-1 text-sm text-muted-foreground">
+                                <p>⚡ Generation time: ~2-3 minutes</p>
+                                <p>🎨 Creates professionally designed slides</p>
+                            </div>
                         </div>
                     </div>
                 ) : (
-                    <div className="rounded-lg border border-purple-200 bg-gradient-to-br from-purple-50 to-primary/5 p-8 shadow-soft">
-                        <div className="mb-6 flex items-center justify-between">
-                            <h3 className="text-xl font-semibold text-foreground">
-                                Create Enrollment Page
+                    <div className="rounded-lg border border-purple-200 bg-purple-50 p-6">
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-purple-100">
+                                <Rocket className="h-6 w-6 text-purple-600" />
+                            </div>
+                            <h3 className="mb-2 text-xl font-semibold text-purple-900">
+                                Creating Your Presentation
                             </h3>
-                            <button
-                                onClick={() => setShowCreateForm(false)}
-                                disabled={isCreating}
-                                className="text-muted-foreground hover:text-foreground disabled:opacity-50"
-                            >
-                                <X className="h-5 w-5" />
-                            </button>
+                            <p className="text-purple-700">
+                                Generation time ≈ 2-3 minutes
+                            </p>
+                            <p className="mt-2 text-sm text-purple-600">
+                                {getGenerationSubstatus(generationProgress)}
+                            </p>
                         </div>
 
-                        <TooltipProvider>
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-foreground">
-                                        Offer
-                                    </label>
-                                    <select
-                                        value={formData.offerId}
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                offerId: e.target.value,
-                                            })
-                                        }
-                                        disabled={isCreating}
-                                        className="w-full rounded-lg border border-border bg-card px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        {offers.map((offer) => (
-                                            <option key={offer.id} value={offer.id}>
-                                                {offer.name} - {offer.currency}{" "}
-                                                {offer.price.toLocaleString()}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <p className="mt-1 text-sm text-muted-foreground">
-                                        Page headline will be automatically generated
-                                        from offer name
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <label className="mb-2 block text-sm font-medium text-foreground">
-                                        Presentation Structure
-                                    </label>
-                                    <select
-                                        value={formData.deckStructureId}
-                                        onChange={(e) =>
-                                            setFormData({
-                                                ...formData,
-                                                deckStructureId: e.target.value,
-                                            })
-                                        }
-                                        disabled={isCreating}
-                                        className="w-full rounded-lg border border-border bg-card px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        {deckStructures.map((deck) => (
-                                            <option key={deck.id} value={deck.id}>
-                                                {deck.metadata?.title ||
-                                                    `Presentation ${deck.total_slides} slides`}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <p className="mt-1 text-sm text-muted-foreground">
-                                        AI-generated testimonials from presentation
-                                        content
-                                    </p>
-                                </div>
-
-                                <div>
-                                    <label className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
-                                        Template Style
-                                        <Tooltip>
-                                            <TooltipTrigger asChild>
-                                                <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-muted-foreground" />
-                                            </TooltipTrigger>
-                                            <TooltipContent className="max-w-xs">
-                                                <p className="text-sm">
-                                                    Choose a template that matches your
-                                                    offer positioning and target
-                                                    audience
-                                                </p>
-                                            </TooltipContent>
-                                        </Tooltip>
-                                    </label>
-                                    <div className="space-y-3">
-                                        {TEMPLATE_OPTIONS.map((template) => (
-                                            <div key={template.value}>
-                                                <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card p-4 hover:border-purple-300 hover:bg-purple-50">
-                                                    <input
-                                                        type="radio"
-                                                        name="templateType"
-                                                        value={template.value}
-                                                        checked={
-                                                            formData.templateType ===
-                                                            template.value
-                                                        }
-                                                        onChange={(e) =>
-                                                            setFormData({
-                                                                ...formData,
-                                                                templateType: e.target
-                                                                    .value as any,
-                                                            })
-                                                        }
-                                                        disabled={isCreating}
-                                                        className="mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500"
-                                                    />
-                                                    <div className="flex-1">
-                                                        <div className="font-medium text-foreground">
-                                                            {template.label}
-                                                        </div>
-                                                        <p className="mt-1 text-sm text-muted-foreground">
-                                                            {template.description}
-                                                        </p>
-                                                    </div>
-                                                </label>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {creationProgress && (
-                                    <div className="rounded-lg bg-purple-100 p-4">
-                                        <div className="flex items-center gap-3">
-                                            <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
-                                            <span className="text-sm font-medium text-purple-900">
-                                                {creationProgress}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-
-                                <div className="flex justify-end gap-3 pt-2">
-                                    <button
-                                        onClick={() => setShowCreateForm(false)}
-                                        disabled={isCreating}
-                                        className="rounded-lg border border-border bg-card px-6 py-2 font-medium text-foreground hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        onClick={handleCreate}
-                                        disabled={
-                                            !formData.offerId ||
-                                            !formData.deckStructureId ||
-                                            isCreating
-                                        }
-                                        className={`flex items-center gap-2 rounded-lg px-6 py-2 font-semibold ${
-                                            formData.offerId &&
-                                            formData.deckStructureId &&
-                                            !isCreating
-                                                ? "bg-purple-600 text-white hover:bg-purple-700"
-                                                : "cursor-not-allowed bg-gray-300 text-muted-foreground"
-                                        }`}
-                                    >
-                                        {isCreating && (
-                                            <Loader2 className="h-4 w-4 animate-spin" />
-                                        )}
-                                        {isCreating
-                                            ? creationProgress || "Creating..."
-                                            : "Create Enrollment Page"}
-                                    </button>
-                                </div>
+                        <div className="mx-auto max-w-md">
+                            <div className="mb-2 flex items-center justify-between">
+                                <span className="text-sm font-medium text-purple-700">
+                                    Progress
+                                </span>
+                                <span className="text-sm text-purple-600">
+                                    {generationProgress}%
+                                </span>
                             </div>
-                        </TooltipProvider>
+                            <div className="h-3 w-full rounded-full bg-purple-200">
+                                <div
+                                    className="h-3 rounded-full bg-purple-600 transition-all duration-500 ease-out"
+                                    style={{ width: `${generationProgress}%` }}
+                                />
+                            </div>
+                        </div>
                     </div>
                 )}
 
-                {/* Existing Pages List */}
+                {/* Generated Gamma Decks */}
                 <div className="rounded-lg border border-border bg-card shadow-soft">
                     <div className="border-b border-border p-6">
                         <div className="flex items-center justify-between">
                             <h3 className="text-xl font-semibold text-foreground">
-                                Your Enrollment Pages
+                                Your Presentations
                             </h3>
                             <span className="text-sm text-muted-foreground">
-                                {enrollmentPages.length} created
+                                {gammaDecks.length} created
                             </span>
                         </div>
                     </div>
 
                     <div className="p-6">
-                        {enrollmentPages.length === 0 ? (
+                        {gammaDecks.length === 0 ? (
                             <div className="py-12 text-center text-muted-foreground">
-                                <ShoppingCart className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                                <Presentation className="mx-auto mb-4 h-12 w-12 opacity-50" />
                                 <p>
-                                    No enrollment pages yet. Create your first one
+                                    No Gamma presentations yet. Generate your first one
                                     above!
                                 </p>
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {enrollmentPages.map((page) => (
+                                {gammaDecks.map((deck) => (
                                     <div
-                                        key={page.id}
-                                        onClick={() => handleEdit(page.id)}
-                                        className="cursor-pointer rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md"
+                                        key={deck.id}
+                                        onClick={(e) => {
+                                            if (
+                                                deck.deck_url &&
+                                                !(e.target as HTMLElement).closest(
+                                                    "button"
+                                                ) &&
+                                                !(e.target as HTMLElement).closest(
+                                                    "input"
+                                                ) &&
+                                                !(e.target as HTMLElement).closest("a")
+                                            ) {
+                                                window.open(
+                                                    deck.deck_url,
+                                                    "_blank",
+                                                    "noopener,noreferrer"
+                                                );
+                                            }
+                                        }}
+                                        className={`rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md ${
+                                            deck.deck_url ? "cursor-pointer" : ""
+                                        }`}
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
                                                 <div className="mb-2 flex items-center gap-3">
-                                                    <h4 className="text-lg font-semibold text-foreground">
-                                                        {page.headline}
-                                                    </h4>
+                                                    {editingId === deck.id ? (
+                                                        <div className="flex flex-1 items-center gap-2">
+                                                            <input
+                                                                type="text"
+                                                                value={editingName}
+                                                                onChange={(e) =>
+                                                                    setEditingName(
+                                                                        e.target.value
+                                                                    )
+                                                                }
+                                                                className="flex-1 rounded border border-purple-300 px-2 py-1 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500"
+                                                                onKeyDown={(e) => {
+                                                                    if (
+                                                                        e.key ===
+                                                                        "Enter"
+                                                                    )
+                                                                        handleEditSave(
+                                                                            deck.id
+                                                                        );
+                                                                    if (
+                                                                        e.key ===
+                                                                        "Escape"
+                                                                    )
+                                                                        setEditingId(
+                                                                            null
+                                                                        );
+                                                                }}
+                                                                autoFocus
+                                                            />
+                                                            <button
+                                                                onClick={() =>
+                                                                    handleEditSave(
+                                                                        deck.id
+                                                                    )
+                                                                }
+                                                                className="rounded bg-purple-600 px-2 py-1 text-sm text-white hover:bg-purple-700"
+                                                            >
+                                                                <Check className="h-4 w-4" />
+                                                            </button>
+                                                            <button
+                                                                onClick={() =>
+                                                                    setEditingId(null)
+                                                                }
+                                                                className="rounded bg-gray-300 px-2 py-1 text-sm text-foreground hover:bg-gray-400"
+                                                            >
+                                                                <X className="h-4 w-4" />
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <h4 className="text-lg font-semibold text-foreground">
+                                                                {deck.title}
+                                                            </h4>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingId(
+                                                                        deck.id
+                                                                    );
+                                                                    setEditingName(
+                                                                        deck.title
+                                                                    );
+                                                                }}
+                                                                className="rounded p-1 text-purple-600 hover:bg-purple-50"
+                                                            >
+                                                                <Pencil className="h-4 w-4" />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+
+                                                <div className="mb-3 flex items-center gap-4 text-sm text-muted-foreground">
                                                     <span
                                                         className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                                            page.is_published
+                                                            deck.status === "completed"
                                                                 ? "bg-green-100 text-green-800"
-                                                                : "bg-yellow-100 text-yellow-800"
+                                                                : deck.status ===
+                                                                    "generating"
+                                                                  ? "bg-yellow-100 text-yellow-800"
+                                                                  : "bg-red-100 text-red-800"
                                                         }`}
                                                     >
-                                                        {page.is_published
-                                                            ? "Published"
-                                                            : "Draft"}
+                                                        {deck.status}
                                                     </span>
-                                                </div>
-
-                                                <p className="mb-3 text-sm text-muted-foreground">
-                                                    {page.subheadline}
-                                                </p>
-
-                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                                     <span>
-                                                        Created{" "}
+                                                        🎨 {deck.settings.theme}
+                                                    </span>
+                                                    <span>
+                                                        📅{" "}
                                                         {new Date(
-                                                            page.created_at
+                                                            deck.created_at
                                                         ).toLocaleDateString()}
                                                     </span>
-                                                    <span>Type: {page.page_type}</span>
                                                 </div>
+
+                                                {deck.deck_url && (
+                                                    <a
+                                                        href={deck.deck_url}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="inline-flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700"
+                                                    >
+                                                        <LinkIcon className="h-4 w-4" />
+                                                        Open in Gamma
+                                                    </a>
+                                                )}
                                             </div>
 
-                                            <div className="flex items-center gap-4">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-sm text-muted-foreground">
-                                                        {page.is_published
-                                                            ? "Live"
-                                                            : "Draft"}
-                                                    </span>
-                                                    <Switch
-                                                        checked={page.is_published}
-                                                        onCheckedChange={() =>
-                                                            handlePublishToggle(
-                                                                page.id,
-                                                                page.is_published
-                                                            )
-                                                        }
-                                                    />
-                                                </div>
-
-                                                <div
-                                                    className="flex items-center gap-2"
-                                                    onClick={(e) => e.stopPropagation()}
+                                            <div className="flex items-center gap-2">
+                                                {deck.deck_url && (
+                                                    <>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleExportPDF(deck);
+                                                            }}
+                                                            className="rounded p-2 text-primary hover:bg-primary/5"
+                                                            title="Export to PDF"
+                                                        >
+                                                            <FileDown className="h-4 w-4" />
+                                                        </button>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleExportGoogleSlides(
+                                                                    deck
+                                                                );
+                                                            }}
+                                                            className="rounded p-2 text-green-600 hover:bg-green-50"
+                                                            title="Export to Google Slides"
+                                                        >
+                                                            <FileText className="h-4 w-4" />
+                                                        </button>
+                                                        <a
+                                                            href={deck.deck_url}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="rounded p-2 text-purple-600 hover:bg-purple-50"
+                                                            title="Open in Gamma"
+                                                        >
+                                                            <Eye className="h-4 w-4" />
+                                                        </a>
+                                                    </>
+                                                )}
+                                                <button
+                                                    onClick={() =>
+                                                        handleDeleteDeck(deck.id)
+                                                    }
+                                                    className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
+                                                    title="Delete deck"
                                                 >
-                                                    <button
-                                                        onClick={() =>
-                                                            handlePreview(page.id)
-                                                        }
-                                                        className="rounded p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-                                                        title="Preview"
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() =>
-                                                            handleEdit(page.id)
-                                                        }
-                                                        className="rounded p-2 text-purple-600 hover:bg-purple-50"
-                                                        title="Edit with Visual Editor"
-                                                    >
-                                                        <Pencil className="h-4 w-4" />
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() =>
-                                                            handleDelete(page.id)
-                                                        }
-                                                        className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
-                                                        title="Delete"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
-                                                </div>
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -820,27 +703,6 @@ export default function Step5EnrollmentPage({
                             </div>
                         )}
                     </div>
-                </div>
-
-                {/* Helper Info */}
-                <div className="rounded-lg border border-primary/10 bg-primary/5 p-6">
-                    <h4 className="mb-3 font-semibold text-primary">
-                        💡 Enrollment Page Tips
-                    </h4>
-                    <ul className="space-y-2 text-sm text-primary">
-                        <li>
-                            • Use urgency and scarcity elements to drive immediate
-                            action
-                        </li>
-                        <li>
-                            • Customize pricing and value stack in the Visual Editor
-                        </li>
-                        <li>
-                            • Add testimonials from your deck structure or create new
-                            ones
-                        </li>
-                        <li>• Changes auto-save every 3 seconds</li>
-                    </ul>
                 </div>
             </div>
         </StepLayout>

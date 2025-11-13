@@ -3,55 +3,75 @@
 import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import { DeckStructureEditor } from "@/components/funnel/deck-structure-editor";
-import { Sparkles, FileText, Trash2, Pencil, Download, Copy } from "lucide-react";
+import { Sparkles, Palette, Link as LinkIcon, Save, Loader2 } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
+import { useToast } from "@/components/ui/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-interface DeckStructure {
+interface BrandDesign {
     id: string;
-    title: string;
-    slideCount: number;
-    status: "generating" | "completed" | "failed";
-    slides: Array<{
-        slideNumber: number;
-        title: string;
-        description: string;
-        section: string;
-    }>;
-    version: number;
-    created_at: string;
-    presentation_type?: "webinar" | "vsl" | "sales_page";
-    template_type?: string;
-    sections?: any;
+    brand_name: string | null;
+    primary_color: string;
+    secondary_color: string | null;
+    accent_color: string | null;
+    background_color: string;
+    text_color: string;
+    scraped_url: string | null;
+    design_style: string | null;
+    personality_traits: {
+        tone?: string;
+        mood?: string;
+        energy?: string;
+        values?: string[];
+    };
+    questionnaire_responses: any;
+    is_ai_generated: boolean;
 }
 
-interface VapiTranscript {
-    id: string;
-    transcript_text: string;
-    created_at: string;
-}
-
-export default function Step3Page({
+export default function Step3BrandDesignPage({
     params,
 }: {
     params: Promise<{ projectId: string }>;
 }) {
+    const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
+    const [brandDesign, setBrandDesign] = useState<BrandDesign | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
-    const [generationProgress, setGenerationProgress] = useState(0);
-    const [selectedTranscript, setSelectedTranscript] = useState("");
-    const [transcripts, setTranscripts] = useState<VapiTranscript[]>([]);
-    const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
-    const [selectedDeck, setSelectedDeck] = useState<DeckStructure | null>(null);
-    const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
-    const [editingDeckName, setEditingDeckName] = useState("");
-    const [slideCount, setSlideCount] = useState<"5" | "55">("55");
-    const [presentationType, setPresentationType] = useState<
-        "webinar" | "vsl" | "sales_page"
-    >("webinar");
+    const [isSaving, setIsSaving] = useState(false);
+    const [transcripts, setTranscripts] = useState<any[]>([]);
+
+    // Form state
+    const [brandName, setBrandName] = useState("");
+    const [primaryColor, setPrimaryColor] = useState("#3b82f6");
+    const [secondaryColor, setSecondaryColor] = useState("#8b5cf6");
+    const [accentColor, setAccentColor] = useState("#ec4899");
+    const [backgroundColor, setBackgroundColor] = useState("#ffffff");
+    const [textColor, setTextColor] = useState("#1f2937");
+    const [scrapedUrl, setScrapedUrl] = useState("");
+    const [designStyle, setDesignStyle] = useState("modern");
+    const [tone, setTone] = useState("professional");
+    const [mood, setMood] = useState("confident");
+    const [energy, setEnergy] = useState("dynamic");
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
@@ -65,11 +85,13 @@ export default function Step3Page({
     }, [params]);
 
     useEffect(() => {
-        const loadProject = async () => {
+        const loadData = async () => {
             if (!projectId) return;
 
             try {
                 const supabase = createClient();
+
+                // Load project
                 const { data: projectData, error: projectError } = await supabase
                     .from("funnel_projects")
                     .select("*")
@@ -78,295 +100,236 @@ export default function Step3Page({
 
                 if (projectError) throw projectError;
                 setProject(projectData);
-            } catch (error) {
-                logger.error({ error }, "Failed to load project");
-            }
-        };
 
-        loadProject();
-    }, [projectId]);
-
-    useEffect(() => {
-        const loadTranscripts = async () => {
-            if (!projectId) return;
-
-            try {
-                const supabase = createClient();
-                const { data: transcriptData, error: transcriptError } = await supabase
+                // Load transcripts
+                const { data: transcriptsData } = await supabase
                     .from("vapi_transcripts")
                     .select("*")
                     .eq("funnel_project_id", projectId)
                     .order("created_at", { ascending: false });
 
-                if (transcriptError) throw transcriptError;
-                setTranscripts(transcriptData || []);
+                setTranscripts(transcriptsData || []);
 
-                if (
-                    transcriptData &&
-                    transcriptData.length > 0 &&
-                    !selectedTranscript
-                ) {
-                    setSelectedTranscript(transcriptData[0].id);
-                }
-            } catch (error) {
-                logger.error({ error }, "Failed to load transcripts");
-            }
-        };
-
-        loadTranscripts();
-    }, [projectId, selectedTranscript]);
-
-    useEffect(() => {
-        const loadDeckStructures = async () => {
-            if (!projectId) return;
-
-            try {
-                const supabase = createClient();
-                const { data: deckData, error: deckError } = await supabase
-                    .from("deck_structures")
+                // Load existing brand design
+                const { data: brandData } = await supabase
+                    .from("brand_designs")
                     .select("*")
                     .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false });
+                    .maybeSingle();
 
-                if (deckError) throw deckError;
-
-                const transformed = (deckData || []).map((deck: any) => ({
-                    id: deck.id,
-                    title: deck.metadata?.title || "Untitled Presentation",
-                    slideCount: Array.isArray(deck.slides)
-                        ? deck.slides.length
-                        : deck.total_slides || 55,
-                    status: "completed" as const,
-                    slides: deck.slides || [],
-                    version: 1,
-                    created_at: deck.created_at,
-                    presentation_type: deck.presentation_type || "webinar",
-                    template_type: deck.template_type,
-                    sections: deck.sections,
-                }));
-                setDeckStructures(transformed);
+                if (brandData) {
+                    setBrandDesign(brandData);
+                    // Populate form with existing data
+                    setBrandName(brandData.brand_name || "");
+                    setPrimaryColor(brandData.primary_color);
+                    setSecondaryColor(brandData.secondary_color || "#8b5cf6");
+                    setAccentColor(brandData.accent_color || "#ec4899");
+                    setBackgroundColor(brandData.background_color);
+                    setTextColor(brandData.text_color);
+                    setScrapedUrl(brandData.scraped_url || "");
+                    setDesignStyle(brandData.design_style || "modern");
+                    if (brandData.personality_traits) {
+                        setTone(brandData.personality_traits.tone || "professional");
+                        setMood(brandData.personality_traits.mood || "confident");
+                        setEnergy(brandData.personality_traits.energy || "dynamic");
+                    }
+                }
             } catch (error) {
-                logger.error({ error }, "Failed to load deck structures");
+                logger.error({ error }, "Failed to load brand design data");
             }
         };
 
-        loadDeckStructures();
+        loadData();
     }, [projectId]);
 
-    const handleGenerateDeck = async () => {
-        if (!selectedTranscript) {
-            alert("Please select an intake call first");
-            return;
-        }
+    const handleSave = async () => {
+        if (!projectId) return;
 
-        setIsGenerating(true);
-        setGenerationProgress(0);
-
-        try {
-            const progressSteps = [5, 15, 30, 45, 60, 75, 85, 95, 100];
-            let currentStep = 0;
-
-            const progressInterval = setInterval(() => {
-                if (currentStep < progressSteps.length) {
-                    setGenerationProgress(progressSteps[currentStep]);
-                    currentStep++;
-                } else {
-                    clearInterval(progressInterval);
-                }
-            }, 3000);
-
-            const response = await fetch("/api/generate/deck-structure", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    projectId,
-                    transcriptId: selectedTranscript,
-                    slideCount,
-                    presentationType,
-                }),
-            });
-
-            clearInterval(progressInterval);
-            setGenerationProgress(100);
-
-            if (!response.ok) {
-                throw new Error("Failed to generate deck structure");
-            }
-
-            const result = await response.json();
-            const newDeck: DeckStructure = {
-                id: result.deckStructure.id,
-                title: result.deckStructure.title || "Presentation Structure",
-                slideCount: result.deckStructure.slides?.length || 55,
-                status: "completed",
-                slides: result.deckStructure.slides || [],
-                version: 1,
-                created_at: result.deckStructure.created_at,
-                presentation_type:
-                    result.deckStructure.presentation_type || presentationType,
-                template_type: result.deckStructure.template_type,
-                sections: result.deckStructure.sections,
-            };
-
-            setDeckStructures((prev) => [newDeck, ...prev]);
-
-            setTimeout(() => {
-                setIsGenerating(false);
-                setGenerationProgress(0);
-            }, 1000);
-        } catch (error) {
-            logger.error({ error }, "Failed to generate deck structure");
-            setIsGenerating(false);
-            setGenerationProgress(0);
-            alert("Failed to generate deck structure. Please try again.");
-        }
-    };
-
-    const handleViewDeck = (deck: DeckStructure) => {
-        setSelectedDeck(deck);
-    };
-
-    const handleDownloadDeck = (deck: DeckStructure) => {
-        const content = JSON.stringify(deck.slides, null, 2);
-        const blob = new Blob([content], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `${deck.title.replace(/[^a-zA-Z0-9]/g, "_")}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    };
-
-    const handleDeleteDeck = async (deckId: string) => {
-        if (!confirm("Delete this presentation structure?")) return;
-
-        try {
-            const supabase = createClient();
-            const { error } = await supabase
-                .from("deck_structures")
-                .delete()
-                .eq("id", deckId);
-
-            if (!error) {
-                setDeckStructures((prev) => prev.filter((d) => d.id !== deckId));
-                if (selectedDeck?.id === deckId) {
-                    setSelectedDeck(null);
-                }
-            }
-        } catch (error) {
-            logger.error({ error }, "Failed to delete presentation structure");
-        }
-    };
-
-    const handleDuplicateDeck = async (deck: DeckStructure) => {
+        setIsSaving(true);
         try {
             const supabase = createClient();
             const {
                 data: { user },
             } = await supabase.auth.getUser();
+
             if (!user) throw new Error("Not authenticated");
 
-            const duplicatedMetadata = {
-                title: `${deck.title} (Copy)`,
+            const brandData = {
+                funnel_project_id: projectId,
+                user_id: user.id,
+                brand_name: brandName || project?.name,
+                primary_color: primaryColor,
+                secondary_color: secondaryColor,
+                accent_color: accentColor,
+                background_color: backgroundColor,
+                text_color: textColor,
+                scraped_url: scrapedUrl || null,
+                design_style: designStyle,
+                personality_traits: {
+                    tone,
+                    mood,
+                    energy,
+                },
+                is_ai_generated: false,
             };
 
-            const { data: newDeck, error } = await supabase
-                .from("deck_structures")
-                .insert({
-                    funnel_project_id: projectId,
-                    user_id: user.id,
-                    template_type: deck.template_type,
-                    total_slides: deck.slideCount,
-                    slides: deck.slides,
-                    sections: deck.sections || {},
-                    metadata: duplicatedMetadata,
-                    presentation_type: deck.presentation_type || "webinar",
-                })
-                .select()
-                .single();
+            if (brandDesign) {
+                // Update existing
+                const { error } = await supabase
+                    .from("brand_designs")
+                    .update(brandData)
+                    .eq("id", brandDesign.id);
 
-            if (error) throw error;
+                if (error) throw error;
+            } else {
+                // Create new
+                const { data, error } = await supabase
+                    .from("brand_designs")
+                    .insert(brandData)
+                    .select()
+                    .single();
 
-            // Refresh deck list
-            const { data: deckData } = await supabase
-                .from("deck_structures")
-                .select("*")
-                .eq("funnel_project_id", projectId)
-                .order("created_at", { ascending: false });
-
-            if (deckData) {
-                const transformed = deckData.map((d: any) => ({
-                    id: d.id,
-                    title: d.metadata?.title || "Untitled Presentation",
-                    slideCount: Array.isArray(d.slides)
-                        ? d.slides.length
-                        : d.total_slides || 55,
-                    status: "completed" as const,
-                    slides: d.slides || [],
-                    version: 1,
-                    created_at: d.created_at,
-                    presentation_type: d.presentation_type || "webinar",
-                    template_type: d.template_type,
-                    sections: d.sections,
-                }));
-                setDeckStructures(transformed);
+                if (error) throw error;
+                setBrandDesign(data);
             }
 
-            logger.info({ deckId: newDeck.id }, "Presentation structure duplicated");
+            toast({
+                title: "✅ Brand design saved",
+                description:
+                    "Your brand colors and personality have been saved successfully.",
+            });
+
+            logger.info({ projectId }, "Brand design saved");
         } catch (error) {
-            logger.error({ error }, "Failed to duplicate presentation structure");
-            alert("Failed to duplicate. Please try again.");
+            logger.error({ error }, "Failed to save brand design");
+            toast({
+                title: "❌ Save failed",
+                description: "Could not save brand design. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsSaving(false);
         }
     };
 
-    const startEditingName = (deck: DeckStructure) => {
-        setEditingDeckId(deck.id);
-        setEditingDeckName(deck.title);
-    };
+    const handleAIGenerate = async () => {
+        if (!projectId || transcripts.length === 0) {
+            toast({
+                title: "⚠️ No intake data",
+                description:
+                    "Complete an AI intake call first to generate brand design.",
+                variant: "destructive",
+            });
+            return;
+        }
 
-    const saveDeckName = async (deckId: string) => {
+        setIsGenerating(true);
         try {
-            const supabase = createClient();
+            const response = await fetch("/api/generate/brand-design", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    projectId,
+                    transcriptId: transcripts[0].id,
+                }),
+            });
 
-            // Get the current deck to update metadata
-            const { data: currentDeck } = await supabase
-                .from("deck_structures")
-                .select("metadata")
-                .eq("id", deckId)
-                .single();
-
-            const updatedMetadata = {
-                ...(currentDeck?.metadata || {}),
-                title: editingDeckName.trim(),
-            };
-
-            const { error } = await supabase
-                .from("deck_structures")
-                .update({ metadata: updatedMetadata })
-                .eq("id", deckId);
-
-            if (!error) {
-                setDeckStructures((prev) =>
-                    prev.map((d) =>
-                        d.id === deckId ? { ...d, title: editingDeckName.trim() } : d
-                    )
-                );
-                setEditingDeckId(null);
-                setEditingDeckName("");
+            if (!response.ok) {
+                throw new Error("Generation failed");
             }
+
+            const data = await response.json();
+
+            // Update form with AI-generated values
+            setPrimaryColor(data.primary_color);
+            setSecondaryColor(data.secondary_color);
+            setAccentColor(data.accent_color);
+            setBackgroundColor(data.background_color || "#ffffff");
+            setTextColor(data.text_color || "#1f2937");
+            setDesignStyle(data.design_style || "modern");
+            if (data.personality_traits) {
+                setTone(data.personality_traits.tone || "professional");
+                setMood(data.personality_traits.mood || "confident");
+                setEnergy(data.personality_traits.energy || "dynamic");
+            }
+
+            setBrandDesign(data);
+
+            toast({
+                title: "✨ Brand design generated",
+                description: "AI has created a custom brand palette for you!",
+            });
+
+            logger.info({ projectId }, "Brand design generated by AI");
         } catch (error) {
-            logger.error({ error }, "Failed to update presentation name");
+            logger.error({ error }, "Failed to generate brand design");
+            toast({
+                title: "❌ Generation failed",
+                description: "Could not generate brand design. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsGenerating(false);
         }
     };
 
-    const hasCompletedDeck = deckStructures.some((d) => d.status === "completed");
+    const handleScrapeUrl = async () => {
+        if (!scrapedUrl) {
+            toast({
+                title: "⚠️ URL required",
+                description: "Please enter a website URL to scrape colors from.",
+                variant: "destructive",
+            });
+            return;
+        }
 
-    if (!projectId) {
+        setIsGenerating(true);
+        try {
+            const response = await fetch("/api/scrape/brand-colors", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ url: scrapedUrl }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Scraping failed");
+            }
+
+            const data = await response.json();
+
+            // Update colors from scraped data
+            if (data.colors) {
+                setPrimaryColor(data.colors.primary || primaryColor);
+                setSecondaryColor(data.colors.secondary || secondaryColor);
+                setAccentColor(data.colors.accent || accentColor);
+                setBackgroundColor(data.colors.background || backgroundColor);
+                setTextColor(data.colors.text || textColor);
+            }
+
+            toast({
+                title: "🎨 Colors extracted",
+                description: "Brand colors have been extracted from the website!",
+            });
+
+            logger.info({ url: scrapedUrl }, "Colors scraped from URL");
+        } catch (error) {
+            logger.error({ error, url: scrapedUrl }, "Failed to scrape colors");
+            toast({
+                title: "❌ Scraping failed",
+                description: "Could not extract colors from URL. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const hasBrandDesign = !!brandDesign;
+
+    if (!project) {
         return (
-            <div className="flex h-screen items-center justify-center">
-                <div className="text-muted-foreground">Loading...</div>
+            <div className="flex min-h-screen items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         );
     }
@@ -377,489 +340,510 @@ export default function Step3Page({
             projectId={projectId}
             funnelName={project?.name}
             completedSteps={completedSteps}
-            nextDisabled={!hasCompletedDeck}
+            nextDisabled={!hasBrandDesign}
             nextLabel={
-                hasCompletedDeck ? "Create Gamma Deck" : "Generate Structure First"
+                hasBrandDesign
+                    ? "Continue to Presentation Structure"
+                    : "Save Brand First"
             }
-            stepTitle="Presentation Structure"
-            stepDescription="AI generates your presentation outline"
+            stepTitle="Brand Design"
+            stepDescription="Define your visual identity with colors and personality"
         >
             <div className="space-y-8">
                 {/* Dependency Warning */}
                 {transcripts.length === 0 && (
                     <DependencyWarning
-                        message="You need to complete your AI intake call first to generate a presentation structure."
+                        message="You need to complete your AI intake call first so we can understand your business and generate appropriate brand styling."
                         requiredStep={1}
                         requiredStepName="AI Intake Call"
                         projectId={projectId}
                     />
                 )}
 
-                {/* Generation Interface */}
-                {!isGenerating ? (
-                    <div className="rounded-lg border border-brand-100 bg-gradient-to-br from-brand-50 to-primary/5 p-8">
-                        <div className="mx-auto mb-6 max-w-md space-y-4">
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-foreground">
-                                    Presentation Type
-                                </label>
-                                <div className="grid grid-cols-3 gap-3">
-                                    <button
-                                        onClick={() => setPresentationType("webinar")}
-                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
-                                            presentationType === "webinar"
-                                                ? "border-brand-500 bg-brand-50 text-brand-900"
-                                                : "border-border bg-card text-foreground hover:border-gray-400"
-                                        }`}
-                                    >
-                                        <div className="font-semibold">Webinar</div>
-                                        <div className="text-xs text-muted-foreground">
-                                            Full 55-slide framework
-                                        </div>
-                                    </button>
-                                    <button
-                                        onClick={() => setPresentationType("vsl")}
-                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
-                                            presentationType === "vsl"
-                                                ? "border-brand-500 bg-brand-50 text-brand-900"
-                                                : "border-border bg-card text-foreground hover:border-gray-400"
-                                        }`}
-                                    >
-                                        <div className="font-semibold">VSL</div>
-                                        <div className="text-xs text-muted-foreground">
-                                            5-10 slide short script
-                                        </div>
-                                    </button>
-                                    <button
-                                        onClick={() =>
-                                            setPresentationType("sales_page")
-                                        }
-                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
-                                            presentationType === "sales_page"
-                                                ? "border-brand-500 bg-brand-50 text-brand-900"
-                                                : "border-border bg-card text-foreground hover:border-gray-400"
-                                        }`}
-                                    >
-                                        <div className="font-semibold">Sales Page</div>
-                                        <div className="text-xs text-muted-foreground">
-                                            Pitch video script
-                                        </div>
-                                    </button>
-                                </div>
-                            </div>
+                {/* Brand Design Tools */}
+                <Tabs defaultValue="manual" className="w-full">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="manual">
+                            <Palette className="mr-2 h-4 w-4" />
+                            Manual Colors
+                        </TabsTrigger>
+                        <TabsTrigger value="ai">
+                            <Sparkles className="mr-2 h-4 w-4" />
+                            AI Generate
+                        </TabsTrigger>
+                        <TabsTrigger value="scrape">
+                            <LinkIcon className="mr-2 h-4 w-4" />
+                            Scrape URL
+                        </TabsTrigger>
+                    </TabsList>
 
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-foreground">
-                                    Select Intake Call Source
-                                </label>
-                                <select
-                                    value={selectedTranscript}
-                                    onChange={(e) =>
-                                        setSelectedTranscript(e.target.value)
-                                    }
-                                    disabled={transcripts.length === 0}
-                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-brand-500 focus:ring-2 focus:ring-brand-500 disabled:cursor-not-allowed disabled:bg-muted"
-                                >
-                                    {transcripts.length === 0 ? (
-                                        <option value="">
-                                            No intake calls available
-                                        </option>
-                                    ) : (
-                                        <>
-                                            <option value="">
-                                                Select an intake call...
-                                            </option>
-                                            {transcripts.map((transcript) => (
-                                                <option
-                                                    key={transcript.id}
-                                                    value={transcript.id}
-                                                >
-                                                    Call from{" "}
-                                                    {new Date(
-                                                        transcript.created_at
-                                                    ).toLocaleDateString()}
-                                                </option>
-                                            ))}
-                                        </>
-                                    )}
-                                </select>
-
-                                {transcripts.length === 0 && (
-                                    <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-600">
-                                        💡 Complete Step 1 first to record intake calls
-                                    </p>
-                                )}
-                            </div>
-
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-foreground">
-                                    Deck Size
-                                </label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button
-                                        onClick={() => setSlideCount("5")}
-                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
-                                            slideCount === "5"
-                                                ? "border-brand-500 bg-brand-50 text-brand-900"
-                                                : "border-border bg-card text-foreground hover:border-gray-400"
-                                        }`}
-                                    >
-                                        <div className="font-semibold">5 Slides</div>
-                                        <div className="text-xs text-muted-foreground">
-                                            Test Mode (~30s)
-                                        </div>
-                                    </button>
-                                    <button
-                                        onClick={() => setSlideCount("55")}
-                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
-                                            slideCount === "55"
-                                                ? "border-brand-500 bg-brand-50 text-brand-900"
-                                                : "border-border bg-card text-foreground hover:border-gray-400"
-                                        }`}
-                                    >
-                                        <div className="font-semibold">55 Slides</div>
-                                        <div className="text-xs text-muted-foreground">
-                                            Full Deck (~3-5 min)
-                                        </div>
-                                    </button>
-                                </div>
-                                <p className="mt-2 text-xs text-muted-foreground">
-                                    {slideCount === "5"
-                                        ? "🚀 Quick test with first 5 slides from the framework"
-                                        : "📊 Complete Magnetic Masterclass Framework (recommended)"}
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="text-center">
-                            <button
-                                onClick={handleGenerateDeck}
-                                disabled={!selectedTranscript}
-                                className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
-                                    selectedTranscript
-                                        ? "bg-brand-500 text-white hover:bg-brand-600"
-                                        : "cursor-not-allowed bg-gray-300 text-muted-foreground"
-                                }`}
-                            >
-                                <Sparkles className="h-6 w-6" />
-                                {!selectedTranscript
-                                    ? "Select Call First"
-                                    : "Generate Deck Structure"}
-                            </button>
-
-                            <div className="mt-4 space-y-1 text-sm text-muted-foreground">
-                                <p>
-                                    ⚡ Generation time:{" "}
-                                    {slideCount === "5"
-                                        ? "~30 seconds"
-                                        : "~3-5 minutes"}
-                                </p>
-                                <p>
-                                    📊 Creates {slideCount} slides using{" "}
-                                    {presentationType === "webinar"
-                                        ? "Magnetic Masterclass Framework"
-                                        : presentationType === "vsl"
-                                          ? "VSL Framework"
-                                          : "Sales Page Pitch Framework"}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-6">
-                        <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-primary/10">
-                                <Sparkles className="h-6 w-6 text-primary" />
-                            </div>
-                            <h3 className="mb-2 text-xl font-semibold text-primary">
-                                Generating Presentation Outline...
-                            </h3>
-                            <p className="text-primary">
-                                AI is analyzing your intake call and creating your
-                                structure
-                            </p>
-                        </div>
-
-                        <div className="mx-auto mb-4 max-w-md rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                            ⚠ Please do not close this page while your outline is
-                            generating.
-                        </div>
-
-                        <div className="mx-auto max-w-md">
-                            <div className="mb-2 flex items-center justify-between">
-                                <span className="text-sm font-medium text-primary">
-                                    Progress
-                                </span>
-                                <span className="text-sm text-primary">
-                                    {generationProgress}%
-                                </span>
-                            </div>
-                            <div className="h-3 w-full rounded-full bg-primary/20">
-                                <div
-                                    className="h-3 rounded-full bg-primary transition-all duration-500 ease-out"
-                                    style={{ width: `${generationProgress}%` }}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Generated Presentation Structures */}
-                <div className="rounded-lg border border-border bg-card shadow-soft">
-                    <div className="border-b border-border p-6">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-semibold text-foreground">
-                                Your Presentation Structures
-                            </h3>
-                            <span className="text-sm text-muted-foreground">
-                                {deckStructures.length} created
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="p-6">
-                        {deckStructures.length === 0 ? (
-                            <div className="py-12 text-center text-muted-foreground">
-                                <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
-                                <p>
-                                    No presentation structures yet. Generate your first
-                                    one above!
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {deckStructures.map((deck) => (
-                                    <div
-                                        key={deck.id}
-                                        onClick={() => handleViewDeck(deck)}
-                                        className="cursor-pointer rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
-                                    >
-                                        <div
-                                            className="flex items-start justify-between"
-                                            onClick={(e) => e.stopPropagation()}
-                                        >
-                                            <div className="flex-1">
-                                                <div className="mb-2 flex items-center gap-3">
-                                                    {editingDeckId === deck.id ? (
-                                                        <div className="flex flex-1 items-center gap-2">
-                                                            <input
-                                                                type="text"
-                                                                value={editingDeckName}
-                                                                onChange={(e) =>
-                                                                    setEditingDeckName(
-                                                                        e.target.value
-                                                                    )
-                                                                }
-                                                                className="flex-1 rounded border border-primary/30 px-2 py-1 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
-                                                                onKeyDown={(e) => {
-                                                                    if (
-                                                                        e.key ===
-                                                                        "Enter"
-                                                                    )
-                                                                        saveDeckName(
-                                                                            deck.id
-                                                                        );
-                                                                    if (
-                                                                        e.key ===
-                                                                        "Escape"
-                                                                    )
-                                                                        setEditingDeckId(
-                                                                            null
-                                                                        );
-                                                                }}
-                                                                autoFocus
-                                                            />
-                                                            <button
-                                                                onClick={() =>
-                                                                    saveDeckName(
-                                                                        deck.id
-                                                                    )
-                                                                }
-                                                                className="rounded bg-primary px-2 py-1 text-sm text-white hover:bg-primary/90"
-                                                            >
-                                                                Save
-                                                            </button>
-                                                            <button
-                                                                onClick={() =>
-                                                                    setEditingDeckId(
-                                                                        null
-                                                                    )
-                                                                }
-                                                                className="rounded bg-gray-300 px-2 py-1 text-sm text-foreground hover:bg-gray-400"
-                                                            >
-                                                                Cancel
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <h4
-                                                                className="cursor-pointer text-lg font-semibold text-foreground hover:text-primary"
-                                                                onDoubleClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    startEditingName(
-                                                                        deck
-                                                                    );
-                                                                }}
-                                                            >
-                                                                {deck.title}
-                                                            </h4>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    startEditingName(
-                                                                        deck
-                                                                    );
-                                                                }}
-                                                                className="rounded p-1 text-primary hover:bg-primary/5"
-                                                            >
-                                                                <Pencil className="h-4 w-4" />
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
-
-                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                    <span>
-                                                        📊 {deck.slideCount} slides
-                                                    </span>
-                                                    <span>
-                                                        📅{" "}
-                                                        {new Date(
-                                                            deck.created_at
-                                                        ).toLocaleDateString()}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleViewDeck(deck);
-                                                    }}
-                                                    className="rounded p-2 text-primary hover:bg-primary/5"
-                                                >
-                                                    View
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDownloadDeck(deck);
-                                                    }}
-                                                    className="rounded p-2 text-muted-foreground hover:bg-muted/50"
-                                                    title="Download JSON"
-                                                >
-                                                    <Download className="h-4 w-4" />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDuplicateDeck(deck);
-                                                    }}
-                                                    className="rounded p-2 text-muted-foreground hover:bg-muted/50"
-                                                    title="Duplicate"
-                                                >
-                                                    <Copy className="h-4 w-4" />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDeleteDeck(deck.id);
-                                                    }}
-                                                    className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
-                                                    title="Delete"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
-                                            </div>
+                    {/* Manual Color Picker */}
+                    <TabsContent value="manual" className="space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Choose Your Brand Colors</CardTitle>
+                                <CardDescription>
+                                    Manually select colors that represent your brand
+                                    identity
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="primary">Primary Color</Label>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                type="color"
+                                                id="primary"
+                                                value={primaryColor}
+                                                onChange={(e) =>
+                                                    setPrimaryColor(e.target.value)
+                                                }
+                                                className="h-10 w-20"
+                                            />
+                                            <Input
+                                                type="text"
+                                                value={primaryColor}
+                                                onChange={(e) =>
+                                                    setPrimaryColor(e.target.value)
+                                                }
+                                                placeholder="#3b82f6"
+                                            />
                                         </div>
                                     </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
-            </div>
 
-            {/* Deck Editor Modal */}
-            {selectedDeck && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-                    <div className="flex h-[90vh] w-full max-w-6xl flex-col rounded-lg bg-card shadow-2xl">
-                        <div className="rounded-t-lg border-b border-border bg-muted/50 p-6">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-2xl font-bold text-foreground">
-                                    {selectedDeck.title}
-                                </h2>
-                                <button
-                                    onClick={() => setSelectedDeck(null)}
-                                    className="text-2xl font-bold text-muted-foreground hover:text-muted-foreground"
+                                    <div className="space-y-2">
+                                        <Label htmlFor="secondary">
+                                            Secondary Color
+                                        </Label>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                type="color"
+                                                id="secondary"
+                                                value={secondaryColor}
+                                                onChange={(e) =>
+                                                    setSecondaryColor(e.target.value)
+                                                }
+                                                className="h-10 w-20"
+                                            />
+                                            <Input
+                                                type="text"
+                                                value={secondaryColor}
+                                                onChange={(e) =>
+                                                    setSecondaryColor(e.target.value)
+                                                }
+                                                placeholder="#8b5cf6"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="accent">Accent Color</Label>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                type="color"
+                                                id="accent"
+                                                value={accentColor}
+                                                onChange={(e) =>
+                                                    setAccentColor(e.target.value)
+                                                }
+                                                className="h-10 w-20"
+                                            />
+                                            <Input
+                                                type="text"
+                                                value={accentColor}
+                                                onChange={(e) =>
+                                                    setAccentColor(e.target.value)
+                                                }
+                                                placeholder="#ec4899"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="background">
+                                            Background Color
+                                        </Label>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                type="color"
+                                                id="background"
+                                                value={backgroundColor}
+                                                onChange={(e) =>
+                                                    setBackgroundColor(e.target.value)
+                                                }
+                                                className="h-10 w-20"
+                                            />
+                                            <Input
+                                                type="text"
+                                                value={backgroundColor}
+                                                onChange={(e) =>
+                                                    setBackgroundColor(e.target.value)
+                                                }
+                                                placeholder="#ffffff"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="text">Text Color</Label>
+                                        <div className="flex gap-2">
+                                            <Input
+                                                type="color"
+                                                id="text"
+                                                value={textColor}
+                                                onChange={(e) =>
+                                                    setTextColor(e.target.value)
+                                                }
+                                                className="h-10 w-20"
+                                            />
+                                            <Input
+                                                type="text"
+                                                value={textColor}
+                                                onChange={(e) =>
+                                                    setTextColor(e.target.value)
+                                                }
+                                                placeholder="#1f2937"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Brand Personality Questionnaire */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Brand Personality</CardTitle>
+                                <CardDescription>
+                                    Define the personality and feel of your brand
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="brandName">
+                                        Brand Name (Optional)
+                                    </Label>
+                                    <Input
+                                        id="brandName"
+                                        value={brandName}
+                                        onChange={(e) => setBrandName(e.target.value)}
+                                        placeholder={project?.name || "Your Brand Name"}
+                                    />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <Label htmlFor="style">Design Style</Label>
+                                    <Select
+                                        value={designStyle}
+                                        onValueChange={setDesignStyle}
+                                    >
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="modern">
+                                                Modern
+                                            </SelectItem>
+                                            <SelectItem value="classic">
+                                                Classic
+                                            </SelectItem>
+                                            <SelectItem value="minimal">
+                                                Minimal
+                                            </SelectItem>
+                                            <SelectItem value="bold">Bold</SelectItem>
+                                            <SelectItem value="vibrant">
+                                                Vibrant
+                                            </SelectItem>
+                                            <SelectItem value="elegant">
+                                                Elegant
+                                            </SelectItem>
+                                            <SelectItem value="playful">
+                                                Playful
+                                            </SelectItem>
+                                            <SelectItem value="professional">
+                                                Professional
+                                            </SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                <div className="grid gap-4 md:grid-cols-3">
+                                    <div className="space-y-2">
+                                        <Label htmlFor="tone">Tone</Label>
+                                        <Select value={tone} onValueChange={setTone}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="professional">
+                                                    Professional
+                                                </SelectItem>
+                                                <SelectItem value="friendly">
+                                                    Friendly
+                                                </SelectItem>
+                                                <SelectItem value="authoritative">
+                                                    Authoritative
+                                                </SelectItem>
+                                                <SelectItem value="conversational">
+                                                    Conversational
+                                                </SelectItem>
+                                                <SelectItem value="inspirational">
+                                                    Inspirational
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="mood">Mood</Label>
+                                        <Select value={mood} onValueChange={setMood}>
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="confident">
+                                                    Confident
+                                                </SelectItem>
+                                                <SelectItem value="calm">
+                                                    Calm
+                                                </SelectItem>
+                                                <SelectItem value="energetic">
+                                                    Energetic
+                                                </SelectItem>
+                                                <SelectItem value="serious">
+                                                    Serious
+                                                </SelectItem>
+                                                <SelectItem value="optimistic">
+                                                    Optimistic
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <Label htmlFor="energy">Energy</Label>
+                                        <Select
+                                            value={energy}
+                                            onValueChange={setEnergy}
+                                        >
+                                            <SelectTrigger>
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="dynamic">
+                                                    Dynamic
+                                                </SelectItem>
+                                                <SelectItem value="stable">
+                                                    Stable
+                                                </SelectItem>
+                                                <SelectItem value="bold">
+                                                    Bold
+                                                </SelectItem>
+                                                <SelectItem value="subtle">
+                                                    Subtle
+                                                </SelectItem>
+                                                <SelectItem value="vibrant">
+                                                    Vibrant
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* AI Generation */}
+                    <TabsContent value="ai" className="space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>AI Brand Generation</CardTitle>
+                                <CardDescription>
+                                    Let AI create a custom brand palette based on your
+                                    intake call
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                {transcripts.length > 0 ? (
+                                    <>
+                                        <p className="text-sm text-muted-foreground">
+                                            AI will analyze your business, industry, and
+                                            target audience from your intake call to
+                                            generate a cohesive brand identity.
+                                        </p>
+                                        <Button
+                                            onClick={handleAIGenerate}
+                                            disabled={isGenerating}
+                                            size="lg"
+                                            className="w-full"
+                                        >
+                                            {isGenerating ? (
+                                                <>
+                                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                    Generating Brand...
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Sparkles className="mr-2 h-4 w-4" />
+                                                    Generate Brand Design
+                                                </>
+                                            )}
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <p className="text-sm text-amber-600">
+                                        Complete your AI intake call first to use AI
+                                        generation.
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* URL Scraper */}
+                    <TabsContent value="scrape" className="space-y-6">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Scrape Website Colors</CardTitle>
+                                <CardDescription>
+                                    Extract brand colors from an existing website
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="url">Website URL</Label>
+                                    <Input
+                                        id="url"
+                                        type="url"
+                                        value={scrapedUrl}
+                                        onChange={(e) => setScrapedUrl(e.target.value)}
+                                        placeholder="https://example.com"
+                                    />
+                                </div>
+                                <Button
+                                    onClick={handleScrapeUrl}
+                                    disabled={isGenerating || !scrapedUrl}
+                                    size="lg"
+                                    className="w-full"
                                 >
-                                    ×
+                                    {isGenerating ? (
+                                        <>
+                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            Extracting Colors...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <LinkIcon className="mr-2 h-4 w-4" />
+                                            Extract Brand Colors
+                                        </>
+                                    )}
+                                </Button>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
+
+                {/* Live Preview */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Brand Preview</CardTitle>
+                        <CardDescription>
+                            See how your brand colors work together
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            {/* Color Palette Display */}
+                            <div className="flex gap-2">
+                                <div
+                                    className="flex h-20 flex-1 items-center justify-center rounded-lg text-sm font-medium"
+                                    style={{
+                                        backgroundColor: primaryColor,
+                                        color: textColor,
+                                    }}
+                                >
+                                    Primary
+                                </div>
+                                <div
+                                    className="flex h-20 flex-1 items-center justify-center rounded-lg text-sm font-medium"
+                                    style={{
+                                        backgroundColor: secondaryColor,
+                                        color: textColor,
+                                    }}
+                                >
+                                    Secondary
+                                </div>
+                                <div
+                                    className="flex h-20 flex-1 items-center justify-center rounded-lg text-sm font-medium"
+                                    style={{
+                                        backgroundColor: accentColor,
+                                        color: textColor,
+                                    }}
+                                >
+                                    Accent
+                                </div>
+                            </div>
+
+                            {/* Sample Card */}
+                            <div
+                                className="rounded-lg border p-6"
+                                style={{
+                                    backgroundColor: backgroundColor,
+                                    borderColor: primaryColor,
+                                }}
+                            >
+                                <h3
+                                    className="mb-2 text-xl font-bold"
+                                    style={{ color: primaryColor }}
+                                >
+                                    {brandName || project?.name || "Your Brand"}
+                                </h3>
+                                <p
+                                    className="mb-4 text-sm"
+                                    style={{ color: textColor }}
+                                >
+                                    {designStyle.charAt(0).toUpperCase() +
+                                        designStyle.slice(1)}{" "}
+                                    • {tone.charAt(0).toUpperCase() + tone.slice(1)} •{" "}
+                                    {mood.charAt(0).toUpperCase() + mood.slice(1)}
+                                </p>
+                                <button
+                                    className="rounded px-4 py-2 text-sm font-medium"
+                                    style={{
+                                        backgroundColor: primaryColor,
+                                        color: backgroundColor,
+                                    }}
+                                >
+                                    Call to Action
                                 </button>
                             </div>
                         </div>
+                    </CardContent>
+                </Card>
 
-                        <div className="flex-1 overflow-y-scroll p-6">
-                            <DeckStructureEditor
-                                initialSlides={selectedDeck.slides}
-                                onSave={async (slides) => {
-                                    try {
-                                        const supabase = createClient();
-                                        const { error } = await supabase
-                                            .from("deck_structures")
-                                            .update({ slides })
-                                            .eq("id", selectedDeck.id);
-
-                                        if (!error) {
-                                            const { data: deckData } = await supabase
-                                                .from("deck_structures")
-                                                .select("*")
-                                                .eq("funnel_project_id", projectId)
-                                                .order("created_at", {
-                                                    ascending: false,
-                                                });
-
-                                            if (deckData) {
-                                                const transformed = deckData.map(
-                                                    (deck: any) => ({
-                                                        id: deck.id,
-                                                        title:
-                                                            deck.metadata?.title ||
-                                                            "Untitled Presentation",
-                                                        slideCount: Array.isArray(
-                                                            deck.slides
-                                                        )
-                                                            ? deck.slides.length
-                                                            : deck.total_slides || 55,
-                                                        status: "completed" as const,
-                                                        slides: deck.slides || [],
-                                                        version: 1,
-                                                        created_at: deck.created_at,
-                                                        presentation_type:
-                                                            deck.presentation_type ||
-                                                            "webinar",
-                                                        template_type:
-                                                            deck.template_type,
-                                                        sections: deck.sections,
-                                                    })
-                                                );
-                                                setDeckStructures(transformed);
-                                            }
-                                            setSelectedDeck(null);
-                                        }
-                                    } catch (error) {
-                                        logger.error(
-                                            { error },
-                                            "Failed to save deck structure"
-                                        );
-                                        throw error;
-                                    }
-                                }}
-                            />
-                        </div>
-                    </div>
+                {/* Save Button */}
+                <div className="flex justify-end">
+                    <Button
+                        onClick={handleSave}
+                        disabled={isSaving}
+                        size="lg"
+                        className="min-w-[200px]"
+                    >
+                        {isSaving ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Saving...
+                            </>
+                        ) : (
+                            <>
+                                <Save className="mr-2 h-4 w-4" />
+                                Save Brand Design
+                            </>
+                        )}
+                    </Button>
                 </div>
-            )}
+            </div>
         </StepLayout>
     );
 }

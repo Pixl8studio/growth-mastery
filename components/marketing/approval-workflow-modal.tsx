@@ -83,7 +83,7 @@ export function ApprovalWorkflowModal({
         } finally {
             setLoading(false);
         }
-    }, [funnelProjectId, platformFilter, statusFilter]);
+    }, [funnelProjectId, platformFilter, statusFilter, toast]);
 
     useEffect(() => {
         if (isOpen) {

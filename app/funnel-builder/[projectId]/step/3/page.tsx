@@ -9,7 +9,7 @@ import { Sparkles, FileText, Trash2, Pencil, Download, Copy } from "lucide-react
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
-import { useIsMobile } from "@/lib/mobile-utils";
+import { useIsMobile } from "@/lib/mobile-utils.client";
 
 interface DeckStructure {
     id: string;

@@ -1,9 +1,10 @@
+"use client";
+
 /**
- * Mobile Detection Utilities
- * Provides both server-side and client-side mobile device detection
+ * Mobile Detection Utilities - Client Side Only
+ * Use these hooks in Client Components
  */
 
-import { headers } from "next/headers";
 import { useEffect, useState } from "react";
 
 // Breakpoint constants matching Tailwind config
@@ -16,52 +17,6 @@ export const BREAKPOINTS = {
 } as const;
 
 export type Breakpoint = keyof typeof BREAKPOINTS;
-
-/**
- * Server-side mobile detection using User-Agent header
- * Use this in Server Components or API routes
- */
-export async function isMobileDevice(): Promise<boolean> {
-    const headersList = await headers();
-    const userAgent = headersList.get("user-agent") || "";
-    return isMobileUserAgent(userAgent);
-}
-
-/**
- * Server-side tablet detection using User-Agent header
- */
-export async function isTabletDevice(): Promise<boolean> {
-    const headersList = await headers();
-    const userAgent = headersList.get("user-agent") || "";
-    return isTabletUserAgent(userAgent);
-}
-
-/**
- * Server-side touch device detection
- * Returns true for both mobile and tablet
- */
-export async function isTouchDevice(): Promise<boolean> {
-    const mobile = await isMobileDevice();
-    const tablet = await isTabletDevice();
-    return mobile || tablet;
-}
-
-/**
- * Check if User-Agent string indicates a mobile device
- */
-export function isMobileUserAgent(userAgent: string): boolean {
-    const mobileRegex = /Android|webOS|iPhone|iPod|BlackBerry|IEMobile|Opera Mini/i;
-    const isTablet = isTabletUserAgent(userAgent);
-    return mobileRegex.test(userAgent) && !isTablet;
-}
-
-/**
- * Check if User-Agent string indicates a tablet device
- */
-export function isTabletUserAgent(userAgent: string): boolean {
-    const tabletRegex = /iPad|Android(?!.*Mobile)|Tablet|PlayBook|Silk/i;
-    return tabletRegex.test(userAgent);
-}
 
 /**
  * Client-side hook for mobile detection using window.matchMedia
@@ -109,7 +64,8 @@ export function useIsTablet(): boolean {
 
         // Also check for tablet user agent
         const userAgent = navigator.userAgent;
-        const isTabletUA = isTabletUserAgent(userAgent);
+        const tabletRegex = /iPad|Android(?!.*Mobile)|Tablet|PlayBook|Silk/i;
+        const isTabletUA = tabletRegex.test(userAgent);
 
         setIsTablet(mediaQuery.matches || isTabletUA);
 
@@ -208,26 +164,4 @@ export function isViewportBelow(width: number, breakpoint: Breakpoint): boolean 
  */
 export function isViewportAbove(width: number, breakpoint: Breakpoint): boolean {
     return width >= BREAKPOINTS[breakpoint];
-}
-
-/**
- * Get device type from user agent
- */
-export function getDeviceType(userAgent: string): "mobile" | "tablet" | "desktop" {
-    if (isTabletUserAgent(userAgent)) {
-        return "tablet";
-    }
-    if (isMobileUserAgent(userAgent)) {
-        return "mobile";
-    }
-    return "desktop";
-}
-
-/**
- * Server-side helper to get device type
- */
-export async function getServerDeviceType(): Promise<"mobile" | "tablet" | "desktop"> {
-    const headersList = await headers();
-    const userAgent = headersList.get("user-agent") || "";
-    return getDeviceType(userAgent);
 }

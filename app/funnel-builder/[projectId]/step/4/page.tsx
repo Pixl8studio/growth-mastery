@@ -21,7 +21,7 @@ import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { useToast } from "@/components/ui/use-toast";
-import { useIsMobile } from "@/lib/mobile-utils";
+import { useIsMobile } from "@/lib/mobile-utils.client";
 
 interface DeckStructure {
     id: string;

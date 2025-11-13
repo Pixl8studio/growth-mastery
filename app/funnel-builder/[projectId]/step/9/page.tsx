@@ -15,7 +15,7 @@ import { createClient } from "@/lib/supabase/client";
 import { generateRegistrationHTML } from "@/lib/generators/registration-page-generator";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { Switch } from "@/components/ui/switch";
-import { useIsMobile } from "@/lib/mobile-utils";
+import { useIsMobile } from "@/lib/mobile-utils.client";
 
 interface DeckStructure {
     id: string;

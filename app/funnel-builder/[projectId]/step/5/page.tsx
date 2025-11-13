@@ -32,7 +32,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useIsMobile } from "@/lib/mobile-utils";
+import { useIsMobile } from "@/lib/mobile-utils.client";
 
 interface DeckStructure {
     id: string;

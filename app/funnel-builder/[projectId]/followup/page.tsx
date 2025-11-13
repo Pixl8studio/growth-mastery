@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProspectList } from "@/components/followup/prospect-list";
 import { SequenceManager } from "@/components/followup/sequence-manager";
 import { StoryLibraryManager } from "@/components/followup/story-library-manager";
-import { useIsMobile } from "@/lib/mobile-utils";
+import { useIsMobile } from "@/lib/mobile-utils.client";
 
 export default function FollowupManagementPage() {
     const params = useParams();

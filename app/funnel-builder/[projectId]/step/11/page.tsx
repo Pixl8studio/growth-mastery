@@ -26,6 +26,7 @@ import {
     Users,
     MessageSquare,
     Target,
+    Loader2,
 } from "lucide-react";
 
 // Import our comprehensive components
@@ -47,6 +48,7 @@ export default function Step11Page({
     const [followupEnabled, setFollowupEnabled] = useState(false);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("sender");
+    const [generatingBrandVoice, setGeneratingBrandVoice] = useState(false);
 
     // State for all follow-up data
     const [agentConfig, setAgentConfig] = useState<any>(null);
@@ -407,6 +409,13 @@ export default function Step11Page({
                 }
 
                 // Generate brand voice guidelines using AI
+                setGeneratingBrandVoice(true);
+                toast({
+                    title: "Generating Brand Voice...",
+                    description:
+                        "Creating personalized guidelines from your intake and offer data",
+                });
+
                 try {
                     const brandVoiceResponse = await fetch(
                         "/api/followup/generate-brand-voice",
@@ -425,6 +434,11 @@ export default function Step11Page({
                         if (brandVoiceData.success && brandVoiceData.brandVoice) {
                             knowledgeBase.brand_voice = brandVoiceData.brandVoice;
                             logger.info({}, "✅ Brand voice guidelines auto-populated");
+                            toast({
+                                title: "✨ Brand Voice Generated",
+                                description:
+                                    "Your personalized brand voice guidelines are ready",
+                            });
                         }
                     }
                 } catch (brandVoiceError) {
@@ -432,6 +446,12 @@ export default function Step11Page({
                         { error: brandVoiceError },
                         "Failed to auto-generate brand voice, using fallback"
                     );
+                    toast({
+                        title: "Using Default Voice Guidelines",
+                        description:
+                            "AI generation failed, but we've created a good starting point for you",
+                        variant: "default",
+                    });
                     // Fallback: use basic brand voice guidelines
                     knowledgeBase.brand_voice = `Brand Voice Guidelines:
 
@@ -447,6 +467,8 @@ Approach:
 - Share authentic stories and experiences
 - Always connect features to benefits
 - End with clear calls-to-action`;
+                } finally {
+                    setGeneratingBrandVoice(false);
                 }
 
                 const response = await fetch("/api/followup/agent-configs", {
@@ -969,8 +991,24 @@ Approach:
                         <Switch
                             checked={followupEnabled}
                             onCheckedChange={handleEnableFollowup}
+                            disabled={generatingBrandVoice}
                         />
                     </div>
+
+                    {generatingBrandVoice && (
+                        <div className="mt-4 flex items-center gap-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                            <Loader2 className="h-5 w-5 text-purple-600 animate-spin" />
+                            <div>
+                                <p className="text-sm font-medium text-purple-900">
+                                    Setting up your AI Follow-Up Engine...
+                                </p>
+                                <p className="text-xs text-purple-700 mt-1">
+                                    Analyzing your intake data and offer to create
+                                    personalized brand voice guidelines
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     {followupEnabled && (
                         <>
@@ -1096,6 +1134,7 @@ Approach:
                                 <AgentConfigForm
                                     config={agentConfig}
                                     onSave={handleSaveAgentConfig}
+                                    funnelProjectId={projectId}
                                 />
                             </TabsContent>
 

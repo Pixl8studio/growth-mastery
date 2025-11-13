@@ -3,12 +3,16 @@ name: Claude Code Review
 on:
   pull_request:
     types: [opened, synchronize]
-    # Run on all PRs (config, docs, code, scripts, etc.)
-    # Removed paths filter to review everything
+    branches:
+      - main
+      - development
+    # Run on PRs targeting main or development branches
+    # Reviews all file types (config, docs, code, scripts, etc.)
 
 jobs:
   claude-review:
     runs-on: ubuntu-latest
+    environment: Production
     permissions:
       contents: read
       pull-requests: write
@@ -27,6 +31,9 @@ jobs:
       - name: 🔍 Run Claude Code Review
         id: claude-review
         uses: anthropics/claude-code-action@v1
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |

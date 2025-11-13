@@ -15,7 +15,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Brain, Target, Sparkles } from "lucide-react";
+import { BookOpen, Brain, Target, Sparkles, Loader2, RefreshCw } from "lucide-react";
+import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
 
 interface AgentConfig {
     name: string;
@@ -42,9 +44,17 @@ interface AgentConfigFormProps {
     config: AgentConfig | null;
     onSave: (config: AgentConfig) => Promise<void>;
     saving?: boolean;
+    funnelProjectId?: string;
 }
 
-export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps) {
+export function AgentConfigForm({
+    config,
+    onSave,
+    saving,
+    funnelProjectId,
+}: AgentConfigFormProps) {
+    const { toast } = useToast();
+    const [regeneratingBrandVoice, setRegeneratingBrandVoice] = useState(false);
     const [formData, setFormData] = useState<AgentConfig>(() => {
         if (config) {
             return {
@@ -137,6 +147,139 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
 
     const handleSave = async () => {
         await onSave(formData);
+    };
+
+    const handleRegenerateBrandVoice = async () => {
+        if (!funnelProjectId) {
+            toast({
+                title: "Error",
+                description: "Funnel project ID is required to regenerate brand voice",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setRegeneratingBrandVoice(true);
+        toast({
+            title: "Regenerating Brand Voice...",
+            description:
+                "Fetching your intake and offer data to create fresh guidelines",
+        });
+
+        try {
+            // Fetch intake data
+            const intakeResponse = await fetch(
+                `/api/intake?funnel_project_id=${funnelProjectId}`
+            );
+            const intakeData = intakeResponse.ok ? await intakeResponse.json() : null;
+
+            // Fetch offer data
+            const offerResponse = await fetch(
+                `/api/offers?funnel_project_id=${funnelProjectId}`
+            );
+            const offerData = offerResponse.ok ? await offerResponse.json() : null;
+
+            if (!intakeData && !offerData) {
+                toast({
+                    title: "No Data Available",
+                    description:
+                        "Please complete your intake session and define your offer first",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            // Build context for brand voice generation
+            const businessContext: any = {
+                business_name: "",
+                industry: "",
+                target_audience: "",
+                main_challenge: "",
+                desired_outcome: "",
+            };
+
+            const productKnowledge: any = {
+                product_name: "",
+                tagline: "",
+                promise: "",
+                features: [],
+                guarantee: "",
+            };
+
+            // Populate from intake
+            if (intakeData?.extracted_data) {
+                const extracted = intakeData.extracted_data;
+                businessContext.business_name = extracted.businessName || "";
+                businessContext.industry = extracted.industry || "";
+                businessContext.target_audience = extracted.targetAudience || "";
+                businessContext.main_challenge = extracted.mainProblem || "";
+                businessContext.desired_outcome = extracted.desiredOutcome || "";
+            }
+
+            // Populate from offer
+            if (offerData?.offer) {
+                const offer = offerData.offer;
+                productKnowledge.product_name = offer.name || "";
+                productKnowledge.tagline = offer.tagline || "";
+                productKnowledge.promise = offer.promise || "";
+                productKnowledge.features = Array.isArray(offer.features)
+                    ? offer.features.map((f: any) =>
+                          typeof f === "string" ? f : f.title || ""
+                      )
+                    : [];
+                productKnowledge.guarantee = offer.guarantee || "";
+            }
+
+            // Generate brand voice
+            const brandVoiceResponse = await fetch(
+                "/api/followup/generate-brand-voice",
+                {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        businessContext,
+                        productKnowledge,
+                    }),
+                }
+            );
+
+            if (!brandVoiceResponse.ok) {
+                throw new Error("Failed to generate brand voice");
+            }
+
+            const brandVoiceData = await brandVoiceResponse.json();
+
+            if (brandVoiceData.success && brandVoiceData.brandVoice) {
+                setFormData({
+                    ...formData,
+                    knowledge_base: {
+                        ...formData.knowledge_base,
+                        brand_voice: brandVoiceData.brandVoice,
+                    },
+                });
+
+                logger.info({}, "✅ Brand voice regenerated successfully");
+                toast({
+                    title: "✨ Brand Voice Regenerated",
+                    description:
+                        "Your brand voice guidelines have been updated. Don't forget to save!",
+                });
+            } else {
+                throw new Error("Invalid response from brand voice generator");
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to regenerate brand voice");
+            toast({
+                title: "Error",
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to regenerate brand voice. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setRegeneratingBrandVoice(false);
+        }
     };
 
     return (
@@ -273,7 +416,29 @@ export function AgentConfigForm({ config, onSave, saving }: AgentConfigFormProps
                 {/* Knowledge Base */}
                 <TabsContent value="knowledge" className="space-y-4 mt-4">
                     <div>
-                        <Label>Brand Voice Guidelines</Label>
+                        <div className="flex items-center justify-between mb-2">
+                            <Label>Brand Voice Guidelines</Label>
+                            {funnelProjectId && (
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleRegenerateBrandVoice}
+                                    disabled={regeneratingBrandVoice || saving}
+                                >
+                                    {regeneratingBrandVoice ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                            Regenerating...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <RefreshCw className="h-4 w-4 mr-2" />
+                                            Regenerate
+                                        </>
+                                    )}
+                                </Button>
+                            )}
+                        </div>
                         <Textarea
                             value={
                                 typeof formData.knowledge_base === "object" &&

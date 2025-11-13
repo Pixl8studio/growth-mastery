@@ -220,7 +220,11 @@ export default function Step2Page({
 
             if (!error && savedOffer) {
                 setOffers((prev) => [savedOffer, ...prev]);
-                setAlternatives([]);
+                toast({
+                    title: "Offer added successfully!",
+                    description:
+                        "You can select another variation or continue to the next step.",
+                });
             }
         } catch (error) {
             logger.error({ error }, "Failed to use alternative offer");
@@ -275,6 +279,33 @@ export default function Step2Page({
 
     const hasCompletedOffer = offers.length > 0;
 
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+        });
+    };
+
+    const getMethodLabel = (method: string) => {
+        switch (method) {
+            case "voice":
+                return "Voice Call";
+            case "upload":
+                return "Document Upload";
+            case "paste":
+                return "Pasted Content";
+            case "scrape":
+                return "Web Scraping";
+            case "google_drive":
+                return "Google Drive";
+            default:
+                return "Unknown";
+        }
+    };
+
     if (!projectId) {
         return (
             <div className="flex h-screen items-center justify-center">
@@ -300,9 +331,9 @@ export default function Step2Page({
                 {/* Dependency Warning */}
                 {transcripts.length === 0 && (
                     <DependencyWarning
-                        message="You need to complete your AI intake call first so AI can understand your business and create a compelling offer."
+                        message="You need to complete your intake session first so AI can understand your business and create a compelling offer."
                         requiredStep={1}
-                        requiredStepName="AI Intake Call"
+                        requiredStepName="Intake"
                         projectId={projectId}
                     />
                 )}
@@ -312,8 +343,13 @@ export default function Step2Page({
                     <div className="rounded-lg border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-8">
                         <div className="mx-auto mb-6 max-w-md">
                             <label className="mb-2 block text-sm font-medium text-foreground">
-                                Select Intake Call Source
+                                Select Intake Session
                             </label>
+                            <p className="mb-4 text-sm text-muted-foreground">
+                                AI intelligently analyzes your intake session to define
+                                your business offers to be used to build the rest of
+                                your funnel and marketing launch.
+                            </p>
                             <select
                                 value={selectedTranscript}
                                 onChange={(e) => setSelectedTranscript(e.target.value)}
@@ -321,21 +357,21 @@ export default function Step2Page({
                                 className="w-full rounded-lg border border-border px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-500 disabled:cursor-not-allowed disabled:bg-muted"
                             >
                                 {transcripts.length === 0 ? (
-                                    <option value="">No intake calls available</option>
+                                    <option value="">
+                                        No intake sessions available
+                                    </option>
                                 ) : (
                                     <>
                                         <option value="">
-                                            Select an intake call...
+                                            Select an intake session...
                                         </option>
                                         {transcripts.map((transcript: any) => (
                                             <option
                                                 key={transcript.id}
                                                 value={transcript.id}
                                             >
-                                                Call from{" "}
-                                                {new Date(
-                                                    transcript.created_at
-                                                ).toLocaleDateString()}
+                                                {transcript.session_name ||
+                                                    `${getMethodLabel(transcript.intake_method || "voice")} - ${formatDate(transcript.created_at)}`}
                                             </option>
                                         ))}
                                     </>
@@ -344,7 +380,7 @@ export default function Step2Page({
 
                             {transcripts.length === 0 && (
                                 <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-600">
-                                    💡 Complete Step 1 first to record intake calls
+                                    💡 Complete Step 1 first to create intake sessions
                                 </p>
                             )}
                         </div>
@@ -355,14 +391,14 @@ export default function Step2Page({
                                 disabled={!selectedTranscript}
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
                                     selectedTranscript
-                                        ? "bg-brand-500 text-white hover:bg-brand-600"
+                                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
                                         : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                 }`}
                             >
                                 <Sparkles className="h-6 w-6" />
                                 {selectedTranscript
                                     ? "Generate Offer"
-                                    : "Select Call First"}
+                                    : "Select Session First"}
                             </button>
 
                             <div className="mt-4 space-y-1 text-sm text-muted-foreground">

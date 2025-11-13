@@ -76,7 +76,7 @@ export function MediaLibraryModal({
         if (isOpen) {
             loadMedia();
         }
-    }, [isOpen, loadMedia]);
+    }, [isOpen, funnelProjectId, loadMedia]);
 
     const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;

@@ -125,7 +125,12 @@ export async function PUT(request: NextRequest, context: RouteContext) {
         const body = await request.json();
 
         // Remove fields that shouldn't be updated
-        const { id, user_id, created_at, ...updates } = body;
+        const {
+            id: _id,
+            user_id: _user_id,
+            created_at: _created_at,
+            ...updates
+        } = body;
 
         logger.info(
             {

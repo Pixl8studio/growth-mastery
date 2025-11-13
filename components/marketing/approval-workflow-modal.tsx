@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -89,7 +89,13 @@ export function ApprovalWorkflowModal({
         if (isOpen) {
             loadVariantsForApproval();
         }
-    }, [isOpen, loadVariantsForApproval]);
+    }, [
+        isOpen,
+        funnelProjectId,
+        platformFilter,
+        statusFilter,
+        loadVariantsForApproval,
+    ]);
 
     const handleApprove = async (variantId: string) => {
         try {

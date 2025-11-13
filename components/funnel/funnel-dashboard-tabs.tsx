@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useCallback, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     Card,
@@ -27,7 +27,6 @@ import { FunnelContactsView } from "@/components/funnel/funnel-contacts-view";
 import { FunnelSettingsView } from "@/components/funnel/funnel-settings-view";
 import { getStepCompletionStatus } from "@/app/funnel-builder/completion-utils";
 import { calculateCompletionPercentage } from "@/app/funnel-builder/completion-types";
-import { useEffect } from "react";
 
 interface FunnelDashboardTabsProps {
     projectId: string;

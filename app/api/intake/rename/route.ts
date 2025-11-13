@@ -63,7 +63,6 @@ export async function PATCH(request: NextRequest) {
         }
 
         const oldSessionName = intake.session_name;
-
         // Update session name
         const { data: updatedIntake, error: updateError } = await supabase
             .from("vapi_transcripts")

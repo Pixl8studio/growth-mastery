@@ -75,7 +75,7 @@ export function PageWebhookSettings({ pageId, pageType }: PageWebhookSettingsPro
 
     useEffect(() => {
         loadWebhookConfig();
-    }, [loadWebhookConfig]);
+    }, [pageId, pageType, loadWebhookConfig]);
 
     useEffect(() => {
         const hasChanges =

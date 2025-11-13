@@ -1,40 +1,66 @@
+/**
+ * Step 12: Marketing Content Engine
+ *
+ * Comprehensive organic social content generation and publishing system.
+ * Features Echo Mode voice mirroring, multi-platform publishing, and analytics.
+ */
+
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
-import { TrendingUp, Users, DollarSign } from "lucide-react";
-import { logger } from "@/lib/client-logger";
-import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
+import {
+    Sparkles,
+    TrendingUp,
+    Calendar,
+    BarChart3,
+    Settings,
+    Lightbulb,
+    Share2,
+} from "lucide-react";
 
-interface Analytics {
-    registrations: number;
-    views: number;
-    conversions: number;
-    revenue: number;
-    watchRate?: number;
-    enrollmentRate?: number;
-    revenuePerRegistrant?: number;
-}
+// Import enhanced components with comprehensive controls
+import { ProfileConfigForm } from "@/components/marketing/profile-config-form";
+import { ContentGenerator } from "@/components/marketing/content-generator";
+import { ContentCalendar } from "@/components/marketing/content-calendar";
+import { MarketingAnalyticsDashboard } from "@/components/marketing/marketing-analytics-dashboard";
+import { TrendExplorer } from "@/components/marketing/trend-explorer";
+import { MarketingSettings } from "@/components/marketing/marketing-settings";
+import { ApprovalWorkflowModal } from "@/components/marketing/approval-workflow-modal";
+import { ExperimentCreatorModal } from "@/components/marketing/experiment-creator-modal";
 
-export default function Step13Page({
+export default function Step12Page({
     params,
 }: {
     params: Promise<{ projectId: string }>;
 }) {
+    const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
-    const [project, setProject] = useState<{ name?: string } | null>(null);
-    const [analytics, setAnalytics] = useState<Analytics>({
-        registrations: 0,
-        views: 0,
-        conversions: 0,
-        revenue: 0,
-        watchRate: 0,
-        enrollmentRate: 0,
-        revenuePerRegistrant: 0,
+    const [marketingEnabled, setMarketingEnabled] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState("profile");
+
+    // State for marketing data
+    const [profile, setProfile] = useState<any>(null);
+    const [stats, setStats] = useState({
+        postsThisMonth: 0,
+        totalOptIns: 0,
+        scheduledPosts: 0,
+        activeExperiments: 0,
+        overallOI1000: 0,
+        pendingApprovals: 0,
     });
-    const [timeRange, setTimeRange] = useState("30");
-    const [loadingAnalytics, setLoadingAnalytics] = useState(true);
+
+    // Modal states
+    const [showApprovalModal, setShowApprovalModal] = useState(false);
+    const [showExperimentModal, setShowExperimentModal] = useState(false);
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
@@ -47,230 +73,394 @@ export default function Step13Page({
         resolveParams();
     }, [params]);
 
-    useEffect(() => {
-        const loadProject = async () => {
-            if (!projectId) return;
-            try {
-                const supabase = createClient();
-                const { data: projectData, error: projectError } = await supabase
-                    .from("funnel_projects")
-                    .select("*")
-                    .eq("id", projectId)
-                    .single();
+    const loadStats = useCallback(async () => {
+        try {
+            // Get posts this month
+            const monthStart = new Date();
+            monthStart.setDate(1);
+            monthStart.setHours(0, 0, 0, 0);
 
-                if (projectError) throw projectError;
-                setProject(projectData);
-            } catch (error) {
-                logger.error({ error }, "Failed to load project");
+            const calendarRes = await fetch(
+                `/api/marketing/calendar?start=${monthStart.toISOString()}`
+            );
+
+            if (calendarRes.ok) {
+                const calendarData = await calendarRes.json();
+                const entries = calendarData.entries || [];
+
+                const published = entries.filter(
+                    (e: any) => e.publish_status === "published"
+                );
+                const scheduled = entries.filter(
+                    (e: any) => e.publish_status === "scheduled"
+                );
+
+                setStats((prev) => ({
+                    ...prev,
+                    postsThisMonth: published.length,
+                    scheduledPosts: scheduled.length,
+                }));
             }
-        };
-        loadProject();
+
+            // Get analytics
+            const analyticsRes = await fetch(
+                `/api/marketing/analytics?funnel_project_id=${projectId}`
+            );
+
+            if (analyticsRes.ok) {
+                const analyticsData = await analyticsRes.json();
+                const dashboard = analyticsData.dashboard;
+
+                if (dashboard) {
+                    setStats((prev) => ({
+                        ...prev,
+                        totalOptIns: dashboard.overview?.total_opt_ins || 0,
+                        overallOI1000: dashboard.overview?.overall_oi_1000 || 0,
+                    }));
+                }
+            }
+
+            // Get experiments count
+            const experimentsRes = await fetch(
+                `/api/marketing/analytics/experiments?funnel_project_id=${projectId}&status=running`
+            );
+
+            if (experimentsRes.ok) {
+                const experimentsData = await experimentsRes.json();
+                setStats((prev) => ({
+                    ...prev,
+                    activeExperiments: experimentsData.experiments?.length || 0,
+                }));
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to load stats");
+        }
     }, [projectId]);
 
+    // Load marketing data
     useEffect(() => {
-        const loadAnalytics = async () => {
+        const loadData = async () => {
             if (!projectId) return;
 
-            setLoadingAnalytics(true);
             try {
-                const response = await fetch(
-                    `/api/analytics/funnel?project_id=${projectId}&time_range=${timeRange}`
-                );
-                const data = await response.json();
+                setLoading(true);
 
-                if (response.ok) {
-                    setAnalytics({
-                        registrations: data.registrations,
-                        views: data.views,
-                        conversions: data.enrollments,
-                        revenue: data.revenue,
-                        watchRate: data.watchRate,
-                        enrollmentRate: data.enrollmentRate,
-                        revenuePerRegistrant: data.revenuePerRegistrant,
-                    });
-                } else {
-                    logger.error({ error: data.error }, "Failed to load analytics");
+                // Load profile
+                const profileRes = await fetch(
+                    `/api/marketing/profiles?funnel_project_id=${projectId}`
+                );
+
+                if (profileRes.ok) {
+                    const profileData = await profileRes.json();
+                    if (profileData.profiles && profileData.profiles.length > 0) {
+                        setProfile(profileData.profiles[0]);
+                        setMarketingEnabled(true);
+                        logger.info(
+                            { profileId: profileData.profiles[0].id },
+                            "Marketing profile loaded"
+                        );
+                    }
+                }
+
+                // Load stats if enabled
+                if (profile) {
+                    await loadStats();
                 }
             } catch (error) {
-                logger.error({ error }, "Failed to load analytics");
+                logger.error({ error }, "Failed to load marketing data");
             } finally {
-                setLoadingAnalytics(false);
+                setLoading(false);
             }
         };
 
-        loadAnalytics();
-    }, [projectId, timeRange]);
+        loadData();
+    }, [projectId, profile, loadStats]);
 
-    const conversionRate = analytics.enrollmentRate?.toFixed(2) || "0.00";
+    const handleEnableMarketing = async (enabled: boolean) => {
+        setMarketingEnabled(enabled);
 
-    if (!projectId) {
+        if (enabled && !profile) {
+            try {
+                const response = await fetch("/api/marketing/profiles", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        funnel_project_id: projectId,
+                        name: "Main Marketing Profile",
+                    }),
+                });
+
+                const data = await response.json();
+
+                if (data.success && data.profile) {
+                    setProfile(data.profile);
+
+                    toast({
+                        title: "Marketing Content Engine Enabled",
+                        description:
+                            "Your profile has been created with auto-populated brand voice from your intake and offer data.",
+                    });
+
+                    logger.info(
+                        { profileId: data.profile.id },
+                        "Marketing profile created"
+                    );
+                } else {
+                    throw new Error(data.error || "Failed to create profile");
+                }
+            } catch (error) {
+                logger.error({ error }, "Failed to enable marketing");
+                toast({
+                    title: "Error",
+                    description: "Failed to enable marketing engine. Please try again.",
+                    variant: "destructive",
+                });
+                setMarketingEnabled(false);
+            }
+        }
+    };
+
+    if (loading) {
         return (
-            <div className="flex h-screen items-center justify-center">
-                <div className="text-muted-foreground">Loading...</div>
-            </div>
+            <StepLayout
+                stepTitle="Marketing Content Engine"
+                stepDescription="Generate and publish organic social content"
+                currentStep={13}
+                projectId={projectId}
+                completedSteps={completedSteps}
+            >
+                <div className="flex items-center justify-center py-12">
+                    <div className="text-center">
+                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4" />
+                        <p className="text-muted-foreground">
+                            Loading marketing engine...
+                        </p>
+                    </div>
+                </div>
+            </StepLayout>
         );
     }
 
     return (
         <StepLayout
-            currentStep={13}
+            stepTitle="Marketing Content Engine"
+            stepDescription="AI-powered social content generation with Echo Mode voice mirroring"
+            currentStep={12}
             projectId={projectId}
             completedSteps={completedSteps}
-            funnelName={project?.name}
-            stepTitle="Analytics & Performance"
-            stepDescription="Track your funnel's performance and optimize for conversions"
+            nextLabel="Continue to Analytics"
         >
-            <div className="space-y-8">
-                <div className="rounded-lg border border-brand-100 bg-gradient-to-br from-brand-50 to-primary/5 p-8">
-                    <div className="mb-6 flex items-center justify-between">
-                        <div className="flex flex-col items-end">
-                            <label
-                                htmlFor="timeRange"
-                                className="text-sm font-medium text-foreground mb-2"
-                            >
-                                Time Range
-                            </label>
-                            <select
-                                id="timeRange"
-                                value={timeRange}
-                                onChange={(e) => setTimeRange(e.target.value)}
-                                className="rounded-md border border-border bg-card px-4 py-2 text-sm shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                            >
-                                <option value="7">Last 7 days</option>
-                                <option value="30">Last 30 days</option>
-                                <option value="90">Last 90 days</option>
-                            </select>
+            <div className="space-y-6">
+                {/* Enable/Disable Section */}
+                <Card className="p-6 bg-gradient-to-r from-primary/5 to-purple-50">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <Share2 className="h-6 w-6 text-primary-foreground0" />
+                            <div>
+                                <h3 className="text-lg font-semibold">
+                                    Enable Marketing Content Engine
+                                </h3>
+                                <p className="text-sm text-muted-foreground">
+                                    Generate platform-optimized content in your
+                                    authentic founder voice
+                                </p>
+                            </div>
                         </div>
+                        <Switch
+                            checked={marketingEnabled}
+                            onCheckedChange={handleEnableMarketing}
+                        />
                     </div>
-                </div>
 
-                {loadingAnalytics && (
-                    <div className="flex items-center justify-center py-12">
-                        <div className="text-muted-foreground">
-                            Loading analytics...
-                        </div>
-                    </div>
+                    {marketingEnabled && (
+                        <>
+                            <div className="mt-6 grid grid-cols-5 gap-4 text-sm">
+                                <div className="text-center p-3 bg-card rounded-lg">
+                                    <div className="text-2xl font-bold text-primary">
+                                        {stats.postsThisMonth}
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                        Posts This Month
+                                    </div>
+                                </div>
+                                <div className="text-center p-3 bg-card rounded-lg">
+                                    <div className="text-2xl font-bold text-green-600">
+                                        {stats.totalOptIns}
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                        Total Opt-ins
+                                    </div>
+                                    {stats.overallOI1000 > 0 && (
+                                        <div className="text-xs text-muted-foreground mt-1">
+                                            {stats.overallOI1000.toFixed(1)} O/I-1000
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="text-center p-3 bg-card rounded-lg">
+                                    <div className="text-2xl font-bold text-purple-600">
+                                        {stats.scheduledPosts}
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                        Scheduled
+                                    </div>
+                                </div>
+                                <div className="text-center p-3 bg-card rounded-lg">
+                                    <div className="text-2xl font-bold text-orange-600">
+                                        {stats.activeExperiments}
+                                    </div>
+                                    <div className="text-muted-foreground">
+                                        Active Tests
+                                    </div>
+                                </div>
+                                <div
+                                    className="text-center p-3 bg-card rounded-lg cursor-pointer hover:bg-yellow-50 transition-smooth"
+                                    onClick={() => setShowApprovalModal(true)}
+                                >
+                                    <div className="text-2xl font-bold text-yellow-600">
+                                        {stats.pendingApprovals}
+                                    </div>
+                                    <div className="text-muted-foreground">Pending</div>
+                                </div>
+                            </div>
+
+                            {/* Quick Action Buttons */}
+                            <div className="mt-4 flex justify-end gap-3">
+                                <Button
+                                    onClick={() => setShowApprovalModal(true)}
+                                    variant="outline"
+                                    size="sm"
+                                >
+                                    Review Approvals
+                                </Button>
+                                <Button
+                                    onClick={() => setShowExperimentModal(true)}
+                                    variant="outline"
+                                    size="sm"
+                                >
+                                    Create A/B Test
+                                </Button>
+                            </div>
+                        </>
+                    )}
+                </Card>
+
+                {marketingEnabled && profile && (
+                    <Tabs
+                        value={activeTab}
+                        onValueChange={setActiveTab}
+                        className="w-full"
+                    >
+                        <TabsList className="grid w-full grid-cols-6">
+                            <TabsTrigger value="profile">
+                                <Sparkles className="h-4 w-4 mr-2" />
+                                Profile
+                            </TabsTrigger>
+                            <TabsTrigger value="generate">
+                                <Lightbulb className="h-4 w-4 mr-2" />
+                                Generate
+                            </TabsTrigger>
+                            <TabsTrigger value="calendar">
+                                <Calendar className="h-4 w-4 mr-2" />
+                                Calendar
+                            </TabsTrigger>
+                            <TabsTrigger value="analytics">
+                                <BarChart3 className="h-4 w-4 mr-2" />
+                                Analytics
+                            </TabsTrigger>
+                            <TabsTrigger value="trends">
+                                <TrendingUp className="h-4 w-4 mr-2" />
+                                Trends
+                            </TabsTrigger>
+                            <TabsTrigger value="settings">
+                                <Settings className="h-4 w-4 mr-2" />
+                                Settings
+                            </TabsTrigger>
+                        </TabsList>
+
+                        {/* Profile Tab */}
+                        <TabsContent value="profile" className="mt-6">
+                            <ProfileConfigForm
+                                profile={profile}
+                                onUpdate={async () => {
+                                    // Reload profile
+                                    const res = await fetch(
+                                        `/api/marketing/profiles?funnel_project_id=${projectId}`
+                                    );
+                                    if (res.ok) {
+                                        const data = await res.json();
+                                        if (data.profiles?.[0]) {
+                                            setProfile(data.profiles[0]);
+                                        }
+                                    }
+                                }}
+                            />
+                        </TabsContent>
+
+                        {/* Generate Tab */}
+                        <TabsContent value="generate" className="mt-6">
+                            <ContentGenerator
+                                profileId={profile.id}
+                                funnelProjectId={projectId}
+                                onContentGenerated={() => loadStats()}
+                            />
+                        </TabsContent>
+
+                        {/* Calendar Tab */}
+                        <TabsContent value="calendar" className="mt-6">
+                            <ContentCalendar
+                                funnelProjectId={projectId}
+                                onUpdate={() => loadStats()}
+                            />
+                        </TabsContent>
+
+                        {/* Analytics Tab */}
+                        <TabsContent value="analytics" className="mt-6">
+                            <MarketingAnalyticsDashboard funnelProjectId={projectId} />
+                        </TabsContent>
+
+                        {/* Trends Tab */}
+                        <TabsContent value="trends" className="mt-6">
+                            <TrendExplorer
+                                profileId={profile.id}
+                                funnelProjectId={projectId}
+                            />
+                        </TabsContent>
+
+                        {/* Settings Tab */}
+                        <TabsContent value="settings" className="mt-6">
+                            <MarketingSettings
+                                funnelProjectId={projectId}
+                                profileId={profile.id}
+                            />
+                        </TabsContent>
+                    </Tabs>
                 )}
-
-                {!loadingAnalytics && (
-                    <>
-                        {/* Key Metrics */}
-                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
-                                <div className="mb-3 flex items-center justify-between">
-                                    <h3 className="text-sm font-medium text-muted-foreground">
-                                        Registrations
-                                    </h3>
-                                    <Users className="h-5 w-5 text-primary" />
-                                </div>
-                                <div className="text-3xl font-bold text-foreground">
-                                    {analytics.registrations.toLocaleString()}
-                                </div>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                    Total sign-ups to date
-                                </p>
-                            </div>
-
-                            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
-                                <div className="mb-3 flex items-center justify-between">
-                                    <h3 className="text-sm font-medium text-muted-foreground">
-                                        Video Views
-                                    </h3>
-                                    <TrendingUp className="h-5 w-5 text-purple-600" />
-                                </div>
-                                <div className="text-3xl font-bold text-foreground">
-                                    {analytics.views.toLocaleString()}
-                                </div>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                    Presentation watches
-                                </p>
-                            </div>
-
-                            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
-                                <div className="mb-3 flex items-center justify-between">
-                                    <h3 className="text-sm font-medium text-muted-foreground">
-                                        Conversions
-                                    </h3>
-                                    <Users className="h-5 w-5 text-green-600" />
-                                </div>
-                                <div className="text-3xl font-bold text-foreground">
-                                    {analytics.conversions.toLocaleString()}
-                                </div>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                    {conversionRate}% conversion rate
-                                </p>
-                            </div>
-
-                            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
-                                <div className="mb-3 flex items-center justify-between">
-                                    <h3 className="text-sm font-medium text-muted-foreground">
-                                        Revenue
-                                    </h3>
-                                    <DollarSign className="h-5 w-5 text-emerald-600" />
-                                </div>
-                                <div className="text-3xl font-bold text-foreground">
-                                    ${analytics.revenue.toLocaleString()}
-                                </div>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                    Total generated
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Additional Metrics Row */}
-                        <div className="grid gap-6 sm:grid-cols-3">
-                            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
-                                <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                                    Watch Rate
-                                </h3>
-                                <div className="text-3xl font-bold text-foreground">
-                                    {analytics.watchRate?.toFixed(1)}%
-                                </div>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                    Percentage of registrants who watched video
-                                </p>
-                            </div>
-
-                            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
-                                <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                                    Enrollment Rate
-                                </h3>
-                                <div className="text-3xl font-bold text-foreground">
-                                    {analytics.enrollmentRate?.toFixed(1)}%
-                                </div>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                    Percentage of viewers who viewed enrollment page
-                                </p>
-                            </div>
-
-                            <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
-                                <h3 className="text-sm font-medium text-muted-foreground mb-2">
-                                    Revenue Per Registrant
-                                </h3>
-                                <div className="text-3xl font-bold text-foreground">
-                                    ${analytics.revenuePerRegistrant?.toFixed(2)}
-                                </div>
-                                <p className="mt-1 text-xs text-muted-foreground">
-                                    Average revenue generated per sign-up
-                                </p>
-                            </div>
-                        </div>
-                    </>
-                )}
-
-                {/* Completion Message */}
-                <div className="rounded-lg border border-green-200 bg-green-50 p-8 text-center">
-                    <div className="mb-4 text-6xl">🎉</div>
-                    <h2 className="mb-3 text-2xl font-bold text-green-900">
-                        Congratulations! Your Funnel is Complete
-                    </h2>
-                    <p className="mx-auto max-w-2xl text-green-800">
-                        You've successfully created your complete webinar funnel with
-                        AI. All your pages are generated and ready to be published.
-                        Track your performance here and optimize for better conversions.
-                    </p>
-                </div>
             </div>
+
+            {/* Approval Workflow Modal */}
+            {marketingEnabled && (
+                <ApprovalWorkflowModal
+                    isOpen={showApprovalModal}
+                    onClose={() => setShowApprovalModal(false)}
+                    funnelProjectId={projectId}
+                    onApprovalComplete={() => {
+                        loadStats();
+                    }}
+                />
+            )}
+
+            {/* Experiment Creator Modal */}
+            {marketingEnabled && (
+                <ExperimentCreatorModal
+                    isOpen={showExperimentModal}
+                    onClose={() => setShowExperimentModal(false)}
+                    funnelProjectId={projectId}
+                    onExperimentCreated={() => {
+                        setShowExperimentModal(false);
+                        loadStats();
+                    }}
+                />
+            )}
         </StepLayout>
     );
 }

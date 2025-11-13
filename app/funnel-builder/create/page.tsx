@@ -175,7 +175,7 @@ export default function CreateFunnelPage() {
                     <CardHeader>
                         <CardTitle>What Happens Next?</CardTitle>
                         <CardDescription>
-                            After creating your funnel, you'll be guided through 11
+                            After creating your funnel, you'll be guided through 13
                             steps
                         </CardDescription>
                     </CardHeader>
@@ -192,19 +192,24 @@ export default function CreateFunnelPage() {
                             </li>
                             <li className="flex items-start">
                                 <span className="mr-2 font-bold text-primary">3.</span>
-                                Create 55-slide presentation structure
+                                Brand Design - Define your visual identity with colors
+                                and personality
                             </li>
                             <li className="flex items-start">
                                 <span className="mr-2 font-bold text-primary">4.</span>
-                                Generate beautiful Gamma presentation
+                                Create 55-slide presentation structure
                             </li>
                             <li className="flex items-start">
                                 <span className="mr-2 font-bold text-primary">5.</span>
+                                Generate beautiful Gamma presentation
+                            </li>
+                            <li className="flex items-start">
+                                <span className="mr-2 font-bold text-primary">6.</span>
                                 Create enrollment page with AI-written sales copy
                             </li>
                             <li className="flex items-start">
                                 <span className="mr-2 font-bold text-primary">...</span>
-                                And 6 more steps to complete your funnel!
+                                And 7 more steps to complete your funnel!
                             </li>
                         </ol>
                     </CardContent>

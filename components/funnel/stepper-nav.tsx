@@ -18,17 +18,18 @@ const STEPS: Step[] = [
         description: "Multiple input options",
     },
     { number: 2, title: "Define Offer", description: "7 P's framework" },
-    { number: 3, title: "Presentation Structure", description: "AI-generated outline" },
-    { number: 4, title: "Create Presentation", description: "Gamma AI slides" },
-    { number: 5, title: "Enrollment Page", description: "AI sales copy" },
-    { number: 6, title: "Talk Track", description: "Video script" },
-    { number: 7, title: "Upload Video", description: "Pitch recording" },
-    { number: 8, title: "Watch Page", description: "Video landing" },
-    { number: 9, title: "Registration", description: "Lead capture" },
-    { number: 10, title: "Flow Setup", description: "Connect pages" },
-    { number: 11, title: "AI Follow-Up", description: "Smart automation" },
-    { number: 12, title: "Marketing Content", description: "Social content engine" },
-    { number: 13, title: "Analytics", description: "Track performance" },
+    { number: 3, title: "Brand Design", description: "Visual identity" },
+    { number: 4, title: "Presentation Structure", description: "AI-generated outline" },
+    { number: 5, title: "Create Presentation", description: "Gamma AI slides" },
+    { number: 6, title: "Enrollment Page", description: "AI sales copy" },
+    { number: 7, title: "Talk Track", description: "Video script" },
+    { number: 8, title: "Upload Video", description: "Pitch recording" },
+    { number: 9, title: "Watch Page", description: "Video landing" },
+    { number: 10, title: "Registration", description: "Lead capture" },
+    { number: 11, title: "Flow Setup", description: "Connect pages" },
+    { number: 12, title: "AI Follow-Up", description: "Smart automation" },
+    { number: 13, title: "Marketing Content", description: "Social content engine" },
+    { number: 14, title: "Analytics", description: "Track performance" },
 ];
 
 interface StepperNavProps {
@@ -45,7 +46,7 @@ export function StepperNav({
     className,
 }: StepperNavProps) {
     const pathname = usePathname();
-    const completionPercentage = Math.round((completedSteps.length / 12) * 100);
+    const completionPercentage = Math.round((completedSteps.length / 13) * 100);
 
     return (
         <nav className={cn("space-y-2", className)}>

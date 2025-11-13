@@ -31,6 +31,8 @@ interface VapiTranscript {
     id: string;
     transcript_text: string;
     created_at: string;
+    intake_method?: string;
+    session_name?: string;
 }
 
 export default function Step3Page({
@@ -379,7 +381,7 @@ export default function Step3Page({
             completedSteps={completedSteps}
             nextDisabled={!hasCompletedDeck}
             nextLabel={
-                hasCompletedDeck ? "Create Gamma Deck" : "Generate Structure First"
+                hasCompletedDeck ? "Create Presentation" : "Generate Structure First"
             }
             stepTitle="Presentation Structure"
             stepDescription="AI generates your presentation outline"
@@ -397,7 +399,7 @@ export default function Step3Page({
 
                 {/* Generation Interface */}
                 {!isGenerating ? (
-                    <div className="rounded-lg border border-brand-100 bg-gradient-to-br from-brand-50 to-primary/5 p-8">
+                    <div className="rounded-lg border border-primary/10 bg-gradient-to-br from-primary/5 to-emerald-light/5 p-8">
                         <div className="mx-auto mb-6 max-w-md space-y-4">
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-foreground">
@@ -408,8 +410,8 @@ export default function Step3Page({
                                         onClick={() => setPresentationType("webinar")}
                                         className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
                                             presentationType === "webinar"
-                                                ? "border-brand-500 bg-brand-50 text-brand-900"
-                                                : "border-border bg-card text-foreground hover:border-gray-400"
+                                                ? "border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20"
+                                                : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5"
                                         }`}
                                     >
                                         <div className="font-semibold">Webinar</div>
@@ -421,8 +423,8 @@ export default function Step3Page({
                                         onClick={() => setPresentationType("vsl")}
                                         className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
                                             presentationType === "vsl"
-                                                ? "border-brand-500 bg-brand-50 text-brand-900"
-                                                : "border-border bg-card text-foreground hover:border-gray-400"
+                                                ? "border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20"
+                                                : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5"
                                         }`}
                                     >
                                         <div className="font-semibold">VSL</div>
@@ -436,8 +438,8 @@ export default function Step3Page({
                                         }
                                         className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
                                             presentationType === "sales_page"
-                                                ? "border-brand-500 bg-brand-50 text-brand-900"
-                                                : "border-border bg-card text-foreground hover:border-gray-400"
+                                                ? "border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20"
+                                                : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5"
                                         }`}
                                     >
                                         <div className="font-semibold">Sales Page</div>
@@ -450,7 +452,7 @@ export default function Step3Page({
 
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-foreground">
-                                    Select Intake Call Source
+                                    Select Intake Session
                                 </label>
                                 <select
                                     value={selectedTranscript}
@@ -458,35 +460,54 @@ export default function Step3Page({
                                         setSelectedTranscript(e.target.value)
                                     }
                                     disabled={transcripts.length === 0}
-                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-brand-500 focus:ring-2 focus:ring-brand-500 disabled:cursor-not-allowed disabled:bg-muted"
+                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:bg-muted"
                                 >
                                     {transcripts.length === 0 ? (
                                         <option value="">
-                                            No intake calls available
+                                            No intake sessions available
                                         </option>
                                     ) : (
                                         <>
                                             <option value="">
-                                                Select an intake call...
+                                                Select an intake session...
                                             </option>
-                                            {transcripts.map((transcript) => (
-                                                <option
-                                                    key={transcript.id}
-                                                    value={transcript.id}
-                                                >
-                                                    Call from{" "}
-                                                    {new Date(
-                                                        transcript.created_at
-                                                    ).toLocaleDateString()}
-                                                </option>
-                                            ))}
+                                            {transcripts.map((transcript) => {
+                                                const methodIcons: Record<
+                                                    string,
+                                                    string
+                                                > = {
+                                                    voice: "📞",
+                                                    upload: "📄",
+                                                    paste: "📝",
+                                                    scrape: "🌐",
+                                                    google_drive: "☁️",
+                                                };
+                                                const icon =
+                                                    methodIcons[
+                                                        transcript.intake_method ||
+                                                            "voice"
+                                                    ] || "📞";
+                                                const displayName =
+                                                    transcript.session_name ||
+                                                    `${transcript.intake_method === "voice" ? "Call" : "Session"} from ${new Date(transcript.created_at).toLocaleDateString()}`;
+
+                                                return (
+                                                    <option
+                                                        key={transcript.id}
+                                                        value={transcript.id}
+                                                    >
+                                                        {icon} {displayName}
+                                                    </option>
+                                                );
+                                            })}
                                         </>
                                     )}
                                 </select>
 
                                 {transcripts.length === 0 && (
                                     <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-600">
-                                        💡 Complete Step 1 first to record intake calls
+                                        💡 Complete Step 1 first to create intake
+                                        sessions
                                     </p>
                                 )}
                             </div>
@@ -500,8 +521,8 @@ export default function Step3Page({
                                         onClick={() => setSlideCount("5")}
                                         className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
                                             slideCount === "5"
-                                                ? "border-brand-500 bg-brand-50 text-brand-900"
-                                                : "border-border bg-card text-foreground hover:border-gray-400"
+                                                ? "border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20"
+                                                : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5"
                                         }`}
                                     >
                                         <div className="font-semibold">5 Slides</div>
@@ -513,8 +534,8 @@ export default function Step3Page({
                                         onClick={() => setSlideCount("55")}
                                         className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
                                             slideCount === "55"
-                                                ? "border-brand-500 bg-brand-50 text-brand-900"
-                                                : "border-border bg-card text-foreground hover:border-gray-400"
+                                                ? "border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20"
+                                                : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5"
                                         }`}
                                     >
                                         <div className="font-semibold">55 Slides</div>
@@ -537,13 +558,13 @@ export default function Step3Page({
                                 disabled={!selectedTranscript}
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
                                     selectedTranscript
-                                        ? "bg-brand-500 text-white hover:bg-brand-600"
+                                        ? "bg-primary text-white hover:bg-primary/90 shadow-md"
                                         : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                 }`}
                             >
                                 <Sparkles className="h-6 w-6" />
                                 {!selectedTranscript
-                                    ? "Select Call First"
+                                    ? "Select Session First"
                                     : "Generate Deck Structure"}
                             </button>
 

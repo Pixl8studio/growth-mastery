@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -48,12 +48,6 @@ export function ApprovalWorkflowModal({
     const [reviewNotes, setReviewNotes] = useState("");
     const [showPreview, setShowPreview] = useState(false);
 
-    useEffect(() => {
-        if (isOpen) {
-            loadVariantsForApproval();
-        }
-    }, [isOpen, funnelProjectId, platformFilter, statusFilter, loadVariantsForApproval]);
-
     const loadVariantsForApproval = useCallback(async () => {
         setLoading(true);
 
@@ -90,6 +84,12 @@ export function ApprovalWorkflowModal({
             setLoading(false);
         }
     }, [funnelProjectId, platformFilter, statusFilter]);
+
+    useEffect(() => {
+        if (isOpen) {
+            loadVariantsForApproval();
+        }
+    }, [isOpen, funnelProjectId, platformFilter, statusFilter, loadVariantsForApproval]);
 
     const handleApprove = async (variantId: string) => {
         try {

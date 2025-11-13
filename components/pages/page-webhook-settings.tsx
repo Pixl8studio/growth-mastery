@@ -40,10 +40,6 @@ export function PageWebhookSettings({ pageId, pageType }: PageWebhookSettingsPro
     const [originalWebhookUrl, setOriginalWebhookUrl] = useState("");
     const [originalWebhookSecret, setOriginalWebhookSecret] = useState("");
 
-    useEffect(() => {
-        loadWebhookConfig();
-    }, [pageId, pageType, loadWebhookConfig]);
-
     const loadWebhookConfig = useCallback(async () => {
         try {
             setLoading(true);
@@ -79,6 +75,10 @@ export function PageWebhookSettings({ pageId, pageType }: PageWebhookSettingsPro
             setLoading(false);
         }
     }, [pageId, pageType]);
+
+    useEffect(() => {
+        loadWebhookConfig();
+    }, [pageId, pageType, loadWebhookConfig]);
 
     useEffect(() => {
         const hasChanges =

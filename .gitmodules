@@ -1,0 +1,3 @@
+[submodule "resources/editor"]
+	path = resources/editor
+	url = https://github.com/danlawless/editor

@@ -137,7 +137,7 @@ export function OfferEditor({
                 purpose: offer.purpose,
                 pathway: offer.pathway,
             });
-        } catch (error) {
+        } catch (_error) {
             alert("Failed to save offer. Please try again.");
         } finally {
             setSaving(false);

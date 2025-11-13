@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,11 +38,7 @@ export function BriefTemplateLibrary({
     const [searchTerm, setSearchTerm] = useState("");
     const [filter, setFilter] = useState<"all" | "default" | "custom">("all");
 
-    useEffect(() => {
-        loadTemplates();
-    }, [funnelProjectId]);
-
-    const loadTemplates = async () => {
+    const loadTemplates = useCallback(async () => {
         setLoading(true);
         try {
             const response = await fetch(
@@ -63,7 +59,11 @@ export function BriefTemplateLibrary({
         } finally {
             setLoading(false);
         }
-    };
+    }, [funnelProjectId]);
+
+    useEffect(() => {
+        loadTemplates();
+    }, [loadTemplates]);
 
     const handleDeleteTemplate = async (id: string) => {
         if (!confirm("Delete this template?")) return;

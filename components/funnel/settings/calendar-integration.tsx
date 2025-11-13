@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/client-logger";
 import { Button } from "@/components/ui/button";
@@ -25,11 +25,7 @@ export function CalendarIntegration({ projectId }: CalendarIntegrationProps) {
     const [connecting, setConnecting] = useState(false);
     const { toast } = useToast();
 
-    useEffect(() => {
-        loadConnection();
-    }, [projectId]);
-
-    const loadConnection = async () => {
+    const loadConnection = useCallback(async () => {
         setLoading(true);
         try {
             const supabase = createClient();
@@ -48,7 +44,11 @@ export function CalendarIntegration({ projectId }: CalendarIntegrationProps) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [projectId]);
+
+    useEffect(() => {
+        loadConnection();
+    }, [loadConnection]);
 
     const handleConnect = async () => {
         setConnecting(true);

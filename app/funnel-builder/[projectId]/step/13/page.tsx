@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
-import { BarChart3, TrendingUp, Users, DollarSign } from "lucide-react";
+import { TrendingUp, Users, DollarSign } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";

@@ -39,7 +39,7 @@ export function personalizeMessage(
     const tokens = buildTokenValues(prospect);
 
     // Get segment-specific personalization rules
-    const segmentRules = message.personalization_rules[prospect.segment];
+    const _segmentRules = message.personalization_rules[prospect.segment];
 
     // Personalize subject line
     const personalizedSubject = message.subject_line

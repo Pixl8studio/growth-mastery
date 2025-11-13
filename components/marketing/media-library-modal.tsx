@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
@@ -49,13 +49,7 @@ export function MediaLibraryModal({
     const [editingAltText, setEditingAltText] = useState<string | null>(null);
     const [altTextValue, setAltTextValue] = useState("");
 
-    useEffect(() => {
-        if (isOpen) {
-            loadMedia();
-        }
-    }, [isOpen, funnelProjectId]);
-
-    const loadMedia = async () => {
+    const loadMedia = useCallback(async () => {
         setLoading(true);
         try {
             const response = await fetch(
@@ -76,7 +70,13 @@ export function MediaLibraryModal({
         } finally {
             setLoading(false);
         }
-    };
+    }, [funnelProjectId, toast]);
+
+    useEffect(() => {
+        if (isOpen) {
+            loadMedia();
+        }
+    }, [isOpen, funnelProjectId, loadMedia]);
 
     const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;

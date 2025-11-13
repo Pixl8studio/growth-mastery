@@ -5,7 +5,7 @@
  * Select from uploaded pitch videos to insert into pages
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { X, Video, Loader2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logger } from "@/lib/client-logger";
@@ -29,13 +29,7 @@ export function VideoSelectorModal({
     const [error, setError] = useState<string | null>(null);
     const [selectedVideo, setSelectedVideo] = useState<PitchVideo | null>(null);
 
-    useEffect(() => {
-        if (isOpen) {
-            loadVideos();
-        }
-    }, [isOpen, projectId]);
-
-    const loadVideos = async () => {
+    const loadVideos = useCallback(async () => {
         setLoading(true);
         setError(null);
 
@@ -60,7 +54,13 @@ export function VideoSelectorModal({
         } finally {
             setLoading(false);
         }
-    };
+    }, [projectId]);
+
+    useEffect(() => {
+        if (isOpen) {
+            loadVideos();
+        }
+    }, [isOpen, projectId, loadVideos]);
 
     const handleSelectVideo = () => {
         if (selectedVideo) {

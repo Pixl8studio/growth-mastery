@@ -19,7 +19,7 @@ export default function IntegrationsSettingsPage() {
     const [webhookEnabled, setWebhookEnabled] = useState(false);
     const [webhookUrl, setWebhookUrl] = useState("");
     const [webhookSecret, setWebhookSecret] = useState("");
-    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [_hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     // Store original values to detect changes
     const [originalWebhookEnabled, setOriginalWebhookEnabled] = useState(false);

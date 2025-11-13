@@ -43,7 +43,7 @@ export function StepLayout({
     stepDescription,
     completedSteps = [],
     funnelName,
-    funnelId,
+    funnelId: _funnelId,
     projectId,
     onNext,
     onPrevious,

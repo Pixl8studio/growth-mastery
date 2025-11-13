@@ -8,7 +8,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
@@ -43,7 +42,6 @@ export default function Step11Page({
 }: {
     params: Promise<{ projectId: string }>;
 }) {
-    const router = useRouter();
     const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
     const [followupEnabled, setFollowupEnabled] = useState(false);
@@ -275,7 +273,7 @@ export default function Step11Page({
         };
 
         loadMessages();
-    }, [selectedSequenceId, sequences, agentConfig?.id]);
+    }, [selectedSequenceId, sequences, agentConfig]);
 
     const handleEnableFollowup = async (enabled: boolean) => {
         setFollowupEnabled(enabled);

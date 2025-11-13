@@ -9,7 +9,6 @@
 
 import { useParams } from "next/navigation";
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProspectList } from "@/components/followup/prospect-list";
 import { SequenceManager } from "@/components/followup/sequence-manager";

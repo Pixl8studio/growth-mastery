@@ -69,7 +69,7 @@ export const SEGMENT_RULES: Record<string, SegmentPersonalization> = {
  * Opening message templates (Day 0)
  */
 export function getOpeningTemplate(segment: string): MessageTemplate {
-    const rules = SEGMENT_RULES[segment] || SEGMENT_RULES.sampler;
+    const _rules = SEGMENT_RULES[segment] || SEGMENT_RULES.sampler;
 
     if (segment === "no_show") {
         return {
@@ -166,7 +166,7 @@ Let me know what's most helpful!`,
  * Value/Story message templates
  */
 export function getValueStoryTemplate(segment: string): MessageTemplate {
-    const rules = SEGMENT_RULES[segment] || SEGMENT_RULES.sampler;
+    const _rules = SEGMENT_RULES[segment] || SEGMENT_RULES.sampler;
 
     return {
         type: "value_story",
@@ -200,7 +200,7 @@ Want me to map this out for you?`,
 /**
  * Social proof template
  */
-export function getSocialProofTemplate(segment: string): MessageTemplate {
+export function getSocialProofTemplate(_segment: string): MessageTemplate {
     return {
         type: "social_proof",
         channel: "email",
@@ -336,7 +336,7 @@ What makes sense for you?`,
 /**
  * Urgency template (for near-deadline messages)
  */
-export function getUrgencyTemplate(segment: string): MessageTemplate {
+export function getUrgencyTemplate(_segment: string): MessageTemplate {
     return {
         type: "urgency",
         channel: "email",

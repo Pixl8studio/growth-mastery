@@ -10,7 +10,6 @@ import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { AuthenticationError, ValidationError } from "@/lib/errors";
 import {
-    selectBestStory,
     selectStoriesForProspect,
     detectObjections,
     getRecommendedStoryTypes,

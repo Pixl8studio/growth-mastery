@@ -148,7 +148,7 @@ export default function Step6Page({
             }
         };
         loadData();
-    }, [projectId]);
+    }, [projectId, selectedDeckId]);
 
     // Check for active jobs on page load (resume if user navigated away)
     useEffect(() => {

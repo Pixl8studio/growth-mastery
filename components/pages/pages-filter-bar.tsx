@@ -7,7 +7,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import type { FunnelOption, PageType } from "@/types/pages";
+import type { FunnelOption } from "@/types/pages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, X } from "lucide-react";

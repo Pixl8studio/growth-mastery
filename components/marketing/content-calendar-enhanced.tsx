@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -48,11 +48,7 @@ export function ContentCalendarEnhanced({
     const [showSchedulingModal, setShowSchedulingModal] = useState(false);
     const [schedulingVariantId, setSchedulingVariantId] = useState<string | null>(null);
 
-    useEffect(() => {
-        loadCalendar();
-    }, [funnelProjectId, currentMonth, space]);
-
-    const loadCalendar = async () => {
+    const loadCalendar = useCallback(async () => {
         setLoading(true);
 
         try {
@@ -82,7 +78,11 @@ export function ContentCalendarEnhanced({
         } finally {
             setLoading(false);
         }
-    };
+    }, [funnelProjectId, currentMonth, space]);
+
+    useEffect(() => {
+        loadCalendar();
+    }, [loadCalendar]);
 
     const handlePreviousMonth = () => {
         setCurrentMonth(

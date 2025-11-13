@@ -172,7 +172,7 @@ export default function Step7Page({
             }
         };
         loadData();
-    }, [projectId]);
+    }, [projectId, selectedDeckId]);
 
     const pollVideoStatus = async (
         videoId: string,

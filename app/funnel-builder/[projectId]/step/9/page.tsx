@@ -6,8 +6,10 @@
  */
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
+import { useIsMobile } from "@/lib/mobile-utils.client";
 import { Video, PlusCircle, Eye, Pencil, Trash2, X } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
@@ -49,6 +51,8 @@ export default function Step8WatchPage({
 }: {
     params: Promise<{ projectId: string }>;
 }) {
+    const router = useRouter();
+    const isMobile = useIsMobile("lg");
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
     const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
@@ -61,6 +65,19 @@ export default function Step8WatchPage({
         deckStructureId: "",
         videoId: "",
     });
+
+    // Redirect mobile users to desktop-required page
+    useEffect(() => {
+        if (isMobile && projectId) {
+            const params = new URLSearchParams({
+                feature: "Watch Page Editor",
+                description:
+                    "The watch page editor requires a desktop computer for creating and customizing video watch pages with visual editing tools.",
+                returnPath: `/funnel-builder/${projectId}`,
+            });
+            router.push(`/desktop-required?${params.toString()}`);
+        }
+    }, [isMobile, projectId, router]);
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);

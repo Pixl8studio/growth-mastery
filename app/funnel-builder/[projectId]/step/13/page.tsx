@@ -8,8 +8,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
+import { useIsMobile } from "@/lib/mobile-utils.client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -41,11 +43,26 @@ export default function Step12Page({
 }: {
     params: Promise<{ projectId: string }>;
 }) {
+    const router = useRouter();
+    const isMobile = useIsMobile("lg");
     const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
     const [marketingEnabled, setMarketingEnabled] = useState(false);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("profile");
+
+    // Redirect mobile users to desktop-required page
+    useEffect(() => {
+        if (isMobile && projectId) {
+            const params = new URLSearchParams({
+                feature: "Marketing Content Engine",
+                description:
+                    "The Marketing Content Engine requires a desktop computer for generating content, managing campaigns, and analyzing performance across multiple platforms.",
+                returnPath: `/funnel-builder/${projectId}`,
+            });
+            router.push(`/desktop-required?${params.toString()}`);
+        }
+    }, [isMobile, projectId, router]);
 
     // State for marketing data
     const [profile, setProfile] = useState<any>(null);

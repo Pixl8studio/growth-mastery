@@ -8,9 +8,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
+import { useIsMobile } from "@/lib/mobile-utils.client";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
@@ -43,11 +45,26 @@ export default function Step11Page({
 }: {
     params: Promise<{ projectId: string }>;
 }) {
+    const router = useRouter();
+    const isMobile = useIsMobile("lg");
     const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
     const [followupEnabled, setFollowupEnabled] = useState(false);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState("sender");
+
+    // Redirect mobile users to desktop-required page
+    useEffect(() => {
+        if (isMobile && projectId) {
+            const params = new URLSearchParams({
+                feature: "AI Follow-Up Engine",
+                description:
+                    "The AI Follow-Up Engine requires a desktop computer for configuring sequences, managing templates, and setting up advanced automation workflows.",
+                returnPath: `/funnel-builder/${projectId}`,
+            });
+            router.push(`/desktop-required?${params.toString()}`);
+        }
+    }, [isMobile, projectId, router]);
     const [generatingBrandVoice, setGeneratingBrandVoice] = useState(false);
 
     // State for all follow-up data

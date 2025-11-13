@@ -1,9 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
 import GammaThemeSelector from "@/components/funnel/gamma-theme-selector";
+import { useIsMobile } from "@/lib/mobile-utils.client";
 import {
     Rocket,
     Presentation,
@@ -49,6 +51,8 @@ export default function Step4Page({
 }: {
     params: Promise<{ projectId: string }>;
 }) {
+    const router = useRouter();
+    const isMobile = useIsMobile("lg");
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -64,6 +68,19 @@ export default function Step4Page({
         style: "professional",
         length: "full",
     });
+
+    // Redirect mobile users to desktop-required page
+    useEffect(() => {
+        if (isMobile && projectId) {
+            const params = new URLSearchParams({
+                feature: "Presentation Builder",
+                description:
+                    "The presentation builder requires a desktop computer for creating and managing complex slide presentations with Gamma integration.",
+                returnPath: `/funnel-builder/${projectId}`,
+            });
+            router.push(`/desktop-required?${params.toString()}`);
+        }
+    }, [isMobile, projectId, router]);
 
     const { toast } = useToast();
 

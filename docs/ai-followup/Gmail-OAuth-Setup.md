@@ -259,6 +259,114 @@ When Gmail is connected:
 - Trigger token refresh
 - Worst case: have user reconnect
 
+### "Failed to initiate Gmail connection" (500 Error)
+
+**Cause**: Missing environment variables or OAuth not configured
+
+**Symptoms**:
+
+- Error message: "Failed to initiate Gmail connection"
+- Gmail button appears but clicking it fails
+- Console shows 500 status code from `/api/followup/gmail/connect`
+
+**Solution**:
+
+1. **Check environment variables are set**:
+
+   ```bash
+   # In your .env.local or production environment
+   GOOGLE_CLIENT_ID=your_client_id.apps.googleusercontent.com
+   GOOGLE_CLIENT_SECRET=your_client_secret
+   ```
+
+2. **Verify credentials in Google Cloud Console**:
+   - Go to APIs & Services → Credentials
+   - Ensure OAuth client exists for your application
+   - Copy the correct Client ID and Secret
+
+3. **Restart your application**:
+
+   ```bash
+   # Kill and restart your dev server
+   npm run dev
+
+   # Or restart your production deployment
+   ```
+
+4. **Check application logs**:
+   - Look for "Gmail OAuth not configured" in server logs
+   - Verify the error mentions GOOGLE_CLIENT_ID specifically
+
+5. **If issue persists**:
+   - Ensure both CLIENT_ID and CLIENT_SECRET are set (both are required)
+   - Check for typos in variable names (they're case-sensitive)
+   - Verify no extra whitespace in the credentials
+   - Try regenerating OAuth credentials in Google Console
+
+**User Experience Note**: When Gmail OAuth is not configured:
+
+- The UI will show a warning: "Gmail OAuth Not Configured"
+- SendGrid option will be highlighted as the available alternative
+- Users are directed to contact administrator or use SendGrid
+
+### Gmail Status Check
+
+The application now includes a built-in status check:
+
+**Endpoint**: `GET /api/followup/gmail/status`
+
+**Returns**:
+
+```json
+{
+  "available": true,
+  "message": "Gmail OAuth is configured and ready to use",
+  "configured": true
+}
+```
+
+Or if not configured:
+
+```json
+{
+  "available": false,
+  "message": "Gmail OAuth requires GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET...",
+  "configured": false
+}
+```
+
+**How it helps**:
+
+- UI automatically checks Gmail availability on page load
+- Shows appropriate warnings when OAuth isn't configured
+- Prevents confusing error messages for users
+- Guides users to working alternatives (SendGrid)
+
+### Missing Test Users (Development/Testing Mode)
+
+**Cause**: App is in testing mode and user's email isn't added to test users list
+
+**Symptoms**:
+
+- OAuth popup shows "Access blocked: This app's request is invalid"
+- Error: "You can't sign in to this app because it doesn't comply with Google's OAuth
+  2.0 policy"
+
+**Solution**:
+
+1. Go to Google Cloud Console → OAuth consent screen
+2. Scroll to "Test users" section
+3. Click "Add Users"
+4. Add the email addresses that should have access
+5. Save changes
+6. Try connecting Gmail again
+
+**Alternative**: Publish your app:
+
+- Submit for verification (takes 1-3 weeks)
+- Once verified, any Google user can connect
+- Required for production use with external users
+
 ## Comparison: Gmail OAuth vs SendGrid
 
 | Feature            | Gmail OAuth                | SendGrid                      |

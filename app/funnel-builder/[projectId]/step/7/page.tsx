@@ -2,54 +2,63 @@
 
 import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
-import { VideoUploader } from "@/components/funnel/video-uploader";
-import {
-    Video,
-    Trash2,
-    Play,
-    Presentation,
-    FileText,
-    ExternalLink,
-} from "lucide-react";
+import { DependencyWarning } from "@/components/funnel/dependency-warning";
+import { Sparkles, MessageSquare, Trash2, Download } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
-
-interface PitchVideo {
-    id: string;
-    video_url: string;
-    thumbnail_url: string | null;
-    video_duration: number;
-    created_at: string;
-}
 
 interface DeckStructure {
     id: string;
     title: string;
     slide_count: number;
-    gamma_deck_url?: string;
+    slides: unknown[];
+    created_at: string;
 }
 
 interface TalkTrack {
     id: string;
     deck_structure_id: string;
     content: string;
+    slide_timings: {
+        totalDuration: number;
+        slides: Array<{ slideNumber: number; duration: number }>;
+    };
+    total_duration: number;
     created_at: string;
 }
 
-export default function Step7Page({
+interface DeckStructureForDisplay {
+    id: string;
+    title: string;
+    slide_count: number;
+}
+
+export default function Step6Page({
     params,
 }: {
     params: Promise<{ projectId: string }>;
 }) {
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
-    const [videos, setVideos] = useState<PitchVideo[]>([]);
-    const [selectedVideo, setSelectedVideo] = useState<PitchVideo | null>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generationProgress, setGenerationProgress] = useState(0);
+    const [talkTracks, setTalkTracks] = useState<TalkTrack[]>([]);
+    const [selectedTrack, setSelectedTrack] = useState<TalkTrack | null>(null);
     const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
     const [selectedDeckId, setSelectedDeckId] = useState("");
-    const [talkTracks, setTalkTracks] = useState<TalkTrack[]>([]);
-    const [selectedTalkTrack, setSelectedTalkTrack] = useState<TalkTrack | null>(null);
+    const [isEditingTrack, setIsEditingTrack] = useState(false);
+    const [editedContent, setEditedContent] = useState("");
+    const [showSavedIndicator, setShowSavedIndicator] = useState(false);
+    const [deckStructureMap, setDeckStructureMap] = useState<
+        Map<string, DeckStructureForDisplay>
+    >(new Map());
+    const [activeJobId, setActiveJobId] = useState<string | null>(null);
+    const [jobStatus, setJobStatus] = useState<
+        "pending" | "processing" | "completed" | "failed" | null
+    >(null);
+    const [showToast, setShowToast] = useState(false);
+    const [toastMessage, setToastMessage] = useState("");
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
@@ -87,14 +96,9 @@ export default function Step7Page({
             if (!projectId) return;
             try {
                 const supabase = createClient();
-                const [
-                    videosResult,
-                    deckStructuresResult,
-                    gammaDecksResult,
-                    talkTracksResult,
-                ] = await Promise.all([
+                const [tracksResult, deckStructuresResult] = await Promise.all([
                     supabase
-                        .from("pitch_videos")
+                        .from("talk_tracks")
                         .select("*")
                         .eq("funnel_project_id", projectId)
                         .order("created_at", { ascending: false }),
@@ -103,40 +107,11 @@ export default function Step7Page({
                         .select("*")
                         .eq("funnel_project_id", projectId)
                         .order("created_at", { ascending: false }),
-                    supabase
-                        .from("gamma_decks")
-                        .select("*")
-                        .eq("funnel_project_id", projectId)
-                        .order("created_at", { ascending: false }),
-                    supabase
-                        .from("talk_tracks")
-                        .select("*")
-                        .eq("funnel_project_id", projectId)
-                        .order("created_at", { ascending: false }),
                 ]);
 
-                if (videosResult.data) setVideos(videosResult.data);
-
-                // Transform deck structures and merge with gamma deck URLs
+                if (tracksResult.data) setTalkTracks(tracksResult.data);
                 if (deckStructuresResult.data) {
-                    // Create map of gamma deck URLs by deck_structure_id
-                    const gammaDecksMap = new Map(
-                        (gammaDecksResult.data || []).map((deck: any) => [
-                            deck.deck_structure_id,
-                            deck.deck_url, // ← Fixed: was gamma_url, should be deck_url
-                        ])
-                    );
-
-                    logger.info(
-                        {
-                            totalGammaDecks: gammaDecksResult.data?.length || 0,
-                            gammaDecksWithUrls: Array.from(
-                                gammaDecksMap.values()
-                            ).filter((url) => url).length,
-                        },
-                        "Loaded Gamma decks"
-                    );
-
+                    // Transform deck structures to match interface
                     const transformed = (deckStructuresResult.data || []).map(
                         (deck: any) => ({
                             id: deck.id,
@@ -144,29 +119,30 @@ export default function Step7Page({
                             slide_count: Array.isArray(deck.slides)
                                 ? deck.slides.length
                                 : deck.total_slides || 55,
-                            gamma_deck_url: gammaDecksMap.get(deck.id),
+                            slides: deck.slides || [],
+                            created_at: deck.created_at,
                         })
                     );
-
-                    logger.info(
-                        {
-                            totalDecks: transformed.length,
-                            decksWithGammaUrls: transformed.filter(
-                                (d) => d.gamma_deck_url
-                            ).length,
-                        },
-                        "Transformed deck structures"
-                    );
-
                     setDeckStructures(transformed);
 
-                    // Auto-select first deck if available
+                    // Create a map for quick lookup
+                    const map = new Map(
+                        transformed.map((deck) => [
+                            deck.id,
+                            {
+                                id: deck.id,
+                                title: deck.title,
+                                slide_count: deck.slide_count,
+                            },
+                        ])
+                    );
+                    setDeckStructureMap(map);
+
+                    // Auto-select first deck if available and no selection made
                     if (transformed.length > 0 && !selectedDeckId) {
                         setSelectedDeckId(transformed[0].id);
                     }
                 }
-
-                if (talkTracksResult.data) setTalkTracks(talkTracksResult.data);
             } catch (error) {
                 logger.error({ error }, "Failed to load data");
             }
@@ -174,138 +150,217 @@ export default function Step7Page({
         loadData();
     }, [projectId, selectedDeckId]);
 
-    const pollVideoStatus = async (
-        videoId: string,
-        maxAttempts = 10
-    ): Promise<{ duration: number; thumbnailUrl: string }> => {
-        for (let i = 0; i < maxAttempts; i++) {
-            try {
-                logger.info(
-                    { videoId, attempt: i + 1, maxAttempts },
-                    "Polling video status"
-                );
+    // Check for active jobs on page load (resume if user navigated away)
+    useEffect(() => {
+        const checkForActiveJobs = async () => {
+            if (!projectId) return;
 
-                const response = await fetch(`/api/cloudflare/video/${videoId}`);
-                const data = await response.json();
+            const supabase = createClient();
+            const { data: jobs } = await supabase
+                .from("talk_track_jobs")
+                .select("id, status, progress")
+                .eq("funnel_project_id", projectId)
+                .in("status", ["pending", "processing"])
+                .order("created_at", { ascending: false })
+                .limit(1);
 
-                if (data.readyToStream) {
-                    logger.info(
-                        { videoId, duration: data.duration },
-                        "Video ready to stream"
-                    );
-                    return {
-                        duration: data.duration || 0,
-                        thumbnailUrl: data.thumbnail || "",
-                    };
-                }
-
-                // Wait 2 seconds before next poll
-                await new Promise((resolve) => setTimeout(resolve, 2000));
-            } catch (error) {
-                logger.error(
-                    { error, videoId, attempt: i + 1 },
-                    "Error polling video status"
-                );
+            if (jobs && jobs.length > 0) {
+                setActiveJobId(jobs[0].id);
+                setJobStatus(jobs[0].status);
+                setGenerationProgress(jobs[0].progress);
+                setIsGenerating(true);
             }
+        };
+
+        checkForActiveJobs();
+    }, [projectId]);
+
+    // Poll job status while generation is active
+    useEffect(() => {
+        if (!activeJobId) return;
+
+        const pollInterval = setInterval(async () => {
+            try {
+                const response = await fetch(
+                    `/api/generate/talk-track/status/${activeJobId}`
+                );
+                const { job } = await response.json();
+
+                setJobStatus(job.status);
+                setGenerationProgress(job.progress);
+
+                if (job.status === "completed") {
+                    clearInterval(pollInterval);
+
+                    // Refresh talk tracks list
+                    const supabase = createClient();
+                    const { data: tracksResult } = await supabase
+                        .from("talk_tracks")
+                        .select("*")
+                        .eq("funnel_project_id", projectId)
+                        .order("created_at", { ascending: false });
+
+                    if (tracksResult) {
+                        setTalkTracks(tracksResult);
+                    }
+
+                    // Show success toast
+                    setToastMessage("Talk Track saved successfully!");
+                    setShowToast(true);
+                    setTimeout(() => setShowToast(false), 3000);
+
+                    // Reset state
+                    setActiveJobId(null);
+                    setIsGenerating(false);
+                    setGenerationProgress(0);
+                } else if (job.status === "failed") {
+                    clearInterval(pollInterval);
+
+                    // Show error toast
+                    setToastMessage(
+                        `Generation failed: ${job.error_message || "Unknown error"}`
+                    );
+                    setShowToast(true);
+                    setTimeout(() => setShowToast(false), 5000);
+
+                    // Reset state
+                    setActiveJobId(null);
+                    setIsGenerating(false);
+                    setGenerationProgress(0);
+                }
+            } catch (error) {
+                logger.error({ error }, "Failed to poll job status");
+            }
+        }, 3000); // Poll every 3 seconds
+
+        return () => clearInterval(pollInterval);
+    }, [activeJobId, projectId]);
+
+    const handleGenerate = async () => {
+        if (!selectedDeckId) {
+            alert("Please select a deck structure first");
+            return;
         }
 
-        logger.warn({ videoId }, "Video processing timeout - saving without metadata");
-        return { duration: 0, thumbnailUrl: "" };
-    };
-
-    const handleUploadComplete = async (videoData: {
-        videoId: string;
-        url: string;
-    }) => {
         try {
-            const supabase = createClient();
-            const {
-                data: { user },
-            } = await supabase.auth.getUser();
+            const response = await fetch("/api/generate/talk-track", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    projectId,
+                    deckStructureId: selectedDeckId,
+                }),
+            });
 
-            if (!user) throw new Error("Not authenticated");
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to start generation");
+            }
 
-            // Poll for video metadata (duration, thumbnail)
-            logger.info({ videoId: videoData.videoId }, "Polling for video metadata");
-            const videoMetadata = await pollVideoStatus(videoData.videoId);
+            const { jobId } = await response.json();
 
-            const { data, error } = await supabase
-                .from("pitch_videos")
-                .insert({
-                    funnel_project_id: projectId,
-                    user_id: user.id,
-                    video_url: videoData.url,
-                    video_id: videoData.videoId,
-                    video_provider: "cloudflare",
-                    video_duration: videoMetadata.duration,
-                    thumbnail_url: videoMetadata.thumbnailUrl,
-                    processing_status: "ready",
-                })
-                .select()
-                .single();
-
-            if (error) throw error;
-
-            setVideos((prev) => [data, ...prev]);
-            logger.info({ videoId: videoData.videoId }, "Video saved successfully");
+            // Start polling
+            setActiveJobId(jobId);
+            setJobStatus("pending");
+            setGenerationProgress(0);
+            setIsGenerating(true);
         } catch (error) {
-            logger.error({ error }, "Failed to save video");
+            logger.error({ error }, "Failed to start talk track generation");
             alert(
-                "Video uploaded but failed to save metadata. Please contact support."
+                error instanceof Error
+                    ? error.message
+                    : "Failed to start generation. Please try again."
             );
         }
     };
 
-    const handleDeleteVideo = async (videoId: string) => {
-        if (!confirm("Delete this video?")) return;
+    const handleDownload = (track: TalkTrack) => {
+        const blob = new Blob([track.content], { type: "text/plain" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `talk-track-${new Date(track.created_at).toLocaleDateString()}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    };
+
+    const handleDelete = async (trackId: string) => {
+        if (!confirm("Delete this talk track?")) return;
 
         try {
             const supabase = createClient();
             const { error } = await supabase
-                .from("pitch_videos")
+                .from("talk_tracks")
                 .delete()
-                .eq("id", videoId);
+                .eq("id", trackId);
 
             if (!error) {
-                setVideos((prev) => prev.filter((v) => v.id !== videoId));
+                setTalkTracks((prev) => prev.filter((t) => t.id !== trackId));
+                if (selectedTrack?.id === trackId) {
+                    setSelectedTrack(null);
+                }
             }
         } catch (error) {
-            logger.error({ error }, "Failed to delete video");
+            logger.error({ error }, "Failed to delete talk track");
         }
     };
 
-    const handleViewDeck = () => {
-        const selectedDeck = deckStructures.find((d) => d.id === selectedDeckId);
+    const handleEditTrack = () => {
+        if (!selectedTrack) return;
+        setIsEditingTrack(true);
+        setEditedContent(selectedTrack.content);
+    };
 
-        logger.info(
-            {
-                selectedDeckId,
-                deckTitle: selectedDeck?.title,
-                hasGammaUrl: !!selectedDeck?.gamma_deck_url,
-                gammaUrl: selectedDeck?.gamma_deck_url,
-            },
-            "View Deck clicked"
-        );
+    const handleSaveTrack = async () => {
+        if (!selectedTrack) return;
 
-        if (selectedDeck?.gamma_deck_url) {
-            window.open(selectedDeck.gamma_deck_url, "_blank", "width=1200,height=800");
-        } else {
-            alert("No Gamma deck found for this deck structure. Create one in Step 4.");
+        try {
+            const supabase = createClient();
+            const { error } = await supabase
+                .from("talk_tracks")
+                .update({ content: editedContent })
+                .eq("id", selectedTrack.id);
+
+            if (error) throw error;
+
+            // Update local state
+            setTalkTracks((prev) =>
+                prev.map((track) =>
+                    track.id === selectedTrack.id
+                        ? { ...track, content: editedContent }
+                        : track
+                )
+            );
+
+            setSelectedTrack((prev) =>
+                prev ? { ...prev, content: editedContent } : null
+            );
+            setIsEditingTrack(false);
+
+            // Show saved indicator
+            setShowSavedIndicator(true);
+            setTimeout(() => setShowSavedIndicator(false), 2000);
+        } catch (error) {
+            logger.error({ error }, "Failed to save talk track");
+            alert("Failed to save changes. Please try again.");
         }
     };
 
-    const handleViewTalkTrack = () => {
-        const track = talkTracks.find((t) => t.deck_structure_id === selectedDeckId);
-        if (track) {
-            setSelectedTalkTrack(track);
-        } else {
-            alert("No talk track found for this deck. Generate one in Step 6.");
-        }
+    const handleCancelEdit = () => {
+        if (!selectedTrack) return;
+        setEditedContent(selectedTrack.content);
+        setIsEditingTrack(false);
     };
 
-    const selectedDeck = deckStructures.find((d) => d.id === selectedDeckId);
+    const getDurationRange = (slideCount: number) => {
+        const minMinutes = Math.round((slideCount * 15) / 60);
+        const maxMinutes = Math.round((slideCount * 30) / 60);
+        return `${minMinutes}-${maxMinutes} min`;
+    };
 
-    const hasVideo = videos.length > 0;
+    const hasCompletedTrack = talkTracks.length > 0;
 
     if (!projectId) {
         return (
@@ -321,218 +376,247 @@ export default function Step7Page({
             projectId={projectId}
             completedSteps={completedSteps}
             funnelName={project?.name}
-            nextDisabled={!hasVideo}
-            nextLabel={hasVideo ? "Generate Watch Page" : "Upload Video First"}
-            stepTitle="Upload Presentation Video"
-            stepDescription="Record and upload your pitch video"
+            nextDisabled={!hasCompletedTrack}
+            nextLabel={hasCompletedTrack ? "Upload Video" : "Generate Talk Track First"}
+            stepTitle="Talk Track Script"
+            stepDescription="AI generates a slide-by-slide presentation script (2-4 sentences per slide)"
         >
             <div className="space-y-8">
-                {/* Recording Instructions */}
-                <div className="rounded-lg border border-primary/10 bg-primary/5 p-6">
-                    <h3 className="mb-3 text-lg font-semibold text-foreground">
-                        🎬 How to Record Your Presentation
-                    </h3>
-                    <ol className="space-y-2 text-sm text-foreground">
-                        <li className="flex items-start">
-                            <span className="mr-2">1️⃣</span>
-                            <span>Open a Zoom meeting alone</span>
-                        </li>
-                        <li className="flex items-start">
-                            <span className="mr-2">2️⃣</span>
-                            <span>
-                                Share your presentation deck (screen-share mode)
-                            </span>
-                        </li>
-                        <li className="flex items-start">
-                            <span className="mr-2">3️⃣</span>
-                            <span>Record to computer (local file)</span>
-                        </li>
-                        <li className="flex items-start">
-                            <span className="mr-2">4️⃣</span>
-                            <span>Speak through the AI-generated Talk Track</span>
-                        </li>
-                        <li className="flex items-start">
-                            <span className="mr-2">5️⃣</span>
-                            <span>Upload the finished MP4 here</span>
-                        </li>
-                    </ol>
-                </div>
+                {/* Toast Notification */}
+                {showToast && (
+                    <div className="fixed right-4 top-4 z-50 rounded-lg border-2 border-green-300 bg-green-50 p-4 shadow-float">
+                        <p className="font-medium text-green-900">{toastMessage}</p>
+                    </div>
+                )}
 
-                {/* Recording Helper Section */}
-                {deckStructures.length > 0 && (
-                    <div className="rounded-lg border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/5 p-6">
-                        <div className="mb-4">
-                            <h3 className="mb-2 text-lg font-semibold text-foreground">
-                                🎬 Recording Helper
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                                Select your deck to view it alongside your talk track
-                                while recording
+                {/* Warning Banner for Active Generation */}
+                {(jobStatus === "pending" || jobStatus === "processing") && (
+                    <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4">
+                        <p className="font-medium text-amber-900">
+                            ⚠️ Generating Talk Track – This may take 2–5 minutes. You
+                            can navigate freely; we'll notify you when it's ready.
+                        </p>
+                        {generationProgress > 0 && (
+                            <p className="mt-2 text-sm text-amber-700">
+                                Progress: {generationProgress}% complete
                             </p>
-                        </div>
+                        )}
+                    </div>
+                )}
 
-                        <div className="mb-4">
+                {deckStructures.length === 0 && (
+                    <DependencyWarning
+                        message="You need to create a deck structure first to generate a talk track."
+                        requiredStep={4}
+                        requiredStepName="Deck Structure"
+                        projectId={projectId}
+                    />
+                )}
+
+                {!isGenerating ? (
+                    <div className="rounded-lg border border-brand-100 bg-gradient-to-br from-brand-50 to-purple-50 p-8">
+                        {/* Deck Structure Selector */}
+                        <div className="mx-auto mb-6 max-w-md">
                             <label className="mb-2 block text-sm font-medium text-foreground">
                                 Select Deck Structure
                             </label>
                             <select
                                 value={selectedDeckId}
                                 onChange={(e) => setSelectedDeckId(e.target.value)}
-                                className="w-full rounded-lg border border-border px-4 py-2 focus:border-primary focus:ring-2 focus:ring-primary"
+                                disabled={deckStructures.length === 0}
+                                className="w-full rounded-lg border border-border px-4 py-3 focus:border-brand-500 focus:ring-2 focus:ring-brand-500 disabled:cursor-not-allowed disabled:bg-muted"
                             >
-                                {deckStructures.map((deck) => (
-                                    <option key={deck.id} value={deck.id}>
-                                        {deck.title} ({deck.slide_count} slides)
+                                {deckStructures.length === 0 ? (
+                                    <option value="">
+                                        No deck structures available
                                     </option>
-                                ))}
+                                ) : (
+                                    <>
+                                        <option value="">
+                                            Select a deck structure...
+                                        </option>
+                                        {deckStructures.map((deck) => (
+                                            <option key={deck.id} value={deck.id}>
+                                                {deck.title} ({deck.slide_count} slides)
+                                            </option>
+                                        ))}
+                                    </>
+                                )}
                             </select>
-                        </div>
 
-                        {selectedDeck && (
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={handleViewDeck}
-                                    disabled={!selectedDeck.gamma_deck_url}
-                                    className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 font-medium transition-colors ${
-                                        selectedDeck.gamma_deck_url
-                                            ? "bg-purple-600 text-white hover:bg-purple-700"
-                                            : "cursor-not-allowed bg-gray-300 text-muted-foreground"
-                                    }`}
-                                >
-                                    <Presentation className="h-5 w-5" />
-                                    View Deck
-                                    <ExternalLink className="h-4 w-4" />
-                                </button>
-
-                                <button
-                                    onClick={handleViewTalkTrack}
-                                    disabled={
-                                        !talkTracks.some(
-                                            (t) =>
-                                                t.deck_structure_id === selectedDeckId
-                                        )
-                                    }
-                                    className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 font-medium transition-colors ${
-                                        talkTracks.some(
-                                            (t) =>
-                                                t.deck_structure_id === selectedDeckId
-                                        )
-                                            ? "bg-primary text-white hover:bg-primary/90"
-                                            : "cursor-not-allowed bg-gray-300 text-muted-foreground"
-                                    }`}
-                                >
-                                    <FileText className="h-5 w-5" />
-                                    View Talk Track
-                                </button>
-                            </div>
-                        )}
-
-                        {selectedDeck && !selectedDeck.gamma_deck_url && (
-                            <p className="mt-3 text-sm text-amber-600">
-                                💡 Create a Gamma deck in Step 4 to view it while
-                                recording
-                            </p>
-                        )}
-
-                        {selectedDeck &&
-                            !talkTracks.some(
-                                (t) => t.deck_structure_id === selectedDeckId
-                            ) && (
-                                <p className="mt-3 text-sm text-amber-600">
-                                    💡 Generate a talk track in Step 6 to view it while
-                                    recording
+                            {deckStructures.length === 0 && (
+                                <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-600">
+                                    💡 Complete Step 3 first to create deck structures
                                 </p>
                             )}
+                        </div>
+
+                        <div className="text-center">
+                            <button
+                                onClick={handleGenerate}
+                                disabled={
+                                    !selectedDeckId || deckStructures.length === 0
+                                }
+                                className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
+                                    selectedDeckId && deckStructures.length > 0
+                                        ? "bg-brand-500 text-white hover:bg-brand-600"
+                                        : "cursor-not-allowed bg-gray-300 text-muted-foreground"
+                                }`}
+                            >
+                                <Sparkles className="h-6 w-6" />
+                                {deckStructures.length === 0
+                                    ? "Create Deck Structure First"
+                                    : !selectedDeckId
+                                      ? "Select Deck Structure"
+                                      : "Generate Talk Track"}
+                            </button>
+
+                            <div className="mt-4 space-y-1 text-sm text-muted-foreground">
+                                <p>⚡ Generation time: ~30-60 seconds</p>
+                                <p>🎤 2-4 sentences per slide</p>
+                                <p>📊 Includes timing and delivery notes</p>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-6">
+                        <div className="mb-6 text-center">
+                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-primary/10">
+                                <Sparkles className="h-6 w-6 text-primary" />
+                            </div>
+                            <h3 className="mb-2 text-xl font-semibold text-primary">
+                                Generating Talk Track
+                            </h3>
+                            <p className="text-primary">
+                                AI is creating your presentation script...
+                            </p>
+                        </div>
+
+                        <div className="mx-auto max-w-md">
+                            <div className="mb-2 flex items-center justify-between">
+                                <span className="text-sm font-medium text-primary">
+                                    Progress
+                                </span>
+                                <span className="text-sm text-primary">
+                                    {generationProgress}%
+                                </span>
+                            </div>
+                            <div className="h-3 w-full rounded-full bg-primary/20">
+                                <div
+                                    className="h-3 rounded-full bg-primary transition-all duration-500 ease-out"
+                                    style={{ width: `${generationProgress}%` }}
+                                />
+                            </div>
+                        </div>
                     </div>
                 )}
-
-                <div className="rounded-lg border border-red-100 bg-gradient-to-br from-red-50 to-orange-50 p-8">
-                    <VideoUploader
-                        projectId={projectId}
-                        onUploadComplete={handleUploadComplete}
-                    />
-                </div>
 
                 <div className="rounded-lg border border-border bg-card shadow-soft">
                     <div className="border-b border-border p-6">
                         <div className="flex items-center justify-between">
                             <h3 className="text-xl font-semibold text-foreground">
-                                Your Videos
+                                Your Talk Tracks
                             </h3>
                             <span className="text-sm text-muted-foreground">
-                                {videos.length} uploaded
+                                {talkTracks.length} created
                             </span>
                         </div>
                     </div>
 
                     <div className="p-6">
-                        {videos.length === 0 ? (
+                        {talkTracks.length === 0 ? (
                             <div className="py-12 text-center text-muted-foreground">
-                                <Video className="mx-auto mb-4 h-12 w-12 opacity-50" />
-                                <p>No videos yet. Upload your first one above!</p>
+                                <MessageSquare className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                                <p>
+                                    No talk tracks yet. Generate your first one above!
+                                </p>
                             </div>
                         ) : (
-                            <div className="grid gap-4 sm:grid-cols-2">
-                                {videos.map((video) => (
+                            <div className="space-y-4">
+                                {talkTracks.map((track) => (
                                     <div
-                                        key={video.id}
-                                        className="rounded-lg border border-border bg-card p-4 shadow-sm transition-all hover:border-red-300 hover:shadow-md"
+                                        key={track.id}
+                                        onClick={() => setSelectedTrack(track)}
+                                        className="cursor-pointer rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-primary/30 hover:shadow-md"
                                     >
-                                        <div className="mb-3 flex items-center justify-between">
-                                            <span className="text-sm font-semibold text-foreground">
-                                                Presentation Video
-                                            </span>
-                                            <button
-                                                onClick={() =>
-                                                    handleDeleteVideo(video.id)
-                                                }
-                                                className="rounded p-1 text-muted-foreground hover:bg-red-50 hover:text-red-600"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
-                                        </div>
-
-                                        <div className="mb-3 aspect-video w-full overflow-hidden rounded-lg bg-gray-900">
-                                            {video.thumbnail_url ? (
-                                                <img
-                                                    src={video.thumbnail_url}
-                                                    alt="Video thumbnail"
-                                                    className="h-full w-full object-cover"
-                                                />
-                                            ) : (
-                                                <div className="flex h-full items-center justify-center">
-                                                    <Video className="h-12 w-12 text-muted-foreground" />
-                                                </div>
-                                            )}
-                                        </div>
-
-                                        <div className="mb-3 text-sm text-muted-foreground">
-                                            <div className="flex items-center justify-between">
-                                                <span>
-                                                    ⏱️{" "}
-                                                    {Math.floor(
-                                                        video.video_duration / 60
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <h4 className="mb-2 text-lg font-semibold text-foreground">
+                                                    Talk Track Script
+                                                </h4>
+                                                <div className="mb-2 flex items-center gap-4 text-sm text-muted-foreground">
+                                                    {track.deck_structure_id &&
+                                                    deckStructureMap.get(
+                                                        track.deck_structure_id
+                                                    ) ? (
+                                                        <>
+                                                            <span>
+                                                                ⏱️{" "}
+                                                                {getDurationRange(
+                                                                    deckStructureMap.get(
+                                                                        track.deck_structure_id
+                                                                    )!.slide_count
+                                                                )}{" "}
+                                                                estimated
+                                                            </span>
+                                                            <span>
+                                                                📄{" "}
+                                                                {
+                                                                    deckStructureMap.get(
+                                                                        track.deck_structure_id
+                                                                    )!.slide_count
+                                                                }{" "}
+                                                                slides
+                                                            </span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <span>
+                                                                ⏱️{" "}
+                                                                {track.slide_timings
+                                                                    ?.totalDuration ||
+                                                                    0}{" "}
+                                                                min
+                                                            </span>
+                                                            <span>
+                                                                📄{" "}
+                                                                {track.slide_timings
+                                                                    ?.slides?.length ||
+                                                                    0}{" "}
+                                                                slides
+                                                            </span>
+                                                        </>
                                                     )}
-                                                    :
-                                                    {(video.video_duration % 60)
-                                                        .toString()
-                                                        .padStart(2, "0")}
-                                                </span>
-                                                <span>
-                                                    {new Date(
-                                                        video.created_at
-                                                    ).toLocaleDateString()}
-                                                </span>
+                                                    <span>
+                                                        📅{" "}
+                                                        {new Date(
+                                                            track.created_at
+                                                        ).toLocaleDateString()}
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDownload(track);
+                                                    }}
+                                                    className="rounded p-2 text-primary hover:bg-primary/5"
+                                                >
+                                                    <Download className="h-4 w-4" />
+                                                </button>
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDelete(track.id);
+                                                    }}
+                                                    className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </button>
                                             </div>
                                         </div>
-
-                                        <button
-                                            onClick={() => setSelectedVideo(video)}
-                                            className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700"
-                                        >
-                                            <Play className="h-4 w-4" />
-                                            Watch Video
-                                        </button>
                                     </div>
                                 ))}
                             </div>
@@ -541,35 +625,8 @@ export default function Step7Page({
                 </div>
             </div>
 
-            {/* Video Player Modal */}
-            {selectedVideo && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
-                    <div className="w-full max-w-4xl">
-                        <div className="mb-4 flex items-center justify-between">
-                            <h3 className="text-xl font-bold text-white">
-                                Presentation Video
-                            </h3>
-                            <button
-                                onClick={() => setSelectedVideo(null)}
-                                className="text-2xl font-bold text-white hover:text-gray-300"
-                            >
-                                ×
-                            </button>
-                        </div>
-                        <div className="aspect-video w-full overflow-hidden rounded-lg">
-                            <iframe
-                                src={selectedVideo.video_url}
-                                className="h-full w-full"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                                allowFullScreen
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Talk Track Viewer Modal */}
-            {selectedTalkTrack && (
+            {/* Talk Track Viewer/Editor Modal */}
+            {selectedTrack && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
                     <div className="flex h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-card shadow-2xl">
                         <div className="flex-shrink-0 rounded-t-lg border-b border-border bg-muted/50 p-6">
@@ -578,26 +635,91 @@ export default function Step7Page({
                                     <h2 className="text-2xl font-bold text-foreground">
                                         Talk Track Script
                                     </h2>
-                                    <p className="mt-1 text-sm text-muted-foreground">
-                                        Use this script while recording your
-                                        presentation
-                                    </p>
+                                    {selectedTrack.deck_structure_id &&
+                                        deckStructureMap.get(
+                                            selectedTrack.deck_structure_id
+                                        ) && (
+                                            <p className="mt-1 text-sm text-muted-foreground">
+                                                {
+                                                    deckStructureMap.get(
+                                                        selectedTrack.deck_structure_id
+                                                    )!.title
+                                                }{" "}
+                                                ({" "}
+                                                {
+                                                    deckStructureMap.get(
+                                                        selectedTrack.deck_structure_id
+                                                    )!.slide_count
+                                                }{" "}
+                                                slides, estimated{" "}
+                                                {getDurationRange(
+                                                    deckStructureMap.get(
+                                                        selectedTrack.deck_structure_id
+                                                    )!.slide_count
+                                                )}
+                                                )
+                                            </p>
+                                        )}
                                 </div>
-                                <button
-                                    onClick={() => setSelectedTalkTrack(null)}
-                                    className="text-2xl font-bold text-muted-foreground hover:text-muted-foreground"
-                                >
-                                    ×
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    {showSavedIndicator && (
+                                        <span className="rounded bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
+                                            ✓ Saved
+                                        </span>
+                                    )}
+                                    {isEditingTrack ? (
+                                        <>
+                                            <button
+                                                onClick={handleSaveTrack}
+                                                className="rounded bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+                                            >
+                                                Save
+                                            </button>
+                                            <button
+                                                onClick={handleCancelEdit}
+                                                className="rounded border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
+                                            >
+                                                Cancel
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button
+                                            onClick={handleEditTrack}
+                                            className="rounded border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
+                                        >
+                                            Edit
+                                        </button>
+                                    )}
+                                    <button
+                                        onClick={() => {
+                                            setSelectedTrack(null);
+                                            setIsEditingTrack(false);
+                                        }}
+                                        className="text-2xl font-bold text-muted-foreground hover:text-muted-foreground"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-scroll p-6">
-                            <div className="prose max-w-none">
-                                <pre className="whitespace-pre-wrap rounded-lg bg-muted/50 p-4 text-sm">
-                                    {selectedTalkTrack.content}
-                                </pre>
-                            </div>
+                        <div className="flex-1 overflow-hidden">
+                            {isEditingTrack ? (
+                                <textarea
+                                    value={editedContent}
+                                    onChange={(e) => setEditedContent(e.target.value)}
+                                    className="h-full w-full resize-none border-none p-6 font-mono text-sm leading-relaxed text-foreground focus:ring-0"
+                                    placeholder="Edit your talk track here..."
+                                />
+                            ) : (
+                                <div className="h-full overflow-y-scroll p-6">
+                                    <div className="prose max-w-none">
+                                        <pre className="whitespace-pre-wrap rounded-lg bg-muted/50 p-4 text-sm">
+                                            {selectedTrack.content}
+                                        </pre>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

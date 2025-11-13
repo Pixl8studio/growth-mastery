@@ -124,6 +124,19 @@ export async function POST(request: NextRequest) {
             throw new ValidationError("Deck structure not found");
         }
 
+        // Get brand design (optional)
+        const { data: brandDesign } = await supabase
+            .from("brand_designs")
+            .select("*")
+            .eq("funnel_project_id", projectId)
+            .eq("user_id", user.id)
+            .maybeSingle();
+
+        log.info("🎨 Brand design loaded", {
+            hasBrand: !!brandDesign,
+            primaryColor: brandDesign?.primary_color,
+        });
+
         // Create gamma deck record
         const deckTitle = `${project.name} - Gamma Presentation`;
 
@@ -140,6 +153,13 @@ export async function POST(request: NextRequest) {
                 settings,
                 metadata: {
                     template_type: deckStructure.template_type,
+                    brand_colors: brandDesign
+                        ? {
+                              primary: brandDesign.primary_color,
+                              secondary: brandDesign.secondary_color,
+                              accent: brandDesign.accent_color,
+                          }
+                        : null,
                 },
             })
             .select()
@@ -153,8 +173,13 @@ export async function POST(request: NextRequest) {
         // Prepare content for Gamma
         const inputText = prepareContentForGamma(deckStructure, project, settings);
 
-        // Build Gamma API request
-        const gammaRequest = buildGammaRequest(inputText, settings, deckStructure);
+        // Build Gamma API request with brand colors
+        const gammaRequest = buildGammaRequest(
+            inputText,
+            settings,
+            deckStructure,
+            brandDesign
+        );
 
         // Start Gamma generation
         log.info("🚀 Starting Gamma API generation", { deckId: gammaDeck.id });
@@ -311,9 +336,12 @@ How to get started today.`;
 function buildGammaRequest(
     inputText: string,
     settings: any,
-    deckStructure: any
+    deckStructure: any,
+    brandDesign?: any
 ): GammaGenerationRequest {
-    log.info("🔧 Building Gamma API request");
+    log.info("🔧 Building Gamma API request", {
+        hasBrandDesign: !!brandDesign,
+    });
 
     // Determine slide count based on template type
     const isTestMode = deckStructure.template_type === "5_slide_test";
@@ -329,6 +357,12 @@ function buildGammaRequest(
 
     const tone = toneMap[settings.style] || "professional, engaging";
 
+    // Build brand-aware instructions
+    let brandInstructions = "";
+    if (brandDesign) {
+        brandInstructions = ` Brand Colors: Primary ${brandDesign.primary_color}, Secondary ${brandDesign.secondary_color || "N/A"}, Accent ${brandDesign.accent_color || "N/A"}. Style: ${brandDesign.design_style || "modern"} with ${brandDesign.personality_traits?.tone || "professional"} tone.`;
+    }
+
     return {
         inputText,
         textMode: "generate",
@@ -336,7 +370,7 @@ function buildGammaRequest(
         themeName: settings.theme,
         numCards: slideCount,
         cardSplit: "auto",
-        additionalInstructions: `Create a compelling ${slideCount}-slide business presentation. Make each slide engaging with clear headings and actionable content.`,
+        additionalInstructions: `Create a compelling ${slideCount}-slide business presentation. Make each slide engaging with clear headings and actionable content.${brandInstructions}`,
         textOptions: {
             amount: isTestMode ? "medium" : "detailed",
             tone,

@@ -1,29 +1,19 @@
 "use client";
 
-/**
- * Step 8: Watch Pages
- * Create and manage watch pages with visual editor integration
- */
-
 import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
-import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import { Video, PlusCircle, Eye, Pencil, Trash2, X } from "lucide-react";
+import { VideoUploader } from "@/components/funnel/video-uploader";
+import {
+    Video,
+    Trash2,
+    Play,
+    Presentation,
+    FileText,
+    ExternalLink,
+} from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
-import { generateWatchPageHTML } from "@/lib/generators/watch-page-generator";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
-import { Switch } from "@/components/ui/switch";
-
-interface DeckStructure {
-    id: string;
-    slides: any[];
-    metadata?: {
-        title?: string;
-    };
-    total_slides: number;
-    created_at: string;
-}
 
 interface PitchVideo {
     id: string;
@@ -33,34 +23,33 @@ interface PitchVideo {
     created_at: string;
 }
 
-interface WatchPage {
+interface DeckStructure {
     id: string;
-    headline: string;
-    subheadline: string;
-    html_content: string;
-    theme: any;
-    is_published: boolean;
-    pitch_video_id: string | null;
+    title: string;
+    slide_count: number;
+    gamma_deck_url?: string;
+}
+
+interface TalkTrack {
+    id: string;
+    deck_structure_id: string;
+    content: string;
     created_at: string;
 }
 
-export default function Step8WatchPage({
+export default function Step7Page({
     params,
 }: {
     params: Promise<{ projectId: string }>;
 }) {
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
+    const [videos, setVideos] = useState<PitchVideo[]>([]);
+    const [selectedVideo, setSelectedVideo] = useState<PitchVideo | null>(null);
     const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
-    const [pitchVideos, setPitchVideos] = useState<PitchVideo[]>([]);
-    const [watchPages, setWatchPages] = useState<WatchPage[]>([]);
-    const [isCreating, setIsCreating] = useState(false);
-    const [showCreateForm, setShowCreateForm] = useState(false);
-    const [formData, setFormData] = useState({
-        headline: "",
-        deckStructureId: "",
-        videoId: "",
-    });
+    const [selectedDeckId, setSelectedDeckId] = useState("");
+    const [talkTracks, setTalkTracks] = useState<TalkTrack[]>([]);
+    const [selectedTalkTrack, setSelectedTalkTrack] = useState<TalkTrack | null>(null);
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
@@ -76,7 +65,6 @@ export default function Step8WatchPage({
     useEffect(() => {
         const loadProject = async () => {
             if (!projectId) return;
-
             try {
                 const supabase = createClient();
                 const { data: projectData, error: projectError } = await supabase
@@ -91,225 +79,233 @@ export default function Step8WatchPage({
                 logger.error({ error }, "Failed to load project");
             }
         };
-
         loadProject();
     }, [projectId]);
 
     useEffect(() => {
         const loadData = async () => {
             if (!projectId) return;
-
             try {
                 const supabase = createClient();
+                const [
+                    videosResult,
+                    deckStructuresResult,
+                    gammaDecksResult,
+                    talkTracksResult,
+                ] = await Promise.all([
+                    supabase
+                        .from("pitch_videos")
+                        .select("*")
+                        .eq("funnel_project_id", projectId)
+                        .order("created_at", { ascending: false }),
+                    supabase
+                        .from("deck_structures")
+                        .select("*")
+                        .eq("funnel_project_id", projectId)
+                        .order("created_at", { ascending: false }),
+                    supabase
+                        .from("gamma_decks")
+                        .select("*")
+                        .eq("funnel_project_id", projectId)
+                        .order("created_at", { ascending: false }),
+                    supabase
+                        .from("talk_tracks")
+                        .select("*")
+                        .eq("funnel_project_id", projectId)
+                        .order("created_at", { ascending: false }),
+                ]);
 
-                // Load deck structures
-                const { data: deckData, error: deckError } = await supabase
-                    .from("deck_structures")
-                    .select("*")
-                    .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false });
+                if (videosResult.data) setVideos(videosResult.data);
 
-                if (deckError) throw deckError;
-                setDeckStructures(deckData || []);
+                // Transform deck structures and merge with gamma deck URLs
+                if (deckStructuresResult.data) {
+                    // Create map of gamma deck URLs by deck_structure_id
+                    const gammaDecksMap = new Map(
+                        (gammaDecksResult.data || []).map((deck: any) => [
+                            deck.deck_structure_id,
+                            deck.deck_url, // ← Fixed: was gamma_url, should be deck_url
+                        ])
+                    );
 
-                // Load pitch videos
-                const { data: videoData, error: videoError } = await supabase
-                    .from("pitch_videos")
-                    .select("*")
-                    .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false });
+                    logger.info(
+                        {
+                            totalGammaDecks: gammaDecksResult.data?.length || 0,
+                            gammaDecksWithUrls: Array.from(
+                                gammaDecksMap.values()
+                            ).filter((url) => url).length,
+                        },
+                        "Loaded Gamma decks"
+                    );
 
-                if (videoError) throw videoError;
-                setPitchVideos(videoData || []);
+                    const transformed = (deckStructuresResult.data || []).map(
+                        (deck: any) => ({
+                            id: deck.id,
+                            title: deck.metadata?.title || "Untitled Deck",
+                            slide_count: Array.isArray(deck.slides)
+                                ? deck.slides.length
+                                : deck.total_slides || 55,
+                            gamma_deck_url: gammaDecksMap.get(deck.id),
+                        })
+                    );
 
-                // Auto-select first deck and video
-                if (deckData && deckData.length > 0) {
-                    setFormData((prev) => ({
-                        ...prev,
-                        deckStructureId: deckData[0].id,
-                    }));
+                    logger.info(
+                        {
+                            totalDecks: transformed.length,
+                            decksWithGammaUrls: transformed.filter(
+                                (d) => d.gamma_deck_url
+                            ).length,
+                        },
+                        "Transformed deck structures"
+                    );
+
+                    setDeckStructures(transformed);
+
+                    // Auto-select first deck if available
+                    if (transformed.length > 0 && !selectedDeckId) {
+                        setSelectedDeckId(transformed[0].id);
+                    }
                 }
-                if (videoData && videoData.length > 0) {
-                    setFormData((prev) => ({
-                        ...prev,
-                        videoId: videoData[0].id,
-                    }));
-                }
 
-                // Load watch pages
-                const { data: pagesData, error: pagesError } = await supabase
-                    .from("watch_pages")
-                    .select("*")
-                    .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false });
-
-                if (pagesError) throw pagesError;
-                setWatchPages(pagesData || []);
+                if (talkTracksResult.data) setTalkTracks(talkTracksResult.data);
             } catch (error) {
                 logger.error({ error }, "Failed to load data");
             }
         };
-
         loadData();
-    }, [projectId]);
+    }, [projectId, selectedDeckId]);
 
-    const handleCreate = async () => {
-        if (
-            !formData.headline.trim() ||
-            !formData.deckStructureId ||
-            !formData.videoId
-        ) {
-            alert(
-                "Please provide a headline, select a deck structure, and select a video"
-            );
-            return;
+    const pollVideoStatus = async (
+        videoId: string,
+        maxAttempts = 10
+    ): Promise<{ duration: number; thumbnailUrl: string }> => {
+        for (let i = 0; i < maxAttempts; i++) {
+            try {
+                logger.info(
+                    { videoId, attempt: i + 1, maxAttempts },
+                    "Polling video status"
+                );
+
+                const response = await fetch(`/api/cloudflare/video/${videoId}`);
+                const data = await response.json();
+
+                if (data.readyToStream) {
+                    logger.info(
+                        { videoId, duration: data.duration },
+                        "Video ready to stream"
+                    );
+                    return {
+                        duration: data.duration || 0,
+                        thumbnailUrl: data.thumbnail || "",
+                    };
+                }
+
+                // Wait 2 seconds before next poll
+                await new Promise((resolve) => setTimeout(resolve, 2000));
+            } catch (error) {
+                logger.error(
+                    { error, videoId, attempt: i + 1 },
+                    "Error polling video status"
+                );
+            }
         }
 
-        setIsCreating(true);
+        logger.warn({ videoId }, "Video processing timeout - saving without metadata");
+        return { duration: 0, thumbnailUrl: "" };
+    };
 
+    const handleUploadComplete = async (videoData: {
+        videoId: string;
+        url: string;
+    }) => {
         try {
             const supabase = createClient();
-
-            // Get current user
             const {
                 data: { user },
             } = await supabase.auth.getUser();
+
             if (!user) throw new Error("Not authenticated");
 
-            // Get selected deck structure and video
-            const deckStructure = deckStructures.find(
-                (d) => d.id === formData.deckStructureId
-            );
-            const video = pitchVideos.find((v) => v.id === formData.videoId);
+            // Poll for video metadata (duration, thumbnail)
+            logger.info({ videoId: videoData.videoId }, "Polling for video metadata");
+            const videoMetadata = await pollVideoStatus(videoData.videoId);
 
-            if (!deckStructure || !video) throw new Error("Deck or video not found");
-
-            // Get theme from project or use defaults
-            const theme = project?.settings?.theme || {
-                primary: "#2563eb",
-                secondary: "#10b981",
-                background: "#ffffff",
-                text: "#1f2937",
-            };
-
-            // Generate HTML using the generator
-            const htmlContent = generateWatchPageHTML({
-                projectId,
-                deckStructure,
-                videoUrl: video.video_url,
-                headline: formData.headline,
-                theme,
-            });
-
-            // Extract subheadline from deck
-            const subheadline =
-                deckStructure.metadata?.title || "Watch this exclusive training";
-
-            // Create watch page
-            const { data: newPage, error: createError } = await supabase
-                .from("watch_pages")
+            const { data, error } = await supabase
+                .from("pitch_videos")
                 .insert({
                     funnel_project_id: projectId,
                     user_id: user.id,
-                    pitch_video_id: video.id,
-                    headline: formData.headline,
-                    subheadline,
-                    html_content: htmlContent,
-                    theme,
-                    is_published: false,
+                    video_url: videoData.url,
+                    video_id: videoData.videoId,
+                    video_provider: "cloudflare",
+                    video_duration: videoMetadata.duration,
+                    thumbnail_url: videoMetadata.thumbnailUrl,
+                    processing_status: "ready",
                 })
                 .select()
                 .single();
 
-            if (createError) throw createError;
-
-            // Add to list
-            setWatchPages((prev) => [newPage, ...prev]);
-
-            // Reset form
-            setFormData({
-                headline: "",
-                deckStructureId: deckStructures[0]?.id || "",
-                videoId: pitchVideos[0]?.id || "",
-            });
-            setShowCreateForm(false);
-
-            logger.info({ pageId: newPage.id }, "Watch page created");
-        } catch (error) {
-            logger.error({ error }, "Failed to create watch page");
-            alert("Failed to create page. Please try again.");
-        } finally {
-            setIsCreating(false);
-        }
-    };
-
-    const handleEdit = (pageId: string) => {
-        const editorUrl = `/funnel-builder/${projectId}/pages/watch/${pageId}?edit=true`;
-        window.open(editorUrl, "_blank");
-    };
-
-    const handlePreview = (pageId: string) => {
-        const previewUrl = `/funnel-builder/${projectId}/pages/watch/${pageId}`;
-        window.open(previewUrl, "_blank");
-    };
-
-    const handleDelete = async (pageId: string) => {
-        if (!confirm("Delete this watch page?")) return;
-
-        try {
-            const supabase = createClient();
-            const { error } = await supabase
-                .from("watch_pages")
-                .delete()
-                .eq("id", pageId);
-
-            if (!error) {
-                setWatchPages((prev) => prev.filter((p) => p.id !== pageId));
-                logger.info({ pageId }, "Watch page deleted");
-            }
-        } catch (error) {
-            logger.error({ error }, "Failed to delete watch page");
-        }
-    };
-
-    const handlePublishToggle = async (pageId: string, currentStatus: boolean) => {
-        try {
-            const supabase = createClient();
-            const newStatus = !currentStatus;
-
-            const { error } = await supabase
-                .from("watch_pages")
-                .update({ is_published: newStatus })
-                .eq("id", pageId);
-
             if (error) throw error;
 
-            setWatchPages((prev) =>
-                prev.map((p) =>
-                    p.id === pageId ? { ...p, is_published: newStatus } : p
-                )
-            );
-
-            logger.info(
-                { pageId, isPublished: newStatus },
-                "Watch page publish status updated"
-            );
-
-            alert(
-                newStatus
-                    ? "Page published successfully!"
-                    : "Page unpublished successfully!"
-            );
+            setVideos((prev) => [data, ...prev]);
+            logger.info({ videoId: videoData.videoId }, "Video saved successfully");
         } catch (error) {
-            logger.error({ error }, "Failed to update publish status");
-            alert("Failed to update publish status. Please try again.");
+            logger.error({ error }, "Failed to save video");
+            alert(
+                "Video uploaded but failed to save metadata. Please contact support."
+            );
         }
     };
 
-    const hasDeckStructure = deckStructures.length > 0;
-    const hasPitchVideo = pitchVideos.length > 0;
-    const hasWatchPage = watchPages.length > 0;
-    const canCreatePage = hasDeckStructure && hasPitchVideo;
+    const handleDeleteVideo = async (videoId: string) => {
+        if (!confirm("Delete this video?")) return;
+
+        try {
+            const supabase = createClient();
+            const { error } = await supabase
+                .from("pitch_videos")
+                .delete()
+                .eq("id", videoId);
+
+            if (!error) {
+                setVideos((prev) => prev.filter((v) => v.id !== videoId));
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to delete video");
+        }
+    };
+
+    const handleViewDeck = () => {
+        const selectedDeck = deckStructures.find((d) => d.id === selectedDeckId);
+
+        logger.info(
+            {
+                selectedDeckId,
+                deckTitle: selectedDeck?.title,
+                hasGammaUrl: !!selectedDeck?.gamma_deck_url,
+                gammaUrl: selectedDeck?.gamma_deck_url,
+            },
+            "View Deck clicked"
+        );
+
+        if (selectedDeck?.gamma_deck_url) {
+            window.open(selectedDeck.gamma_deck_url, "_blank", "width=1200,height=800");
+        } else {
+            alert("No Gamma deck found for this deck structure. Create one in Step 4.");
+        }
+    };
+
+    const handleViewTalkTrack = () => {
+        const track = talkTracks.find((t) => t.deck_structure_id === selectedDeckId);
+        if (track) {
+            setSelectedTalkTrack(track);
+        } else {
+            alert("No talk track found for this deck. Generate one in Step 6.");
+        }
+    };
+
+    const selectedDeck = deckStructures.find((d) => d.id === selectedDeckId);
+
+    const hasVideo = videos.length > 0;
 
     if (!projectId) {
         return (
@@ -325,295 +321,287 @@ export default function Step8WatchPage({
             projectId={projectId}
             completedSteps={completedSteps}
             funnelName={project?.name}
-            nextDisabled={!hasWatchPage}
-            nextLabel={hasWatchPage ? "Create Registration Page" : "Create Page First"}
-            stepTitle="Watch Pages"
-            stepDescription="Create engaging video watch pages with visual editor"
+            nextDisabled={!hasVideo}
+            nextLabel={hasVideo ? "Generate Watch Page" : "Upload Video First"}
+            stepTitle="Upload Presentation Video"
+            stepDescription="Record and upload your pitch video"
         >
             <div className="space-y-8">
-                {/* Dependency Warnings */}
-                {!hasDeckStructure && (
-                    <DependencyWarning
-                        message="You need to create a deck structure first."
-                        requiredStep={3}
-                        requiredStepName="Deck Structure"
-                        projectId={projectId}
-                    />
-                )}
-                {!hasPitchVideo && (
-                    <DependencyWarning
-                        message="You need to upload a pitch video first."
-                        requiredStep={7}
-                        requiredStepName="Upload Video"
-                        projectId={projectId}
-                    />
-                )}
+                {/* Recording Instructions */}
+                <div className="rounded-lg border border-primary/10 bg-primary/5 p-6">
+                    <h3 className="mb-3 text-lg font-semibold text-foreground">
+                        🎬 How to Record Your Presentation
+                    </h3>
+                    <ol className="space-y-2 text-sm text-foreground">
+                        <li className="flex items-start">
+                            <span className="mr-2">1️⃣</span>
+                            <span>Open a Zoom meeting alone</span>
+                        </li>
+                        <li className="flex items-start">
+                            <span className="mr-2">2️⃣</span>
+                            <span>
+                                Share your presentation deck (screen-share mode)
+                            </span>
+                        </li>
+                        <li className="flex items-start">
+                            <span className="mr-2">3️⃣</span>
+                            <span>Record to computer (local file)</span>
+                        </li>
+                        <li className="flex items-start">
+                            <span className="mr-2">4️⃣</span>
+                            <span>Speak through the AI-generated Talk Track</span>
+                        </li>
+                        <li className="flex items-start">
+                            <span className="mr-2">5️⃣</span>
+                            <span>Upload the finished MP4 here</span>
+                        </li>
+                    </ol>
+                </div>
 
-                {/* Create New Page Button */}
-                {!showCreateForm ? (
-                    <div className="rounded-lg border border-cyan-100 bg-gradient-to-br from-cyan-50 to-primary/5 p-8">
-                        <div className="text-center">
-                            <button
-                                onClick={() => setShowCreateForm(true)}
-                                disabled={!canCreatePage}
-                                className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
-                                    canCreatePage
-                                        ? "bg-cyan-600 text-white hover:bg-cyan-700"
-                                        : "cursor-not-allowed bg-gray-300 text-muted-foreground"
-                                }`}
-                            >
-                                <PlusCircle className="h-6 w-6" />
-                                {canCreatePage
-                                    ? "Create New Watch Page"
-                                    : "Complete Prerequisites First"}
-                            </button>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="rounded-lg border border-border bg-card p-6 shadow-soft">
-                        <div className="mb-6 flex items-center justify-between">
-                            <h3 className="text-xl font-semibold text-foreground">
-                                Create Watch Page
+                {/* Recording Helper Section */}
+                {deckStructures.length > 0 && (
+                    <div className="rounded-lg border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/5 p-6">
+                        <div className="mb-4">
+                            <h3 className="mb-2 text-lg font-semibold text-foreground">
+                                🎬 Recording Helper
                             </h3>
-                            <button
-                                onClick={() => setShowCreateForm(false)}
-                                className="text-muted-foreground hover:text-foreground"
-                            >
-                                <X className="h-5 w-5" />
-                            </button>
+                            <p className="text-sm text-muted-foreground">
+                                Select your deck to view it alongside your talk track
+                                while recording
+                            </p>
                         </div>
 
-                        <div className="space-y-4">
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-foreground">
-                                    Page Headline
-                                </label>
-                                <input
-                                    type="text"
-                                    value={formData.headline}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            headline: e.target.value,
-                                        })
-                                    }
-                                    placeholder="e.g., Watch: AI Sales Masterclass"
-                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                                />
-                            </div>
+                        <div className="mb-4">
+                            <label className="mb-2 block text-sm font-medium text-foreground">
+                                Select Deck Structure
+                            </label>
+                            <select
+                                value={selectedDeckId}
+                                onChange={(e) => setSelectedDeckId(e.target.value)}
+                                className="w-full rounded-lg border border-border px-4 py-2 focus:border-primary focus:ring-2 focus:ring-primary"
+                            >
+                                {deckStructures.map((deck) => (
+                                    <option key={deck.id} value={deck.id}>
+                                        {deck.title} ({deck.slide_count} slides)
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
 
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-foreground">
-                                    Deck Structure
-                                </label>
-                                <select
-                                    value={formData.deckStructureId}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            deckStructureId: e.target.value,
-                                        })
-                                    }
-                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                                >
-                                    {deckStructures.map((deck) => (
-                                        <option key={deck.id} value={deck.id}>
-                                            {deck.metadata?.title ||
-                                                `Deck ${deck.total_slides} slides`}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-foreground">
-                                    Pitch Video
-                                </label>
-                                <select
-                                    value={formData.videoId}
-                                    onChange={(e) =>
-                                        setFormData({
-                                            ...formData,
-                                            videoId: e.target.value,
-                                        })
-                                    }
-                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                                >
-                                    {pitchVideos.map((video) => (
-                                        <option key={video.id} value={video.id}>
-                                            Video from{" "}
-                                            {new Date(
-                                                video.created_at
-                                            ).toLocaleDateString()}
-                                        </option>
-                                    ))}
-                                </select>
-                                <p className="mt-1 text-sm text-muted-foreground">
-                                    This video will be embedded in the page
-                                </p>
-                            </div>
-
-                            <div className="flex justify-end gap-3">
+                        {selectedDeck && (
+                            <div className="flex gap-3">
                                 <button
-                                    onClick={() => setShowCreateForm(false)}
-                                    className="rounded-lg border border-border px-6 py-2 font-medium text-foreground hover:bg-muted/50"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    onClick={handleCreate}
-                                    disabled={
-                                        !formData.headline.trim() ||
-                                        !formData.videoId ||
-                                        isCreating
-                                    }
-                                    className={`rounded-lg px-6 py-2 font-semibold ${
-                                        formData.headline.trim() &&
-                                        formData.videoId &&
-                                        !isCreating
-                                            ? "bg-cyan-600 text-white hover:bg-cyan-700"
+                                    onClick={handleViewDeck}
+                                    disabled={!selectedDeck.gamma_deck_url}
+                                    className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 font-medium transition-colors ${
+                                        selectedDeck.gamma_deck_url
+                                            ? "bg-purple-600 text-white hover:bg-purple-700"
                                             : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                     }`}
                                 >
-                                    {isCreating ? "Creating..." : "Create Page"}
+                                    <Presentation className="h-5 w-5" />
+                                    View Deck
+                                    <ExternalLink className="h-4 w-4" />
+                                </button>
+
+                                <button
+                                    onClick={handleViewTalkTrack}
+                                    disabled={
+                                        !talkTracks.some(
+                                            (t) =>
+                                                t.deck_structure_id === selectedDeckId
+                                        )
+                                    }
+                                    className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 font-medium transition-colors ${
+                                        talkTracks.some(
+                                            (t) =>
+                                                t.deck_structure_id === selectedDeckId
+                                        )
+                                            ? "bg-primary text-white hover:bg-primary/90"
+                                            : "cursor-not-allowed bg-gray-300 text-muted-foreground"
+                                    }`}
+                                >
+                                    <FileText className="h-5 w-5" />
+                                    View Talk Track
                                 </button>
                             </div>
-                        </div>
+                        )}
+
+                        {selectedDeck && !selectedDeck.gamma_deck_url && (
+                            <p className="mt-3 text-sm text-amber-600">
+                                💡 Create a Gamma deck in Step 4 to view it while
+                                recording
+                            </p>
+                        )}
+
+                        {selectedDeck &&
+                            !talkTracks.some(
+                                (t) => t.deck_structure_id === selectedDeckId
+                            ) && (
+                                <p className="mt-3 text-sm text-amber-600">
+                                    💡 Generate a talk track in Step 6 to view it while
+                                    recording
+                                </p>
+                            )}
                     </div>
                 )}
 
-                {/* Existing Pages List */}
+                <div className="rounded-lg border border-red-100 bg-gradient-to-br from-red-50 to-orange-50 p-8">
+                    <VideoUploader
+                        projectId={projectId}
+                        onUploadComplete={handleUploadComplete}
+                    />
+                </div>
+
                 <div className="rounded-lg border border-border bg-card shadow-soft">
                     <div className="border-b border-border p-6">
                         <div className="flex items-center justify-between">
                             <h3 className="text-xl font-semibold text-foreground">
-                                Your Watch Pages
+                                Your Videos
                             </h3>
                             <span className="text-sm text-muted-foreground">
-                                {watchPages.length} created
+                                {videos.length} uploaded
                             </span>
                         </div>
                     </div>
 
                     <div className="p-6">
-                        {watchPages.length === 0 ? (
+                        {videos.length === 0 ? (
                             <div className="py-12 text-center text-muted-foreground">
                                 <Video className="mx-auto mb-4 h-12 w-12 opacity-50" />
-                                <p>No watch pages yet. Create your first one above!</p>
+                                <p>No videos yet. Upload your first one above!</p>
                             </div>
                         ) : (
-                            <div className="space-y-4">
-                                {watchPages.map((page) => (
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                {videos.map((video) => (
                                     <div
-                                        key={page.id}
-                                        className="rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-cyan-300 hover:shadow-md"
+                                        key={video.id}
+                                        className="rounded-lg border border-border bg-card p-4 shadow-sm transition-all hover:border-red-300 hover:shadow-md"
                                     >
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1">
-                                                <div className="mb-2 flex items-center gap-3">
-                                                    <h4 className="text-lg font-semibold text-foreground">
-                                                        {page.headline}
-                                                    </h4>
-                                                    <span
-                                                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                                            page.is_published
-                                                                ? "bg-green-100 text-green-800"
-                                                                : "bg-yellow-100 text-yellow-800"
-                                                        }`}
-                                                    >
-                                                        {page.is_published
-                                                            ? "Published"
-                                                            : "Draft"}
-                                                    </span>
+                                        <div className="mb-3 flex items-center justify-between">
+                                            <span className="text-sm font-semibold text-foreground">
+                                                Presentation Video
+                                            </span>
+                                            <button
+                                                onClick={() =>
+                                                    handleDeleteVideo(video.id)
+                                                }
+                                                className="rounded p-1 text-muted-foreground hover:bg-red-50 hover:text-red-600"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </div>
+
+                                        <div className="mb-3 aspect-video w-full overflow-hidden rounded-lg bg-gray-900">
+                                            {video.thumbnail_url ? (
+                                                <img
+                                                    src={video.thumbnail_url}
+                                                    alt="Video thumbnail"
+                                                    className="h-full w-full object-cover"
+                                                />
+                                            ) : (
+                                                <div className="flex h-full items-center justify-center">
+                                                    <Video className="h-12 w-12 text-muted-foreground" />
                                                 </div>
+                                            )}
+                                        </div>
 
-                                                <p className="mb-3 text-sm text-muted-foreground">
-                                                    {page.subheadline}
-                                                </p>
-
-                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                    <span>
-                                                        Created{" "}
-                                                        {new Date(
-                                                            page.created_at
-                                                        ).toLocaleDateString()}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div className="flex items-center gap-4">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="text-sm text-muted-foreground">
-                                                        {page.is_published
-                                                            ? "Live"
-                                                            : "Draft"}
-                                                    </span>
-                                                    <Switch
-                                                        checked={page.is_published}
-                                                        onCheckedChange={() =>
-                                                            handlePublishToggle(
-                                                                page.id,
-                                                                page.is_published
-                                                            )
-                                                        }
-                                                    />
-                                                </div>
-
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={() =>
-                                                            handlePreview(page.id)
-                                                        }
-                                                        className="rounded p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-                                                        title="Preview"
-                                                    >
-                                                        <Eye className="h-4 w-4" />
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() =>
-                                                            handleEdit(page.id)
-                                                        }
-                                                        className="rounded p-2 text-cyan-600 hover:bg-cyan-50"
-                                                        title="Edit with Visual Editor"
-                                                    >
-                                                        <Pencil className="h-4 w-4" />
-                                                    </button>
-
-                                                    <button
-                                                        onClick={() =>
-                                                            handleDelete(page.id)
-                                                        }
-                                                        className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
-                                                        title="Delete"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </button>
-                                                </div>
+                                        <div className="mb-3 text-sm text-muted-foreground">
+                                            <div className="flex items-center justify-between">
+                                                <span>
+                                                    ⏱️{" "}
+                                                    {Math.floor(
+                                                        video.video_duration / 60
+                                                    )}
+                                                    :
+                                                    {(video.video_duration % 60)
+                                                        .toString()
+                                                        .padStart(2, "0")}
+                                                </span>
+                                                <span>
+                                                    {new Date(
+                                                        video.created_at
+                                                    ).toLocaleDateString()}
+                                                </span>
                                             </div>
                                         </div>
+
+                                        <button
+                                            onClick={() => setSelectedVideo(video)}
+                                            className="flex w-full items-center justify-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-white transition-colors hover:bg-red-700"
+                                        >
+                                            <Play className="h-4 w-4" />
+                                            Watch Video
+                                        </button>
                                     </div>
                                 ))}
                             </div>
                         )}
                     </div>
                 </div>
-
-                {/* Helper Info */}
-                <div className="rounded-lg border border-primary/10 bg-primary/5 p-6">
-                    <h4 className="mb-3 font-semibold text-primary">
-                        💡 Watch Page Tips
-                    </h4>
-                    <ul className="space-y-2 text-sm text-primary">
-                        <li>• The video block is protected and can't be deleted</li>
-                        <li>
-                            • Use the Visual Editor to customize surrounding content
-                        </li>
-                        <li>• Add engagement elements like progress bars and CTAs</li>
-                        <li>• Changes auto-save every 3 seconds</li>
-                    </ul>
-                </div>
             </div>
+
+            {/* Video Player Modal */}
+            {selectedVideo && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
+                    <div className="w-full max-w-4xl">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-xl font-bold text-white">
+                                Presentation Video
+                            </h3>
+                            <button
+                                onClick={() => setSelectedVideo(null)}
+                                className="text-2xl font-bold text-white hover:text-gray-300"
+                            >
+                                ×
+                            </button>
+                        </div>
+                        <div className="aspect-video w-full overflow-hidden rounded-lg">
+                            <iframe
+                                src={selectedVideo.video_url}
+                                className="h-full w-full"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowFullScreen
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Talk Track Viewer Modal */}
+            {selectedTalkTrack && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
+                    <div className="flex h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-card shadow-2xl">
+                        <div className="flex-shrink-0 rounded-t-lg border-b border-border bg-muted/50 p-6">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h2 className="text-2xl font-bold text-foreground">
+                                        Talk Track Script
+                                    </h2>
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        Use this script while recording your
+                                        presentation
+                                    </p>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedTalkTrack(null)}
+                                    className="text-2xl font-bold text-muted-foreground hover:text-muted-foreground"
+                                >
+                                    ×
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="flex-1 overflow-y-scroll p-6">
+                            <div className="prose max-w-none">
+                                <pre className="whitespace-pre-wrap rounded-lg bg-muted/50 p-4 text-sm">
+                                    {selectedTalkTrack.content}
+                                </pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </StepLayout>
     );
 }

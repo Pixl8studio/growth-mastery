@@ -7,10 +7,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { logger } from "@/lib/client-logger";
-import type {
-    PageType,
-    EffectiveWebhookConfig,
-} from "@/types/pages";
+import type { PageType, EffectiveWebhookConfig } from "@/types/pages";
 import { Button } from "@/components/ui/button";
 import { CheckCircle2, XCircle, AlertCircle, Loader2 } from "lucide-react";
 

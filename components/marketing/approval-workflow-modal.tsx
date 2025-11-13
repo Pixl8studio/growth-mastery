@@ -89,7 +89,13 @@ export function ApprovalWorkflowModal({
         if (isOpen) {
             loadVariantsForApproval();
         }
-    }, [isOpen, funnelProjectId, platformFilter, statusFilter, loadVariantsForApproval]);
+    }, [
+        isOpen,
+        funnelProjectId,
+        platformFilter,
+        statusFilter,
+        loadVariantsForApproval,
+    ]);
 
     const handleApprove = async (variantId: string) => {
         try {

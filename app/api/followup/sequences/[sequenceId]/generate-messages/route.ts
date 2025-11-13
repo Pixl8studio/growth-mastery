@@ -195,4 +195,3 @@ export async function POST(request: NextRequest, context: RouteContext) {
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
-

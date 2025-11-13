@@ -94,9 +94,7 @@ export function EditorPageWrapper({
         // Cleanup: remove CSS links when component unmounts
         return () => {
             cssFiles.forEach((href) => {
-                const existingLink = document.querySelector(
-                    `link[href="${href}"]`
-                );
+                const existingLink = document.querySelector(`link[href="${href}"]`);
                 if (existingLink) {
                     existingLink.remove();
                 }
@@ -127,7 +125,6 @@ export function EditorPageWrapper({
             window.visualEditor.insertAIImage(imageUrl, mediaId);
         }
     };
-
 
     // Handler for video selection
     const handleVideoSelected = (video: PitchVideo) => {

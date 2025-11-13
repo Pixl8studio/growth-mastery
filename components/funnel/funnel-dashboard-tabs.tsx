@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     Card,
@@ -45,11 +45,7 @@ export function FunnelDashboardTabs({
     const [completionPercentage, setCompletionPercentage] = useState(0);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        loadCompletionStatus();
-    }, [projectId]);
-
-    const loadCompletionStatus = async () => {
+    const loadCompletionStatus = useCallback(async () => {
         try {
             const status = await getStepCompletionStatus(projectId);
             const percentage = calculateCompletionPercentage(status);
@@ -62,7 +58,11 @@ export function FunnelDashboardTabs({
         } finally {
             setLoading(false);
         }
-    };
+    }, [projectId]);
+
+    useEffect(() => {
+        loadCompletionStatus();
+    }, [loadCompletionStatus]);
 
     return (
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

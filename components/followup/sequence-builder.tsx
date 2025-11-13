@@ -59,12 +59,12 @@ export function SequenceBuilder({
     onDeleteSequence,
     onSelectSequence,
     onReloadSequences,
-    funnelProjectId,
-    offerId,
+    funnelProjectId: _funnelProjectId,
+    offerId: _offerId,
 }: SequenceBuilderProps) {
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);
-    const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+    const [_isGeneratingAI, _setIsGeneratingAI] = useState(false);
     const [generatingMessagesFor, setGeneratingMessagesFor] = useState<string | null>(
         null
     );

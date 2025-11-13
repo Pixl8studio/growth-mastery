@@ -11,7 +11,6 @@ import { useEffect, useState } from "react";
 import { logger } from "@/lib/client-logger";
 import { PageRegenerateButton } from "@/components/pages/page-regenerate-button";
 import { ImageGenerationModal } from "@/components/pages/image-generation-modal";
-import { ImageUploadButton } from "@/components/pages/image-upload-button";
 import { VideoSelectorModal } from "@/components/pages/video-selector-modal";
 import { SectionBlockGenerator } from "@/components/pages/section-block-generator";
 import type { PitchVideo } from "@/types/pages";
@@ -70,6 +69,20 @@ export function EditorPageWrapper({
             root.style.setProperty(key, value);
         });
 
+        // Load editor CSS files dynamically
+        const cssFiles = [
+            "/funnel-system/assets/css/editor.css",
+            "/funnel-system/assets/css/blocks.css",
+            "/funnel-system/assets/css/component-library.css",
+        ];
+
+        cssFiles.forEach((href) => {
+            const link = document.createElement("link");
+            link.rel = "stylesheet";
+            link.href = href;
+            document.head.appendChild(link);
+        });
+
         logger.info(
             { pageId, projectId, pageType, isEditMode },
             "📝 Editor page wrapper mounted - loading editor scripts"
@@ -77,6 +90,18 @@ export function EditorPageWrapper({
 
         // Debug log for theme
         logger.info({ theme }, "🎨 Theme CSS variables injected");
+
+        // Cleanup: remove CSS links when component unmounts
+        return () => {
+            cssFiles.forEach((href) => {
+                const existingLink = document.querySelector(
+                    `link[href="${href}"]`
+                );
+                if (existingLink) {
+                    existingLink.remove();
+                }
+            });
+        };
 
         // Expose modal openers to window for vanilla JS integration
         window.openImageGenerationModal = () => setIsImageGenModalOpen(true);
@@ -103,22 +128,6 @@ export function EditorPageWrapper({
         }
     };
 
-    // Handler for uploaded image
-    const handleImageUploaded = (
-        imageUrl: string,
-        mediaId: string,
-        filename: string
-    ) => {
-        logger.info(
-            { imageUrl, mediaId, filename },
-            "Image uploaded, inserting into editor"
-        );
-
-        // Call vanilla JS editor function to insert image
-        if (window.visualEditor && window.visualEditor.insertUploadedImage) {
-            window.visualEditor.insertUploadedImage(imageUrl, mediaId, filename);
-        }
-    };
 
     // Handler for video selection
     const handleVideoSelected = (video: PitchVideo) => {
@@ -194,13 +203,7 @@ export function EditorPageWrapper({
                 }
             `}</style>
 
-            {/* Load editor CSS */}
-            <link rel="stylesheet" href="/funnel-system/assets/css/editor.css" />
-            <link rel="stylesheet" href="/funnel-system/assets/css/blocks.css" />
-            <link
-                rel="stylesheet"
-                href="/funnel-system/assets/css/component-library.css"
-            />
+            {/* Editor CSS loaded via useEffect */}
 
             {/* Load editor JavaScript - vanilla JS works as-is! */}
             <Script

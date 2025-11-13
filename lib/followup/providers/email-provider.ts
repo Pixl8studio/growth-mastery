@@ -177,7 +177,7 @@ export class SendGridEmailProvider implements EmailProvider {
         }
     }
 
-    verifyWebhook(body: unknown, signature: string): boolean {
+    verifyWebhook(_body: unknown, _signature: string): boolean {
         // SendGrid webhook verification would go here
         // For now, return true (implement proper verification in production)
         return true;

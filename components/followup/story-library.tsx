@@ -75,7 +75,7 @@ export function StoryLibrary({
     stories,
     onCreateStory,
     onUpdateStory,
-    onDeleteStory,
+    onDeleteStory: _onDeleteStory,
 }: StoryLibraryProps) {
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);

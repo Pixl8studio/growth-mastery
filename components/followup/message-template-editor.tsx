@@ -72,7 +72,7 @@ export function MessageTemplateEditor({
     sequences,
     onCreateMessage,
     onUpdateMessage,
-    onDeleteMessage,
+    onDeleteMessage: _onDeleteMessage,
 }: MessageTemplateEditorProps) {
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [editingId, setEditingId] = useState<string | null>(null);

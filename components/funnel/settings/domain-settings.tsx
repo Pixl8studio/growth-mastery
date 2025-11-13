@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/client-logger";
 import { Button } from "@/components/ui/button";
@@ -30,11 +30,7 @@ export function DomainSettings({ projectId }: DomainSettingsProps) {
     const [saving, setSaving] = useState(false);
     const { toast } = useToast();
 
-    useEffect(() => {
-        loadData();
-    }, [projectId]);
-
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         setLoading(true);
         try {
             const supabase = createClient();
@@ -57,7 +53,11 @@ export function DomainSettings({ projectId }: DomainSettingsProps) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [projectId]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     const handleSave = async () => {
         setSaving(true);

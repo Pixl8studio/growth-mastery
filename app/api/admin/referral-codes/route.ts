@@ -12,7 +12,7 @@ import { ValidationError, AuthenticationError } from "@/lib/errors";
  * GET /api/admin/referral-codes
  * List all referral codes with usage stats
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
     const requestLogger = logger.child({ handler: "list-referral-codes" });
 
     try {

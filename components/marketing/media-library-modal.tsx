@@ -5,7 +5,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/components/ui/use-toast";
@@ -53,9 +53,9 @@ export function MediaLibraryModal({
         if (isOpen) {
             loadMedia();
         }
-    }, [isOpen, funnelProjectId]);
+    }, [isOpen, funnelProjectId, loadMedia]);
 
-    const loadMedia = async () => {
+    const loadMedia = useCallback(async () => {
         setLoading(true);
         try {
             const response = await fetch(
@@ -76,7 +76,7 @@ export function MediaLibraryModal({
         } finally {
             setLoading(false);
         }
-    };
+    }, [funnelProjectId]);
 
     const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;

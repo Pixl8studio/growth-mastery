@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -82,12 +82,7 @@ export function MarketingSettingsEnhanced({
     const [weeklySummary, setWeeklySummary] = useState(true);
     const [notificationFrequency, setNotificationFrequency] = useState("immediate");
 
-    useEffect(() => {
-        loadConnections();
-        loadActivityLog();
-    }, [funnelProjectId]);
-
-    const loadConnections = async () => {
+    const loadConnections = useCallback(async () => {
         setLoading(true);
 
         try {
@@ -108,9 +103,9 @@ export function MarketingSettingsEnhanced({
         } finally {
             setLoading(false);
         }
-    };
+    }, [funnelProjectId]);
 
-    const loadActivityLog = async () => {
+    const loadActivityLog = useCallback(async () => {
         try {
             const response = await fetch(
                 `/api/marketing/activity-log?funnel_project_id=${funnelProjectId}&limit=20`
@@ -123,7 +118,12 @@ export function MarketingSettingsEnhanced({
         } catch (error) {
             logger.error({ error }, "Failed to load activity log");
         }
-    };
+    }, [funnelProjectId]);
+
+    useEffect(() => {
+        loadConnections();
+        loadActivityLog();
+    }, [loadConnections, loadActivityLog]);
 
     const handleConnect = async (platform: string) => {
         try {

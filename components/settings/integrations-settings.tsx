@@ -19,7 +19,7 @@ export function IntegrationsSettings() {
     const [webhookEnabled, setWebhookEnabled] = useState(false);
     const [webhookUrl, setWebhookUrl] = useState("");
     const [webhookSecret, setWebhookSecret] = useState("");
-    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+    const [_hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
     const [originalWebhookEnabled, setOriginalWebhookEnabled] = useState(false);
     const [originalWebhookUrl, setOriginalWebhookUrl] = useState("");

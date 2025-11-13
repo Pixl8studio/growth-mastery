@@ -8,7 +8,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { determinePriceBand } from "./content-selector-service";
-import type { FollowupProspect } from "@/types/followup";
 
 export interface OfferContext {
     offer_id: string;

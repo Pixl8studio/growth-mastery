@@ -5,7 +5,7 @@
  * Displays all pages (registration, watch, enrollment) with publish toggles and share buttons
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -41,11 +41,7 @@ export function PagesList({ userId, username }: PagesListProps) {
     const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
     const { toast } = useToast();
 
-    useEffect(() => {
-        fetchPages();
-    }, [userId]);
-
-    const fetchPages = async () => {
+    const fetchPages = useCallback(async () => {
         setIsLoading(true);
         const supabase = createClient();
 
@@ -131,7 +127,11 @@ export function PagesList({ userId, username }: PagesListProps) {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [userId]);
+
+    useEffect(() => {
+        fetchPages();
+    }, [fetchPages]);
 
     const getPageTypeColor = (type: string) => {
         switch (type) {

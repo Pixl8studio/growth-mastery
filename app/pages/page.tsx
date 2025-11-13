@@ -221,17 +221,17 @@ function LoadingSkeleton() {
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 {[1, 2, 3, 4].map((i) => (
                     <div key={i} className="space-y-2">
-                        <div className="h-4 w-16 animate-pulse rounded bg-gray-200" />
-                        <div className="h-10 animate-pulse rounded-md bg-gray-200" />
+                        <div className="h-4 w-16 animate-pulse rounded bg-muted/50" />
+                        <div className="h-10 animate-pulse rounded-md bg-card/80 backdrop-blur-sm shadow-soft" />
                     </div>
                 ))}
             </div>
-            <div className="rounded-lg border border-gray-200 bg-white p-8">
+            <div className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm shadow-soft p-8">
                 <div className="space-y-4">
                     {[1, 2, 3, 4, 5].map((i) => (
                         <div
                             key={i}
-                            className="h-16 animate-pulse rounded bg-gray-100"
+                            className="h-16 animate-pulse rounded bg-muted/50"
                         />
                     ))}
                 </div>
@@ -246,13 +246,13 @@ export default async function PagesPage({
     searchParams: Promise<Record<string, string | undefined>>;
 }) {
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen gradient-hero">
             <Header />
 
             <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900">Pages</h1>
-                    <p className="mt-2 text-sm text-gray-600">
+                <div className="mb-8 animate-fade-in">
+                    <h1 className="text-3xl font-bold text-foreground">Pages</h1>
+                    <p className="mt-2 text-sm text-muted-foreground">
                         View and manage all your pages across all funnels
                     </p>
                 </div>

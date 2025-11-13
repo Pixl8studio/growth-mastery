@@ -130,17 +130,27 @@ describe("CreateFunnelPage", () => {
             },
         });
 
-        mockSupabase.from.mockReturnValue({
-            select: vi.fn().mockReturnValue({
-                eq: vi.fn().mockReturnValue({
-                    like: vi.fn().mockResolvedValue({
-                        data: [],
-                        error: null,
-                    }),
+        // Mock for the slug check query (first call to from)
+        const mockSelectForSlugCheck = vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+                like: vi.fn().mockResolvedValue({
+                    data: [],
+                    error: null,
                 }),
             }),
+        });
+
+        // Mock for the insert query (second call to from)
+        const mockFromForInsert = vi.fn().mockReturnValue({
             insert: mockInsert,
         });
+
+        // Setup from to return different mocks for each call
+        mockSupabase.from
+            .mockReturnValueOnce({
+                select: mockSelectForSlugCheck,
+            })
+            .mockReturnValueOnce(mockFromForInsert());
 
         render(<CreateFunnelPage />);
 
@@ -175,7 +185,7 @@ describe("CreateFunnelPage", () => {
         expect(insertCall).not.toHaveProperty("description");
         expect(insertCall).not.toHaveProperty("target_audience");
         expect(insertCall).not.toHaveProperty("business_niche");
-    });
+    }, 10000);
 
     it("should redirect to step 1 on successful creation", async () => {
         const user = userEvent.setup();

@@ -154,7 +154,7 @@ export default function SettingsPage() {
 
     return (
         <div className="mx-auto max-w-5xl p-8">
-            <div className="mb-8">
+            <div className="mb-8 animate-fade-in">
                 <h1 className="text-3xl font-bold text-foreground">Settings</h1>
                 <p className="mt-2 text-muted-foreground">
                     Manage your account preferences and integrations
@@ -166,36 +166,44 @@ export default function SettingsPage() {
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <Link
                         href="/settings/profile"
-                        className="rounded-lg border border-border bg-card p-4 hover:border-primary/30 hover:bg-primary/5 transition-smooth"
+                        className="group rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-4 shadow-soft hover:shadow-float hover:border-primary transition-smooth hover:-translate-y-1"
                     >
-                        <h3 className="font-semibold text-foreground">Profile</h3>
+                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-smooth">
+                            Profile
+                        </h3>
                         <p className="mt-1 text-sm text-muted-foreground">
                             Name, email, username
                         </p>
                     </Link>
                     <Link
                         href="/settings/integrations"
-                        className="rounded-lg border border-border bg-card p-4 hover:border-primary/30 hover:bg-primary/5 transition-smooth"
+                        className="group rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-4 shadow-soft hover:shadow-float hover:border-primary transition-smooth hover:-translate-y-1"
                     >
-                        <h3 className="font-semibold text-foreground">Integrations</h3>
+                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-smooth">
+                            Integrations
+                        </h3>
                         <p className="mt-1 text-sm text-muted-foreground">
                             CRM webhooks
                         </p>
                     </Link>
                     <Link
                         href="/settings/payments"
-                        className="rounded-lg border border-border bg-card p-4 hover:border-primary/30 hover:bg-primary/5 transition-smooth"
+                        className="group rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-4 shadow-soft hover:shadow-float hover:border-primary transition-smooth hover:-translate-y-1"
                     >
-                        <h3 className="font-semibold text-foreground">Payments</h3>
+                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-smooth">
+                            Payments
+                        </h3>
                         <p className="mt-1 text-sm text-muted-foreground">
                             Stripe Connect
                         </p>
                     </Link>
                     <Link
                         href="/settings/domains"
-                        className="rounded-lg border border-border bg-card p-4 hover:border-primary/30 hover:bg-primary/5 transition-smooth"
+                        className="group rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-4 shadow-soft hover:shadow-float hover:border-primary transition-smooth hover:-translate-y-1"
                     >
-                        <h3 className="font-semibold text-foreground">Domains</h3>
+                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-smooth">
+                            Domains
+                        </h3>
                         <p className="mt-1 text-sm text-muted-foreground">
                             Custom domains
                         </p>
@@ -203,7 +211,7 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Business Settings */}
-                <div className="rounded-lg border border-border bg-card p-6">
+                <div className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm shadow-soft p-6">
                     <h2 className="mb-6 text-xl font-semibold text-foreground">
                         Business Settings
                     </h2>
@@ -272,7 +280,7 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Beta Features */}
-                <div className="rounded-lg border border-border bg-card p-6">
+                <div className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm shadow-soft p-6">
                     <h2 className="mb-6 text-xl font-semibold text-foreground">
                         Beta Features
                     </h2>
@@ -294,14 +302,14 @@ export default function SettingsPage() {
                                             !settings.beta_followup_engine_enabled,
                                     })
                                 }
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-smooth shadow-soft ${
                                     settings.beta_followup_engine_enabled
-                                        ? "bg-primary"
-                                        : "bg-gray-200"
+                                        ? "gradient-emerald"
+                                        : "bg-muted"
                                 }`}
                             >
                                 <span
-                                    className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-card transition-smooth shadow-soft ${
                                         settings.beta_followup_engine_enabled
                                             ? "translate-x-6"
                                             : "translate-x-1"
@@ -327,14 +335,14 @@ export default function SettingsPage() {
                                             !settings.beta_analytics_modules_enabled,
                                     })
                                 }
-                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-smooth shadow-soft ${
                                     settings.beta_analytics_modules_enabled
-                                        ? "bg-primary"
-                                        : "bg-gray-200"
+                                        ? "gradient-emerald"
+                                        : "bg-muted"
                                 }`}
                             >
                                 <span
-                                    className={`inline-block h-4 w-4 transform rounded-full bg-card transition-transform ${
+                                    className={`inline-block h-4 w-4 transform rounded-full bg-card transition-smooth shadow-soft ${
                                         settings.beta_analytics_modules_enabled
                                             ? "translate-x-6"
                                             : "translate-x-1"
@@ -346,7 +354,7 @@ export default function SettingsPage() {
                 </div>
 
                 {/* Integration Status */}
-                <div className="rounded-lg border border-border bg-card p-6">
+                <div className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm shadow-soft p-6">
                     <h2 className="mb-6 text-xl font-semibold text-foreground">
                         Integration Status
                     </h2>
@@ -371,13 +379,13 @@ export default function SettingsPage() {
                         ].map((integration) => (
                             <div
                                 key={integration.key}
-                                className="flex items-center justify-between rounded-lg border border-border p-4"
+                                className="flex items-center justify-between rounded-xl border border-border/50 bg-card/60 backdrop-blur-sm shadow-soft p-4 hover:shadow-float transition-smooth"
                             >
                                 <div className="flex items-center space-x-3">
                                     {integrationStatus[
                                         integration.key as keyof typeof integrationStatus
                                     ] ? (
-                                        <Check className="h-5 w-5 text-green-600" />
+                                        <Check className="h-5 w-5 text-primary" />
                                     ) : (
                                         <X className="h-5 w-5 text-muted-foreground" />
                                     )}
@@ -389,7 +397,7 @@ export default function SettingsPage() {
                                     href={integration.docs}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-primary hover:text-primary-foreground0"
+                                    className="text-primary hover:text-accent transition-smooth"
                                 >
                                     <ExternalLink className="h-4 w-4" />
                                 </a>
@@ -400,7 +408,12 @@ export default function SettingsPage() {
 
                 {/* Save Button */}
                 <div className="flex justify-end">
-                    <Button onClick={handleSave} disabled={saving}>
+                    <Button
+                        onClick={handleSave}
+                        disabled={saving}
+                        variant="hero"
+                        className="transition-smooth"
+                    >
                         {saving ? "Saving..." : "Save Changes"}
                     </Button>
                 </div>

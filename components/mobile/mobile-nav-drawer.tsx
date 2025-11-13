@@ -77,7 +77,7 @@ export function MobileNavDrawer({ isOpen, onClose, userEmail }: MobileNavDrawerP
                     <div className="flex items-center justify-between p-4 border-b border-border">
                         <Link href="/funnel-builder" onClick={onClose}>
                             <span className="text-xl font-bold text-foreground">
-                                Genie AI
+                                Growth Mastery AI
                             </span>
                         </Link>
                         <Button

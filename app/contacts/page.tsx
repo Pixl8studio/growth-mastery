@@ -11,7 +11,7 @@ import { Header } from "@/components/layout/header";
 import Link from "next/link";
 
 export const metadata = {
-    title: "Contacts | Genie AI",
+    title: "Contacts | Growth Mastery AI",
     description: "View and manage your funnel contacts",
 };
 
@@ -88,7 +88,7 @@ export default async function ContactsPage({
     };
 
     return (
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen gradient-hero">
             <Header />
 
             {/* Main Content */}
@@ -109,9 +109,9 @@ export default async function ContactsPage({
 
                 {/* Empty State */}
                 {contacts && contacts.length === 0 && (
-                    <div className="mt-8 rounded-lg border border-gray-200 bg-white p-12 text-center">
+                    <div className="mt-8 rounded-2xl border-2 border-dashed border-primary/30 bg-card/80 backdrop-blur-sm shadow-soft p-12 text-center">
                         <svg
-                            className="mx-auto h-12 w-12 text-gray-400"
+                            className="mx-auto h-12 w-12 text-primary/50"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -123,10 +123,10 @@ export default async function ContactsPage({
                                 d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
                             />
                         </svg>
-                        <h3 className="mt-2 text-sm font-semibold text-gray-900">
+                        <h3 className="mt-2 text-sm font-semibold text-foreground">
                             No contacts found
                         </h3>
-                        <p className="mt-1 text-sm text-gray-500">
+                        <p className="mt-1 text-sm text-muted-foreground">
                             {stage !== "all" || search
                                 ? "Try adjusting your filters"
                                 : "Contacts will appear here when someone registers for your funnel"}
@@ -135,7 +135,7 @@ export default async function ContactsPage({
                             <div className="mt-6">
                                 <Link
                                     href="/contacts"
-                                    className="inline-flex items-center rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500"
+                                    className="inline-flex items-center rounded-md gradient-emerald px-3 py-2 text-sm font-semibold text-primary-foreground shadow-soft hover:shadow-float transition-smooth"
                                 >
                                     Clear Filters
                                 </Link>

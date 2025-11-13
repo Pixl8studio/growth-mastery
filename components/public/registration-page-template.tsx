@@ -164,7 +164,7 @@ export function RegistrationPageTemplate({ page }: RegistrationPageProps) {
 
                 {/* Footer */}
                 <p className="mt-8 text-center text-sm text-muted-foreground">
-                    Powered by Genie AI
+                    Powered by Growth Mastery AI
                 </p>
             </div>
         </div>

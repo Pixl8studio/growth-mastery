@@ -29,16 +29,16 @@ export async function Header() {
             </div>
 
             {/* Desktop Header */}
-            <header className="hidden md:block sticky top-0 z-50 border-b border-border bg-card">
+            <header className="hidden md:block sticky top-0 z-50 border-b border-border/30 bg-card/95 backdrop-blur-md shadow-soft">
                 <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                     <div className="flex h-16 items-center justify-between">
                         {/* Logo */}
                         <Link
                             href={user ? "/funnel-builder" : "/"}
-                            className="flex items-center space-x-2"
+                            className="flex items-center space-x-2 group"
                         >
-                            <span className="text-2xl font-bold text-foreground">
-                                Genie AI
+                            <span className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent group-hover:opacity-80 transition-smooth">
+                                Growth Mastery AI
                             </span>
                         </Link>
 
@@ -47,25 +47,25 @@ export async function Header() {
                             <nav className="flex items-center space-x-6">
                                 <Link
                                     href="/funnel-builder"
-                                    className="text-sm font-medium text-foreground hover:text-foreground"
+                                    className="text-sm font-medium text-foreground hover:text-primary transition-smooth"
                                 >
                                     Funnels
                                 </Link>
                                 <Link
                                     href="/pages"
-                                    className="text-sm font-medium text-foreground hover:text-foreground"
+                                    className="text-sm font-medium text-foreground hover:text-primary transition-smooth"
                                 >
                                     Pages
                                 </Link>
                                 <Link
                                     href="/ai-followup"
-                                    className="text-sm font-medium text-foreground hover:text-foreground"
+                                    className="text-sm font-medium text-foreground hover:text-primary transition-smooth"
                                 >
                                     AI Followup
                                 </Link>
                                 <Link
                                     href="/contacts"
-                                    className="text-sm font-medium text-foreground hover:text-foreground"
+                                    className="text-sm font-medium text-foreground hover:text-primary transition-smooth"
                                 >
                                     Contacts
                                 </Link>

@@ -42,7 +42,7 @@ export function MobileHeader({ user }: MobileHeaderProps) {
                         className="flex items-center"
                     >
                         <span className="text-lg font-bold text-foreground">
-                            Genie AI
+                            Growth Mastery AI
                         </span>
                     </Link>
 

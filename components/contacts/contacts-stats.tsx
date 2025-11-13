@@ -24,7 +24,7 @@ export function ContactsStats({ stats }: ContactsStatsProps) {
     return (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
             {/* Total Contacts */}
-            <Card className="p-6">
+            <Card className="p-6 shadow-soft hover:shadow-float transition-smooth bg-card/80 backdrop-blur-sm border-border/50">
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-sm font-medium text-muted-foreground">
@@ -34,7 +34,7 @@ export function ContactsStats({ stats }: ContactsStatsProps) {
                             {total}
                         </p>
                     </div>
-                    <div className="rounded-full bg-primary/10 p-3">
+                    <div className="rounded-full bg-primary/10 p-3 shadow-soft">
                         <svg
                             className="h-6 w-6 text-primary"
                             fill="none"
@@ -53,7 +53,7 @@ export function ContactsStats({ stats }: ContactsStatsProps) {
             </Card>
 
             {/* Registered */}
-            <Card className="p-6">
+            <Card className="p-6 shadow-soft hover:shadow-float transition-smooth bg-card/80 backdrop-blur-sm border-border/50">
                 <div className="flex items-center justify-between">
                     <div className="w-full">
                         <p className="text-sm font-medium text-muted-foreground">
@@ -70,9 +70,9 @@ export function ContactsStats({ stats }: ContactsStatsProps) {
                             )}
                         </div>
                     </div>
-                    <div className="rounded-full bg-purple-100 p-3">
+                    <div className="rounded-full bg-secondary/20 p-3 shadow-soft">
                         <svg
-                            className="h-6 w-6 text-purple-600"
+                            className="h-6 w-6 text-secondary"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -89,7 +89,7 @@ export function ContactsStats({ stats }: ContactsStatsProps) {
             </Card>
 
             {/* Watched Video */}
-            <Card className="p-6">
+            <Card className="p-6 shadow-soft hover:shadow-float transition-smooth bg-card/80 backdrop-blur-sm border-border/50">
                 <div className="flex items-center justify-between">
                     <div className="w-full">
                         <p className="text-sm font-medium text-muted-foreground">
@@ -106,9 +106,9 @@ export function ContactsStats({ stats }: ContactsStatsProps) {
                             )}
                         </div>
                     </div>
-                    <div className="rounded-full bg-green-100 p-3">
+                    <div className="rounded-full gradient-emerald p-3 shadow-glow">
                         <svg
-                            className="h-6 w-6 text-green-600"
+                            className="h-6 w-6 text-primary-foreground"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -131,7 +131,7 @@ export function ContactsStats({ stats }: ContactsStatsProps) {
             </Card>
 
             {/* Viewed Enrollment */}
-            <Card className="p-6">
+            <Card className="p-6 shadow-soft hover:shadow-float transition-smooth bg-card/80 backdrop-blur-sm border-border/50">
                 <div className="flex items-center justify-between">
                     <div className="w-full">
                         <p className="text-sm font-medium text-muted-foreground">
@@ -148,9 +148,9 @@ export function ContactsStats({ stats }: ContactsStatsProps) {
                             )}
                         </div>
                     </div>
-                    <div className="rounded-full bg-yellow-100 p-3">
+                    <div className="rounded-full gradient-gold p-3 shadow-soft">
                         <svg
-                            className="h-6 w-6 text-yellow-600"
+                            className="h-6 w-6 text-accent-foreground"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"
@@ -167,7 +167,7 @@ export function ContactsStats({ stats }: ContactsStatsProps) {
             </Card>
 
             {/* Purchased */}
-            <Card className="p-6">
+            <Card className="p-6 shadow-soft hover:shadow-float transition-smooth bg-card/80 backdrop-blur-sm border-border/50">
                 <div className="flex items-center justify-between">
                     <div className="w-full">
                         <p className="text-sm font-medium text-muted-foreground">
@@ -184,9 +184,9 @@ export function ContactsStats({ stats }: ContactsStatsProps) {
                             )}
                         </div>
                     </div>
-                    <div className="rounded-full bg-emerald-100 p-3">
+                    <div className="rounded-full gradient-emerald p-3 shadow-glow">
                         <svg
-                            className="h-6 w-6 text-emerald-600"
+                            className="h-6 w-6 text-primary-foreground"
                             fill="none"
                             stroke="currentColor"
                             viewBox="0 0 24 24"

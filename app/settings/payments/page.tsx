@@ -205,10 +205,11 @@ export default function PaymentsSettingsPage() {
                                     Platform Fee
                                 </h4>
                                 <p className="mt-1 text-sm text-primary">
-                                    Genie AI acts as your affiliate marketer and charges
-                                    a 20% platform fee + $0.50 per transaction for all
-                                    sales we generate. You'll receive 80% of each sale
-                                    minus Stripe processing fees.
+                                    Growth Mastery AI acts as your affiliate marketer
+                                    and charges a 20% platform fee + $0.50 per
+                                    transaction for all sales we generate. You'll
+                                    receive 80% of each sale minus Stripe processing
+                                    fees.
                                 </p>
                             </div>
 

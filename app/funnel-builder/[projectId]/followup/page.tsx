@@ -7,17 +7,33 @@
 
 "use client";
 
-import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ProspectList } from "@/components/followup/prospect-list";
 import { SequenceManager } from "@/components/followup/sequence-manager";
 import { StoryLibraryManager } from "@/components/followup/story-library-manager";
+import { useIsMobile } from "@/lib/mobile-utils";
 
 export default function FollowupManagementPage() {
     const params = useParams();
+    const router = useRouter();
+    const isMobile = useIsMobile("lg");
     const projectId = params?.projectId as string;
     const [activeTab, setActiveTab] = useState("prospects");
+
+    // Redirect mobile users to desktop-required page
+    useEffect(() => {
+        if (isMobile && projectId) {
+            const searchParams = new URLSearchParams({
+                feature: "AI Follow-Up Editor",
+                description:
+                    "The follow-up sequence editor requires a desktop computer for managing prospects, creating sequences, and editing email templates.",
+                returnPath: `/funnel-builder/${projectId}`,
+            });
+            router.push(`/desktop-required?${searchParams.toString()}`);
+        }
+    }, [isMobile, projectId, router]);
 
     return (
         <div className="container mx-auto p-6">

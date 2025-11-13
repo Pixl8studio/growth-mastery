@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
 import { DeckStructureEditor } from "@/components/funnel/deck-structure-editor";
@@ -8,6 +9,7 @@ import { Sparkles, FileText, Trash2, Pencil, Download, Copy } from "lucide-react
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
+import { useIsMobile } from "@/lib/mobile-utils";
 
 interface DeckStructure {
     id: string;
@@ -38,6 +40,8 @@ export default function Step3Page({
 }: {
     params: Promise<{ projectId: string }>;
 }) {
+    const router = useRouter();
+    const isMobile = useIsMobile("lg"); // Check if below large breakpoint
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
     const [isGenerating, setIsGenerating] = useState(false);
@@ -48,6 +52,19 @@ export default function Step3Page({
     const [selectedDeck, setSelectedDeck] = useState<DeckStructure | null>(null);
     const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
     const [editingDeckName, setEditingDeckName] = useState("");
+
+    // Redirect mobile users to desktop-required page
+    useEffect(() => {
+        if (isMobile && projectId) {
+            const params = new URLSearchParams({
+                feature: "Deck Structure Editor",
+                description:
+                    "The deck structure editor requires a desktop computer for drag-and-drop editing and managing complex slide layouts.",
+                returnPath: `/funnel-builder/${projectId}`,
+            });
+            router.push(`/desktop-required?${params.toString()}`);
+        }
+    }, [isMobile, projectId, router]);
     const [slideCount, setSlideCount] = useState<"5" | "55">("55");
     const [presentationType, setPresentationType] = useState<
         "webinar" | "vsl" | "sales_page"

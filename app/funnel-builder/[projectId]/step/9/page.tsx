@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
 import { FileText, PlusCircle, Eye, Pencil, Trash2, X } from "lucide-react";
@@ -14,6 +15,7 @@ import { createClient } from "@/lib/supabase/client";
 import { generateRegistrationHTML } from "@/lib/generators/registration-page-generator";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { Switch } from "@/components/ui/switch";
+import { useIsMobile } from "@/lib/mobile-utils";
 
 interface DeckStructure {
     id: string;
@@ -41,6 +43,8 @@ export default function Step9RegistrationPage({
 }: {
     params: Promise<{ projectId: string }>;
 }) {
+    const router = useRouter();
+    const isMobile = useIsMobile("lg");
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
     const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
@@ -54,6 +58,19 @@ export default function Step9RegistrationPage({
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
+
+    // Redirect mobile users to desktop-required page
+    useEffect(() => {
+        if (isMobile && projectId) {
+            const params = new URLSearchParams({
+                feature: "Registration Page Editor",
+                description:
+                    "The registration page editor requires a desktop computer for editing registration forms, customizing layouts, and managing page content.",
+                returnPath: `/funnel-builder/${projectId}`,
+            });
+            router.push(`/desktop-required?${params.toString()}`);
+        }
+    }, [isMobile, projectId, router]);
 
     useEffect(() => {
         const resolveParams = async () => {

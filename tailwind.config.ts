@@ -11,12 +11,22 @@ const config: Config = {
     theme: {
         container: {
             center: true,
-            padding: "2rem",
+            padding: {
+                DEFAULT: "1rem",
+                sm: "1.5rem",
+                lg: "2rem",
+            },
             screens: {
                 "2xl": "1400px",
             },
         },
         extend: {
+            spacing: {
+                safe: "env(safe-area-inset-bottom)",
+                "safe-top": "env(safe-area-inset-top)",
+                "safe-left": "env(safe-area-inset-left)",
+                "safe-right": "env(safe-area-inset-right)",
+            },
             colors: {
                 border: "hsl(var(--border))",
                 input: "hsl(var(--input))",
@@ -116,9 +126,43 @@ const config: Config = {
                 sans: ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
                 display: ["var(--font-poppins)", "Poppins", "Inter", "sans-serif"],
             },
+            minHeight: {
+                touch: "44px",
+                "touch-lg": "48px",
+            },
+            minWidth: {
+                touch: "44px",
+                "touch-lg": "48px",
+            },
         },
     },
-    plugins: [require("tailwindcss-animate")],
+    plugins: [
+        require("tailwindcss-animate"),
+        // Custom plugin for touch-specific utilities
+        function ({ addUtilities }: { addUtilities: Function }) {
+            const newUtilities = {
+                ".touch-manipulation": {
+                    "touch-action": "manipulation",
+                },
+                ".tap-highlight-none": {
+                    "-webkit-tap-highlight-color": "transparent",
+                },
+                ".tap-highlight-primary": {
+                    "-webkit-tap-highlight-color": "hsl(var(--primary) / 0.2)",
+                },
+                ".safe-area-inset-bottom": {
+                    "padding-bottom": "env(safe-area-inset-bottom)",
+                },
+                ".safe-area-inset-top": {
+                    "padding-top": "env(safe-area-inset-top)",
+                },
+                ".scroll-smooth-momentum": {
+                    "-webkit-overflow-scrolling": "touch",
+                },
+            };
+            addUtilities(newUtilities);
+        },
+    ],
 };
 
 export default config;

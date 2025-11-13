@@ -6,6 +6,7 @@
  */
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
 import {
@@ -31,6 +32,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useIsMobile } from "@/lib/mobile-utils";
 
 interface DeckStructure {
     id: string;
@@ -91,6 +93,8 @@ export default function Step5EnrollmentPage({
 }: {
     params: Promise<{ projectId: string }>;
 }) {
+    const router = useRouter();
+    const isMobile = useIsMobile("lg");
     const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
@@ -100,6 +104,19 @@ export default function Step5EnrollmentPage({
     const [isCreating, setIsCreating] = useState(false);
     const [creationProgress, setCreationProgress] = useState("");
     const [showCreateForm, setShowCreateForm] = useState(false);
+
+    // Redirect mobile users to desktop-required page
+    useEffect(() => {
+        if (isMobile && projectId) {
+            const params = new URLSearchParams({
+                feature: "Enrollment Page Editor",
+                description:
+                    "The enrollment page editor requires a desktop computer for editing sales copy, customizing layouts, and managing page content.",
+                returnPath: `/funnel-builder/${projectId}`,
+            });
+            router.push(`/desktop-required?${params.toString()}`);
+        }
+    }, [isMobile, projectId, router]);
     const [formData, setFormData] = useState({
         deckStructureId: "",
         offerId: "",

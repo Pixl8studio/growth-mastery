@@ -163,7 +163,7 @@ export function EnrollmentPageTemplate({ page }: EnrollmentPageProps) {
 
                 {/* Footer */}
                 <p className="mt-12 text-center text-sm text-muted-foreground">
-                    Powered by Genie AI
+                    Powered by Growth Mastery AI
                 </p>
             </div>
         </div>

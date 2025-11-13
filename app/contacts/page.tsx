@@ -11,7 +11,7 @@ import { Header } from "@/components/layout/header";
 import Link from "next/link";
 
 export const metadata = {
-    title: "Contacts | Genie AI",
+    title: "Contacts | Growth Mastery AI",
     description: "View and manage your funnel contacts",
 };
 

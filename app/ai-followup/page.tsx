@@ -11,7 +11,7 @@ import { Header } from "@/components/layout/header";
 import { AIFollowupDashboard } from "@/components/followup/ai-followup-dashboard";
 
 export const metadata = {
-    title: "AI Followup - Genie AI",
+    title: "AI Followup - Growth Mastery AI",
     description: "Global view of all AI-powered followup conversations and analytics",
 };
 

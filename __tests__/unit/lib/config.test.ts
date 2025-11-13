@@ -19,7 +19,7 @@ import {
 describe("config", () => {
     describe("APP_CONFIG", () => {
         it("should have required fields", () => {
-            expect(APP_CONFIG.name).toBe("Genie AI");
+            expect(APP_CONFIG.name).toBe("Growth Mastery AI");
             expect(APP_CONFIG.description).toBeTruthy();
             expect(APP_CONFIG.url).toBeTruthy();
         });

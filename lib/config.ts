@@ -4,7 +4,7 @@
  */
 
 export const APP_CONFIG = {
-    name: "Genie AI",
+    name: "Growth Mastery AI",
     description: "AI-Powered Funnel Builder",
     url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
 } as const;

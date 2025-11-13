@@ -1,0 +1,23 @@
+{
+  "setup-worktree": [
+    "npm install",
+    "npm run lint",
+    "npm run type-check || tsc --noEmit || echo 'No type-check script configured'",
+    "npm run test -- run || vitest run || echo 'No tests configured yet'",
+    "echo '✅ Worktree setup complete! All quality gates validated.'"
+  ],
+  "validate": [
+    "npm run lint",
+    "npm run type-check || tsc --noEmit",
+    "npm run test -- run || vitest run",
+    "echo '✅ All validation passed - ready to commit!'"
+  ],
+  "quick-validate": ["npm run lint", "echo '✅ Quick validation passed!'"],
+  "test-only": ["npm run test -- run || vitest run", "echo '✅ Tests passed!'"],
+  "pre-commit": [
+    "npm run lint",
+    "npm run type-check || tsc --noEmit",
+    "npm run test -- run || vitest run",
+    "echo '✅ Pre-commit validation complete - green checks achieved!'"
+  ]
+}

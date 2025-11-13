@@ -13,7 +13,7 @@ import { Header } from "@/components/layout/header";
 import { ProjectCard } from "@/components/funnel-builder/project-card";
 
 export const metadata = {
-    title: "Funnel Builder | Genie AI",
+    title: "Funnel Builder | Growth Mastery AI",
     description: "Create high-converting pitch video funnels with AI",
 };
 

@@ -123,6 +123,6 @@ export async function generateMetadata({ params }: PageProps) {
     }
 
     return {
-        title: "Genie AI",
+        title: "Growth Mastery AI",
     };
 }

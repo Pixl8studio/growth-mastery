@@ -38,7 +38,7 @@ export async function Header() {
                             className="flex items-center space-x-2 group"
                         >
                             <span className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent group-hover:opacity-80 transition-smooth">
-                                Genie AI
+                                Growth Mastery AI
                             </span>
                         </Link>
 

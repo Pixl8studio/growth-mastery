@@ -9,7 +9,7 @@ import { redirect } from "next/navigation";
 import { Header } from "@/components/layout/header";
 
 export const metadata = {
-    title: "Settings | Genie AI",
+    title: "Settings | Growth Mastery AI",
     description: "Manage your account settings and integrations",
 };
 

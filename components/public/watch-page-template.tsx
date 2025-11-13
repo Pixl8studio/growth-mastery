@@ -99,7 +99,7 @@ export function WatchPageTemplate({ page }: WatchPageProps) {
 
                 {/* Footer */}
                 <p className="mt-8 sm:mt-12 text-center text-xs sm:text-sm text-muted-foreground">
-                    Powered by Genie AI
+                    Powered by Growth Mastery AI
                 </p>
             </div>
         </div>

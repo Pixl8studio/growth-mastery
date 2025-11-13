@@ -18,7 +18,7 @@ export const metadata = {
 };
 
 export default async function FunnelBuilderPage() {
-    const { user, profile } = await getCurrentUserWithProfile();
+    const { user } = await getCurrentUserWithProfile();
     const supabase = await createClient();
 
     // Fetch user's funnel projects

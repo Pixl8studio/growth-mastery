@@ -363,7 +363,7 @@ function checkSendCompliance(
     }
 
     // Check quiet hours (if configured)
-    const timezone = prospect.timezone as string;
+    const _timezone = prospect.timezone as string;
     const now = new Date();
     const hour = now.getHours();
 

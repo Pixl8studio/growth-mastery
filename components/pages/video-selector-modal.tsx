@@ -33,9 +33,9 @@ export function VideoSelectorModal({
         if (isOpen) {
             loadVideos();
         }
-    }, [isOpen, projectId]);
+    }, [isOpen, projectId, loadVideos]);
 
-    const loadVideos = async () => {
+    const loadVideos = useCallback(async () => {
         setLoading(true);
         setError(null);
 
@@ -60,7 +60,7 @@ export function VideoSelectorModal({
         } finally {
             setLoading(false);
         }
-    };
+    }, [projectId]);
 
     const handleSelectVideo = () => {
         if (selectedVideo) {

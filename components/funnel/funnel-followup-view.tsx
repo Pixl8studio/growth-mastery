@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/client-logger";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -33,11 +33,7 @@ export function FunnelFollowupView({ projectId }: FunnelFollowupViewProps) {
     });
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        loadStats();
-    }, [projectId]);
-
-    const loadStats = async () => {
+    const loadStats = useCallback(async () => {
         setLoading(true);
         try {
             const supabase = createClient();
@@ -71,7 +67,11 @@ export function FunnelFollowupView({ projectId }: FunnelFollowupViewProps) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [projectId]);
+
+    useEffect(() => {
+        loadStats();
+    }, [loadStats]);
 
     if (loading) {
         return (

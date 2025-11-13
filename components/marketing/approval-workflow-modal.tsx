@@ -52,9 +52,15 @@ export function ApprovalWorkflowModal({
         if (isOpen) {
             loadVariantsForApproval();
         }
-    }, [isOpen, funnelProjectId, platformFilter, statusFilter]);
+    }, [
+        isOpen,
+        funnelProjectId,
+        platformFilter,
+        statusFilter,
+        loadVariantsForApproval,
+    ]);
 
-    const loadVariantsForApproval = async () => {
+    const loadVariantsForApproval = useCallback(async () => {
         setLoading(true);
 
         try {
@@ -89,7 +95,7 @@ export function ApprovalWorkflowModal({
         } finally {
             setLoading(false);
         }
-    };
+    }, [funnelProjectId, platformFilter, statusFilter]);
 
     const handleApprove = async (variantId: string) => {
         try {

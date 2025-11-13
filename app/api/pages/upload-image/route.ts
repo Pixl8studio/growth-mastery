@@ -96,7 +96,6 @@ export async function POST(request: NextRequest) {
 
         // Generate storage path
         const timestamp = Date.now();
-        const extension = file.name.split(".").pop() || "jpg";
         const sanitizedFilename = file.name
             .replace(/[^a-zA-Z0-9.-]/g, "_")
             .substring(0, 100);

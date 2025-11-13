@@ -41,11 +41,7 @@ export function PagesList({ userId, username }: PagesListProps) {
     const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
     const { toast } = useToast();
 
-    useEffect(() => {
-        fetchPages();
-    }, [userId]);
-
-    const fetchPages = async () => {
+    const fetchPages = useCallback(async () => {
         setIsLoading(true);
         const supabase = createClient();
 
@@ -131,7 +127,11 @@ export function PagesList({ userId, username }: PagesListProps) {
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [userId]);
+
+    useEffect(() => {
+        fetchPages();
+    }, [fetchPages]);
 
     const getPageTypeColor = (type: string) => {
         switch (type) {

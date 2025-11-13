@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { logger } from "@/lib/client-logger";
 import { Button } from "@/components/ui/button";
 
@@ -85,6 +85,97 @@ export function VapiCallWidget({
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
+
+    const saveTranscript = useCallback(
+        async (callId: string | null, callStartTimestamp: string | null) => {
+            try {
+                logger.info(
+                    { callId, callStartTimestamp },
+                    "⏳ Waiting for VAPI to process transcript..."
+                );
+
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "system",
+                        content:
+                            "⏳ Processing transcript (this takes a few seconds)...",
+                        timestamp: new Date(),
+                    },
+                ]);
+
+                // Wait for VAPI to process the call
+                await new Promise((resolve) => setTimeout(resolve, 5000));
+
+                logger.info(
+                    { callId, callStartTimestamp },
+                    "📡 Fetching transcript from VAPI"
+                );
+
+                const response = await fetch("/api/vapi/webhook", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        callId,
+                        callStartTimestamp,
+                        projectId,
+                        userId,
+                    }),
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    logger.info(
+                        { transcriptLength: data.transcript?.length },
+                        "✅ Transcript saved successfully!"
+                    );
+
+                    setMessages((prev) => [
+                        ...prev,
+                        {
+                            role: "system",
+                            content: "✅ Transcript saved!",
+                            timestamp: new Date(),
+                        },
+                    ]);
+
+                    // Notify parent component to refresh the calls list
+                    if (onCallComplete) {
+                        setTimeout(() => onCallComplete(), 1500);
+                    }
+                } else {
+                    const errorData = await response.json();
+                    logger.error(
+                        { status: response.status, error: errorData },
+                        "❌ Failed to save transcript"
+                    );
+
+                    setMessages((prev) => [
+                        ...prev,
+                        {
+                            role: "system",
+                            content:
+                                "❌ Error saving transcript. Please try again or contact support.",
+                            timestamp: new Date(),
+                        },
+                    ]);
+                }
+            } catch (error) {
+                logger.error({ error }, "❌ Error in saveTranscript");
+
+                setMessages((prev) => [
+                    ...prev,
+                    {
+                        role: "system",
+                        content:
+                            "❌ Error saving transcript. Please try again or contact support.",
+                        timestamp: new Date(),
+                    },
+                ]);
+            }
+        },
+        [projectId, userId, onCallComplete]
+    );
 
     // Initialize VAPI Web SDK
     useEffect(() => {
@@ -328,92 +419,7 @@ export function VapiCallWidget({
         return () => {
             stopTimer();
         };
-    }, [publicKey]);
-
-    const saveTranscript = async (
-        callId: string | null,
-        callStartTimestamp: string | null
-    ) => {
-        try {
-            logger.info(
-                { callId, callStartTimestamp },
-                "⏳ Waiting for VAPI to process transcript..."
-            );
-
-            setMessages((prev) => [
-                ...prev,
-                {
-                    role: "system",
-                    content: "⏳ Processing transcript (this takes a few seconds)...",
-                    timestamp: new Date(),
-                },
-            ]);
-
-            // Wait for VAPI to process the call
-            await new Promise((resolve) => setTimeout(resolve, 5000));
-
-            logger.info(
-                { callId, callStartTimestamp },
-                "📡 Fetching transcript from VAPI"
-            );
-
-            const response = await fetch("/api/vapi/webhook", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ callId, callStartTimestamp, projectId, userId }),
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                logger.info(
-                    { transcriptLength: data.transcript?.length },
-                    "✅ Transcript saved successfully!"
-                );
-
-                setMessages((prev) => [
-                    ...prev,
-                    {
-                        role: "system",
-                        content: "✅ Transcript saved!",
-                        timestamp: new Date(),
-                    },
-                ]);
-
-                // Notify parent component to refresh the calls list
-                if (onCallComplete) {
-                    setTimeout(() => onCallComplete(), 1500);
-                }
-            } else {
-                const errorData = await response.json();
-                logger.error(
-                    { status: response.status, error: errorData },
-                    "❌ Failed to save transcript"
-                );
-
-                setMessages((prev) => [
-                    ...prev,
-                    {
-                        role: "system",
-                        content:
-                            "❌ Error saving transcript. Please try again or contact support.",
-                        timestamp: new Date(),
-                    },
-                ]);
-            }
-        } catch (error) {
-            logger.error({ error }, "❌ Error in saveTranscript");
-
-            setMessages((prev) => [
-                ...prev,
-                {
-                    role: "system",
-                    content:
-                        "❌ Error saving transcript. Please refresh and try again.",
-                    timestamp: new Date(),
-                },
-            ]);
-        }
-    };
+    }, [publicKey, isConnecting, saveTranscript]);
 
     const startCall = async () => {
         if (!vapi || !assistantId) return;

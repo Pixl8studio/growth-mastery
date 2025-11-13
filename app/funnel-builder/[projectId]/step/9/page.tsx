@@ -125,7 +125,7 @@ export default function Step9RegistrationPage({
         };
 
         loadData();
-    }, [projectId]);
+    }, [projectId, formData.deckStructureId]);
 
     const handleCreate = async () => {
         if (!formData.headline.trim() || !formData.deckStructureId) {

@@ -6,7 +6,7 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
@@ -67,11 +67,7 @@ export function MarketingAnalyticsDashboardEnhanced({
     // Experiments
     const [experiments, setExperiments] = useState<any[]>([]);
 
-    useEffect(() => {
-        loadAnalytics();
-    }, [funnelProjectId, dateRange]);
-
-    const loadAnalytics = async () => {
+    const loadAnalytics = useCallback(async () => {
         setLoading(true);
 
         try {
@@ -121,7 +117,11 @@ export function MarketingAnalyticsDashboardEnhanced({
         } finally {
             setLoading(false);
         }
-    };
+    }, [funnelProjectId, dateRange]);
+
+    useEffect(() => {
+        loadAnalytics();
+    }, [loadAnalytics]);
 
     const handleExportCSV = async () => {
         try {

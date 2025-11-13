@@ -40,7 +40,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
     }, [project.id]);
 
     return (
-        <Card className="transition-shadow hover:shadow-md">
+        <Card className="shadow-soft hover:shadow-float transition-smooth hover:-translate-y-2 border-border/50 bg-card/80 backdrop-blur-sm">
             <CardHeader>
                 <div className="flex items-center justify-between">
                     <CardTitle className="text-lg">{project.name}</CardTitle>
@@ -68,9 +68,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
                             </span>
                         </div>
                         {/* Progress Bar */}
-                        <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                        <div className="h-2 w-full overflow-hidden rounded-full bg-muted/50">
                             <div
-                                className="h-full rounded-full bg-primary transition-all duration-500"
+                                className="h-full rounded-full gradient-emerald transition-all duration-500 shadow-soft"
                                 style={{ width: `${completionPercentage}%` }}
                             />
                         </div>
@@ -86,7 +86,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
                 <div className="mt-6 flex space-x-2">
                     <Link href={`/funnel-builder/${project.id}`} className="flex-1">
-                        <Button variant="default" className="w-full" size="sm">
+                        <Button
+                            variant="default"
+                            className="w-full transition-smooth"
+                            size="sm"
+                        >
                             Continue
                         </Button>
                     </Link>
@@ -95,7 +99,11 @@ export function ProjectCard({ project }: ProjectCardProps) {
                             href={`/funnel-builder/${project.id}/analytics`}
                             className="flex-1"
                         >
-                            <Button variant="outline" className="w-full" size="sm">
+                            <Button
+                                variant="outline"
+                                className="w-full transition-smooth"
+                                size="sm"
+                            >
                                 Analytics
                             </Button>
                         </Link>

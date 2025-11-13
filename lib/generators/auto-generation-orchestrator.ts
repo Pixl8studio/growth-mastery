@@ -90,13 +90,15 @@ export async function generateAllFromIntake(
     const completedSteps: number[] = [];
     const failedSteps: Array<{ step: number; error: string }> = [];
 
+    // Extract intakeId before try block so it's available in catch block
+    const intakeId =
+        typeof intakeIdOrData === "string" ? intakeIdOrData : intakeIdOrData.id;
+
     try {
         const supabase = await createClient();
 
         // Determine if we received an intakeId (string) or combined intake data (object)
         let intakeData: IntakeData;
-        const intakeId =
-            typeof intakeIdOrData === "string" ? intakeIdOrData : intakeIdOrData.id;
 
         if (typeof intakeIdOrData === "string") {
             // Fetch intake data from database

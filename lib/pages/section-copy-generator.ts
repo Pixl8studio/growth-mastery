@@ -170,7 +170,7 @@ function getPageContext(pageType: PageType): string {
  */
 function getSectionGuidance(
     sectionType: string,
-    pageType: PageType
+    _pageType: PageType
 ): { framework: string; structure: Record<string, string> } {
     const guidanceMap: Record<
         string,

@@ -288,7 +288,7 @@ export default function Step1Page({
                         status: response.status,
                         statusText: response.statusText,
                         projectId,
-                        intakeId: mostRecentIntake.id,
+                        intakeSessionCount: intakeSessions.length,
                     },
                     "Failed to start generation"
                 );

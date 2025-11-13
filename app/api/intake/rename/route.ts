@@ -40,10 +40,10 @@ export async function PATCH(request: NextRequest) {
             throw new AuthenticationError("User not authenticated");
         }
 
-        // Verify intake ownership
+        // Verify intake ownership and get current session name
         const { data: intake, error: intakeError } = await supabase
             .from("vapi_transcripts")
-            .select("id, user_id, funnel_project_id")
+            .select("id, user_id, funnel_project_id, session_name")
             .eq("id", intakeId)
             .eq("user_id", user.id)
             .eq("funnel_project_id", projectId)
@@ -62,6 +62,7 @@ export async function PATCH(request: NextRequest) {
             throw new ValidationError("Intake not found or access denied");
         }
 
+        const oldSessionName = intake.session_name;
         // Update session name
         const { data: updatedIntake, error: updateError } = await supabase
             .from("vapi_transcripts")
@@ -90,7 +91,7 @@ export async function PATCH(request: NextRequest) {
                 intakeId,
                 projectId,
                 userId: user.id,
-                oldSessionName: intake.session_name,
+                oldSessionName: oldSessionName || "unnamed",
                 newSessionName: trimmedName,
             },
             "Session name updated successfully"

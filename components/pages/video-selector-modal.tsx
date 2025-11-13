@@ -29,12 +29,6 @@ export function VideoSelectorModal({
     const [error, setError] = useState<string | null>(null);
     const [selectedVideo, setSelectedVideo] = useState<PitchVideo | null>(null);
 
-    useEffect(() => {
-        if (isOpen) {
-            loadVideos();
-        }
-    }, [isOpen, projectId, loadVideos]);
-
     const loadVideos = useCallback(async () => {
         setLoading(true);
         setError(null);
@@ -61,6 +55,12 @@ export function VideoSelectorModal({
             setLoading(false);
         }
     }, [projectId]);
+
+    useEffect(() => {
+        if (isOpen) {
+            loadVideos();
+        }
+    }, [isOpen, loadVideos]);
 
     const handleSelectVideo = () => {
         if (selectedVideo) {

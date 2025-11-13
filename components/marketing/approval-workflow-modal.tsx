@@ -48,18 +48,6 @@ export function ApprovalWorkflowModal({
     const [reviewNotes, setReviewNotes] = useState("");
     const [showPreview, setShowPreview] = useState(false);
 
-    useEffect(() => {
-        if (isOpen) {
-            loadVariantsForApproval();
-        }
-    }, [
-        isOpen,
-        funnelProjectId,
-        platformFilter,
-        statusFilter,
-        loadVariantsForApproval,
-    ]);
-
     const loadVariantsForApproval = useCallback(async () => {
         setLoading(true);
 
@@ -95,7 +83,13 @@ export function ApprovalWorkflowModal({
         } finally {
             setLoading(false);
         }
-    }, [funnelProjectId, platformFilter, statusFilter]);
+    }, [funnelProjectId, platformFilter, statusFilter, toast]);
+
+    useEffect(() => {
+        if (isOpen) {
+            loadVariantsForApproval();
+        }
+    }, [isOpen, loadVariantsForApproval]);
 
     const handleApprove = async (variantId: string) => {
         try {

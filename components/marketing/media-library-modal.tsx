@@ -49,12 +49,6 @@ export function MediaLibraryModal({
     const [editingAltText, setEditingAltText] = useState<string | null>(null);
     const [altTextValue, setAltTextValue] = useState("");
 
-    useEffect(() => {
-        if (isOpen) {
-            loadMedia();
-        }
-    }, [isOpen, funnelProjectId, loadMedia]);
-
     const loadMedia = useCallback(async () => {
         setLoading(true);
         try {
@@ -76,7 +70,13 @@ export function MediaLibraryModal({
         } finally {
             setLoading(false);
         }
-    }, [funnelProjectId]);
+    }, [funnelProjectId, toast]);
+
+    useEffect(() => {
+        if (isOpen) {
+            loadMedia();
+        }
+    }, [isOpen, loadMedia]);
 
     const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const files = event.target.files;

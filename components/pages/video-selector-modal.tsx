@@ -5,7 +5,7 @@
  * Select from uploaded pitch videos to insert into pages
  */
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { X, Video, Loader2, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logger } from "@/lib/client-logger";

@@ -1,11 +1,28 @@
 /**
  * Social Content Scraper Service
- * Scrapes and extracts content from social media profiles and websites
- * for voice analysis and Echo Mode calibration
+ * Integrates with social media APIs for Echo Mode voice analysis
+ * Falls back to manual content pasting when API unavailable
  */
 
 import { logger } from "@/lib/logger";
 import { extractTextFromUrl } from "@/lib/intake/processors";
+import { createClient } from "@/lib/supabase/server";
+import { decryptToken } from "@/lib/crypto/token-encryption";
+import type { OAuthConnection, OAuthConnectionMetadata } from "@/types/oauth";
+import {
+    fetchInstagramPosts,
+    getInstagramContentFromPage,
+    extractTextFromPosts as extractFromInstagram,
+} from "@/lib/scraping/instagram-api";
+import {
+    fetchLinkedInPosts,
+    extractTextFromLinkedInPosts,
+} from "@/lib/scraping/linkedin-api";
+import { fetchTweets, extractTextFromTweets } from "@/lib/scraping/twitter-api";
+import {
+    fetchFacebookPosts,
+    extractTextFromFacebookPosts,
+} from "@/lib/scraping/facebook-api";
 
 export type PlatformType =
     | "instagram"
@@ -17,10 +34,12 @@ export type PlatformType =
 export interface ScrapedContent {
     platform: PlatformType;
     content: string[];
+    source: "api" | "manual" | "scrape";
     metadata?: {
         profileName?: string;
         bio?: string;
         postCount?: number;
+        connectionStatus?: "connected" | "expired" | "not_connected";
     };
 }
 
@@ -52,11 +71,208 @@ export function detectPlatformType(url: string): PlatformType {
 }
 
 /**
- * Scrape and extract content from a URL
- * Returns structured content array suitable for voice analysis
+ * Get OAuth connection for a user and platform
+ */
+async function getOAuthConnection(
+    userId: string,
+    profileId: string,
+    platform: PlatformType
+): Promise<{
+    connected: boolean;
+    accessToken?: string;
+    platformUserId?: string;
+    expired?: boolean;
+} | null> {
+    try {
+        const supabase = await createClient();
+
+        const { data, error } = await supabase
+            .from("marketing_oauth_connections")
+            .select("*")
+            .eq("user_id", userId)
+            .eq("profile_id", profileId)
+            .eq("platform", platform)
+            .eq("status", "active")
+            .maybeSingle();
+
+        if (error || !data) {
+            return { connected: false };
+        }
+
+        // Check if token is expired
+        if (data.token_expires_at) {
+            const expiresAt = new Date(data.token_expires_at);
+            if (expiresAt < new Date()) {
+                return { connected: true, expired: true };
+            }
+        }
+
+        // Decrypt the access token before returning
+        const accessToken = await decryptToken(data.access_token_encrypted);
+
+        return {
+            connected: true,
+            accessToken,
+            platformUserId: data.platform_user_id || undefined,
+            expired: false,
+        };
+    } catch (error) {
+        logger.error({ error, userId, platform }, "Failed to get OAuth connection");
+        return null;
+    }
+}
+
+/**
+ * Fetch content using platform API if OAuth connected
+ */
+async function fetchViaAPI(
+    userId: string,
+    profileId: string,
+    platform: PlatformType,
+    url?: string
+): Promise<{ success: boolean; data?: ScrapedContent; error?: string }> {
+    const connection = await getOAuthConnection(userId, profileId, platform);
+
+    if (!connection || !connection.connected) {
+        return {
+            success: false,
+            error: "not_connected",
+        };
+    }
+
+    if (connection.expired) {
+        return {
+            success: false,
+            error: "token_expired",
+        };
+    }
+
+    if (!connection.accessToken) {
+        return {
+            success: false,
+            error: "no_access_token",
+        };
+    }
+
+    try {
+        let content: string[] = [];
+        let postCount = 0;
+
+        switch (platform) {
+            case "instagram": {
+                if (!connection.platformUserId) {
+                    throw new Error("Instagram account ID not found");
+                }
+                const posts = await fetchInstagramPosts(
+                    connection.platformUserId,
+                    connection.accessToken,
+                    20
+                );
+                content = extractFromInstagram(posts);
+                postCount = posts.length;
+                break;
+            }
+
+            case "linkedin": {
+                if (!connection.platformUserId) {
+                    throw new Error("LinkedIn user ID not found");
+                }
+                const posts = await fetchLinkedInPosts(
+                    connection.accessToken,
+                    connection.platformUserId,
+                    10
+                );
+                content = extractTextFromLinkedInPosts(posts);
+                postCount = posts.length;
+                break;
+            }
+
+            case "twitter": {
+                if (!connection.platformUserId) {
+                    throw new Error("Twitter user ID not found");
+                }
+                const tweets = await fetchTweets(
+                    connection.platformUserId,
+                    connection.accessToken,
+                    50
+                );
+                content = extractTextFromTweets(tweets);
+                postCount = tweets.length;
+                break;
+            }
+
+            case "facebook": {
+                // Facebook requires page ID from metadata
+                const connectionData = connection as unknown as {
+                    connected: boolean;
+                    accessToken?: string;
+                    platformUserId?: string;
+                    expired?: boolean;
+                    metadata?: OAuthConnectionMetadata;
+                };
+
+                const pageId = connectionData.metadata?.page_id;
+                if (!pageId) {
+                    throw new Error(
+                        "Facebook page ID not found in connection metadata"
+                    );
+                }
+
+                if (!connection.accessToken) {
+                    throw new Error("Facebook access token not available");
+                }
+
+                const posts = await fetchFacebookPosts(
+                    pageId,
+                    connection.accessToken,
+                    20
+                );
+                content = extractTextFromFacebookPosts(posts);
+                postCount = posts.length;
+                break;
+            }
+
+            default:
+                throw new Error(`Unsupported platform: ${platform}`);
+        }
+
+        logger.info(
+            { platform, postCount, contentLength: content.length },
+            "Successfully fetched content via API"
+        );
+
+        return {
+            success: true,
+            data: {
+                platform,
+                content,
+                source: "api",
+                metadata: {
+                    postCount,
+                    connectionStatus: "connected",
+                },
+            },
+        };
+    } catch (error) {
+        logger.error({ error, platform }, "Failed to fetch via API");
+        return {
+            success: false,
+            error:
+                error instanceof Error
+                    ? error.message
+                    : "Failed to fetch content from platform API",
+        };
+    }
+}
+
+/**
+ * Scrape and extract content from a URL (with API integration)
+ * Tries API first if OAuth connected, falls back to manual paste instructions
  */
 export async function scrapeAndExtractContent(
-    url: string
+    url: string,
+    userId?: string,
+    profileId?: string
 ): Promise<{ success: boolean; data?: ScrapedContent; error?: string }> {
     try {
         // Validate URL format
@@ -81,19 +297,67 @@ export async function scrapeAndExtractContent(
         const platform = detectPlatformType(url);
         logger.info({ url, platform }, "Detected platform type");
 
-        // For social media platforms, we'll attempt to scrape
-        // Note: Most platforms require authentication/APIs, so we'll use basic scraping
-        // and provide helpful error messages if it fails
+        // Try API if OAuth available for social platforms
+        if (platform !== "generic" && userId && profileId) {
+            const apiResult = await fetchViaAPI(userId, profileId, platform, url);
+
+            if (apiResult.success) {
+                return apiResult;
+            }
+
+            // If API failed due to connection issues, provide OAuth prompt
+            if (
+                apiResult.error === "not_connected" ||
+                apiResult.error === "token_expired"
+            ) {
+                return {
+                    success: false,
+                    error:
+                        apiResult.error === "token_expired"
+                            ? `Your ${platform} connection has expired. Please reconnect to import posts automatically.`
+                            : `Connect your ${platform} account to automatically import your posts for voice analysis. Alternatively, you can paste content manually below.`,
+                    data: {
+                        platform,
+                        content: [],
+                        source: "manual",
+                        metadata: {
+                            connectionStatus:
+                                apiResult.error === "token_expired"
+                                    ? "expired"
+                                    : "not_connected",
+                        },
+                    },
+                };
+            }
+        }
+
+        // For social media without API, guide to manual paste
+        if (platform !== "generic") {
+            return {
+                success: false,
+                error: `To analyze your ${platform} content, please connect your ${platform} account or paste sample posts manually. Social media profiles cannot be scraped directly due to privacy protections.`,
+                data: {
+                    platform,
+                    content: [],
+                    source: "manual",
+                    metadata: {
+                        connectionStatus: "not_connected",
+                    },
+                },
+            };
+        }
+
+        // For generic websites, try basic scraping
         const rawText = await extractTextFromUrl(url);
 
         if (!rawText || rawText.trim().length === 0) {
             return {
                 success: false,
-                error: "No content found on this page. The profile may be private or require authentication.",
+                error: "No content found on this page. Please try a different URL or paste content manually.",
             };
         }
 
-        // Parse content based on platform type
+        // Parse content
         const content = await parseContentForPlatform(platform, rawText, url);
 
         if (content.length === 0) {
@@ -108,7 +372,7 @@ export async function scrapeAndExtractContent(
         if (totalLength < 100) {
             return {
                 success: false,
-                error: "Insufficient content found. Please ensure the page has enough text content for analysis.",
+                error: "Insufficient content found. Please paste content manually for better analysis.",
             };
         }
 
@@ -122,6 +386,7 @@ export async function scrapeAndExtractContent(
             data: {
                 platform,
                 content,
+                source: "scrape",
             },
         };
     } catch (error) {
@@ -135,7 +400,7 @@ export async function scrapeAndExtractContent(
             ) {
                 return {
                     success: false,
-                    error: "This profile appears to be private or requires authentication. Please paste content manually.",
+                    error: "This content is private or requires authentication. Please paste content manually.",
                 };
             }
             if (error.message.includes("HTTP 404")) {
@@ -144,20 +409,11 @@ export async function scrapeAndExtractContent(
                     error: "Page not found. Please check the URL and try again.",
                 };
             }
-            if (error.message.includes("Failed to scrape")) {
-                return {
-                    success: false,
-                    error: "Unable to access this URL. Please try pasting content manually or check if the URL is accessible.",
-                };
-            }
         }
 
         return {
             success: false,
-            error:
-                error instanceof Error
-                    ? error.message
-                    : "Failed to scrape URL. Please try pasting content manually.",
+            error: "Failed to access URL. Please try pasting content manually for voice analysis.",
         };
     }
 }

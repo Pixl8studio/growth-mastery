@@ -27,9 +27,9 @@ export async function POST(request: NextRequest) {
         }
 
         // Validate URL using new infrastructure
-        const validation = validateUrl(url);
-        if (!validation.valid) {
-            return NextResponse.json({ error: validation.error }, { status: 400 });
+        const urlValidation = validateUrl(url);
+        if (!urlValidation.valid) {
+            return NextResponse.json({ error: urlValidation.error }, { status: 400 });
         }
 
         logger.info({ url, projectId }, "Starting intake scraping with brand extraction");

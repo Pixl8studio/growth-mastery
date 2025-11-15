@@ -65,9 +65,13 @@ function getBackoffDelay(attempt: number, initialDelay: number, maxDelay: number
 /**
  * Check if an error is retryable
  */
-function isRetryableError(error: any, statusCode?: number): boolean {
+function isRetryableError(error: unknown, statusCode?: number): boolean {
     // Network errors are retryable
-    if (error.code === "ECONNRESET" || error.code === "ETIMEDOUT") {
+    if (
+        error &&
+        typeof error === "object" &&
+        ("code" in error && (error.code === "ECONNRESET" || error.code === "ETIMEDOUT"))
+    ) {
         return true;
     }
 
@@ -305,7 +309,7 @@ export function validateUrl(url: string): { valid: boolean; error?: string } {
  * Simple in-memory cache for scraping results
  * In production, this should be replaced with Redis or similar
  */
-const cache = new Map<string, { data: any; timestamp: number }>();
+const cache = new Map<string, { data: unknown; timestamp: number }>();
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 /**
@@ -328,7 +332,7 @@ export function getCached<T>(key: string): T | null {
 /**
  * Set data in cache
  */
-export function setCache(key: string, data: any): void {
+export function setCache(key: string, data: unknown): void {
     cache.set(key, {
         data,
         timestamp: Date.now(),

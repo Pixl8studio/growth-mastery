@@ -155,7 +155,7 @@ function extractLinks($: cheerio.CheerioAPI, baseUrl: string): string[] {
     const seen = new Set<string>();
 
     $("a[href]").each((_, el) => {
-        let href = $(el).attr("href");
+        const href = $(el).attr("href");
         if (!href) return;
 
         // Convert relative URLs to absolute
@@ -183,7 +183,7 @@ function extractImages($: cheerio.CheerioAPI, baseUrl: string): string[] {
     const seen = new Set<string>();
 
     $("img[src]").each((_, el) => {
-        let src = $(el).attr("src");
+        const src = $(el).attr("src");
         if (!src) return;
 
         // Convert relative URLs to absolute

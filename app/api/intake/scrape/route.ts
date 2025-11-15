@@ -7,6 +7,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { extractTextFromUrl, validateIntakeContent } from "@/lib/intake/processors";
+import {
+    fetchWithRetry,
+    validateUrl,
+    getCached,
+    setCache,
+} from "@/lib/scraping/fetch-utils";
+import { extractBrandFromHtml, BrandData } from "@/lib/scraping/brand-extractor";
 
 export async function POST(request: NextRequest) {
     try {
@@ -19,52 +26,77 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Validate URL format
-        let validUrl: URL;
-        try {
-            validUrl = new URL(url);
-        } catch {
-            return NextResponse.json({ error: "Invalid URL format" }, { status: 400 });
+        // Validate URL using new infrastructure
+        const urlValidation = validateUrl(url);
+        if (!urlValidation.valid) {
+            return NextResponse.json({ error: urlValidation.error }, { status: 400 });
         }
 
-        // Only allow http/https
-        if (!["http:", "https:"].includes(validUrl.protocol)) {
-            return NextResponse.json(
-                { error: "Only HTTP(S) URLs are supported" },
-                { status: 400 }
-            );
-        }
+        logger.info({ url, projectId }, "Starting intake scraping with brand extraction");
 
-        // Extract text from URL
+        // Check cache first
+        const cacheKey = `intake:${url}`;
+        const cached = getCached<{
+            scrapedText: string;
+            brandData: BrandData | null;
+        }>(cacheKey);
+
         let scrapedText: string;
-        try {
-            scrapedText = await extractTextFromUrl(url);
-        } catch (error) {
-            logger.error(
-                {
-                    error,
-                    url,
-                    errorMessage:
-                        error instanceof Error ? error.message : String(error),
-                    errorStack: error instanceof Error ? error.stack : undefined,
-                },
-                "Failed to scrape URL"
-            );
+        let brandData: BrandData | null = null;
 
-            // Provide more specific error messages
-            let errorMessage =
-                "Failed to scrape URL. Please check the URL and try again.";
-            if (error instanceof Error) {
-                if (error.message.includes("HTTP")) {
-                    errorMessage = `Failed to access URL: ${error.message}. Please ensure the URL is accessible and try again.`;
-                } else if (error.message.includes("fetch")) {
-                    errorMessage = `Failed to fetch URL. Please check your internet connection and ensure the URL is correct.`;
-                } else {
-                    errorMessage = `Failed to scrape URL: ${error.message}`;
-                }
+        if (cached) {
+            logger.info({ url }, "Using cached intake data");
+            scrapedText = cached.scrapedText;
+            brandData = cached.brandData;
+        } else {
+            // Fetch HTML with retry logic
+            const fetchResult = await fetchWithRetry(url, {
+                maxRetries: 3,
+                timeoutMs: 30000,
+            });
+
+            if (!fetchResult.success || !fetchResult.html) {
+                logger.error({ url, error: fetchResult.error }, "Failed to fetch URL");
+                return NextResponse.json(
+                    {
+                        error:
+                            fetchResult.error ||
+                            "Failed to fetch website. Please check the URL and try again.",
+                    },
+                    { status: fetchResult.statusCode || 500 }
+                );
             }
 
-            return NextResponse.json({ error: errorMessage }, { status: 500 });
+            // Extract text content
+            try {
+                scrapedText = await extractTextFromUrl(url);
+            } catch (error) {
+                logger.error({ error, url }, "Failed to extract text from URL");
+                return NextResponse.json(
+                    {
+                        error: "Failed to extract content from URL. The website structure may not be supported.",
+                    },
+                    { status: 500 }
+                );
+            }
+
+            // Extract brand data in parallel (don't block on failure)
+            try {
+                brandData = await extractBrandFromHtml(fetchResult.html);
+                logger.info(
+                    {
+                        url,
+                        brandConfidence: brandData.confidence.overall,
+                    },
+                    "Successfully extracted brand data"
+                );
+            } catch (error) {
+                logger.warn({ error, url }, "Failed to extract brand data (non-blocking)");
+                brandData = null;
+            }
+
+            // Cache the results
+            setCache(cacheKey, { scrapedText, brandData });
         }
 
         // Validate scraped content
@@ -82,7 +114,10 @@ export async function POST(request: NextRequest) {
 
         const supabase = await createClient();
 
-        // Save to database
+        // Parse URL for metadata
+        const urlObj = new URL(url);
+
+        // Save to database with brand data
         const { data: intakeRecord, error: dbError } = await supabase
             .from("vapi_transcripts")
             .insert({
@@ -93,13 +128,22 @@ export async function POST(request: NextRequest) {
                 transcript_text: scrapedText,
                 call_status: "completed",
                 call_duration: 0,
-                session_name: sessionName || `Scraped: ${validUrl.hostname}`,
+                session_name: sessionName || `Scraped: ${urlObj.hostname}`,
+                brand_data: brandData
+                    ? {
+                          ...brandData,
+                          source_url: url,
+                          extracted_at: new Date().toISOString(),
+                      }
+                    : null,
                 metadata: {
                     scraped_url: url,
-                    hostname: validUrl.hostname,
+                    hostname: urlObj.hostname,
                     character_count: scrapedText.length,
                     word_count: scrapedText.split(/\s+/).length,
                     scraped_at: new Date().toISOString(),
+                    has_brand_data: !!brandData,
+                    brand_confidence: brandData?.confidence.overall || 0,
                 },
             })
             .select()
@@ -129,6 +173,7 @@ export async function POST(request: NextRequest) {
                 projectId,
                 url,
                 textLength: scrapedText.length,
+                hasBrandData: !!brandData,
             },
             "URL scraped and processed successfully"
         );
@@ -139,6 +184,13 @@ export async function POST(request: NextRequest) {
             method: "scrape",
             url,
             preview: scrapedText.substring(0, 200) + "...",
+            brandData: brandData
+                ? {
+                      colors: brandData.colors,
+                      fonts: brandData.fonts,
+                      confidence: brandData.confidence,
+                  }
+                : null,
         });
     } catch (error) {
         logger.error({ error }, "Error in scrape intake endpoint");

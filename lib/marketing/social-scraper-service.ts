@@ -8,10 +8,9 @@ import { logger } from "@/lib/logger";
 import { extractTextFromUrl } from "@/lib/intake/processors";
 import { createClient } from "@/lib/supabase/server";
 import { decryptToken } from "@/lib/crypto/token-encryption";
-import type { OAuthConnection, OAuthConnectionMetadata } from "@/types/oauth";
+import type { OAuthConnectionMetadata } from "@/types/oauth";
 import {
     fetchInstagramPosts,
-    getInstagramContentFromPage,
     extractTextFromPosts as extractFromInstagram,
 } from "@/lib/scraping/instagram-api";
 import {
@@ -128,8 +127,7 @@ async function getOAuthConnection(
 async function fetchViaAPI(
     userId: string,
     profileId: string,
-    platform: PlatformType,
-    url?: string
+    platform: PlatformType
 ): Promise<{ success: boolean; data?: ScrapedContent; error?: string }> {
     const connection = await getOAuthConnection(userId, profileId, platform);
 
@@ -299,7 +297,7 @@ export async function scrapeAndExtractContent(
 
         // Try API if OAuth available for social platforms
         if (platform !== "generic" && userId && profileId) {
-            const apiResult = await fetchViaAPI(userId, profileId, platform, url);
+            const apiResult = await fetchViaAPI(userId, profileId, platform);
 
             if (apiResult.success) {
                 return apiResult;

@@ -78,7 +78,7 @@ export async function generatePKCE(): Promise<{
 
     // Convert to base64url encoding (required for PKCE)
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const base64 = btoa(String.fromCharCode.apply(null, hashArray as any));
+    const base64 = btoa(String.fromCharCode(...hashArray));
     const codeChallenge = base64
         .replace(/\+/g, "-")
         .replace(/\//g, "_")

@@ -13,7 +13,7 @@ import {
     getCached,
     setCache,
 } from "@/lib/scraping/fetch-utils";
-import { extractBrandFromHtml } from "@/lib/scraping/brand-extractor";
+import { extractBrandFromHtml, BrandData } from "@/lib/scraping/brand-extractor";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
 
 /**
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
             throw new ValidationError(firstError.message);
         }
 
-        const { url, projectId } = parseResult.data;
+        const { url } = parseResult.data;
 
         // Check rate limit
         const identifier = getRateLimitIdentifier(request, body.userId);
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
 
         // Check cache first
         const cacheKey = `brand:${url}`;
-        const cached = await getCached<any>(cacheKey);
+        const cached = await getCached<BrandData>(cacheKey);
         if (cached) {
             logger.info({ url }, "Returning cached brand data");
             return NextResponse.json({

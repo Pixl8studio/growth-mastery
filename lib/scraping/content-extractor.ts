@@ -114,7 +114,7 @@ function extractMainContent($: cheerio.CheerioAPI): string {
     }
 
     // Fallback: get all paragraphs
-    let paragraphs: string[] = [];
+    const paragraphs: string[] = [];
     $("p").each((_, el) => {
         const text = $(el).text().trim();
         if (text.length > 50) {

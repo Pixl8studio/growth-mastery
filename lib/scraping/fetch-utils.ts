@@ -99,7 +99,7 @@ export async function fetchWithRetry(
         userAgent,
     } = config;
 
-    let lastError: any;
+    let lastError: Error | undefined;
     let lastStatusCode: number | undefined;
 
     for (let attempt = 0; attempt <= maxRetries; attempt++) {

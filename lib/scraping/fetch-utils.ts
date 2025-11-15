@@ -56,7 +56,7 @@ function sleep(ms: number): Promise<void> {
  * Calculate exponential backoff delay
  */
 function getBackoffDelay(attempt: number, initialDelay: number, maxDelay: number): number {
-    const delay = Math.min(initialDelay * Math.pow(2, attempt), maxDelay);
+    const delay = Math.min(initialDelay * 2 ** attempt, maxDelay);
     // Add jitter (±25%) to avoid thundering herd
     const jitter = delay * 0.25 * (Math.random() * 2 - 1);
     return Math.floor(delay + jitter);
@@ -195,11 +195,11 @@ export async function fetchWithRetry(
 
             // Server errors (5xx) - retryable
             lastError = new Error(`HTTP ${response.status}: ${response.statusText}`);
-        } catch (error: any) {
-            lastError = error;
+        } catch (error) {
+            lastError = error as Error;
 
             // Handle abort/timeout
-            if (error.name === "AbortError") {
+            if (error instanceof Error && error.name === "AbortError") {
                 logger.warn({ url, attempt: attempt + 1, timeoutMs }, "Request timeout");
                 lastError = new Error(`Request timeout after ${timeoutMs}ms`);
             } else {
@@ -207,7 +207,7 @@ export async function fetchWithRetry(
                     {
                         url,
                         attempt: attempt + 1,
-                        error: error.message,
+                        error: error instanceof Error ? error.message : String(error),
                     },
                     "Fetch attempt failed"
                 );

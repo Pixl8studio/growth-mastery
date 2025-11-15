@@ -189,11 +189,16 @@ export async function extractTextFromPlainFile(file: File): Promise<string> {
 
 /**
  * Extract relevant text content from a URL.
- * Removes navigation, headers, footers, and script content.
+ * Uses cheerio for proper DOM parsing and content extraction.
  */
 export async function extractTextFromUrl(url: string): Promise<string> {
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, {
+            headers: {
+                "User-Agent":
+                    "Mozilla/5.0 (compatible; GrowthMastery/1.0; +https://growthmastery.ai)",
+            },
+        });
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -201,24 +206,32 @@ export async function extractTextFromUrl(url: string): Promise<string> {
 
         const html = await response.text();
 
-        // Simple HTML cleaning - remove scripts, styles, nav, headers, footers
-        let cleaned = html
-            .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
-            .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, "")
-            .replace(/<nav\b[^<]*(?:(?!<\/nav>)<[^<]*)*<\/nav>/gi, "")
-            .replace(/<header\b[^<]*(?:(?!<\/header>)<[^<]*)*<\/header>/gi, "")
-            .replace(/<footer\b[^<]*(?:(?!<\/footer>)<[^<]*)*<\/footer>/gi, "");
+        // Use cheerio for proper DOM parsing
+        const cheerio = await import("cheerio");
+        const $ = cheerio.load(html);
 
-        // Extract text from remaining HTML
-        cleaned = cleaned.replace(/<[^>]+>/g, " ");
-        cleaned = cleaned.replace(/&nbsp;/g, " ");
-        cleaned = cleaned.replace(/&amp;/g, "&");
-        cleaned = cleaned.replace(/&lt;/g, "<");
-        cleaned = cleaned.replace(/&gt;/g, ">");
-        cleaned = cleaned.replace(/&quot;/g, '"');
+        // Remove unwanted elements
+        $(
+            "script, style, nav, header, footer, iframe, noscript, aside, .sidebar, #sidebar, .advertisement, .ad, .cookie-banner"
+        ).remove();
+
+        // Try to extract main content first (semantic HTML)
+        let mainContent =
+            $("main").text() ||
+            $("article").text() ||
+            $('[role="main"]').text() ||
+            $(".content").text() ||
+            $("#content").text() ||
+            $(".main-content").text() ||
+            $("#main-content").text();
+
+        // Fallback to body if no semantic content found
+        if (!mainContent || mainContent.trim().length < 100) {
+            mainContent = $("body").text();
+        }
 
         // Clean up whitespace
-        cleaned = cleaned.replace(/\s+/g, " ").trim();
+        const cleaned = mainContent.replace(/\s+/g, " ").trim();
 
         logger.info({ url, length: cleaned.length }, "Extracted text from URL");
 

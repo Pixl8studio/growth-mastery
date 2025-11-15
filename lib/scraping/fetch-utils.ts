@@ -1,0 +1,373 @@
+/**
+ * Unified Scraper Service
+ * Provides retry logic, rate limiting, caching, and robust error handling for web scraping
+ */
+
+import { logger } from "@/lib/logger";
+
+/**
+ * Configuration for fetch with retry logic
+ */
+interface FetchConfig {
+    maxRetries?: number;
+    initialDelayMs?: number;
+    maxDelayMs?: number;
+    timeoutMs?: number;
+    userAgent?: string;
+}
+
+/**
+ * Result of a fetch operation
+ */
+interface FetchResult {
+    success: boolean;
+    html?: string;
+    error?: string;
+    statusCode?: number;
+}
+
+// Default user agent that identifies our bot properly
+const DEFAULT_USER_AGENT =
+    "Mozilla/5.0 (compatible; GrowthMastery/1.0; +https://growthmastery.ai)";
+
+// User agent rotation pool for avoiding blocks
+const USER_AGENTS = [
+    DEFAULT_USER_AGENT,
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0",
+];
+
+/**
+ * Get a random user agent from the pool
+ */
+function getRandomUserAgent(): string {
+    return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+}
+
+/**
+ * Sleep for a specified duration
+ */
+function sleep(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Calculate exponential backoff delay
+ */
+function getBackoffDelay(attempt: number, initialDelay: number, maxDelay: number): number {
+    const delay = Math.min(initialDelay * Math.pow(2, attempt), maxDelay);
+    // Add jitter (±25%) to avoid thundering herd
+    const jitter = delay * 0.25 * (Math.random() * 2 - 1);
+    return Math.floor(delay + jitter);
+}
+
+/**
+ * Check if an error is retryable
+ */
+function isRetryableError(error: any, statusCode?: number): boolean {
+    // Network errors are retryable
+    if (error.code === "ECONNRESET" || error.code === "ETIMEDOUT") {
+        return true;
+    }
+
+    // HTTP status codes that are retryable
+    if (statusCode) {
+        // 408 Request Timeout, 429 Too Many Requests, 500-599 Server Errors
+        return statusCode === 408 || statusCode === 429 || (statusCode >= 500 && statusCode < 600);
+    }
+
+    return false;
+}
+
+/**
+ * Fetch HTML from a URL with retry logic, timeout, and error handling
+ */
+export async function fetchWithRetry(
+    url: string,
+    config: FetchConfig = {}
+): Promise<FetchResult> {
+    const {
+        maxRetries = 3,
+        initialDelayMs = 1000,
+        maxDelayMs = 10000,
+        timeoutMs = 30000,
+        userAgent,
+    } = config;
+
+    let lastError: any;
+    let lastStatusCode: number | undefined;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            // Create abort controller for timeout
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+            const response = await fetch(url, {
+                headers: {
+                    "User-Agent": userAgent || getRandomUserAgent(),
+                    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Accept-Language": "en-US,en;q=0.9",
+                    "Accept-Encoding": "gzip, deflate, br",
+                    "Cache-Control": "no-cache",
+                    Pragma: "no-cache",
+                },
+                signal: controller.signal,
+            });
+
+            clearTimeout(timeoutId);
+
+            lastStatusCode = response.status;
+
+            // Success
+            if (response.ok) {
+                const html = await response.text();
+                logger.info(
+                    {
+                        url,
+                        statusCode: response.status,
+                        contentLength: html.length,
+                        attempts: attempt + 1,
+                    },
+                    "Successfully fetched URL"
+                );
+
+                return {
+                    success: true,
+                    html,
+                    statusCode: response.status,
+                };
+            }
+
+            // Client errors (4xx) are generally not retryable except specific cases
+            if (response.status >= 400 && response.status < 500) {
+                if (response.status === 429) {
+                    // Rate limited - check for Retry-After header
+                    const retryAfter = response.headers.get("Retry-After");
+                    if (retryAfter && attempt < maxRetries) {
+                        const delayMs = parseInt(retryAfter) * 1000 || initialDelayMs;
+                        logger.warn(
+                            { url, statusCode: response.status, retryAfter, delayMs },
+                            "Rate limited, retrying after delay"
+                        );
+                        await sleep(delayMs);
+                        continue;
+                    }
+                }
+
+                // 403 Forbidden or 401 Unauthorized - not retryable
+                if (response.status === 403 || response.status === 401) {
+                    logger.error(
+                        { url, statusCode: response.status },
+                        "Access denied (authentication/authorization required)"
+                    );
+                    return {
+                        success: false,
+                        error:
+                            response.status === 403
+                                ? "Access denied. This website may require authentication or blocks automated access."
+                                : "Authentication required. This content is private.",
+                        statusCode: response.status,
+                    };
+                }
+
+                // 404 Not Found - not retryable
+                if (response.status === 404) {
+                    return {
+                        success: false,
+                        error: "Page not found. Please check the URL and try again.",
+                        statusCode: response.status,
+                    };
+                }
+
+                // Other 4xx errors
+                return {
+                    success: false,
+                    error: `HTTP ${response.status}: ${response.statusText}`,
+                    statusCode: response.status,
+                };
+            }
+
+            // Server errors (5xx) - retryable
+            lastError = new Error(`HTTP ${response.status}: ${response.statusText}`);
+        } catch (error: any) {
+            lastError = error;
+
+            // Handle abort/timeout
+            if (error.name === "AbortError") {
+                logger.warn({ url, attempt: attempt + 1, timeoutMs }, "Request timeout");
+                lastError = new Error(`Request timeout after ${timeoutMs}ms`);
+            } else {
+                logger.warn(
+                    {
+                        url,
+                        attempt: attempt + 1,
+                        error: error.message,
+                    },
+                    "Fetch attempt failed"
+                );
+            }
+        }
+
+        // Don't retry if this was the last attempt
+        if (attempt < maxRetries && isRetryableError(lastError, lastStatusCode)) {
+            const delayMs = getBackoffDelay(attempt, initialDelayMs, maxDelayMs);
+            logger.info(
+                { url, attempt: attempt + 1, delayMs, maxRetries },
+                "Retrying after delay"
+            );
+            await sleep(delayMs);
+        } else if (attempt === maxRetries) {
+            logger.error(
+                {
+                    url,
+                    attempts: attempt + 1,
+                    lastError: lastError?.message,
+                    statusCode: lastStatusCode,
+                },
+                "Max retries exceeded"
+            );
+        }
+    }
+
+    // All retries failed
+    return {
+        success: false,
+        error: lastError?.message || "Failed to fetch URL after multiple attempts",
+        statusCode: lastStatusCode,
+    };
+}
+
+/**
+ * Check if a URL is accessible by making a HEAD request
+ */
+export async function checkUrlAccessible(url: string): Promise<boolean> {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        const response = await fetch(url, {
+            method: "HEAD",
+            headers: {
+                "User-Agent": DEFAULT_USER_AGENT,
+            },
+            signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+        return response.ok;
+    } catch {
+        return false;
+    }
+}
+
+/**
+ * Validate URL format
+ */
+export function validateUrl(url: string): { valid: boolean; error?: string } {
+    try {
+        const urlObj = new URL(url);
+
+        // Only allow http/https
+        if (!["http:", "https:"].includes(urlObj.protocol)) {
+            return {
+                valid: false,
+                error: "Only HTTP and HTTPS URLs are supported",
+            };
+        }
+
+        // Check for localhost/internal IPs (basic check)
+        const hostname = urlObj.hostname.toLowerCase();
+        if (
+            hostname === "localhost" ||
+            hostname.startsWith("127.") ||
+            hostname.startsWith("192.168.") ||
+            hostname.startsWith("10.") ||
+            hostname === "0.0.0.0"
+        ) {
+            return {
+                valid: false,
+                error: "Local/internal URLs are not allowed for security reasons",
+            };
+        }
+
+        return { valid: true };
+    } catch {
+        return {
+            valid: false,
+            error: "Invalid URL format. Please enter a valid HTTP or HTTPS URL.",
+        };
+    }
+}
+
+/**
+ * Simple in-memory cache for scraping results
+ * In production, this should be replaced with Redis or similar
+ */
+const cache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+
+/**
+ * Get cached data if it exists and is not expired
+ */
+export function getCached<T>(key: string): T | null {
+    const cached = cache.get(key);
+    if (!cached) return null;
+
+    const age = Date.now() - cached.timestamp;
+    if (age > CACHE_TTL_MS) {
+        cache.delete(key);
+        return null;
+    }
+
+    logger.info({ key, age }, "Cache hit");
+    return cached.data as T;
+}
+
+/**
+ * Set data in cache
+ */
+export function setCache(key: string, data: any): void {
+    cache.set(key, {
+        data,
+        timestamp: Date.now(),
+    });
+    logger.info({ key }, "Cached data");
+}
+
+/**
+ * Clear cache for a specific key or all cache
+ */
+export function clearCache(key?: string): void {
+    if (key) {
+        cache.delete(key);
+        logger.info({ key }, "Cleared cache entry");
+    } else {
+        cache.clear();
+        logger.info("Cleared all cache");
+    }
+}
+
+/**
+ * Periodically clean up expired cache entries
+ */
+setInterval(
+    () => {
+        const now = Date.now();
+        let cleaned = 0;
+
+        for (const [key, value] of cache.entries()) {
+            if (now - value.timestamp > CACHE_TTL_MS) {
+                cache.delete(key);
+                cleaned++;
+            }
+        }
+
+        if (cleaned > 0) {
+            logger.info({ cleaned }, "Cleaned up expired cache entries");
+        }
+    },
+    60 * 60 * 1000
+); // Run every hour
+

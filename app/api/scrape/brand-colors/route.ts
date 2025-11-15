@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
         // Validate request body with Zod
         const parseResult = BrandColorRequestSchema.safeParse(body);
         if (!parseResult.success) {
-            const firstError = parseResult.error.errors[0];
+            const firstError = parseResult.error.issues[0];
             throw new ValidationError(firstError.message);
         }
 

@@ -18,7 +18,7 @@ export const DEFAULT_BRAND_COLORS = {
     ACCENT: "#EC4899", // Tailwind pink-500
     BACKGROUND: "#FFFFFF", // White
     TEXT: "#1F2937", // Tailwind gray-800
-} as const;
+};
 
 /**
  * Brand extraction confidence thresholds

@@ -135,6 +135,15 @@ export default function Step14Page({
     };
 
     const handleContinueToVariations = async () => {
+        if (!metaConnected) {
+            toast({
+                title: "Connect Facebook First",
+                description: "Connect your Facebook account to generate ads.",
+                variant: "destructive",
+            });
+            return;
+        }
+
         if (!selectedAdAccount) {
             toast({
                 title: "Select Ad Account",
@@ -183,6 +192,11 @@ export default function Step14Page({
     };
 
     const handleContinueToAudience = () => {
+        if (!metaConnected) {
+            setCurrentSubStep("audience");
+            return;
+        }
+
         if (selectedVariations.length === 0) {
             toast({
                 title: "Select Variations",
@@ -201,6 +215,11 @@ export default function Step14Page({
     };
 
     const handleContinueToDeploy = () => {
+        if (!metaConnected) {
+            setCurrentSubStep("deploy");
+            return;
+        }
+
         if (!audienceConfig) {
             toast({
                 title: "Configure Audience",
@@ -214,6 +233,16 @@ export default function Step14Page({
     };
 
     const handleDeployCampaign = async () => {
+        if (!metaConnected) {
+            toast({
+                title: "Connect Facebook to Deploy",
+                description:
+                    "Connect your Facebook account to launch real ad campaigns.",
+                variant: "destructive",
+            });
+            return;
+        }
+
         setDeploying(true);
 
         try {
@@ -346,29 +375,59 @@ export default function Step14Page({
                         </CardHeader>
                         <CardContent className="space-y-6">
                             {!metaConnected ? (
-                                <div className="rounded-lg border border-orange-200 bg-orange-50 p-6">
-                                    <div className="flex items-start gap-4">
-                                        <AlertCircle className="h-6 w-6 text-orange-600" />
-                                        <div className="flex-1">
-                                            <h3 className="font-semibold text-orange-900">
-                                                Facebook/Meta Not Connected
-                                            </h3>
-                                            <p className="mt-2 text-sm text-orange-800">
-                                                To use the Ads Manager, you need to
-                                                connect your Facebook account first in
-                                                the Marketing settings. This will give
-                                                us access to your Meta Ad Accounts.
-                                            </p>
-                                            <Button
-                                                onClick={handleConnectMeta}
-                                                className="mt-4"
-                                                variant="default"
-                                            >
-                                                Connect Facebook
-                                            </Button>
+                                <>
+                                    <div className="rounded-lg border border-orange-200 bg-orange-50 p-6">
+                                        <div className="flex items-start gap-4">
+                                            <AlertCircle className="h-6 w-6 text-orange-600" />
+                                            <div className="flex-1">
+                                                <h3 className="font-semibold text-orange-900">
+                                                    Facebook/Meta Not Connected
+                                                </h3>
+                                                <p className="mt-2 text-sm text-orange-800">
+                                                    To launch real ad campaigns, you
+                                                    need to connect your Facebook
+                                                    account first. This will give us
+                                                    access to your Meta Ad Accounts.
+                                                </p>
+                                                <Button
+                                                    onClick={handleConnectMeta}
+                                                    className="mt-4"
+                                                    variant="default"
+                                                >
+                                                    Connect Facebook
+                                                </Button>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
+
+                                    {/* Preview/Explore Mode */}
+                                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-6">
+                                        <div className="flex items-start gap-4">
+                                            <Sparkles className="h-6 w-6 text-primary" />
+                                            <div className="flex-1">
+                                                <h3 className="font-semibold text-primary">
+                                                    Preview the Ads Manager
+                                                </h3>
+                                                <p className="mt-2 text-sm text-muted-foreground">
+                                                    Want to see how the Ads Manager
+                                                    works before connecting? Click below
+                                                    to explore the wizard and see
+                                                    example ad variations.
+                                                </p>
+                                                <Button
+                                                    onClick={() =>
+                                                        setCurrentSubStep("variations")
+                                                    }
+                                                    className="mt-4"
+                                                    variant="outline"
+                                                >
+                                                    Explore Ads Manager
+                                                    <ArrowRight className="h-4 w-4 ml-2" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
                             ) : (
                                 <>
                                     <MetaAccountSelector
@@ -405,6 +464,19 @@ export default function Step14Page({
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
+                            {!metaConnected && adVariations.length === 0 && (
+                                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 mb-4">
+                                    <p className="text-sm text-muted-foreground">
+                                        <strong className="text-primary">
+                                            Preview Mode:
+                                        </strong>{" "}
+                                        Connect Facebook to generate real ads from your
+                                        funnel data. For now, click "Continue" to
+                                        explore the interface.
+                                    </p>
+                                </div>
+                            )}
+
                             {generatingAds ? (
                                 <div className="flex flex-col items-center justify-center py-12">
                                     <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
@@ -414,11 +486,25 @@ export default function Step14Page({
                                 </div>
                             ) : (
                                 <>
-                                    <AdVariationsReview
-                                        variations={adVariations}
-                                        selectedVariations={selectedVariations}
-                                        onSelectVariations={handleSelectVariations}
-                                    />
+                                    {adVariations.length > 0 ? (
+                                        <AdVariationsReview
+                                            variations={adVariations}
+                                            selectedVariations={selectedVariations}
+                                            onSelectVariations={handleSelectVariations}
+                                        />
+                                    ) : (
+                                        <div className="text-center py-12 text-muted-foreground">
+                                            <p className="mb-4">
+                                                Ad variations will appear here after
+                                                generation
+                                            </p>
+                                            <p className="text-sm">
+                                                Connect Facebook and select an ad
+                                                account to generate 5 AI-powered ad
+                                                variations
+                                            </p>
+                                        </div>
+                                    )}
 
                                     <div className="flex justify-between">
                                         <Button
@@ -430,7 +516,6 @@ export default function Step14Page({
                                         <Button
                                             onClick={handleContinueToAudience}
                                             className="gap-2"
-                                            disabled={selectedVariations.length === 0}
                                         >
                                             Continue to Audience
                                             <ArrowRight className="h-4 w-4" />
@@ -452,6 +537,19 @@ export default function Step14Page({
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
+                            {!metaConnected && (
+                                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                                    <p className="text-sm text-muted-foreground">
+                                        <strong className="text-primary">
+                                            Preview Mode:
+                                        </strong>{" "}
+                                        This is how you'll configure your target
+                                        audience and daily budget. Connect Facebook to
+                                        save real settings.
+                                    </p>
+                                </div>
+                            )}
+
                             <AudienceBuilder
                                 projectId={projectId}
                                 onConfigured={handleAudienceConfigured}
@@ -468,7 +566,6 @@ export default function Step14Page({
                                 <Button
                                     onClick={handleContinueToDeploy}
                                     className="gap-2"
-                                    disabled={!audienceConfig}
                                 >
                                     Review & Deploy
                                     <ArrowRight className="h-4 w-4" />
@@ -488,12 +585,42 @@ export default function Step14Page({
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-6">
+                            {!metaConnected && (
+                                <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+                                    <div className="flex items-start gap-3">
+                                        <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
+                                        <div>
+                                            <p className="text-sm font-semibold text-orange-900">
+                                                Connect Facebook to Deploy
+                                            </p>
+                                            <p className="text-sm text-orange-800 mt-1">
+                                                You're in preview mode. Connect your
+                                                Facebook account to launch real
+                                                campaigns on Meta/Instagram.
+                                            </p>
+                                            <Button
+                                                onClick={handleConnectMeta}
+                                                className="mt-3"
+                                                size="sm"
+                                            >
+                                                Connect Now
+                                            </Button>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
                             <CampaignDeployer
-                                adAccountId={selectedAdAccount!}
+                                adAccountId={selectedAdAccount || "preview-mode"}
                                 variations={adVariations.filter((v) =>
                                     selectedVariations.includes(v.id)
                                 )}
-                                audienceConfig={audienceConfig}
+                                audienceConfig={
+                                    audienceConfig || {
+                                        type: "interest",
+                                        description: "Preview audience",
+                                    }
+                                }
                                 dailyBudget={dailyBudget}
                                 onDeploy={handleDeployCampaign}
                                 deploying={deploying}
@@ -512,12 +639,17 @@ export default function Step14Page({
                                     <Button
                                         onClick={handleDeployCampaign}
                                         className="gap-2"
-                                        disabled={deploying}
+                                        disabled={deploying || !metaConnected}
                                     >
                                         {deploying ? (
                                             <>
                                                 <Loader2 className="h-4 w-4 animate-spin" />
                                                 Creating Campaign...
+                                            </>
+                                        ) : !metaConnected ? (
+                                            <>
+                                                <Target className="h-4 w-4" />
+                                                Connect to Launch
                                             </>
                                         ) : (
                                             <>

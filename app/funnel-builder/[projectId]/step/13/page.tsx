@@ -91,6 +91,8 @@ export default function Step12Page({
     }, [params]);
 
     const loadStats = useCallback(async () => {
+        if (!projectId) return;
+
         try {
             // Get posts this month
             const monthStart = new Date();
@@ -170,18 +172,17 @@ export default function Step12Page({
                 if (profileRes.ok) {
                     const profileData = await profileRes.json();
                     if (profileData.profiles && profileData.profiles.length > 0) {
-                        setProfile(profileData.profiles[0]);
+                        const loadedProfile = profileData.profiles[0];
+                        setProfile(loadedProfile);
                         setMarketingEnabled(true);
                         logger.info(
-                            { profileId: profileData.profiles[0].id },
+                            { profileId: loadedProfile.id },
                             "Marketing profile loaded"
                         );
-                    }
-                }
 
-                // Load stats if enabled
-                if (profile) {
-                    await loadStats();
+                        // Load stats after profile is loaded
+                        await loadStats();
+                    }
                 }
             } catch (error) {
                 logger.error({ error }, "Failed to load marketing data");
@@ -191,7 +192,7 @@ export default function Step12Page({
         };
 
         loadData();
-    }, [projectId, profile, loadStats]);
+    }, [projectId, loadStats]);
 
     const handleEnableMarketing = async (enabled: boolean) => {
         setMarketingEnabled(enabled);

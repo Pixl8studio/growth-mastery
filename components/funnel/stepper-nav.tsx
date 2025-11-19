@@ -29,7 +29,8 @@ const STEPS: Step[] = [
     { number: 11, title: "Flow Setup", description: "Connect pages" },
     { number: 12, title: "AI Follow-Up", description: "Smart automation" },
     { number: 13, title: "Marketing Content", description: "Social content engine" },
-    { number: 14, title: "Analytics", description: "Track performance" },
+    { number: 14, title: "Ads Manager", description: "Meta/Instagram ads" },
+    { number: 15, title: "Analytics", description: "Track performance" },
 ];
 
 interface StepperNavProps {
@@ -46,7 +47,7 @@ export function StepperNav({
     className,
 }: StepperNavProps) {
     const pathname = usePathname();
-    const completionPercentage = Math.round((completedSteps.length / 13) * 100);
+    const completionPercentage = Math.round((completedSteps.length / 15) * 100);
 
     return (
         <nav className={cn("space-y-2", className)}>

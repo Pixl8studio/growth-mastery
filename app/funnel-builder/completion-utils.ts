@@ -66,7 +66,7 @@ export async function getStepCompletionStatus(
         } = await supabase.auth.getUser();
 
         if (!user) {
-            return Array.from({ length: 13 }, (_, i) => ({
+            return Array.from({ length: 15 }, (_, i) => ({
                 step: i + 1,
                 isCompleted: false,
                 hasContent: false,
@@ -89,6 +89,8 @@ export async function getStepCompletionStatus(
             registrationPages,
             flows,
             followupConfigs,
+            marketingBriefs,
+            adCampaigns,
         ] = await Promise.all([
             // Step 1: VAPI Transcripts
             supabase
@@ -173,6 +175,22 @@ export async function getStepCompletionStatus(
                 .select("id", { count: "exact", head: true })
                 .eq("funnel_project_id", projectId)
                 .eq("user_id", user.id),
+
+            // Step 13: Marketing Content Briefs
+            supabase
+                .from("marketing_content_briefs")
+                .select("id", { count: "exact", head: true })
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id)
+                .eq("campaign_type", "organic"),
+
+            // Step 14: Ad Campaigns
+            supabase
+                .from("marketing_content_briefs")
+                .select("id", { count: "exact", head: true })
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id)
+                .eq("campaign_type", "paid_ad"),
         ]);
 
         const completionStatus: StepCompletion[] = [
@@ -238,6 +256,16 @@ export async function getStepCompletionStatus(
             },
             {
                 step: 13,
+                isCompleted: (marketingBriefs.count ?? 0) > 0,
+                hasContent: (marketingBriefs.count ?? 0) > 0,
+            },
+            {
+                step: 14,
+                isCompleted: (adCampaigns.count ?? 0) > 0,
+                hasContent: (adCampaigns.count ?? 0) > 0,
+            },
+            {
+                step: 15,
                 isCompleted: false, // Analytics is always accessible, not "completable"
                 hasContent: false,
             },
@@ -253,7 +281,7 @@ export async function getStepCompletionStatus(
     } catch (error) {
         requestLogger.error({ error }, "Failed to check step completion");
         // Return empty completion status on error
-        return Array.from({ length: 13 }, (_, i) => ({
+        return Array.from({ length: 15 }, (_, i) => ({
             step: i + 1,
             isCompleted: false,
             hasContent: false,

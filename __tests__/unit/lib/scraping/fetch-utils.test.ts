@@ -111,10 +111,22 @@ describe("fetchWithRetry", () => {
     });
 
     it("should timeout after specified duration", async () => {
-        // Mock a fetch that never resolves
+        // Mock a fetch that respects abort signal
         vi.mocked(fetch).mockImplementation(
-            () =>
-                new Promise((resolve) => {
+            (_url, options: any) =>
+                new Promise((resolve, reject) => {
+                    const signal = options?.signal;
+
+                    // Listen for abort signal
+                    if (signal) {
+                        signal.addEventListener("abort", () => {
+                            const error = new Error("The operation was aborted");
+                            error.name = "AbortError";
+                            reject(error);
+                        });
+                    }
+
+                    // Simulate slow response that would trigger timeout
                     setTimeout(
                         () =>
                             resolve({
@@ -122,7 +134,7 @@ describe("fetchWithRetry", () => {
                                 status: 200,
                                 text: async () => "too late",
                             } as any),
-                        5000
+                        3000
                     );
                 })
         );
@@ -134,7 +146,7 @@ describe("fetchWithRetry", () => {
 
         expect(result.success).toBe(false);
         expect(result.error).toContain("timeout");
-    });
+    }, 6000);
 
     it("should not retry on 403 Forbidden", async () => {
         const mockResponse = {

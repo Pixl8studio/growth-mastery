@@ -31,7 +31,8 @@ const STEPS: Step[] = [
     { number: 11, title: "Flow Setup", shortTitle: "Flow" },
     { number: 12, title: "AI Follow-Up", shortTitle: "Follow-Up" },
     { number: 13, title: "Marketing Content", shortTitle: "Marketing" },
-    { number: 14, title: "Analytics", shortTitle: "Analytics" },
+    { number: 14, title: "Ads Manager", shortTitle: "Ads" },
+    { number: 15, title: "Analytics", shortTitle: "Analytics" },
 ];
 
 interface HorizontalProgressProps {

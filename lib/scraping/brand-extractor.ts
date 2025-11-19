@@ -5,6 +5,14 @@
 
 import { logger } from "@/lib/logger";
 import * as cheerio from "cheerio";
+import {
+    DEFAULT_BRAND_COLORS,
+    COLOR_CONFIDENCE_THRESHOLD,
+    FONT_CONFIDENCE_BASE,
+    GRAYSCALE_RGB_DIFF_THRESHOLD,
+    EXTREME_LIGHT_THRESHOLD,
+    EXTREME_DARK_THRESHOLD,
+} from "./constants";
 
 /**
  * Color information with frequency and context
@@ -151,8 +159,12 @@ function isGrayscale(hex: string): boolean {
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
 
-    // Colors are grayscale if R, G, B are within 10 of each other
-    return Math.abs(r - g) < 10 && Math.abs(g - b) < 10 && Math.abs(r - b) < 10;
+    // Colors are grayscale if R, G, B are within threshold of each other
+    return (
+        Math.abs(r - g) < GRAYSCALE_RGB_DIFF_THRESHOLD &&
+        Math.abs(g - b) < GRAYSCALE_RGB_DIFF_THRESHOLD &&
+        Math.abs(r - b) < GRAYSCALE_RGB_DIFF_THRESHOLD
+    );
 }
 
 /**
@@ -167,8 +179,8 @@ function isExtremeShade(hex: string): boolean {
 
     const brightness = (r * 299 + g * 587 + b * 114) / 1000;
 
-    // Too light (> 240) or too dark (< 20)
-    return brightness > 240 || brightness < 20;
+    // Too light or too dark
+    return brightness > EXTREME_LIGHT_THRESHOLD || brightness < EXTREME_DARK_THRESHOLD;
 }
 
 /**
@@ -210,7 +222,10 @@ function colorDistance(hex1: string, hex2: string): number {
     const hsl2 = hexToHsl(hex2);
 
     // Weighted distance considering hue, saturation, and lightness
-    const hueDiff = Math.min(Math.abs(hsl1.h - hsl2.h), 360 - Math.abs(hsl1.h - hsl2.h));
+    const hueDiff = Math.min(
+        Math.abs(hsl1.h - hsl2.h),
+        360 - Math.abs(hsl1.h - hsl2.h)
+    );
     const satDiff = Math.abs(hsl1.s - hsl2.s);
     const lightDiff = Math.abs(hsl1.l - hsl2.l);
 
@@ -219,9 +234,9 @@ function colorDistance(hex1: string, hex2: string): number {
 
 /**
  * Extract all colors from HTML with context
+ * Takes a CheerioAPI instance to avoid multiple parses
  */
-function extractColors(html: string): ColorInfo[] {
-    const $ = cheerio.load(html);
+function extractColors($: cheerio.CheerioAPI): ColorInfo[] {
     const colorMap = new Map<string, ColorInfo>();
 
     // Element weights for importance
@@ -332,13 +347,15 @@ function selectBrandColors(colors: ColorInfo[]): BrandData["colors"] {
     );
 
     // Sort by weighted score (frequency * weight)
-    const sorted = vibrantColors.sort((a, b) => b.weight * b.frequency - a.weight * a.frequency);
+    const sorted = vibrantColors.sort(
+        (a, b) => b.weight * b.frequency - a.weight * a.frequency
+    );
 
     // Find primary (most prominent vibrant color)
-    const primary = sorted[0]?.color || "#3B82F6"; // Default blue
+    const primary = sorted[0]?.color || DEFAULT_BRAND_COLORS.PRIMARY;
 
     // Find secondary (different from primary)
-    let secondary = "#8B5CF6"; // Default purple
+    let secondary = DEFAULT_BRAND_COLORS.SECONDARY;
     for (const color of sorted.slice(1)) {
         if (colorDistance(primary, color.color) > 50) {
             secondary = color.color;
@@ -347,7 +364,7 @@ function selectBrandColors(colors: ColorInfo[]): BrandData["colors"] {
     }
 
     // Find accent (high contrast with primary)
-    let accent = "#EC4899"; // Default pink
+    let accent = DEFAULT_BRAND_COLORS.ACCENT;
     for (const color of sorted) {
         if (
             colorDistance(primary, color.color) > 100 &&
@@ -359,10 +376,12 @@ function selectBrandColors(colors: ColorInfo[]): BrandData["colors"] {
     }
 
     // Find background and text colors from all colors (including grayscale)
-    const allSorted = colors.sort((a, b) => b.weight * b.frequency - a.weight * a.frequency);
+    const allSorted = colors.sort(
+        (a, b) => b.weight * b.frequency - a.weight * a.frequency
+    );
 
-    let background = "#FFFFFF";
-    let text = "#1F2937";
+    let background = DEFAULT_BRAND_COLORS.BACKGROUND;
+    let text = DEFAULT_BRAND_COLORS.TEXT;
 
     // Find light background
     for (const color of allSorted) {
@@ -395,9 +414,9 @@ function selectBrandColors(colors: ColorInfo[]): BrandData["colors"] {
 
 /**
  * Extract font information from HTML
+ * Takes a CheerioAPI instance to avoid multiple parses
  */
-function extractFonts(html: string): BrandData["fonts"] {
-    const $ = cheerio.load(html);
+function extractFonts($: cheerio.CheerioAPI): BrandData["fonts"] {
     const fontFamilies = new Set<string>();
     const fontWeights = new Set<string>();
 
@@ -451,13 +470,20 @@ export async function extractBrandFromHtml(html: string): Promise<BrandData> {
     try {
         logger.info("Extracting brand data from HTML");
 
-        const colors = extractColors(html);
+        // Parse HTML once for better performance
+        const $ = cheerio.load(html);
+
+        // Extract data using the parsed DOM
+        const colors = extractColors($);
         const selectedColors = selectBrandColors(colors);
-        const fonts = extractFonts(html);
+        const fonts = extractFonts($);
 
         // Calculate confidence based on data quality
-        const colorConfidence = Math.min(100, (colors.length / 10) * 100); // More colors = higher confidence
-        const fontConfidence = fonts.primary ? 80 : 20;
+        const colorConfidence = Math.min(
+            100,
+            (colors.length / COLOR_CONFIDENCE_THRESHOLD) * 100
+        );
+        const fontConfidence = fonts.primary ? FONT_CONFIDENCE_BASE + 30 : 20;
         const overallConfidence = (colorConfidence + fontConfidence) / 2;
 
         logger.info(
@@ -489,4 +515,3 @@ export async function extractBrandFromHtml(html: string): Promise<BrandData> {
         throw error;
     }
 }
-

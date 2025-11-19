@@ -32,7 +32,10 @@ export interface InstagramOAuthConfig {
 /**
  * Generate Instagram OAuth URL
  */
-export function getInstagramOAuthUrl(config: InstagramOAuthConfig, state: string): string {
+export function getInstagramOAuthUrl(
+    config: InstagramOAuthConfig,
+    state: string
+): string {
     const params = new URLSearchParams({
         client_id: config.appId,
         redirect_uri: config.redirectUri,
@@ -66,7 +69,9 @@ export async function exchangeInstagramCode(
         if (!response.ok) {
             const error = await response.json();
             logger.error({ error }, "Failed to exchange Instagram code");
-            throw new Error(error.error?.message || "Failed to exchange authorization code");
+            throw new Error(
+                error.error?.message || "Failed to exchange authorization code"
+            );
         }
 
         const data = await response.json();
@@ -261,4 +266,3 @@ export function extractTextFromPosts(posts: InstagramPost[]): string[] {
         .map((post) => post.caption!)
         .slice(0, 20); // Limit to 20 posts for analysis
 }
-

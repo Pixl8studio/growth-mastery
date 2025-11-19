@@ -55,7 +55,11 @@ function sleep(ms: number): Promise<void> {
 /**
  * Calculate exponential backoff delay
  */
-function getBackoffDelay(attempt: number, initialDelay: number, maxDelay: number): number {
+function getBackoffDelay(
+    attempt: number,
+    initialDelay: number,
+    maxDelay: number
+): number {
     const delay = Math.min(initialDelay * 2 ** attempt, maxDelay);
     // Add jitter (±25%) to avoid thundering herd
     const jitter = delay * 0.25 * (Math.random() * 2 - 1);
@@ -70,7 +74,8 @@ function isRetryableError(error: unknown, statusCode?: number): boolean {
     if (
         error &&
         typeof error === "object" &&
-        ("code" in error && (error.code === "ECONNRESET" || error.code === "ETIMEDOUT"))
+        "code" in error &&
+        (error.code === "ECONNRESET" || error.code === "ETIMEDOUT")
     ) {
         return true;
     }
@@ -78,7 +83,11 @@ function isRetryableError(error: unknown, statusCode?: number): boolean {
     // HTTP status codes that are retryable
     if (statusCode) {
         // 408 Request Timeout, 429 Too Many Requests, 500-599 Server Errors
-        return statusCode === 408 || statusCode === 429 || (statusCode >= 500 && statusCode < 600);
+        return (
+            statusCode === 408 ||
+            statusCode === 429 ||
+            (statusCode >= 500 && statusCode < 600)
+        );
     }
 
     return false;
@@ -200,7 +209,10 @@ export async function fetchWithRetry(
 
             // Handle abort/timeout
             if (error instanceof Error && error.name === "AbortError") {
-                logger.warn({ url, attempt: attempt + 1, timeoutMs }, "Request timeout");
+                logger.warn(
+                    { url, attempt: attempt + 1, timeoutMs },
+                    "Request timeout"
+                );
                 lastError = new Error(`Request timeout after ${timeoutMs}ms`);
             } else {
                 logger.warn(
@@ -261,13 +273,59 @@ export async function checkUrlAccessible(url: string): Promise<boolean> {
 
         clearTimeout(timeoutId);
         return response.ok;
-    } catch {
+    } catch (error) {
+        logger.debug({ error, url }, "URL accessibility check failed");
         return false;
     }
 }
 
 /**
- * Validate URL format
+ * Blocked IP patterns for SSRF protection
+ * Prevents access to internal networks, cloud metadata endpoints, and localhost
+ */
+const BLOCKED_IP_PATTERNS = [
+    /^127\./, // Loopback (127.0.0.0/8)
+    /^10\./, // Private Class A (10.0.0.0/8)
+    /^192\.168\./, // Private Class C (192.168.0.0/16)
+    /^172\.(1[6-9]|2[0-9]|3[01])\./, // Private Class B (172.16.0.0/12) - Docker networks
+    /^169\.254\./, // Link-local (169.254.0.0/16) + AWS metadata endpoint
+    /^0\.0\.0\.0$/, // Wildcard
+    /^::1$/, // IPv6 loopback
+    /^::$/, // IPv6 unspecified
+    /^fc00:/i, // IPv6 private (fc00::/7)
+    /^fd00:/i, // IPv6 private (fd00::/8)
+    /^fe80:/i, // IPv6 link-local (fe80::/10)
+    /^ff00:/i, // IPv6 multicast
+];
+
+/**
+ * Check if hostname matches blocked IP patterns
+ */
+function isBlockedHostname(hostname: string): boolean {
+    const lowerHostname = hostname.toLowerCase();
+
+    // Check against blocked patterns
+    for (const pattern of BLOCKED_IP_PATTERNS) {
+        if (pattern.test(lowerHostname)) {
+            return true;
+        }
+    }
+
+    // Check for localhost variants
+    if (
+        lowerHostname === "localhost" ||
+        lowerHostname === "0.0.0.0" ||
+        lowerHostname === "[::]" ||
+        lowerHostname.endsWith(".localhost")
+    ) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Validate URL format and check for SSRF vulnerabilities
  */
 export function validateUrl(url: string): { valid: boolean; error?: string } {
     try {
@@ -281,15 +339,9 @@ export function validateUrl(url: string): { valid: boolean; error?: string } {
             };
         }
 
-        // Check for localhost/internal IPs (basic check)
-        const hostname = urlObj.hostname.toLowerCase();
-        if (
-            hostname === "localhost" ||
-            hostname.startsWith("127.") ||
-            hostname.startsWith("192.168.") ||
-            hostname.startsWith("10.") ||
-            hostname === "0.0.0.0"
-        ) {
+        // Check for blocked hostnames/IPs (SSRF protection)
+        const hostname = urlObj.hostname;
+        if (isBlockedHostname(hostname)) {
             return {
                 valid: false,
                 error: "Local/internal URLs are not allowed for security reasons",
@@ -305,73 +357,6 @@ export function validateUrl(url: string): { valid: boolean; error?: string } {
     }
 }
 
-/**
- * Simple in-memory cache for scraping results
- * In production, this should be replaced with Redis or similar
- */
-const cache = new Map<string, { data: unknown; timestamp: number }>();
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
-
-/**
- * Get cached data if it exists and is not expired
- */
-export function getCached<T>(key: string): T | null {
-    const cached = cache.get(key);
-    if (!cached) return null;
-
-    const age = Date.now() - cached.timestamp;
-    if (age > CACHE_TTL_MS) {
-        cache.delete(key);
-        return null;
-    }
-
-    logger.info({ key, age }, "Cache hit");
-    return cached.data as T;
-}
-
-/**
- * Set data in cache
- */
-export function setCache(key: string, data: unknown): void {
-    cache.set(key, {
-        data,
-        timestamp: Date.now(),
-    });
-    logger.info({ key }, "Cached data");
-}
-
-/**
- * Clear cache for a specific key or all cache
- */
-export function clearCache(key?: string): void {
-    if (key) {
-        cache.delete(key);
-        logger.info({ key }, "Cleared cache entry");
-    } else {
-        cache.clear();
-        logger.info("Cleared all cache");
-    }
-}
-
-/**
- * Periodically clean up expired cache entries
- */
-setInterval(
-    () => {
-        const now = Date.now();
-        let cleaned = 0;
-
-        for (const [key, value] of cache.entries()) {
-            if (now - value.timestamp > CACHE_TTL_MS) {
-                cache.delete(key);
-                cleaned++;
-            }
-        }
-
-        if (cleaned > 0) {
-            logger.info({ cleaned }, "Cleaned up expired cache entries");
-        }
-    },
-    60 * 60 * 1000
-); // Run every hour
-
+// Cache functions are now provided by lib/scraping/cache.ts
+// This uses Vercel KV for distributed caching across serverless functions
+export { getCached, setCache, clearCache } from "./cache";

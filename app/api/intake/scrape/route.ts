@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { extractTextFromUrl, validateIntakeContent } from "@/lib/intake/processors";
@@ -14,16 +15,96 @@ import {
     setCache,
 } from "@/lib/scraping/fetch-utils";
 import { extractBrandFromHtml, BrandData } from "@/lib/scraping/brand-extractor";
+import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
 
+/**
+ * Request schema for intake scraping
+ */
+const IntakeScrapeRequestSchema = z.object({
+    projectId: z.string().uuid("Invalid project ID"),
+    userId: z.string().uuid("Invalid user ID"),
+    url: z
+        .string()
+        .min(1, "URL is required")
+        .url("Invalid URL format")
+        .refine((url) => url.startsWith("http://") || url.startsWith("https://"), {
+            message: "URL must start with http:// or https://",
+        }),
+    sessionName: z.string().optional(),
+});
+
+/**
+ * POST /api/intake/scrape
+ *
+ * Scrapes content from a URL (enrollment page, website, etc.) for intake processing.
+ * Extracts text content and brand data in parallel, validates content quality,
+ * and saves to database with comprehensive metadata.
+ * Implements 24-hour caching and rate limiting (10 requests per minute).
+ *
+ * @param request - Next.js request object
+ * @returns {Promise<NextResponse>} Scraped content, brand data, and intake record details
+ *
+ * @example Request Body
+ * ```json
+ * {
+ *   "projectId": "uuid-of-project",
+ *   "userId": "uuid-of-user",
+ *   "url": "https://example.com/enrollment",
+ *   "sessionName": "Landing Page Content" // optional
+ * }
+ * ```
+ *
+ * @example Success Response (200)
+ * ```json
+ * {
+ *   "success": true,
+ *   "intakeId": "uuid-of-intake-record",
+ *   "method": "scrape",
+ *   "url": "https://example.com/enrollment",
+ *   "preview": "First 200 characters of scraped content...",
+ *   "brandData": {
+ *     "colors": { "primary": "#3B82F6", ... },
+ *     "fonts": { "primary": "Inter", ... },
+ *     "confidence": { "overall": 85 }
+ *   },
+ *   "characterCount": 5420,
+ *   "wordCount": 850
+ * }
+ * ```
+ *
+ * @throws {400} Missing required fields, invalid URL, insufficient content, or SSRF protection triggered
+ * @throws {429} Rate limit exceeded (10 requests per minute)
+ * @throws {500} Scraping failed, extraction error, or database save failed
+ *
+ * @description
+ * This endpoint performs comprehensive web scraping with the following features:
+ * - **Content Extraction**: Uses cheerio for semantic HTML parsing
+ * - **Brand Extraction**: Automatically detects brand colors, fonts, and visual style
+ * - **Content Validation**: Ensures sufficient quality and length
+ * - **Parallel Processing**: Brand extraction doesn't block main scrape operation
+ * - **Caching**: 24-hour cache reduces load and improves response time
+ * - **Rate Limiting**: Per-user limits prevent abuse
+ * - **SSRF Protection**: Blocks access to internal/private networks
+ * - **Database Integration**: Saves to vapi_transcripts with metadata
+ */
 export async function POST(request: NextRequest) {
     try {
-        const { projectId, userId, url, sessionName } = await request.json();
+        const body = await request.json();
 
-        if (!projectId || !userId || !url) {
-            return NextResponse.json(
-                { error: "Missing required fields" },
-                { status: 400 }
-            );
+        // Validate request body with Zod
+        const parseResult = IntakeScrapeRequestSchema.safeParse(body);
+        if (!parseResult.success) {
+            const firstError = parseResult.error.issues[0];
+            return NextResponse.json({ error: firstError.message }, { status: 400 });
+        }
+
+        const { projectId, userId, url, sessionName } = parseResult.data;
+
+        // Check rate limit
+        const identifier = getRateLimitIdentifier(request, userId);
+        const rateLimitResponse = await checkRateLimit(identifier, "scraping");
+        if (rateLimitResponse) {
+            return rateLimitResponse;
         }
 
         // Validate URL using new infrastructure
@@ -32,11 +113,14 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: urlValidation.error }, { status: 400 });
         }
 
-        logger.info({ url, projectId }, "Starting intake scraping with brand extraction");
+        logger.info(
+            { url, projectId },
+            "Starting intake scraping with brand extraction"
+        );
 
         // Check cache first
         const cacheKey = `intake:${url}`;
-        const cached = getCached<{
+        const cached = await getCached<{
             scrapedText: string;
             brandData: BrandData | null;
         }>(cacheKey);
@@ -91,12 +175,15 @@ export async function POST(request: NextRequest) {
                     "Successfully extracted brand data"
                 );
             } catch (error) {
-                logger.warn({ error, url }, "Failed to extract brand data (non-blocking)");
+                logger.warn(
+                    { error, url },
+                    "Failed to extract brand data (non-blocking)"
+                );
                 brandData = null;
             }
 
             // Cache the results
-            setCache(cacheKey, { scrapedText, brandData });
+            await setCache(cacheKey, { scrapedText, brandData });
         }
 
         // Validate scraped content

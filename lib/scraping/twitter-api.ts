@@ -59,20 +59,30 @@ export function getTwitterOAuthUrl(
 
 /**
  * Generate PKCE code verifier and challenge
+ * Uses proper SHA256 hashing as required by OAuth 2.0 PKCE specification
  */
-export function generatePKCE(): {
+export async function generatePKCE(): Promise<{
     codeVerifier: string;
     codeChallenge: string;
-} {
-    // Generate random code verifier (43-128 characters)
+}> {
+    // Generate random code verifier (43-128 characters, base64url encoded)
     const codeVerifier = Array.from(crypto.getRandomValues(new Uint8Array(32)))
         .map((b) => b.toString(16).padStart(2, "0"))
         .join("")
         .substring(0, 128);
 
-    // For simplicity, we'll use the verifier as the challenge in server environment
-    // In production, should use SHA256 hash and base64url encoding
-    const codeChallenge = codeVerifier;
+    // Create SHA256 hash of the code verifier
+    const encoder = new TextEncoder();
+    const data = encoder.encode(codeVerifier);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+
+    // Convert to base64url encoding (required for PKCE)
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const base64 = btoa(String.fromCharCode(...hashArray));
+    const codeChallenge = base64
+        .replace(/\+/g, "-")
+        .replace(/\//g, "_")
+        .replace(/=/g, "");
 
     return { codeVerifier, codeChallenge };
 }
@@ -106,7 +116,9 @@ export async function exchangeTwitterCode(
         if (!response.ok) {
             const error = await response.json();
             logger.error({ error }, "Failed to exchange Twitter code");
-            throw new Error(error.error_description || "Failed to exchange authorization code");
+            throw new Error(
+                error.error_description || "Failed to exchange authorization code"
+            );
         }
 
         const data = await response.json();
@@ -309,4 +321,3 @@ export function extractTextFromTweets(tweets: Tweet[]): string[] {
         .map((tweet) => tweet.text)
         .slice(0, 50); // Limit to 50 tweets for analysis
 }
-

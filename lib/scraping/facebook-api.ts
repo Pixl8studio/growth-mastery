@@ -41,7 +41,10 @@ export interface FacebookOAuthConfig {
 /**
  * Generate Facebook OAuth URL
  */
-export function getFacebookOAuthUrl(config: FacebookOAuthConfig, state: string): string {
+export function getFacebookOAuthUrl(
+    config: FacebookOAuthConfig,
+    state: string
+): string {
     const params = new URLSearchParams({
         client_id: config.appId,
         redirect_uri: config.redirectUri,
@@ -75,7 +78,9 @@ export async function exchangeFacebookCode(
         if (!response.ok) {
             const error = await response.json();
             logger.error({ error }, "Failed to exchange Facebook code");
-            throw new Error(error.error?.message || "Failed to exchange authorization code");
+            throw new Error(
+                error.error?.message || "Failed to exchange authorization code"
+            );
         }
 
         const data = await response.json();
@@ -203,7 +208,10 @@ export async function fetchFacebookPosts(
             });
         }
 
-        logger.info({ pageId, count: posts.length }, "Fetched Facebook posts successfully");
+        logger.info(
+            { pageId, count: posts.length },
+            "Fetched Facebook posts successfully"
+        );
 
         return posts;
     } catch (error) {
@@ -258,7 +266,10 @@ export async function fetchFacebookFeed(
             });
         }
 
-        logger.info({ pageId, count: posts.length }, "Fetched Facebook feed successfully");
+        logger.info(
+            { pageId, count: posts.length },
+            "Fetched Facebook feed successfully"
+        );
 
         return posts;
     } catch (error) {
@@ -279,4 +290,3 @@ export function extractTextFromFacebookPosts(posts: FacebookPost[]): string[] {
         .map((post) => post.message || post.story || "")
         .slice(0, 20); // Limit to 20 posts for analysis
 }
-

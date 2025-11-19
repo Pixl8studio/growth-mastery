@@ -7,9 +7,10 @@
 import { logger } from "@/lib/logger";
 import { extractTextFromUrl } from "@/lib/intake/processors";
 import { createClient } from "@/lib/supabase/server";
+import { decryptToken } from "@/lib/crypto/token-encryption";
+import type { OAuthConnectionMetadata } from "@/types/oauth";
 import {
     fetchInstagramPosts,
-    getInstagramContentFromPage,
     extractTextFromPosts as extractFromInstagram,
 } from "@/lib/scraping/instagram-api";
 import {
@@ -105,9 +106,12 @@ async function getOAuthConnection(
             }
         }
 
+        // Decrypt the access token before returning
+        const accessToken = await decryptToken(data.access_token_encrypted);
+
         return {
             connected: true,
-            accessToken: data.access_token_encrypted, // Note: In production, decrypt this
+            accessToken,
             platformUserId: data.platform_user_id || undefined,
             expired: false,
         };
@@ -123,8 +127,7 @@ async function getOAuthConnection(
 async function fetchViaAPI(
     userId: string,
     profileId: string,
-    platform: PlatformType,
-    url?: string
+    platform: PlatformType
 ): Promise<{ success: boolean; data?: ScrapedContent; error?: string }> {
     const connection = await getOAuthConnection(userId, profileId, platform);
 
@@ -198,11 +201,25 @@ async function fetchViaAPI(
 
             case "facebook": {
                 // Facebook requires page ID from metadata
-                const metadata = connection as any;
-                const pageId = metadata.metadata?.page_id;
+                const connectionData = connection as unknown as {
+                    connected: boolean;
+                    accessToken?: string;
+                    platformUserId?: string;
+                    expired?: boolean;
+                    metadata?: OAuthConnectionMetadata;
+                };
+
+                const pageId = connectionData.metadata?.page_id;
                 if (!pageId) {
-                    throw new Error("Facebook page ID not found");
+                    throw new Error(
+                        "Facebook page ID not found in connection metadata"
+                    );
                 }
+
+                if (!connection.accessToken) {
+                    throw new Error("Facebook access token not available");
+                }
+
                 const posts = await fetchFacebookPosts(
                     pageId,
                     connection.accessToken,
@@ -280,7 +297,7 @@ export async function scrapeAndExtractContent(
 
         // Try API if OAuth available for social platforms
         if (platform !== "generic" && userId && profileId) {
-            const apiResult = await fetchViaAPI(userId, profileId, platform, url);
+            const apiResult = await fetchViaAPI(userId, profileId, platform);
 
             if (apiResult.success) {
                 return apiResult;
@@ -303,7 +320,9 @@ export async function scrapeAndExtractContent(
                         source: "manual",
                         metadata: {
                             connectionStatus:
-                                apiResult.error === "token_expired" ? "expired" : "not_connected",
+                                apiResult.error === "token_expired"
+                                    ? "expired"
+                                    : "not_connected",
                         },
                     },
                 };

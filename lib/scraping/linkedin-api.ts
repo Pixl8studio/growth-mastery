@@ -31,7 +31,10 @@ export interface LinkedInOAuthConfig {
 /**
  * Generate LinkedIn OAuth URL
  */
-export function getLinkedInOAuthUrl(config: LinkedInOAuthConfig, state: string): string {
+export function getLinkedInOAuthUrl(
+    config: LinkedInOAuthConfig,
+    state: string
+): string {
     const params = new URLSearchParams({
         response_type: "code",
         client_id: config.clientId,
@@ -70,7 +73,9 @@ export async function exchangeLinkedInCode(
         if (!response.ok) {
             const error = await response.json();
             logger.error({ error }, "Failed to exchange LinkedIn code");
-            throw new Error(error.error_description || "Failed to exchange authorization code");
+            throw new Error(
+                error.error_description || "Failed to exchange authorization code"
+            );
         }
 
         const data = await response.json();
@@ -158,7 +163,8 @@ export async function fetchLinkedInPosts(
         const posts: LinkedInPost[] = [];
 
         for (const element of data.elements || []) {
-            const specificContent = element.specificContent?.["com.linkedin.ugc.ShareContent"];
+            const specificContent =
+                element.specificContent?.["com.linkedin.ugc.ShareContent"];
             const text = specificContent?.shareCommentary?.text || "";
 
             posts.push({
@@ -173,7 +179,10 @@ export async function fetchLinkedInPosts(
             });
         }
 
-        logger.info({ authorId, count: posts.length }, "Fetched LinkedIn posts successfully");
+        logger.info(
+            { authorId, count: posts.length },
+            "Fetched LinkedIn posts successfully"
+        );
 
         return posts;
     } catch (error) {
@@ -217,7 +226,8 @@ export async function fetchLinkedInOrganizationPosts(
         const posts: LinkedInPost[] = [];
 
         for (const element of data.elements || []) {
-            const specificContent = element.specificContent?.["com.linkedin.ugc.ShareContent"];
+            const specificContent =
+                element.specificContent?.["com.linkedin.ugc.ShareContent"];
             const text = specificContent?.shareCommentary?.text || "";
 
             posts.push({
@@ -253,4 +263,3 @@ export function extractTextFromLinkedInPosts(posts: LinkedInPost[]): string[] {
         .map((post) => post.text!)
         .slice(0, 10); // Limit to 10 posts for analysis
 }
-

@@ -62,7 +62,7 @@ function extractMetadata($: cheerio.CheerioAPI): {
     const publishDate =
         $('meta[property="article:published_time"]').attr("content") ||
         $('meta[name="publish_date"]').attr("content") ||
-        $('time[datetime]').attr("datetime") ||
+        $("time[datetime]").attr("datetime") ||
         undefined;
 
     // Keywords
@@ -213,7 +213,10 @@ function calculateReadingTime(wordCount: number): number {
 /**
  * Extract comprehensive content from HTML
  */
-export async function extractContent(html: string, url: string): Promise<ExtractedContent> {
+export async function extractContent(
+    html: string,
+    url: string
+): Promise<ExtractedContent> {
     try {
         const $ = cheerio.load(html);
 
@@ -282,4 +285,3 @@ export async function extractContentFromUrl(url: string): Promise<ExtractedConte
     // Extract content
     return extractContent(fetchResult.html, url);
 }
-

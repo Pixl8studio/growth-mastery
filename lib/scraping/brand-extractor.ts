@@ -464,11 +464,68 @@ function extractFonts($: cheerio.CheerioAPI): BrandData["fonts"] {
 }
 
 /**
+ * Detect if gradients are used in the HTML
+ */
+function detectGradients($: cheerio.CheerioAPI): boolean {
+    let hasGradients = false;
+
+    // Check inline styles
+    $("[style]").each((_, el) => {
+        const style = $(el).attr("style") || "";
+        if (/linear-gradient|radial-gradient|conic-gradient/i.test(style)) {
+            hasGradients = true;
+            return false; // Break the loop
+        }
+    });
+
+    // Check style tags
+    if (!hasGradients) {
+        $("style").each((_, el) => {
+            const css = $(el).html() || "";
+            if (/linear-gradient|radial-gradient|conic-gradient/i.test(css)) {
+                hasGradients = true;
+                return false; // Break the loop
+            }
+        });
+    }
+
+    return hasGradients;
+}
+
+/**
  * Extract brand data from HTML
  */
 export async function extractBrandFromHtml(html: string): Promise<BrandData> {
     try {
         logger.info("Extracting brand data from HTML");
+
+        // Handle empty HTML
+        if (!html || html.trim().length === 0) {
+            return {
+                colors: {
+                    primary: DEFAULT_BRAND_COLORS.PRIMARY,
+                    secondary: DEFAULT_BRAND_COLORS.SECONDARY,
+                    accent: DEFAULT_BRAND_COLORS.ACCENT,
+                    background: DEFAULT_BRAND_COLORS.BACKGROUND,
+                    text: DEFAULT_BRAND_COLORS.TEXT,
+                },
+                fonts: {
+                    primary: undefined,
+                    secondary: undefined,
+                    weights: [],
+                },
+                style: {
+                    borderRadius: "8px",
+                    shadows: false,
+                    gradients: false,
+                },
+                confidence: {
+                    colors: 0,
+                    fonts: 0,
+                    overall: 0,
+                },
+            };
+        }
 
         // Parse HTML once for better performance
         const $ = cheerio.load(html);
@@ -477,6 +534,7 @@ export async function extractBrandFromHtml(html: string): Promise<BrandData> {
         const colors = extractColors($);
         const selectedColors = selectBrandColors(colors);
         const fonts = extractFonts($);
+        const hasGradients = detectGradients($);
 
         // Calculate confidence based on data quality
         const colorConfidence = Math.min(
@@ -502,7 +560,7 @@ export async function extractBrandFromHtml(html: string): Promise<BrandData> {
             style: {
                 borderRadius: "8px", // Default, would need more parsing to detect
                 shadows: true,
-                gradients: false,
+                gradients: hasGradients,
             },
             confidence: {
                 colors: Math.round(colorConfidence),

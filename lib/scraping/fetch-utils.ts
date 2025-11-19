@@ -340,7 +340,13 @@ export function validateUrl(url: string): { valid: boolean; error?: string } {
         }
 
         // Check for blocked hostnames/IPs (SSRF protection)
-        const hostname = urlObj.hostname;
+        let hostname = urlObj.hostname;
+
+        // Strip IPv6 brackets if present
+        if (hostname.startsWith("[") && hostname.endsWith("]")) {
+            hostname = hostname.slice(1, -1);
+        }
+
         if (isBlockedHostname(hostname)) {
             return {
                 valid: false,

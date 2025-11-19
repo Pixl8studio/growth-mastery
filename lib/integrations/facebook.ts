@@ -11,12 +11,35 @@ const FACEBOOK_GRAPH_API = "https://graph.facebook.com/v18.0";
 const FACEBOOK_OAUTH_URL = "https://www.facebook.com/v18.0/dialog/oauth";
 const FACEBOOK_TOKEN_URL = "https://graph.facebook.com/v18.0/oauth/access_token";
 
-export function getFacebookAuthUrl(projectId: string, redirectUri: string): string {
+export function getFacebookAuthUrl(
+    projectId: string,
+    redirectUri: string,
+    includeAdsScopes = false
+): string {
+    // Base scopes for organic social posting
+    let scopes = [
+        "pages_show_list",
+        "pages_read_engagement",
+        "pages_manage_posts",
+        "instagram_basic",
+        "instagram_content_publish",
+    ];
+
+    // Add ads management scopes if requested
+    if (includeAdsScopes) {
+        scopes = [
+            ...scopes,
+            "ads_management", // Create and manage ads
+            "ads_read", // Read ad performance data
+            "business_management", // Access ad accounts
+        ];
+    }
+
     const params = new URLSearchParams({
         client_id: env.FACEBOOK_APP_ID!,
         redirect_uri: redirectUri,
         state: projectId,
-        scope: "pages_show_list,pages_read_engagement,pages_manage_posts,instagram_basic,instagram_content_publish",
+        scope: scopes.join(","),
         response_type: "code",
     });
 

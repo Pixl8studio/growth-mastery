@@ -245,7 +245,7 @@ export async function getStepCompletionStatus(
 
         const completedCount = completionStatus.filter((s) => s.isCompleted).length;
         requestLogger.info(
-            { completedSteps: completedCount, totalSteps: 13 },
+            { completedSteps: completedCount, totalSteps: 15 },
             "Step completion status retrieved"
         );
 

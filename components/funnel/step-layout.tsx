@@ -76,7 +76,7 @@ export function StepLayout({
                             {funnelName || "Funnel Builder"}
                         </h2>
                         <p className="text-sm text-muted-foreground">
-                            Step {currentStep} of 12
+                            Step {currentStep} of 15
                         </p>
                     </div>
 

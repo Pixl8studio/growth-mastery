@@ -14,6 +14,8 @@ import {
     createAd,
 } from "@/lib/integrations/meta-ads";
 import { decryptToken } from "@/lib/crypto/token-encryption";
+import { CreateCampaignSchema } from "@/lib/ads/validation-schemas";
+import { z } from "zod";
 
 /**
  * POST /api/ads/campaigns/create
@@ -33,22 +35,28 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
+
+        // Validate request body with Zod
+        let validatedData;
+        try {
+            validatedData = CreateCampaignSchema.parse(body);
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                const errorMessage = error.issues
+                    .map((e: z.ZodIssue) => `${e.path.join(".")}: ${e.message}`)
+                    .join(", ");
+                throw new ValidationError(errorMessage);
+            }
+            throw error;
+        }
+
         const {
             funnel_project_id,
             ad_account_id,
             variations,
             audience_config,
             daily_budget_cents,
-        } = body;
-
-        if (
-            !funnel_project_id ||
-            !ad_account_id ||
-            !variations ||
-            !daily_budget_cents
-        ) {
-            throw new ValidationError("Missing required fields");
-        }
+        } = validatedData;
 
         // Verify project ownership
         const { data: project } = await supabase

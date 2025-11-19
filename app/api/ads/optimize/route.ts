@@ -6,8 +6,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import { AuthenticationError } from "@/lib/errors";
+import { AuthenticationError, ValidationError } from "@/lib/errors";
 import { optimizeAllCampaigns, optimizeCampaign } from "@/lib/ads/optimization-engine";
+import { OptimizeCampaignSchema } from "@/lib/ads/validation-schemas";
+import { z } from "zod";
 
 /**
  * POST /api/ads/optimize
@@ -27,7 +29,22 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { campaign_id, autopilot } = body;
+
+        // Validate request body with Zod
+        let validatedData;
+        try {
+            validatedData = OptimizeCampaignSchema.parse(body);
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                const errorMessage = error.issues
+                    .map((e: z.ZodIssue) => `${e.path.join(".")}: ${e.message}`)
+                    .join(", ");
+                throw new ValidationError(errorMessage);
+            }
+            throw error;
+        }
+
+        const { campaign_id, autopilot } = validatedData;
 
         let results;
 
@@ -72,6 +89,10 @@ export async function POST(request: NextRequest) {
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });
+        }
+
+        if (error instanceof ValidationError) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
         }
 
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });

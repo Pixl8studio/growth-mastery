@@ -9,6 +9,8 @@ import { logger } from "@/lib/logger";
 import { AuthenticationError, ValidationError } from "@/lib/errors";
 import { generateAdVariations } from "@/lib/ads/ad-generator";
 import type { AdGenerationRequest } from "@/types/ads";
+import { GenerateVariationsSchema } from "@/lib/ads/validation-schemas";
+import { z } from "zod";
 
 /**
  * POST /api/ads/variations/generate
@@ -28,11 +30,22 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { funnel_project_id } = body;
 
-        if (!funnel_project_id) {
-            throw new ValidationError("funnel_project_id is required");
+        // Validate request body with Zod
+        let validatedData;
+        try {
+            validatedData = GenerateVariationsSchema.parse(body);
+        } catch (error) {
+            if (error instanceof z.ZodError) {
+                const errorMessage = error.issues
+                    .map((e: z.ZodIssue) => `${e.path.join(".")}: ${e.message}`)
+                    .join(", ");
+                throw new ValidationError(errorMessage);
+            }
+            throw error;
         }
+
+        const { funnel_project_id } = validatedData;
 
         // Verify project ownership
         const { data: project } = await supabase

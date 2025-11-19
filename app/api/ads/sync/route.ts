@@ -14,13 +14,22 @@ import { syncAllAdMetrics } from "@/lib/ads/metrics-fetcher";
  */
 export async function GET(request: NextRequest) {
     try {
-        // Verify cron secret (if using Vercel Cron)
-        const authHeader = request.headers.get("authorization");
-        const expectedAuth = process.env.CRON_SECRET
-            ? `Bearer ${process.env.CRON_SECRET}`
-            : null;
+        // Verify cron secret (required for security)
+        const cronSecret = process.env.CRON_SECRET;
 
-        if (expectedAuth && authHeader !== expectedAuth) {
+        if (!cronSecret) {
+            logger.error({}, "CRON_SECRET not configured - endpoint disabled");
+            return NextResponse.json(
+                { error: "Service misconfigured" },
+                { status: 500 }
+            );
+        }
+
+        const authHeader = request.headers.get("authorization");
+        const expectedAuth = `Bearer ${cronSecret}`;
+
+        if (authHeader !== expectedAuth) {
+            logger.warn({ authHeader }, "Unauthorized cron sync attempt");
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 

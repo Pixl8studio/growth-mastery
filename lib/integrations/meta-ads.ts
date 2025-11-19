@@ -1,6 +1,9 @@
 /**
  * Meta Marketing API Client
  * Handles Meta Ads Manager API for campaign, ad set, and ad creative management
+ *
+ * SECURITY: All API calls use Authorization headers per RFC 6750 OAuth 2.0 Bearer Token Usage
+ * Access tokens are NEVER passed in URL query parameters to prevent exposure in logs
  */
 
 import { env } from "@/lib/env";
@@ -21,6 +24,15 @@ const META_GRAPH_API = "https://graph.facebook.com/v21.0";
 const META_API_VERSION = "v21.0";
 
 /**
+ * Create secure headers with Authorization bearer token
+ */
+function createAuthHeaders(accessToken: string): HeadersInit {
+    return {
+        Authorization: `Bearer ${accessToken}`,
+    };
+}
+
+/**
  * Get all ad accounts accessible to the user
  */
 export async function getAdAccounts(
@@ -28,7 +40,10 @@ export async function getAdAccounts(
 ): Promise<MetaAdAccountResponse[]> {
     try {
         const response = await fetch(
-            `${META_GRAPH_API}/me/adaccounts?fields=id,account_id,name,account_status,currency,timezone_name,balance&access_token=${accessToken}`
+            `${META_GRAPH_API}/me/adaccounts?fields=id,account_id,name,account_status,currency,timezone_name,balance`,
+            {
+                headers: createAuthHeaders(accessToken),
+            }
         );
 
         if (!response.ok) {
@@ -55,7 +70,10 @@ export async function getAdAccount(
 ): Promise<MetaAdAccountResponse> {
     try {
         const response = await fetch(
-            `${META_GRAPH_API}/${adAccountId}?fields=id,account_id,name,account_status,currency,timezone_name,balance&access_token=${accessToken}`
+            `${META_GRAPH_API}/${adAccountId}?fields=id,account_id,name,account_status,currency,timezone_name,balance`,
+            {
+                headers: createAuthHeaders(accessToken),
+            }
         );
 
         if (!response.ok) {
@@ -88,12 +106,12 @@ export async function createCampaign(
             objective,
             status,
             special_ad_categories: JSON.stringify([]), // Required for some objectives
-            access_token: accessToken,
         });
 
         const response = await fetch(`${META_GRAPH_API}/${adAccountId}/campaigns`, {
             method: "POST",
             headers: {
+                ...createAuthHeaders(accessToken),
                 "Content-Type": "application/x-www-form-urlencoded",
             },
             body: params.toString(),
@@ -126,12 +144,12 @@ export async function updateCampaignStatus(
     try {
         const params = new URLSearchParams({
             status,
-            access_token: accessToken,
         });
 
         const response = await fetch(`${META_GRAPH_API}/${campaignId}`, {
             method: "POST",
             headers: {
+                ...createAuthHeaders(accessToken),
                 "Content-Type": "application/x-www-form-urlencoded",
             },
             body: params.toString(),
@@ -177,12 +195,12 @@ export async function createAdSet(
             bid_strategy: bidStrategy,
             targeting: JSON.stringify(targeting),
             status,
-            access_token: accessToken,
         };
 
         const response = await fetch(`${META_GRAPH_API}/${campaignId}/adsets`, {
             method: "POST",
             headers: {
+                ...createAuthHeaders(accessToken),
                 "Content-Type": "application/x-www-form-urlencoded",
             },
             body: new URLSearchParams(params).toString(),
@@ -237,12 +255,12 @@ export async function createLeadAdCreative(
         const params = new URLSearchParams({
             name,
             object_story_spec: JSON.stringify(objectStorySpec),
-            access_token: accessToken,
         });
 
         const response = await fetch(`${META_GRAPH_API}/${adAccountId}/adcreatives`, {
             method: "POST",
             headers: {
+                ...createAuthHeaders(accessToken),
                 "Content-Type": "application/x-www-form-urlencoded",
             },
             body: params.toString(),
@@ -283,12 +301,12 @@ export async function createAd(
             adset_id: adSetId,
             creative: JSON.stringify({ creative_id: creativeId }),
             status,
-            access_token: accessToken,
         });
 
         const response = await fetch(`${META_GRAPH_API}/${adSetId}/ads`, {
             method: "POST",
             headers: {
+                ...createAuthHeaders(accessToken),
                 "Content-Type": "application/x-www-form-urlencoded",
             },
             body: params.toString(),
@@ -321,12 +339,12 @@ export async function updateAdStatus(
     try {
         const params = new URLSearchParams({
             status,
-            access_token: accessToken,
         });
 
         const response = await fetch(`${META_GRAPH_API}/${adId}`, {
             method: "POST",
             headers: {
+                ...createAuthHeaders(accessToken),
                 "Content-Type": "application/x-www-form-urlencoded",
             },
             body: params.toString(),
@@ -366,7 +384,10 @@ export async function getAdInsights(
     try {
         const fieldsParam = fields.join(",");
         const response = await fetch(
-            `${META_GRAPH_API}/${adId}/insights?date_preset=${datePreset}&fields=${fieldsParam}&access_token=${accessToken}`
+            `${META_GRAPH_API}/${adId}/insights?date_preset=${datePreset}&fields=${fieldsParam}`,
+            {
+                headers: createAuthHeaders(accessToken),
+            }
         );
 
         if (!response.ok) {
@@ -423,12 +444,12 @@ export async function uploadAdImage(
     try {
         const params = new URLSearchParams({
             url: imageUrl,
-            access_token: accessToken,
         });
 
         const response = await fetch(`${META_GRAPH_API}/${adAccountId}/adimages`, {
             method: "POST",
             headers: {
+                ...createAuthHeaders(accessToken),
                 "Content-Type": "application/x-www-form-urlencoded",
             },
             body: params.toString(),
@@ -465,7 +486,6 @@ export async function createCustomAudience(
             description,
             subtype: "CUSTOM",
             customer_file_source: "USER_PROVIDED_ONLY",
-            access_token: accessToken,
         });
 
         const response = await fetch(
@@ -473,6 +493,7 @@ export async function createCustomAudience(
             {
                 method: "POST",
                 headers: {
+                    ...createAuthHeaders(accessToken),
                     "Content-Type": "application/x-www-form-urlencoded",
                 },
                 body: params.toString(),
@@ -513,7 +534,6 @@ export async function createLookalikeAudience(
                 starting_ratio: spec.ratio,
                 country: spec.country,
             }),
-            access_token: accessToken,
         });
 
         const response = await fetch(
@@ -521,6 +541,7 @@ export async function createLookalikeAudience(
             {
                 method: "POST",
                 headers: {
+                    ...createAuthHeaders(accessToken),
                     "Content-Type": "application/x-www-form-urlencoded",
                 },
                 body: params.toString(),
@@ -554,10 +575,11 @@ export async function searchInterests(
         const params = new URLSearchParams({
             q: query,
             type: "adinterest",
-            access_token: accessToken,
         });
 
-        const response = await fetch(`${META_GRAPH_API}/search?${params.toString()}`);
+        const response = await fetch(`${META_GRAPH_API}/search?${params.toString()}`, {
+            headers: createAuthHeaders(accessToken),
+        });
 
         if (!response.ok) {
             const error = await response.json();
@@ -591,11 +613,13 @@ export async function getDeliveryEstimate(
         const params = new URLSearchParams({
             targeting_spec: JSON.stringify(targeting),
             optimization_goal: optimizationGoal,
-            access_token: accessToken,
         });
 
         const response = await fetch(
-            `${META_GRAPH_API}/${adAccountId}/delivery_estimate?${params.toString()}`
+            `${META_GRAPH_API}/${adAccountId}/delivery_estimate?${params.toString()}`,
+            {
+                headers: createAuthHeaders(accessToken),
+            }
         );
 
         if (!response.ok) {
@@ -643,12 +667,12 @@ export async function sendConversionEvent(
     try {
         const params = new URLSearchParams({
             data: JSON.stringify([eventData]),
-            access_token: accessToken,
         });
 
         const response = await fetch(`${META_GRAPH_API}/${pixelId}/events`, {
             method: "POST",
             headers: {
+                ...createAuthHeaders(accessToken),
                 "Content-Type": "application/x-www-form-urlencoded",
             },
             body: params.toString(),

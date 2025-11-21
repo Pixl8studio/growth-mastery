@@ -10,8 +10,8 @@ import {
     FileText,
     Globe,
     Cloud,
-    Sparkles,
-    RefreshCw,
+    // Sparkles,  // REMOVED: Only used in commented auto-generation section
+    // RefreshCw,  // REMOVED: Only used in commented auto-generation section
     Edit2,
     Check,
     X,
@@ -24,11 +24,11 @@ import {
 import { PasteIntake } from "@/components/intake/paste-intake";
 import { UploadIntake } from "@/components/intake/upload-intake";
 import { ScrapeIntake } from "@/components/intake/scrape-intake";
-import { AutoGenerationModal } from "@/components/funnel/auto-generation-modal";
-import {
-    AutoGenerationProgress,
-    type GenerationProgressItem,
-} from "@/components/funnel/auto-generation-progress";
+// REMOVED: import { AutoGenerationModal } from "@/components/funnel/auto-generation-modal";
+// REMOVED: import {
+//     AutoGenerationProgress,
+//     type GenerationProgressItem,
+// } from "@/components/funnel/auto-generation-progress";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
@@ -67,20 +67,21 @@ export default function Step1Page({
     const [intakeSessions, setIntakeSessions] = useState<IntakeSession[]>([]);
     const [isLoadingSessions, setIsLoadingSessions] = useState(true);
     const [selectedMethod, setSelectedMethod] = useState<IntakeMethod | null>(null);
-    const [showGenerationModal, setShowGenerationModal] = useState(false);
-    const [generationMode, setGenerationMode] = useState<"generate" | "regenerate">(
-        "generate"
-    );
-    const [hasExistingContent, setHasExistingContent] = useState(false);
-    const [isPolling, setIsPolling] = useState(false);
-    const [generationProgress, setGenerationProgress] = useState<
-        GenerationProgressItem[]
-    >([]);
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [currentGeneratingStep, setCurrentGeneratingStep] = useState<number | null>(
-        null
-    );
-    const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+    // COMMENTED OUT: Auto-generation state variables
+    // const [showGenerationModal, setShowGenerationModal] = useState(false);
+    // const [generationMode, setGenerationMode] = useState<"generate" | "regenerate">(
+    //     "generate"
+    // );
+    // const [hasExistingContent, setHasExistingContent] = useState(false);
+    // const [isPolling, setIsPolling] = useState(false);
+    // const [generationProgress, setGenerationProgress] = useState<
+    //     GenerationProgressItem[]
+    // >([]);
+    // const [isGenerating, setIsGenerating] = useState(false);
+    // const [currentGeneratingStep, setCurrentGeneratingStep] = useState<number | null>(
+    //     null
+    // );
+    // const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
     const [editingSessionName, setEditingSessionName] = useState<string>("");
     const [isRenaming, setIsRenaming] = useState(false);
@@ -153,198 +154,199 @@ export default function Step1Page({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [projectId]);
 
-    // Check for existing content
-    useEffect(() => {
-        const checkExistingContent = () => {
-            const hasContent = completedSteps.some((step) => step >= 2 && step <= 11);
-            setHasExistingContent(hasContent);
-        };
+    // COMMENTED OUT: Check for existing content
+    // useEffect(() => {
+    //     const checkExistingContent = () => {
+    //         const hasContent = completedSteps.some((step) => step >= 2 && step <= 11);
+    //         setHasExistingContent(hasContent);
+    //     };
 
-        if (completedSteps.length > 0) {
-            checkExistingContent();
-        }
-    }, [completedSteps]);
+    //     if (completedSteps.length > 0) {
+    //         checkExistingContent();
+    //     }
+    // }, [completedSteps]);
 
-    // Poll for generation status
-    const pollGenerationStatus = async () => {
-        if (!projectId) return;
+    // COMMENTED OUT: Poll for generation status
+    // const pollGenerationStatus = async () => {
+    //     if (!projectId) return;
 
-        try {
-            const response = await fetch(
-                `/api/generate/generation-status?projectId=${projectId}`
-            );
+    //     try {
+    //         const response = await fetch(
+    //             `/api/generate/generation-status?projectId=${projectId}`
+    //         );
 
-            if (!response.ok) {
-                logger.error({}, "Failed to fetch generation status");
-                return;
-            }
+    //         if (!response.ok) {
+    //             logger.error({}, "Failed to fetch generation status");
+    //             return;
+    //         }
 
-            const data = await response.json();
+    //         const data = await response.json();
 
-            setIsGenerating(data.isGenerating);
-            setCurrentGeneratingStep(data.currentStep);
-            setGenerationProgress(data.progress || []);
+    //         setIsGenerating(data.isGenerating);
+    //         setCurrentGeneratingStep(data.currentStep);
+    //         setGenerationProgress(data.progress || []);
 
-            // If generation is complete, stop polling and refresh
-            if (!data.isGenerating && isPolling) {
-                setIsPolling(false);
-                if (pollingIntervalRef.current) {
-                    clearInterval(pollingIntervalRef.current);
-                    pollingIntervalRef.current = null;
-                }
-                refreshCompletion();
+    //         // If generation is complete, stop polling and refresh
+    //         if (!data.isGenerating && isPolling) {
+    //             setIsPolling(false);
+    //             if (pollingIntervalRef.current) {
+    //                 clearInterval(pollingIntervalRef.current);
+    //                 pollingIntervalRef.current = null;
+    //             }
+    //             refreshCompletion();
 
-                toast({
-                    title: "Generation Complete! ✨",
-                    description: `Successfully generated ${data.completedSteps.length} steps`,
-                });
-            }
-        } catch (error) {
-            logger.error({ error }, "Error polling generation status");
-        }
-    };
+    //             toast({
+    //                 title: "Generation Complete! ✨",
+    //                 description: `Successfully generated ${data.completedSteps.length} steps`,
+    //             });
+    //         }
+    //     } catch (error) {
+    //         logger.error({ error }, "Error polling generation status");
+    //     }
+    // };
 
-    // Start polling when component mounts or projectId changes
-    useEffect(() => {
-        if (!projectId) return;
+    // COMMENTED OUT: Start polling when component mounts or projectId changes
+    // useEffect(() => {
+    //     if (!projectId) return;
 
-        // Check initial status
-        pollGenerationStatus();
+    //     // Check initial status
+    //     pollGenerationStatus();
 
-        // Cleanup function
-        return () => {
-            if (pollingIntervalRef.current) {
-                clearInterval(pollingIntervalRef.current);
-                pollingIntervalRef.current = null;
-            }
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [projectId]);
+    //     // Cleanup function
+    //     return () => {
+    //         if (pollingIntervalRef.current) {
+    //             clearInterval(pollingIntervalRef.current);
+    //             pollingIntervalRef.current = null;
+    //         }
+    //     };
+    //     // eslint-disable-next-line react-hooks/exhaustive-deps
+    // }, [projectId]);
 
-    // Start/stop polling based on generation status
-    useEffect(() => {
-        if (isGenerating && !pollingIntervalRef.current) {
-            // Start polling every 2.5 seconds
-            pollingIntervalRef.current = setInterval(pollGenerationStatus, 2500);
-            setIsPolling(true);
-        } else if (!isGenerating && pollingIntervalRef.current) {
-            // Stop polling
-            clearInterval(pollingIntervalRef.current);
-            pollingIntervalRef.current = null;
-            setIsPolling(false);
-        }
+    // COMMENTED OUT: Start/stop polling based on generation status
+    // useEffect(() => {
+    //     if (isGenerating && !pollingIntervalRef.current) {
+    //         // Start polling every 2.5 seconds
+    //         pollingIntervalRef.current = setInterval(pollGenerationStatus, 2500);
+    //         setIsPolling(true);
+    //     } else if (!isGenerating && pollingIntervalRef.current) {
+    //         // Stop polling
+    //         clearInterval(pollingIntervalRef.current);
+    //         pollingIntervalRef.current = null;
+    //         setIsPolling(false);
+    //     }
 
-        return () => {
-            if (pollingIntervalRef.current) {
-                clearInterval(pollingIntervalRef.current);
-                pollingIntervalRef.current = null;
-            }
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isGenerating]);
+    //     return () => {
+    //         if (pollingIntervalRef.current) {
+    //             clearInterval(pollingIntervalRef.current);
+    //             pollingIntervalRef.current = null;
+    //         }
+    //     };
+    //     // eslint-disable-next-line react-hooks/exhaustive-deps
+    // }, [isGenerating]);
 
     const hasCompletedIntake = intakeSessions.length > 0;
 
-    const handleGenerateAll = () => {
-        setGenerationMode("generate");
-        setShowGenerationModal(true);
-    };
+    // COMMENTED OUT: Generation handlers
+    // const handleGenerateAll = () => {
+    //     setGenerationMode("generate");
+    //     setShowGenerationModal(true);
+    // };
 
-    const handleRegenerateAll = () => {
-        setGenerationMode("regenerate");
-        setShowGenerationModal(true);
-    };
+    // const handleRegenerateAll = () => {
+    //     setGenerationMode("regenerate");
+    //     setShowGenerationModal(true);
+    // };
 
-    const handleConfirmGeneration = async () => {
-        try {
-            setShowGenerationModal(false);
-            setIsGenerating(true);
+    // const handleConfirmGeneration = async () => {
+    //     try {
+    //         setShowGenerationModal(false);
+    //         setIsGenerating(true);
 
-            toast({
-                title: "Starting Generation...",
-                description:
-                    "Your content is being generated. This may take a few minutes.",
-            });
+    //         toast({
+    //             title: "Starting Generation...",
+    //             description:
+    //                 "Your content is being generated. This may take a few minutes.",
+    //         });
 
-            const response = await fetch("/api/generate/auto-generate-all", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    projectId,
-                    // Don't pass intakeId - API will fetch all intake records and combine them
-                    regenerate: generationMode === "regenerate",
-                }),
-            });
+    //         const response = await fetch("/api/generate/auto-generate-all", {
+    //             method: "POST",
+    //             headers: { "Content-Type": "application/json" },
+    //             body: JSON.stringify({
+    //                 projectId,
+    //                 // Don't pass intakeId - API will fetch all intake records and combine them
+    //                 regenerate: generationMode === "regenerate",
+    //             }),
+    //         });
 
-            const data = await response.json();
+    //         const data = await response.json();
 
-            if (!response.ok) {
-                const errorMessage =
-                    data.error ||
-                    `Failed to start generation: ${response.status} ${response.statusText}`;
-                logger.error(
-                    {
-                        error: errorMessage,
-                        status: response.status,
-                        statusText: response.statusText,
-                        projectId,
-                        intakeSessionCount: intakeSessions.length,
-                    },
-                    "Failed to start generation"
-                );
-                throw new Error(errorMessage);
-            }
+    //         if (!response.ok) {
+    //             const errorMessage =
+    //                 data.error ||
+    //                 `Failed to start generation: ${response.status} ${response.statusText}`;
+    //             logger.error(
+    //                 {
+    //                     error: errorMessage,
+    //                     status: response.status,
+    //                     statusText: response.statusText,
+    //                     projectId,
+    //                     intakeSessionCount: intakeSessions.length,
+    //                 },
+    //                 "Failed to start generation"
+    //             );
+    //             throw new Error(errorMessage);
+    //         }
 
-            // Check if generation started successfully
-            if (!data.success && data.failedSteps && data.failedSteps.length > 0) {
-                logger.warn(
-                    {
-                        failedSteps: data.failedSteps,
-                        completedSteps: data.completedSteps,
-                        projectId,
-                    },
-                    "Generation started but some steps failed immediately"
-                );
-                toast({
-                    title: "Generation Started with Warnings",
-                    description: `Some steps failed: ${data.failedSteps.map((f: { step: number; error: string }) => `Step ${f.step}: ${f.error}`).join(", ")}`,
-                    variant: "destructive",
-                });
-            }
+    //         // Check if generation started successfully
+    //         if (!data.success && data.failedSteps && data.failedSteps.length > 0) {
+    //             logger.warn(
+    //                 {
+    //                     failedSteps: data.failedSteps,
+    //                     completedSteps: data.completedSteps,
+    //                     projectId,
+    //                 },
+    //                 "Generation started but some steps failed immediately"
+    //             );
+    //             toast({
+    //                 title: "Generation Started with Warnings",
+    //                 description: `Some steps failed: ${data.failedSteps.map((f: { step: number; error: string }) => `Step ${f.step}: ${f.error}`).join(", ")}`,
+    //                 variant: "destructive",
+    //             });
+    //         }
 
-            // Start polling for progress
-            if (!pollingIntervalRef.current) {
-                pollingIntervalRef.current = setInterval(pollGenerationStatus, 2500);
-                setIsPolling(true);
-            }
+    //         // Start polling for progress
+    //         if (!pollingIntervalRef.current) {
+    //             pollingIntervalRef.current = setInterval(pollGenerationStatus, 2500);
+    //             setIsPolling(true);
+    //         }
 
-            toast({
-                title: "Generation Started",
-                description:
-                    "Your content is being generated. This may take a few minutes.",
-            });
-        } catch (error) {
-            logger.error(
-                {
-                    error,
-                    errorMessage:
-                        error instanceof Error ? error.message : String(error),
-                    projectId,
-                    intakeSessionCount: intakeSessions.length,
-                },
-                "Failed to start generation"
-            );
-            setIsGenerating(false);
-            toast({
-                title: "Generation Failed",
-                description:
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to start content generation. Please try again.",
-                variant: "destructive",
-            });
-        }
-    };
+    //         toast({
+    //             title: "Generation Started",
+    //             description:
+    //                 "Your content is being generated. This may take a few minutes.",
+    //         });
+    //     } catch (error) {
+    //         logger.error(
+    //             {
+    //                 error,
+    //                 errorMessage:
+    //                     error instanceof Error ? error.message : String(error),
+    //                 projectId,
+    //                 intakeSessionCount: intakeSessions.length,
+    //             },
+    //             "Failed to start generation"
+    //         );
+    //         setIsGenerating(false);
+    //         toast({
+    //             title: "Generation Failed",
+    //             description:
+    //                 error instanceof Error
+    //                     ? error.message
+    //                     : "Failed to start content generation. Please try again.",
+    //             variant: "destructive",
+    //         });
+    //     }
+    // };
 
     const handleIntakeComplete = () => {
         setSelectedMethod(null); // Reset method selection
@@ -500,8 +502,8 @@ export default function Step1Page({
             stepDescription="Provide your business information through voice, documents, or other methods"
         >
             <div className="space-y-8">
-                {/* Generation Progress - Show if generating or has progress */}
-                {(isGenerating || generationProgress.length > 0) && (
+                {/* COMMENTED OUT: Generation Progress - Show if generating or has progress */}
+                {/* {(isGenerating || generationProgress.length > 0) && (
                     <AutoGenerationProgress
                         projectId={projectId}
                         progress={generationProgress}
@@ -509,7 +511,7 @@ export default function Step1Page({
                         currentStep={currentGeneratingStep}
                         onClose={() => setGenerationProgress([])}
                     />
-                )}
+                )} */}
 
                 {/* Method Selector or Active Method Interface */}
                 {!selectedMethod ? (
@@ -752,8 +754,8 @@ export default function Step1Page({
                     </div>
                 )}
 
-                {/* Auto-Generation Section */}
-                {hasCompletedIntake && (
+                {/* COMMENTED OUT: Auto-Generation Section */}
+                {/* {hasCompletedIntake && (
                     <div className="rounded-lg border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-purple-500/5 p-6">
                         <div className="mb-4 flex items-start justify-between">
                             <div>
@@ -829,7 +831,7 @@ export default function Step1Page({
                             </p>
                         )}
                     </div>
-                )}
+                )} */}
 
                 {/* What's Next */}
                 <div className="rounded-lg border border-border bg-muted/50 p-6">
@@ -850,14 +852,14 @@ export default function Step1Page({
                 </div>
             </div>
 
-            {/* Auto-Generation Modal */}
-            <AutoGenerationModal
+            {/* COMMENTED OUT: Auto-Generation Modal */}
+            {/* <AutoGenerationModal
                 isOpen={showGenerationModal}
                 onClose={() => setShowGenerationModal(false)}
                 onConfirm={handleConfirmGeneration}
                 mode={generationMode}
                 hasExistingContent={hasExistingContent}
-            />
+            /> */}
         </StepLayout>
     );
 }

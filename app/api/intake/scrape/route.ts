@@ -7,7 +7,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import { extractTextFromUrl, validateIntakeContent } from "@/lib/intake/processors";
+import {
+    extractTextFromUrl,
+    validateIntakeContent,
+    type ExtractedPrice,
+} from "@/lib/intake/processors";
 import {
     fetchWithRetry,
     validateUrl,
@@ -123,15 +127,18 @@ export async function POST(request: NextRequest) {
         const cached = await getCached<{
             scrapedText: string;
             brandData: BrandData | null;
+            pricing: ExtractedPrice[];
         }>(cacheKey);
 
         let scrapedText: string;
         let brandData: BrandData | null = null;
+        let pricing: ExtractedPrice[] = [];
 
         if (cached) {
             logger.info({ url }, "Using cached intake data");
             scrapedText = cached.scrapedText;
             brandData = cached.brandData;
+            pricing = cached.pricing || [];
         } else {
             // Fetch HTML with retry logic
             const fetchResult = await fetchWithRetry(url, {
@@ -151,9 +158,23 @@ export async function POST(request: NextRequest) {
                 );
             }
 
-            // Extract text content
+            // Extract text content and pricing
             try {
-                scrapedText = await extractTextFromUrl(url);
+                const extractionResult = await extractTextFromUrl(url);
+
+                // Handle both string and UrlExtractionResult return types
+                if (typeof extractionResult === "string") {
+                    scrapedText = extractionResult;
+                    pricing = [];
+                } else {
+                    scrapedText = extractionResult.text;
+                    pricing = extractionResult.pricing;
+                }
+
+                logger.info(
+                    { url, priceCount: pricing.length },
+                    "Extracted text and pricing from URL"
+                );
             } catch (error) {
                 logger.error({ error, url }, "Failed to extract text from URL");
                 return NextResponse.json(
@@ -182,8 +203,8 @@ export async function POST(request: NextRequest) {
                 brandData = null;
             }
 
-            // Cache the results
-            await setCache(cacheKey, { scrapedText, brandData });
+            // Cache the results including pricing
+            await setCache(cacheKey, { scrapedText, brandData, pricing });
         }
 
         // Validate scraped content
@@ -204,7 +225,7 @@ export async function POST(request: NextRequest) {
         // Parse URL for metadata
         const urlObj = new URL(url);
 
-        // Save to database with brand data
+        // Save to database with brand data and pricing
         const { data: intakeRecord, error: dbError } = await supabase
             .from("vapi_transcripts")
             .insert({
@@ -223,6 +244,7 @@ export async function POST(request: NextRequest) {
                           extracted_at: new Date().toISOString(),
                       }
                     : null,
+                extracted_data: pricing.length > 0 ? { pricing } : null,
                 metadata: {
                     scraped_url: url,
                     hostname: urlObj.hostname,
@@ -231,6 +253,7 @@ export async function POST(request: NextRequest) {
                     scraped_at: new Date().toISOString(),
                     has_brand_data: !!brandData,
                     brand_confidence: brandData?.confidence.overall || 0,
+                    price_count: pricing.length,
                 },
             })
             .select()
@@ -261,6 +284,8 @@ export async function POST(request: NextRequest) {
                 url,
                 textLength: scrapedText.length,
                 hasBrandData: !!brandData,
+                priceCount: pricing.length,
+                prices: pricing.map((p) => p.amount),
             },
             "URL scraped and processed successfully"
         );
@@ -278,6 +303,9 @@ export async function POST(request: NextRequest) {
                       confidence: brandData.confidence,
                   }
                 : null,
+            pricing: pricing.length > 0 ? pricing : undefined,
+            characterCount: scrapedText.length,
+            wordCount: scrapedText.split(/\s+/).length,
         });
     } catch (error) {
         logger.error({ error }, "Error in scrape intake endpoint");

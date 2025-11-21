@@ -1,51 +1,40 @@
 -- Migration: Add OAuth Connections Table
 -- Description: Stores encrypted OAuth tokens for social media platform connections
 -- Date: 2025-11-15
-
 -- Create marketing_oauth_connections table
 CREATE TABLE IF NOT EXISTS marketing_oauth_connections (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid (),
-    user_id UUID NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
-    profile_id UUID REFERENCES marketing_profiles (id) ON DELETE CASCADE,
-    platform TEXT NOT NULL CHECK (
-        platform IN (
-            'instagram',
-            'facebook',
-            'linkedin',
-            'twitter'
-        )
-    ),
-    -- Encrypted access token (using Supabase Vault for encryption)
-    access_token_encrypted TEXT NOT NULL,
-    -- Encrypted refresh token (if available)
-    refresh_token_encrypted TEXT,
-    -- Token metadata
-    token_expires_at TIMESTAMP WITH TIME ZONE,
-    token_issued_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    -- Platform-specific IDs
-    platform_user_id TEXT,
-    platform_username TEXT,
-    platform_name TEXT,
-    -- Connection status
-    status TEXT NOT NULL DEFAULT 'active' CHECK (
-        status IN (
-            'active',
-            'expired',
-            'revoked',
-            'error'
-        )
-    ),
-    last_synced_at TIMESTAMP WITH TIME ZONE,
-    sync_error TEXT,
-    -- Scope and permissions granted
-    scopes TEXT [] DEFAULT '{}',
-    -- Platform-specific metadata (page IDs, organization IDs, etc.)
-    metadata JSONB DEFAULT '{}',
-    -- Timestamps
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    -- Unique constraint: one connection per user per platform per profile
-    UNIQUE (user_id, platform, profile_id)
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
+  profile_id UUID REFERENCES marketing_profiles (id) ON DELETE CASCADE,
+  platform TEXT NOT NULL CHECK (
+    platform IN ('instagram', 'facebook', 'linkedin', 'twitter')
+  ),
+  -- Encrypted access token (using Supabase Vault for encryption)
+  access_token_encrypted TEXT NOT NULL,
+  -- Encrypted refresh token (if available)
+  refresh_token_encrypted TEXT,
+  -- Token metadata
+  token_expires_at TIMESTAMP WITH TIME ZONE,
+  token_issued_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  -- Platform-specific IDs
+  platform_user_id TEXT,
+  platform_username TEXT,
+  platform_name TEXT,
+  -- Connection status
+  status TEXT NOT NULL DEFAULT 'active' CHECK (
+    status IN ('active', 'expired', 'revoked', 'error')
+  ),
+  last_synced_at TIMESTAMP WITH TIME ZONE,
+  sync_error TEXT,
+  -- Scope and permissions granted
+  scopes TEXT[] DEFAULT '{}',
+  -- Platform-specific metadata (page IDs, organization IDs, etc.)
+  metadata JSONB DEFAULT '{}',
+  -- Timestamps
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  -- Unique constraint: one connection per user per platform per profile
+  UNIQUE (user_id, platform, profile_id)
 );
 
 -- Create indexes
@@ -70,16 +59,17 @@ ALTER TABLE marketing_oauth_connections ENABLE ROW LEVEL SECURITY;
 -- Users can only see their own connections
 CREATE POLICY "Users can view their own OAuth connections" ON marketing_oauth_connections FOR
 SELECT
-    USING (auth.uid () = user_id);
+  USING (auth.uid () = user_id);
 
 -- Users can insert their own connections
 CREATE POLICY "Users can insert their own OAuth connections" ON marketing_oauth_connections FOR INSERT
 WITH
-    CHECK (auth.uid () = user_id);
+  CHECK (auth.uid () = user_id);
 
 -- Users can update their own connections
-CREATE POLICY "Users can update their own OAuth connections" ON marketing_oauth_connections FOR
-UPDATE USING (auth.uid () = user_id);
+CREATE POLICY "Users can update their own OAuth connections" ON marketing_oauth_connections
+FOR UPDATE
+  USING (auth.uid () = user_id);
 
 -- Users can delete their own connections
 CREATE POLICY "Users can delete their own OAuth connections" ON marketing_oauth_connections FOR DELETE USING (auth.uid () = user_id);
@@ -96,4 +86,3 @@ COMMENT ON COLUMN marketing_oauth_connections.token_expires_at IS 'When the acce
 COMMENT ON COLUMN marketing_oauth_connections.metadata IS 'Platform-specific data like page IDs, account IDs, etc.';
 
 COMMENT ON COLUMN marketing_oauth_connections.scopes IS 'OAuth scopes/permissions granted';
-

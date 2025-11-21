@@ -188,10 +188,144 @@ export async function extractTextFromPlainFile(file: File): Promise<string> {
 }
 
 /**
- * Extract relevant text content from a URL.
+ * Price information extracted from HTML
+ */
+export interface ExtractedPrice {
+    amount: number;
+    currency: string;
+    context: string;
+    confidence: "high" | "medium" | "low";
+}
+
+/**
+ * Extract pricing information from HTML content.
+ * Identifies common price patterns, currency symbols, and contextual information.
+ */
+export async function extractPricingFromHtml(html: string): Promise<ExtractedPrice[]> {
+    try {
+        const cheerio = await import("cheerio");
+        const $ = cheerio.load(html);
+
+        const prices: ExtractedPrice[] = [];
+        const pricePatterns = [
+            // Matches: $1,234.56 or $1234 or $1,234
+            /\$\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/g,
+            // Matches: USD 1234.56 or USD1234
+            /USD\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/gi,
+            // Matches: 1234.56 USD or 1234 USD
+            /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*USD/gi,
+            // Matches standalone numbers in price contexts
+            /(?:price|cost|investment|pay|payment|total)[\s:]*\$?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/gi,
+        ];
+
+        // Common price-related selectors
+        const priceSelectors = [
+            '[class*="price"]',
+            '[class*="cost"]',
+            '[class*="amount"]',
+            "[data-price]",
+            '[itemprop="price"]',
+            ".pricing",
+            ".payment",
+            "#price",
+        ];
+
+        // Extract prices from specific price elements
+        priceSelectors.forEach((selector) => {
+            $(selector).each((_, element) => {
+                const text = $(element).text().trim();
+                const context = $(element).parent().text().trim().slice(0, 150);
+
+                pricePatterns.forEach((pattern) => {
+                    const matches = text.matchAll(pattern);
+                    for (const match of matches) {
+                        const amountStr = match[1].replace(/,/g, "");
+                        const amount = parseFloat(amountStr);
+
+                        if (amount > 0 && amount < 1000000) {
+                            prices.push({
+                                amount,
+                                currency: "USD",
+                                context,
+                                confidence: "high",
+                            });
+                        }
+                    }
+                });
+            });
+        });
+
+        // Extract prices from general content if no specific price elements found
+        if (prices.length === 0) {
+            const bodyText = $("body").text();
+            pricePatterns.forEach((pattern) => {
+                const matches = bodyText.matchAll(pattern);
+                for (const match of matches) {
+                    const amountStr = match[1].replace(/,/g, "");
+                    const amount = parseFloat(amountStr);
+
+                    if (amount > 0 && amount < 1000000) {
+                        // Get surrounding context
+                        const matchIndex = match.index || 0;
+                        const contextStart = Math.max(0, matchIndex - 75);
+                        const contextEnd = Math.min(bodyText.length, matchIndex + 75);
+                        const context = bodyText.slice(contextStart, contextEnd).trim();
+
+                        prices.push({
+                            amount,
+                            currency: "USD",
+                            context,
+                            confidence: "medium",
+                        });
+                    }
+                }
+            });
+        }
+
+        // Deduplicate prices with same amount
+        const uniquePrices = Array.from(
+            new Map(prices.map((p) => [p.amount, p])).values()
+        );
+
+        // Sort by confidence and amount
+        uniquePrices.sort((a, b) => {
+            if (a.confidence !== b.confidence) {
+                const confidenceOrder = { high: 0, medium: 1, low: 2 };
+                return confidenceOrder[a.confidence] - confidenceOrder[b.confidence];
+            }
+            return b.amount - a.amount;
+        });
+
+        logger.info(
+            {
+                priceCount: uniquePrices.length,
+                prices: uniquePrices.map((p) => p.amount),
+            },
+            "Extracted pricing from HTML"
+        );
+
+        return uniquePrices;
+    } catch (error) {
+        logger.error({ error }, "Failed to extract pricing from HTML");
+        return [];
+    }
+}
+
+/**
+ * Result from URL text extraction
+ */
+export interface UrlExtractionResult {
+    text: string;
+    pricing: ExtractedPrice[];
+}
+
+/**
+ * Extract relevant text content and pricing from a URL.
  * Uses cheerio for proper DOM parsing and content extraction.
  */
-export async function extractTextFromUrl(url: string): Promise<string> {
+export async function extractTextFromUrl(
+    url: string
+): Promise<string | UrlExtractionResult> {
     try {
         const response = await fetch(url, {
             headers: {
@@ -205,6 +339,9 @@ export async function extractTextFromUrl(url: string): Promise<string> {
         }
 
         const html = await response.text();
+
+        // Extract pricing information first (before removing elements)
+        const pricing = await extractPricingFromHtml(html);
 
         // Use cheerio for proper DOM parsing
         const cheerio = await import("cheerio");
@@ -233,8 +370,20 @@ export async function extractTextFromUrl(url: string): Promise<string> {
         // Clean up whitespace
         const cleaned = mainContent.replace(/\s+/g, " ").trim();
 
-        logger.info({ url, length: cleaned.length }, "Extracted text from URL");
+        logger.info(
+            { url, length: cleaned.length, priceCount: pricing.length },
+            "Extracted text and pricing from URL"
+        );
 
+        // Return structured result with pricing if any prices were found
+        if (pricing.length > 0) {
+            return {
+                text: cleaned,
+                pricing,
+            };
+        }
+
+        // Return just text for backward compatibility if no prices found
         return cleaned;
     } catch (error) {
         logger.error({ error, url }, "Failed to extract text from URL");

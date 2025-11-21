@@ -346,7 +346,13 @@ export async function scrapeAndExtractContent(
         }
 
         // For generic websites, try basic scraping
-        const rawText = await extractTextFromUrl(url);
+        const extractionResult = await extractTextFromUrl(url);
+
+        // Handle both string and UrlExtractionResult return types
+        const rawText =
+            typeof extractionResult === "string"
+                ? extractionResult
+                : extractionResult.text;
 
         if (!rawText || rawText.trim().length === 0) {
             return {

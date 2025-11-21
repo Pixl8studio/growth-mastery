@@ -242,7 +242,9 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
                                 <div className="space-y-1">
                                     <div
                                         className="h-16 w-full rounded-lg border-2 border-white shadow-sm"
-                                        style={{ backgroundColor: brandData.colors.primary }}
+                                        style={{
+                                            backgroundColor: brandData.colors.primary,
+                                        }}
                                     />
                                     <p className="text-center text-xs font-medium text-foreground">
                                         Primary
@@ -254,7 +256,9 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
                                 <div className="space-y-1">
                                     <div
                                         className="h-16 w-full rounded-lg border-2 border-white shadow-sm"
-                                        style={{ backgroundColor: brandData.colors.secondary }}
+                                        style={{
+                                            backgroundColor: brandData.colors.secondary,
+                                        }}
                                     />
                                     <p className="text-center text-xs font-medium text-foreground">
                                         Secondary
@@ -266,7 +270,9 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
                                 <div className="space-y-1">
                                     <div
                                         className="h-16 w-full rounded-lg border-2 border-white shadow-sm"
-                                        style={{ backgroundColor: brandData.colors.accent }}
+                                        style={{
+                                            backgroundColor: brandData.colors.accent,
+                                        }}
                                     />
                                     <p className="text-center text-xs font-medium text-foreground">
                                         Accent
@@ -278,7 +284,10 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
                                 <div className="space-y-1">
                                     <div
                                         className="h-16 w-full rounded-lg border-2 border-border shadow-sm"
-                                        style={{ backgroundColor: brandData.colors.background }}
+                                        style={{
+                                            backgroundColor:
+                                                brandData.colors.background,
+                                        }}
                                     />
                                     <p className="text-center text-xs font-medium text-foreground">
                                         Background
@@ -290,7 +299,9 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
                                 <div className="space-y-1">
                                     <div
                                         className="h-16 w-full rounded-lg border-2 border-border shadow-sm"
-                                        style={{ backgroundColor: brandData.colors.text }}
+                                        style={{
+                                            backgroundColor: brandData.colors.text,
+                                        }}
                                     />
                                     <p className="text-center text-xs font-medium text-foreground">
                                         Text
@@ -319,9 +330,9 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
                                     className="mb-3 text-sm"
                                     style={{ color: brandData.colors.text }}
                                 >
-                                    This is how your brand colors will look together. These
-                                    colors were automatically extracted from your website and can
-                                    be used in Step 3 (Brand Design).
+                                    This is how your brand colors will look together.
+                                    These colors were automatically extracted from your
+                                    website and can be used in Step 3 (Brand Design).
                                 </p>
                                 <button
                                     className="rounded px-4 py-2 text-sm font-medium"
@@ -357,8 +368,8 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
                             • You can scrape multiple pages by repeating this process
                         </li>
                         <li>
-                            • Extracted brand colors can be used directly in Step 3 (Brand
-                            Design)
+                            • Extracted brand colors can be used directly in Step 3
+                            (Brand Design)
                         </li>
                     </ul>
                 </div>

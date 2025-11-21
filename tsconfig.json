@@ -27,6 +27,7 @@
     "node_modules",
     "supabase/functions",
     "docs/reference-design",
-    "OLD-APPDOCS-ONLY-REFERENCE"
+    "OLD-APPDOCS-ONLY-REFERENCE",
+    "resources"
   ]
 }

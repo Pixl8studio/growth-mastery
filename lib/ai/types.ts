@@ -102,7 +102,15 @@ export interface AIGenerationOptions {
 // Transcript data
 export interface TranscriptData {
     transcript_text: string;
-    extracted_data?: Record<string, unknown>;
+    extracted_data?: {
+        pricing?: Array<{
+            amount: number;
+            currency: string;
+            context: string;
+            confidence: string;
+        }>;
+        [key: string]: unknown;
+    };
 }
 
 // Image generation types

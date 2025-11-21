@@ -119,11 +119,29 @@ ${transcriptData.transcript_text}
 
 ${transcriptData.extracted_data ? `KEY INFO:\n${JSON.stringify(transcriptData.extracted_data, null, 2)}` : ""}
 
+${
+    transcriptData.extracted_data?.pricing &&
+    transcriptData.extracted_data.pricing.length > 0
+        ? `\nEXTRACTED PRICING FROM SOURCE:
+${transcriptData.extracted_data.pricing.map((p: any) => `- $${p.amount} ${p.currency} (confidence: ${p.confidence})\n  Context: ${p.context}`).join("\n")}
+
+PRICING GUIDANCE:
+- If multiple prices are detected, choose the PRIMARY offer price (usually the highest or most prominent)
+- Use the extracted pricing as the foundation for your offer
+- Ensure the price aligns with the value proposition in the content
+- If prices seem to be for different tiers/options, select the main offer price`
+        : `\nNO PRICING DATA DETECTED:
+- Analyze the transcript content to determine an appropriate price point
+- Consider the value proposition, target market, and transformation promised
+- Use industry standards for similar offers as a guide
+- Price should reflect the true value and transformation delivered`
+}
+
 Return ONLY a JSON object with this structure:
 {
   "name": "Offer name (benefit-focused, transformation-driven)",
   "tagline": "One-line value proposition that creates desire",
-  "price": 997,
+  "price": <use extracted price if available, otherwise determine appropriate price based on content>,
   "currency": "USD",
   "promise": "The specific, measurable transformation outcome they will achieve (2-3 sentences)",
   "person": "Detailed description of the ideal client who needs this most (2-3 sentences)",
@@ -148,7 +166,10 @@ Return ONLY a JSON object with this structure:
   "guarantee": "Full risk reversal guarantee statement (specific, not generic)"
 }
 
-CRITICAL: Include 3-6 features and 3-5 bonuses. Set pathway based on price tier.`,
+CRITICAL:
+- Include 3-6 features and 3-5 bonuses
+- Set pathway based on price tier (>= $2000 = book_call, < $2000 = direct_purchase)
+- Use extracted pricing data when available - DO NOT ignore detected prices`,
         },
     ];
 }

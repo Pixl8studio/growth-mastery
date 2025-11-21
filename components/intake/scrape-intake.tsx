@@ -5,7 +5,27 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { logger } from "@/lib/client-logger";
 import { useToast } from "@/components/ui/use-toast";
-import { Globe, ExternalLink } from "lucide-react";
+import { Globe, ExternalLink, Palette, ArrowRight } from "lucide-react";
+
+interface BrandData {
+    colors: {
+        primary: string;
+        secondary: string;
+        accent: string;
+        background: string;
+        text: string;
+    };
+    fonts: {
+        primary?: string;
+        secondary?: string;
+        weights: string[];
+    };
+    confidence: {
+        colors: number;
+        fonts: number;
+        overall: number;
+    };
+}
 
 interface ScrapeIntakeProps {
     projectId: string;
@@ -18,6 +38,7 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
     const [sessionName, setSessionName] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
     const [preview, setPreview] = useState<string | null>(null);
+    const [brandData, setBrandData] = useState<BrandData | null>(null);
     const { toast } = useToast();
 
     const validateUrl = (urlString: string): boolean => {
@@ -41,6 +62,7 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
 
         setIsProcessing(true);
         setPreview(null);
+        setBrandData(null);
 
         try {
             const response = await fetch("/api/intake/scrape", {
@@ -60,14 +82,24 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
                 throw new Error(data.error || "Failed to scrape URL");
             }
 
-            logger.info({ intakeId: data.intakeId, url }, "URL scraped successfully");
+            logger.info(
+                {
+                    intakeId: data.intakeId,
+                    url,
+                    hasBrandData: !!data.brandData,
+                },
+                "URL scraped successfully"
+            );
 
             toast({
                 title: "Content imported!",
-                description: "Website content has been scraped successfully.",
+                description: data.brandData
+                    ? "Website content and brand colors extracted successfully."
+                    : "Website content has been scraped successfully.",
             });
 
             setPreview(data.preview);
+            setBrandData(data.brandData || null);
             setUrl("");
             setSessionName("");
 
@@ -179,6 +211,143 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
                     </div>
                 )}
 
+                {/* Brand Data Preview */}
+                {brandData && (
+                    <Card className="border-primary/20 bg-primary/5 p-6">
+                        <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <h4 className="flex items-center text-base font-semibold text-primary">
+                                        <Palette className="mr-2 h-5 w-5" />
+                                        Brand Colors Extracted
+                                    </h4>
+                                    <p className="mt-1 text-xs text-muted-foreground">
+                                        Confidence: {brandData.confidence.overall}% •{" "}
+                                        {brandData.fonts.primary
+                                            ? `Font: ${brandData.fonts.primary}`
+                                            : ""}
+                                    </p>
+                                </div>
+                                <a
+                                    href={`/funnel-builder/${projectId}/step/3`}
+                                    className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
+                                >
+                                    Use in Step 3
+                                    <ArrowRight className="h-4 w-4" />
+                                </a>
+                            </div>
+
+                            {/* Color Palette */}
+                            <div className="grid grid-cols-5 gap-2">
+                                <div className="space-y-1">
+                                    <div
+                                        className="h-16 w-full rounded-lg border-2 border-white shadow-sm"
+                                        style={{
+                                            backgroundColor: brandData.colors.primary,
+                                        }}
+                                    />
+                                    <p className="text-center text-xs font-medium text-foreground">
+                                        Primary
+                                    </p>
+                                    <p className="text-center text-xs text-muted-foreground">
+                                        {brandData.colors.primary}
+                                    </p>
+                                </div>
+                                <div className="space-y-1">
+                                    <div
+                                        className="h-16 w-full rounded-lg border-2 border-white shadow-sm"
+                                        style={{
+                                            backgroundColor: brandData.colors.secondary,
+                                        }}
+                                    />
+                                    <p className="text-center text-xs font-medium text-foreground">
+                                        Secondary
+                                    </p>
+                                    <p className="text-center text-xs text-muted-foreground">
+                                        {brandData.colors.secondary}
+                                    </p>
+                                </div>
+                                <div className="space-y-1">
+                                    <div
+                                        className="h-16 w-full rounded-lg border-2 border-white shadow-sm"
+                                        style={{
+                                            backgroundColor: brandData.colors.accent,
+                                        }}
+                                    />
+                                    <p className="text-center text-xs font-medium text-foreground">
+                                        Accent
+                                    </p>
+                                    <p className="text-center text-xs text-muted-foreground">
+                                        {brandData.colors.accent}
+                                    </p>
+                                </div>
+                                <div className="space-y-1">
+                                    <div
+                                        className="h-16 w-full rounded-lg border-2 border-border shadow-sm"
+                                        style={{
+                                            backgroundColor:
+                                                brandData.colors.background,
+                                        }}
+                                    />
+                                    <p className="text-center text-xs font-medium text-foreground">
+                                        Background
+                                    </p>
+                                    <p className="text-center text-xs text-muted-foreground">
+                                        {brandData.colors.background}
+                                    </p>
+                                </div>
+                                <div className="space-y-1">
+                                    <div
+                                        className="h-16 w-full rounded-lg border-2 border-border shadow-sm"
+                                        style={{
+                                            backgroundColor: brandData.colors.text,
+                                        }}
+                                    />
+                                    <p className="text-center text-xs font-medium text-foreground">
+                                        Text
+                                    </p>
+                                    <p className="text-center text-xs text-muted-foreground">
+                                        {brandData.colors.text}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Sample Preview */}
+                            <div
+                                className="rounded-lg border p-4"
+                                style={{
+                                    backgroundColor: brandData.colors.background,
+                                    borderColor: brandData.colors.primary,
+                                }}
+                            >
+                                <h5
+                                    className="mb-2 text-lg font-bold"
+                                    style={{ color: brandData.colors.primary }}
+                                >
+                                    Sample Heading
+                                </h5>
+                                <p
+                                    className="mb-3 text-sm"
+                                    style={{ color: brandData.colors.text }}
+                                >
+                                    This is how your brand colors will look together.
+                                    These colors were automatically extracted from your
+                                    website and can be used in Step 3 (Brand Design).
+                                </p>
+                                <button
+                                    className="rounded px-4 py-2 text-sm font-medium"
+                                    style={{
+                                        backgroundColor: brandData.colors.primary,
+                                        color: brandData.colors.background,
+                                    }}
+                                >
+                                    Call to Action
+                                </button>
+                            </div>
+                        </div>
+                    </Card>
+                )}
+
                 {/* Help Text */}
                 <div className="rounded-lg bg-primary/5 p-4">
                     <h4 className="mb-2 text-sm font-semibold text-primary">💡 Tips</h4>
@@ -187,13 +356,20 @@ export function ScrapeIntake({ projectId, userId, onComplete }: ScrapeIntakeProp
                             • Works best with enrollment pages, sales pages, or landing
                             pages
                         </li>
-                        <li>• We automatically remove navigation and footer content</li>
+                        <li>
+                            • We automatically extract brand colors and fonts from your
+                            website
+                        </li>
                         <li>
                             • Make sure the page is publicly accessible (no login
                             required)
                         </li>
                         <li>
                             • You can scrape multiple pages by repeating this process
+                        </li>
+                        <li>
+                            • Extracted brand colors can be used directly in Step 3
+                            (Brand Design)
                         </li>
                     </ul>
                 </div>

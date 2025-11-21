@@ -175,41 +175,51 @@ export default function CreateFunnelPage() {
                     <CardHeader>
                         <CardTitle>What Happens Next?</CardTitle>
                         <CardDescription>
-                            After creating your funnel, you'll be guided through 15
-                            steps
+                            After creating your funnel, you'll complete 5 main sections
+                            with 15 guided steps
                         </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ol className="space-y-2 text-sm text-foreground">
+                        <ol className="space-y-3 text-sm text-foreground">
                             <li className="flex items-start">
                                 <span className="mr-2 font-bold text-primary">1.</span>
-                                AI Intake Call - Have a conversation about your business
+                                <div>
+                                    <strong>Business Definition</strong> - Share your
+                                    business info, define your offer with the 7 P's
+                                    framework, and design your brand identity
+                                </div>
                             </li>
                             <li className="flex items-start">
                                 <span className="mr-2 font-bold text-primary">2.</span>
-                                Define Offer - AI analyzes intake to create optimized
-                                offers with 7 P's framework
+                                <div>
+                                    <strong>Presentation Materials</strong> - Create
+                                    your 55-slide presentation structure, generate it
+                                    with Gamma AI, craft your enrollment page, talk
+                                    track, and upload your pitch video
+                                </div>
                             </li>
                             <li className="flex items-start">
                                 <span className="mr-2 font-bold text-primary">3.</span>
-                                Brand Design - Define your visual identity with colors
-                                and personality
+                                <div>
+                                    <strong>Funnel Pages</strong> - Build your watch
+                                    room, registration page, and connect your funnel
+                                    flow
+                                </div>
                             </li>
                             <li className="flex items-start">
                                 <span className="mr-2 font-bold text-primary">4.</span>
-                                Create 55-slide presentation structure
+                                <div>
+                                    <strong>Traffic Agents</strong> - Set up AI
+                                    follow-up automation, organic content engine, and
+                                    Meta/Instagram ads manager
+                                </div>
                             </li>
                             <li className="flex items-start">
                                 <span className="mr-2 font-bold text-primary">5.</span>
-                                Generate beautiful Gamma presentation
-                            </li>
-                            <li className="flex items-start">
-                                <span className="mr-2 font-bold text-primary">6.</span>
-                                Create enrollment page with AI-written sales copy
-                            </li>
-                            <li className="flex items-start">
-                                <span className="mr-2 font-bold text-primary">...</span>
-                                And 7 more steps to complete your funnel!
+                                <div>
+                                    <strong>Analytics</strong> - Track your funnel
+                                    performance and conversion metrics
+                                </div>
                             </li>
                         </ol>
                     </CardContent>

@@ -7,7 +7,16 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import type { StepCompletion } from "./completion-types";
+import type {
+    StepCompletion,
+    MasterStepCompletion,
+    MasterStepProgress,
+} from "./completion-types";
+import {
+    MASTER_STEPS,
+    calculateMasterStepCompletion,
+    calculateOverallCompletion,
+} from "./master-steps-config";
 
 /**
  * Check if intake has been completed for a project
@@ -47,7 +56,7 @@ export async function hasCompletedIntake(projectId: string): Promise<boolean> {
 }
 
 /**
- * Check completion status for all 12 steps
+ * Check completion status for all 15 steps
  * Returns which steps have actual generated content
  */
 export async function getStepCompletionStatus(
@@ -286,5 +295,73 @@ export async function getStepCompletionStatus(
             isCompleted: false,
             hasContent: false,
         }));
+    }
+}
+
+/**
+ * Get master step completion status
+ * Returns completion data for all 5 master steps
+ */
+export async function getMasterStepCompletionStatus(
+    projectId: string
+): Promise<MasterStepProgress> {
+    const requestLogger = logger.child({
+        handler: "get-master-step-completion",
+        projectId,
+    });
+
+    try {
+        // Get individual step completion status
+        const stepCompletions = await getStepCompletionStatus(projectId);
+        const completedSteps = stepCompletions
+            .filter((s) => s.isCompleted)
+            .map((s) => s.step);
+
+        // Calculate master step completions
+        const masterStepCompletions: MasterStepCompletion[] = MASTER_STEPS.map(
+            (masterStep) => {
+                const completion = calculateMasterStepCompletion(
+                    masterStep,
+                    completedSteps
+                );
+                return {
+                    masterStepId: masterStep.id,
+                    ...completion,
+                };
+            }
+        );
+
+        // Calculate overall progress
+        const overall = calculateOverallCompletion(completedSteps);
+
+        requestLogger.info(
+            {
+                completedMasterSteps: overall.completedMasterSteps,
+                totalMasterSteps: overall.totalMasterSteps,
+                percentage: overall.percentage,
+            },
+            "Master step completion calculated"
+        );
+
+        return {
+            ...overall,
+            masterStepCompletions,
+        };
+    } catch (error) {
+        requestLogger.error({ error }, "Failed to get master step completion");
+        // Return empty status on error
+        return {
+            completedMasterSteps: 0,
+            totalMasterSteps: 5,
+            percentage: 0,
+            masterStepCompletions: MASTER_STEPS.map((master) => ({
+                masterStepId: master.id,
+                isFullyComplete: false,
+                isPartiallyComplete: false,
+                completedCount: 0,
+                totalCount: master.subSteps.length,
+                percentage: 0,
+            })),
+        };
     }
 }

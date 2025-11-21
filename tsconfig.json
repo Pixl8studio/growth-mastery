@@ -28,6 +28,6 @@
     "supabase/functions",
     "docs/reference-design",
     "OLD-APPDOCS-ONLY-REFERENCE",
-    "resources/editor"
+    "resources"
   ]
 }

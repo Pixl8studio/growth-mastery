@@ -492,14 +492,6 @@ class IconPicker {
 // Initialize globally
 if (typeof window !== 'undefined') {
     window.IconPicker = IconPicker;
-
-    // Auto-initialize when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            window.iconPicker = new IconPicker();
-        });
-    } else {
-        window.iconPicker = new IconPicker();
-    }
+    // Don't auto-initialize - let editor-page-wrapper.tsx control initialization
 }
 

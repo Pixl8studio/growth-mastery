@@ -336,7 +336,7 @@ export function EditorPageWrapper({
 
             {/* Load icon mapper first */}
             <Script
-                src="/funnel-system/assets/js/icon-mapper.js?v=6.4"
+                src="/funnel-system/assets/js/icon-mapper.js?v=6.9"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Icon mapper script loaded");
@@ -345,16 +345,30 @@ export function EditorPageWrapper({
 
             {/* Load icon picker for interactive icon selection */}
             <Script
-                src="/funnel-system/assets/js/icon-picker.js?v=6.4"
+                src="/funnel-system/assets/js/icon-picker.js?v=6.9"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Icon picker script loaded");
+                    
+                    // Initialize icon picker
+                    if (typeof IconPicker !== "undefined" && !window.iconPicker) {
+                        window.iconPicker = new IconPicker();
+                        console.log("✅ Icon picker instantiated!");
+                        
+                        // Attach click handlers to icons after a short delay to ensure DOM is ready
+                        setTimeout(() => {
+                            if (window.iconPicker) {
+                                window.iconPicker.initializeIconClickHandlers();
+                                console.log("✅ Icon click handlers attached!");
+                            }
+                        }, 1000);
+                    }
                 }}
             />
 
             {/* Load editor JavaScript - vanilla JS works as-is! */}
             <Script
-                src="/funnel-system/assets/js/visual-editor.js?v=6.6"
+                src="/funnel-system/assets/js/visual-editor.js?v=6.9"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Visual editor script loaded");

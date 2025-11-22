@@ -13,6 +13,7 @@ import { PageRegenerateButton } from "@/components/pages/page-regenerate-button"
 import { ImageGenerationModal } from "@/components/pages/image-generation-modal";
 import { VideoSelectorModal } from "@/components/pages/video-selector-modal";
 import { SectionBlockGenerator } from "@/components/pages/section-block-generator";
+import { FieldRegenerateModal } from "@/components/pages/field-regenerate-modal";
 import type { PitchVideo } from "@/types/pages";
 
 interface EditorPageWrapperProps {
@@ -41,6 +42,12 @@ export function EditorPageWrapper({
     const [isImageGenModalOpen, setIsImageGenModalOpen] = useState(false);
     const [isVideoSelectorOpen, setIsVideoSelectorOpen] = useState(false);
     const [isSectionGeneratorOpen, setIsSectionGeneratorOpen] = useState(false);
+    const [isFieldRegenerateOpen, setIsFieldRegenerateOpen] = useState(false);
+    const [fieldToRegenerate, setFieldToRegenerate] = useState<{
+        fieldId: string;
+        fieldContext: string;
+        element: HTMLElement;
+    } | null>(null);
 
     useEffect(() => {
         if (!isEditMode) return;
@@ -92,7 +99,19 @@ export function EditorPageWrapper({
         // Debug log for theme
         logger.info({ theme }, "🎨 Theme CSS variables injected");
 
-        // Cleanup: remove CSS links when component unmounts
+        // Expose modal openers to window for vanilla JS integration
+        window.openImageGenerationModal = () => setIsImageGenModalOpen(true);
+        window.openVideoSelectorModal = () => setIsVideoSelectorOpen(true);
+        window.openSectionGeneratorModal = () => setIsSectionGeneratorOpen(true);
+        window.openFieldRegenerateModal = (
+            fieldId: string,
+            fieldContext: string,
+            element: HTMLElement
+        ) => handleOpenFieldRegenerate(fieldId, fieldContext, element);
+
+        logger.info({}, "✅ React modal handlers exposed to window");
+
+        // Cleanup: remove CSS links and window functions when component unmounts
         return () => {
             cssFiles.forEach((href) => {
                 const existingLink = document.querySelector(`link[href="${href}"]`);
@@ -100,20 +119,11 @@ export function EditorPageWrapper({
                     existingLink.remove();
                 }
             });
-        };
 
-        // Expose modal openers to window for vanilla JS integration
-        window.openImageGenerationModal = () => setIsImageGenModalOpen(true);
-        window.openVideoSelectorModal = () => setIsVideoSelectorOpen(true);
-        window.openSectionGeneratorModal = () => setIsSectionGeneratorOpen(true);
-
-        logger.info({}, "✅ React modal handlers exposed to window");
-
-        return () => {
-            // Cleanup
             delete window.openImageGenerationModal;
             delete window.openVideoSelectorModal;
             delete window.openSectionGeneratorModal;
+            delete window.openFieldRegenerateModal;
         };
     }, [isEditMode, theme, pageId, projectId, pageType]);
 
@@ -144,6 +154,68 @@ export function EditorPageWrapper({
         // Call vanilla JS editor function to insert section
         if (window.visualEditor && window.visualEditor.insertGeneratedSection) {
             window.visualEditor.insertGeneratedSection(sectionType, copy);
+        }
+    };
+
+    // Handler to open field regenerate modal
+    const handleOpenFieldRegenerate = (
+        fieldId: string,
+        fieldContext: string,
+        element: HTMLElement
+    ) => {
+        logger.info({ fieldId }, "Opening field regenerate modal");
+        setFieldToRegenerate({ fieldId, fieldContext, element });
+        setIsFieldRegenerateOpen(true);
+    };
+
+    // Handler for selected field option
+    const handleFieldOptionSelected = (newContent: string) => {
+        logger.info(
+            { hasContent: !!newContent, content: newContent.substring(0, 50) },
+            "Field option selected"
+        );
+
+        if (fieldToRegenerate && newContent) {
+            const element = fieldToRegenerate.element;
+
+            // SIMPLE APPROACH: Update only text nodes, leave sparkle button untouched
+            // Remove all text nodes but keep the sparkle button
+            Array.from(element.childNodes).forEach((node) => {
+                // Only remove text nodes, leave element nodes (like the sparkle button) alone
+                if (node.nodeType === Node.TEXT_NODE) {
+                    node.remove();
+                }
+            });
+
+            // Add new text as first child (before the sparkle button)
+            const textNode = document.createTextNode(newContent);
+            element.insertBefore(textNode, element.firstChild);
+
+            logger.info(
+                {
+                    newText: newContent.substring(0, 50),
+                    hasSparkleButton: !!element.querySelector(".field-regenerate-btn"),
+                },
+                "Content updated - sparkle button preserved"
+            );
+
+            // Flash success
+            element.style.background = "#dcfce7";
+            setTimeout(() => {
+                element.style.background = "";
+            }, 1000);
+
+            // Trigger auto-save
+            setTimeout(() => {
+                if (window.scheduleAutoSave) {
+                    window.scheduleAutoSave();
+                }
+            }, 500);
+
+            logger.info(
+                { fieldId: fieldToRegenerate.fieldId },
+                "Field update complete"
+            );
         }
     };
 
@@ -431,10 +503,26 @@ export function EditorPageWrapper({
                                 console.log('✅ Editor interface activated (should be visible now)');
                             }
 
-                            // Activate edit mode
+                            // Activate edit mode - ensure it's ON
+                            console.log('🔧 Current edit mode state:', window.visualEditor.isEditMode);
                             if (window.visualEditor.isEditMode === false) {
+                                console.log('⚙️  Toggling edit mode ON...');
                                 window.visualEditor.toggleEditMode();
+                            } else {
+                                console.log('✅ Edit mode already ON');
                             }
+
+                            // Verify edit mode is ON after a short delay
+                            setTimeout(() => {
+                                console.log('🔍 Verifying edit mode after initialization:', {
+                                    isEditMode: window.visualEditor.isEditMode,
+                                    expectedState: true
+                                });
+                                if (!window.visualEditor.isEditMode) {
+                                    console.warn('⚠️  Edit mode is OFF! This will prevent sparkle buttons from showing.');
+                                    console.warn('💡 Try clicking the Edit button in the toolbar');
+                                }
+                            }, 1500);
 
                             // CRITICAL: Hook auto-save into editor events
                             // Override the editor's save function to use our database save
@@ -539,15 +627,26 @@ export function EditorPageWrapper({
             {/* Per-field regeneration system */}
             <Script id="field-regeneration" strategy="afterInteractive">
                 {`
+                    console.log('🚀 AI Field Regeneration System: Initializing...');
+
                     // Add regenerate icons to editable fields
                     function addRegenerateIcons() {
                         const editableElements = document.querySelectorAll('[data-editable="true"]');
                         let fieldIdCounter = 0;
 
-                        editableElements.forEach((element) => {
-                            // Skip if already has regenerate button
-                            if (element.querySelector('.field-regenerate-btn')) {
-                                return;
+                        console.log('✨ AI Regeneration: Found', editableElements.length, 'editable fields');
+                        console.log('✨ AI Regeneration: Editor state -', {
+                            visualEditorExists: !!window.visualEditor,
+                            isEditMode: window.visualEditor?.isEditMode,
+                            editorType: typeof window.visualEditor
+                        });
+
+                        editableElements.forEach((element, index) => {
+                            // Remove any existing regenerate button first (from previous load)
+                            const existingBtn = element.querySelector('.field-regenerate-btn');
+                            if (existingBtn) {
+                                console.log('🔄 Removing old sparkle button from field', index);
+                                existingBtn.remove();
                             }
 
                             // Generate field ID if not present
@@ -555,6 +654,7 @@ export function EditorPageWrapper({
                                 const blockType = element.closest('[data-block-type]')?.getAttribute('data-block-type') || 'unknown';
                                 const fieldId = blockType + '-field-' + (fieldIdCounter++);
                                 element.setAttribute('data-field-id', fieldId);
+                                console.log('🏷️  Generated field ID:', fieldId, 'for element', index);
                             }
 
                             // Create regenerate button
@@ -582,55 +682,21 @@ export function EditorPageWrapper({
                                 transition: all 0.2s;
                             \`;
 
-                            regenBtn.addEventListener('click', async (e) => {
+                            regenBtn.addEventListener('click', (e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
 
                                 const fieldId = element.getAttribute('data-field-id');
                                 const fieldContext = element.textContent || element.innerText;
 
-                                console.log('🔄 Regenerating field:', fieldId);
+                                console.log('✨ Opening regenerate modal for field:', fieldId);
 
-                                // Show loading state
-                                regenBtn.innerHTML = '⏳';
-                                regenBtn.disabled = true;
-
-                                try {
-                                    const response = await fetch('/api/pages/${pageType}/${pageId}/regenerate-field', {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({
-                                            fieldId: fieldId,
-                                            fieldContext: fieldContext
-                                        })
-                                    });
-
-                                    const data = await response.json();
-
-                                    if (data.success && data.newContent) {
-                                        // Update the field content
-                                        element.textContent = data.newContent;
-                                        console.log('✅ Field regenerated:', fieldId);
-
-                                        // Flash success
-                                        element.style.background = '#dcfce7';
-                                        setTimeout(() => {
-                                            element.style.background = '';
-                                        }, 1000);
-
-                                        // Trigger auto-save
-                                        if (window.scheduleAutoSave) {
-                                            window.scheduleAutoSave();
-                                        }
-                                    } else {
-                                        throw new Error(data.error || 'Failed to regenerate field');
-                                    }
-                                } catch (error) {
-                                    console.error('❌ Field regeneration error:', error);
-                                    alert('Failed to regenerate field: ' + error.message);
-                                } finally {
-                                    regenBtn.innerHTML = '✨';
-                                    regenBtn.disabled = false;
+                                // Open the React modal with field data
+                                if (window.openFieldRegenerateModal) {
+                                    window.openFieldRegenerateModal(fieldId, fieldContext, element);
+                                } else {
+                                    console.error('❌ Field regenerate modal not available');
+                                    alert('AI regeneration feature is loading. Please try again in a moment.');
                                 }
                             });
 
@@ -640,10 +706,21 @@ export function EditorPageWrapper({
                                 element.style.position = 'relative';
                             }
 
-                            // Show/hide button on hover
+                            // Show/hide button on hover - with debug logging
                             element.addEventListener('mouseenter', () => {
+                                const editorState = {
+                                    visualEditorExists: !!window.visualEditor,
+                                    isEditMode: window.visualEditor?.isEditMode,
+                                    buttonWillShow: !!(window.visualEditor && window.visualEditor.isEditMode)
+                                };
+
+                                console.log('👆 Hover on field:', element.getAttribute('data-field-id'), editorState);
+
                                 if (window.visualEditor && window.visualEditor.isEditMode) {
                                     regenBtn.style.display = 'flex';
+                                    console.log('✨ Sparkle button shown for:', element.getAttribute('data-field-id'));
+                                } else {
+                                    console.warn('⚠️  Sparkle button NOT shown - edit mode check failed:', editorState);
                                 }
                             });
 
@@ -654,20 +731,105 @@ export function EditorPageWrapper({
                             element.appendChild(regenBtn);
                         });
 
-                        console.log('✨ Regenerate icons added to', editableElements.length, 'fields');
+                        console.log('✅ AI Regeneration: Added sparkle buttons to', editableElements.length, 'fields');
+                        console.log('💡 To see sparkles: Hover over any editable text in edit mode');
                     }
 
+                    // Store reference to buttons for edit mode change handling
+                    window.aiRegenerationButtons = [];
+
+                    // Function to update button visibility based on edit mode
+                    window.updateSparkleButtonsVisibility = function() {
+                        const isEditMode = window.visualEditor?.isEditMode;
+                        console.log('🔄 Updating sparkle button visibility. Edit mode:', isEditMode);
+
+                        // Note: We don't change display here, that's handled by hover events
+                        // This function just logs the state for debugging
+                        if (!isEditMode) {
+                            console.warn('⚠️  Edit mode is OFF - sparkle buttons will not appear on hover');
+                            console.warn('💡 Click the Edit/Preview button in toolbar to enable edit mode');
+                        } else {
+                            console.log('✅ Edit mode is ON - sparkle buttons should appear on hover');
+                        }
+                    };
+
                     // Wait for editor to be ready, then add regenerate icons
+                    let checkCount = 0;
                     const checkEditorReady = setInterval(() => {
-                        if (window.visualEditor && document.querySelectorAll('[data-editable="true"]').length > 0) {
+                        checkCount++;
+                        const editorExists = !!window.visualEditor;
+                        const editableCount = document.querySelectorAll('[data-editable="true"]').length;
+
+                        if (checkCount % 4 === 0) { // Log every 2 seconds
+                            console.log('⏳ Waiting for editor... (attempt', checkCount, ')', {
+                                editorExists,
+                                editableCount,
+                                isEditMode: window.visualEditor?.isEditMode
+                            });
+                        }
+
+                        if (editorExists && editableCount > 0) {
                             clearInterval(checkEditorReady);
-                            setTimeout(addRegenerateIcons, 1000); // Small delay to ensure editor is fully initialized
+                            console.log('✅ Editor ready! Adding sparkle buttons in 1.5 seconds...');
+                            console.log('📊 Current state:', {
+                                editor: !!window.visualEditor,
+                                editMode: window.visualEditor?.isEditMode,
+                                editableFields: editableCount
+                            });
+
+                            // Wait 1.5 seconds to ensure edit mode is properly set
+                            setTimeout(() => {
+                                addRegenerateIcons();
+
+                                // Check edit mode status after adding icons
+                                setTimeout(() => {
+                                    window.updateSparkleButtonsVisibility();
+                                }, 500);
+
+                                // CONTINUOUSLY monitor and maintain sparkle buttons
+                                // Check every 2 seconds if buttons are missing and re-add them
+                                setInterval(() => {
+                                    const editables = document.querySelectorAll('[data-editable="true"]');
+                                    let missingCount = 0;
+
+                                    editables.forEach((element) => {
+                                        // If element doesn't have a sparkle button, it got removed somehow
+                                        if (!element.querySelector('.field-regenerate-btn')) {
+                                            missingCount++;
+                                        }
+                                    });
+
+                                    if (missingCount > 0) {
+                                        console.log('🔧 Detected', missingCount, 'missing sparkle buttons - re-adding them');
+                                        addRegenerateIcons();
+                                    }
+                                }, 2000); // Check every 2 seconds
+                            }, 1500);
                         }
                     }, 500);
+
+                    // Monitor for edit mode toggle button clicks
+                    document.addEventListener('click', function(e) {
+                        const toggleBtn = e.target.closest('#toggle-edit');
+                        if (toggleBtn) {
+                            // Wait for toggle to complete, then update visibility info
+                            setTimeout(() => {
+                                window.updateSparkleButtonsVisibility();
+                            }, 100);
+                        }
+                    });
 
                     // Timeout after 15 seconds
                     setTimeout(() => {
                         clearInterval(checkEditorReady);
+                        if (!window.visualEditor || document.querySelectorAll('[data-editable="true"]').length === 0) {
+                            console.error('❌ AI Regeneration System: Timeout - Editor not ready after 15 seconds');
+                            console.error('Debug info:', {
+                                visualEditor: !!window.visualEditor,
+                                editableFields: document.querySelectorAll('[data-editable="true"]').length,
+                                isEditMode: window.visualEditor?.isEditMode
+                            });
+                        }
                     }, 15000);
                 `}
             </Script>
@@ -695,6 +857,21 @@ export function EditorPageWrapper({
                 projectId={projectId}
                 pageId={pageId}
             />
+
+            {fieldToRegenerate && (
+                <FieldRegenerateModal
+                    isOpen={isFieldRegenerateOpen}
+                    onClose={() => {
+                        setIsFieldRegenerateOpen(false);
+                        setFieldToRegenerate(null);
+                    }}
+                    onSelect={handleFieldOptionSelected}
+                    fieldId={fieldToRegenerate.fieldId}
+                    fieldContext={fieldToRegenerate.fieldContext}
+                    pageId={pageId}
+                    pageType={pageType}
+                />
+            )}
         </>
     );
 }

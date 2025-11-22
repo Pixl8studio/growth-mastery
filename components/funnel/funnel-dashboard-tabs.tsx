@@ -29,6 +29,7 @@ import {
     getMasterStepCompletionStatus,
 } from "@/app/funnel-builder/completion-utils";
 import { MasterSectionCard } from "@/components/funnel-builder/master-section-card";
+import { HorizontalMasterSteps } from "@/components/funnel/horizontal-master-steps";
 import type { MasterStepProgress } from "@/app/funnel-builder/completion-types";
 
 interface FunnelDashboardTabsProps {
@@ -141,8 +142,25 @@ export function FunnelDashboardTabs({
                     </CardContent>
                 </Card>
 
-                {/* Master Section Cards */}
-                <div className="space-y-4">
+                {/* Master Section Cards - Horizontal on Desktop, Vertical on Mobile */}
+
+                {/* Desktop: Horizontal Master Steps */}
+                <div className="hidden md:block">
+                    {loading ? (
+                        <Card className="h-32 animate-pulse bg-gray-200" />
+                    ) : masterStepProgress ? (
+                        <HorizontalMasterSteps
+                            projectId={projectId}
+                            masterStepCompletions={
+                                masterStepProgress.masterStepCompletions
+                            }
+                            completedSubSteps={completedSteps}
+                        />
+                    ) : null}
+                </div>
+
+                {/* Mobile: Vertical Master Section Cards */}
+                <div className="md:hidden space-y-4">
                     {loading ? (
                         <>
                             {[1, 2, 3, 4, 5].map((i) => (

@@ -29,6 +29,7 @@ import {
     getMasterStepCompletionStatus,
 } from "@/app/funnel-builder/completion-utils";
 import { MasterSectionCard } from "@/components/funnel-builder/master-section-card";
+import { HorizontalMasterSteps } from "@/components/funnel/horizontal-master-steps";
 import type { MasterStepProgress } from "@/app/funnel-builder/completion-types";
 
 interface FunnelDashboardTabsProps {
@@ -104,7 +105,7 @@ export function FunnelDashboardTabs({
                                     {loading
                                         ? "Loading..."
                                         : masterStepProgress
-                                          ? `${masterStepProgress.completedMasterSteps} of ${masterStepProgress.totalMasterSteps} sections complete • ${masterStepProgress.percentage}% done`
+                                          ? `${masterStepProgress.completedMasterSteps} of ${masterStepProgress.totalMasterSteps} sections complete • ${Math.round((completedSteps.length / 15) * 100)}% done`
                                           : "Complete each section to build your funnel"}
                                 </CardDescription>
                             </div>
@@ -124,7 +125,7 @@ export function FunnelDashboardTabs({
                                     <div
                                         className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
                                         style={{
-                                            width: `${masterStepProgress.percentage}%`,
+                                            width: `${Math.round((completedSteps.length / 15) * 100)}%`,
                                         }}
                                     />
                                 </div>
@@ -133,7 +134,7 @@ export function FunnelDashboardTabs({
                                         {completedSteps.length} of 15 steps completed
                                     </span>
                                     <span className="font-bold text-primary">
-                                        {masterStepProgress.percentage}%
+                                        {Math.round((completedSteps.length / 15) * 100)}%
                                     </span>
                                 </div>
                             </div>
@@ -141,8 +142,25 @@ export function FunnelDashboardTabs({
                     </CardContent>
                 </Card>
 
-                {/* Master Section Cards */}
-                <div className="space-y-4">
+                {/* Master Section Cards - Horizontal on Desktop, Vertical on Mobile */}
+
+                {/* Desktop: Horizontal Master Steps */}
+                <div className="hidden md:block">
+                    {loading ? (
+                        <Card className="h-32 animate-pulse bg-gray-200" />
+                    ) : masterStepProgress ? (
+                        <HorizontalMasterSteps
+                            projectId={projectId}
+                            masterStepCompletions={
+                                masterStepProgress.masterStepCompletions
+                            }
+                            completedSubSteps={completedSteps}
+                        />
+                    ) : null}
+                </div>
+
+                {/* Mobile: Vertical Master Section Cards */}
+                <div className="md:hidden space-y-4">
                     {loading ? (
                         <>
                             {[1, 2, 3, 4, 5].map((i) => (

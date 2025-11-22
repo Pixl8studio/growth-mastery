@@ -194,16 +194,16 @@ export default function CreateFunnelPage() {
                                 <div>
                                     <strong>Presentation Materials</strong> - Create
                                     your 55-slide presentation structure, generate it
-                                    with Gamma AI, craft your enrollment page, talk
-                                    track, and upload your pitch video
+                                    with Gamma AI, craft your talk track, and upload
+                                    your pitch video
                                 </div>
                             </li>
                             <li className="flex items-start">
                                 <span className="mr-2 font-bold text-primary">3.</span>
                                 <div>
-                                    <strong>Funnel Pages</strong> - Build your watch
-                                    room, registration page, and connect your funnel
-                                    flow
+                                    <strong>Funnel Pages</strong> - Build your enrollment
+                                    page, watch room, registration page, and connect your
+                                    funnel flow
                                 </div>
                             </li>
                             <li className="flex items-start">

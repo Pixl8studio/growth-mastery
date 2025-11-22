@@ -214,8 +214,8 @@ export function generateWatchPageHTML(options: WatchPageGeneratorOptions): strin
                style="background: white; color: ${theme.primary}; padding: 1.2rem 2rem; font-size: 1.1rem; font-weight: 600; text-decoration: none; border-radius: 8px; display: inline-block; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
                 GET INSTANT ACCESS NOW
             </a>
-            <p style="color: white; margin-top: var(--space-4); font-size: 0.9rem; opacity: 0.9;" data-editable="true">
-                ⏰ Limited time offer expires in 24 hours
+            <p style="color: white; margin-top: var(--space-4); font-size: 0.9rem; opacity: 0.9; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" data-editable="true">
+                <span style="width: 20px; height: 20px; display: inline-flex; align-items: center;">${getIconSvg("clock")}</span> Limited time offer expires in 24 hours
             </p>
         </div>
     </div>

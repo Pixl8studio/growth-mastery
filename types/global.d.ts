@@ -53,12 +53,30 @@ declare class ComponentLibrary {
 }
 
 /**
+ * Icon Picker - Manages interactive icon selection
+ */
+declare class IconPicker {
+    constructor();
+    init(): void;
+    initializeIconClickHandlers(): void;
+    attachClickHandlers(): void;
+    open(
+        element: HTMLElement,
+        currentIcon: string,
+        callback: (iconName: string) => void
+    ): void;
+    close(): void;
+    // Add other methods as needed
+}
+
+/**
  * Extend the Window interface to include editor globals
  */
 interface Window {
     visualEditor?: VisualEditor;
     blockManager?: BlockManager;
     componentLibrary?: ComponentLibrary;
+    iconPicker?: IconPicker;
 
     // Database save functions
     saveToDatabase?: () => Promise<void>;
@@ -77,4 +95,12 @@ interface Window {
 
     // AI field regeneration functions
     addRegenerateIcons?: () => void;
+
+    // Icon mapper functions
+    getIconSvg?: (iconName: string) => string;
+    getAllIconNames?: () => string[];
+    getIconDisplayName?: (iconName: string) => string;
+    emojiToSvg?: (emoji: string) => string;
+    ICON_SVG_MAP?: Record<string, string>;
+    ICON_CATEGORIES?: Record<string, { name: string; icons: string[] }>;
 }

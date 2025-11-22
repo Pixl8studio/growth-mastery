@@ -15,7 +15,6 @@ import {
     Edit2,
     Check,
     X,
-    Eye,
     Palette,
     DollarSign,
 } from "lucide-react";
@@ -650,8 +649,11 @@ export default function Step1Page({
                                         key={session.id}
                                         className="cursor-pointer rounded-lg border border-border bg-muted/50 p-4 transition-all hover:border-primary/50 hover:bg-muted hover:shadow-md"
                                         onClick={() => {
-                                            setSelectedSession(session);
-                                            setIsViewerOpen(true);
+                                            // Only open modal if not editing
+                                            if (editingSessionId !== session.id) {
+                                                setSelectedSession(session);
+                                                setIsViewerOpen(true);
+                                            }
                                         }}
                                     >
                                         <div className="mb-3 flex items-center justify-between">
@@ -743,34 +745,16 @@ export default function Step1Page({
                                                         </div>
                                                     )}
                                                 {editingSessionId !== session.id && (
-                                                    <>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                setSelectedSession(
-                                                                    session
-                                                                );
-                                                                setIsViewerOpen(true);
-                                                            }}
-                                                            className="flex items-center gap-1 rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
-                                                            title="View all data"
-                                                        >
-                                                            <Eye className="h-3 w-3" />
-                                                            View Details
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleStartRename(
-                                                                    session
-                                                                );
-                                                            }}
-                                                            className="p-1 text-muted-foreground hover:text-foreground"
-                                                            title="Rename session"
-                                                        >
-                                                            <Edit2 className="h-4 w-4" />
-                                                        </button>
-                                                    </>
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleStartRename(session);
+                                                        }}
+                                                        className="p-1 text-muted-foreground hover:text-foreground"
+                                                        title="Rename session"
+                                                    >
+                                                        <Edit2 className="h-4 w-4" />
+                                                    </button>
                                                 )}
                                             </div>
                                         </div>
@@ -826,23 +810,10 @@ export default function Step1Page({
                                                 </p>
                                             )}
 
-                                        {session.transcript_text && (
-                                            <div className="mt-3">
-                                                <details className="group">
-                                                    <summary className="cursor-pointer text-sm font-medium text-primary hover:text-primary">
-                                                        View Content
-                                                    </summary>
-                                                    <div className="mt-3 max-h-64 overflow-y-auto rounded bg-card p-3 text-sm text-foreground">
-                                                        {session.transcript_text.substring(
-                                                            0,
-                                                            500
-                                                        )}
-                                                        {session.transcript_text
-                                                            .length > 500 && "..."}
-                                                    </div>
-                                                </details>
-                                            </div>
-                                        )}
+                                        {/* Card is fully clickable - no preview needed */}
+                                        <p className="mt-2 text-xs text-muted-foreground">
+                                            Click to view all data →
+                                        </p>
                                     </div>
                                 ))}
                             </div>

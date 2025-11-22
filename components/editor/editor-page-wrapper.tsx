@@ -336,7 +336,7 @@ export function EditorPageWrapper({
 
             {/* Load icon mapper first */}
             <Script
-                src="/funnel-system/assets/js/icon-mapper.js?v=6.9"
+                src="/funnel-system/assets/js/icon-mapper.js?v=7.1"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Icon mapper script loaded");
@@ -345,7 +345,7 @@ export function EditorPageWrapper({
 
             {/* Load icon picker for interactive icon selection */}
             <Script
-                src="/funnel-system/assets/js/icon-picker.js?v=7.0"
+                src="/funnel-system/assets/js/icon-picker.js?v=7.2"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Icon picker script loaded");
@@ -361,7 +361,7 @@ export function EditorPageWrapper({
 
             {/* Load editor JavaScript - vanilla JS works as-is! */}
             <Script
-                src="/funnel-system/assets/js/visual-editor.js?v=6.9"
+                src="/funnel-system/assets/js/visual-editor.js?v=7.2"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Visual editor script loaded");
@@ -517,6 +517,12 @@ export function EditorPageWrapper({
                                 editorInterface.classList.add('active');
                                 editorInterface.style.opacity = '1';
                                 console.log('✅ Editor interface activated (should be visible now)');
+                            }
+
+                            // Reinitialize icon click handlers for saved content
+                            if (window.iconPicker) {
+                                console.log('🎨 Reinitializing icon click handlers for saved content...');
+                                window.iconPicker.initializeIconClickHandlers();
                             }
 
                             // Activate edit mode - ensure it's ON

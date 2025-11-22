@@ -5550,12 +5550,12 @@ class VisualEditor {
     const themes = [
       {
         id: 'default',
-        name: 'Default Blue',
-        description: 'Professional blue theme',
+        name: 'Growth Mastery',
+        description: 'Emerald & gold branding',
         colors: {
-          primary: '#4F46E5',
-          secondary: '#10B981',
-          accent: '#F59E0B',
+          primary: '#138A36',      // Deep Emerald hsl(103 89% 29%) from design system
+          secondary: '#34A853',    // Medium emerald hsl(103 70% 45%) for gradients
+          accent: '#F5B800',       // Gold/Amber hsl(45 93% 58%) from design system
           background: '#FFFFFF',
           text: '#111827'
         }
@@ -6036,12 +6036,8 @@ class VisualEditor {
     if (savedTheme && savedTheme !== 'default') {
       this.applyTheme(savedTheme);
     } else {
-      // Apply default theme styling including gradient cards
-      const defaultTheme = this.getThemePresets().find(t => t.id === 'default');
-      if (defaultTheme) {
-        this.updateCardColors(defaultTheme.colors);
-        this.applyCardGradients(defaultTheme.colors);
-      }
+      // Apply default emerald/gold theme with full color system
+      this.applyTheme('default');
     }
   }
 

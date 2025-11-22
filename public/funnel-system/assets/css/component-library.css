@@ -6,14 +6,15 @@
   left: -380px;
   width: 380px;
   height: 100vh;
-  background: #1a1a1a;
-  border-right: 1px solid #2d2d2d;
+  background: hsl(103 20% 96%);
+  border-right: 1px solid hsl(103 40% 85%);
   z-index: 10000;
   transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
+  box-shadow: 4px 0 20px hsl(103 30% 70% / 0.15);
   flex-direction: column;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  color: #ffffff;
+  color: hsl(103 30% 30%);
   backdrop-filter: blur(20px);
   box-shadow: 0 0 50px rgba(0, 0, 0, 0.3);
 }
@@ -30,8 +31,8 @@
 /* Library Header */
 .library-header {
   padding: 16px 20px;
-  border-bottom: 1px solid #2d2d2d;
-  background: rgba(26, 26, 26, 0.95);
+  border-bottom: 1px solid hsl(103 40% 85%);
+  background: hsl(103 30% 98%);
   backdrop-filter: blur(10px);
 }
 
@@ -46,14 +47,14 @@
   margin: 0;
   font-size: 18px;
   font-weight: 600;
-  color: #ffffff;
+  color: hsl(103 50% 25%);
 }
 
 .library-toggle {
-  background: #2d2d2d;
+  background: hsl(140 20% 25%);
   border: 1px solid #3d3d3d;
   border-radius: 6px;
-  color: #ffffff;
+  color: hsl(103 30% 30%);
   width: 32px;
   height: 32px;
   display: flex;
@@ -65,8 +66,8 @@
 }
 
 .library-toggle:hover {
-  background: #3d3d3d;
-  border-color: #4d4d4d;
+  background: hsl(140 20% 30%);
+  border-color: hsl(140 20% 35%);
 }
 
 /* Search */
@@ -84,17 +85,17 @@
   position: absolute;
   left: 12px;
   font-size: 14px;
-  color: #888;
+  color: hsl(103 20% 50%);
   z-index: 1;
 }
 
 .search-input {
   width: 100%;
   padding: 10px 12px 10px 36px;
-  background: #2d2d2d;
+  background: hsl(140 20% 25%);
   border: 1px solid #3d3d3d;
   border-radius: 8px;
-  color: #ffffff;
+  color: hsl(103 30% 30%);
   font-size: 14px;
   outline: none;
   transition: all 0.2s ease;
@@ -106,7 +107,7 @@
 }
 
 .search-input::placeholder {
-  color: #888;
+  color: hsl(103 20% 50%);
 }
 
 /* Library Actions */
@@ -117,10 +118,10 @@
 }
 
 .theme-toggle {
-  background: #2d2d2d;
+  background: hsl(140 20% 25%);
   border: 1px solid #3d3d3d;
   border-radius: 6px;
-  color: #ffffff;
+  color: hsl(103 30% 30%);
   width: 32px;
   height: 32px;
   display: flex;
@@ -132,8 +133,8 @@
 }
 
 .theme-toggle:hover {
-  background: #3d3d3d;
-  border-color: #4d4d4d;
+  background: hsl(140 20% 30%);
+  border-color: hsl(140 20% 35%);
 }
 
 /* Library Content */
@@ -203,8 +204,8 @@
 
 .category-count {
   font-size: 12px;
-  color: #888;
-  background: #2d2d2d;
+  color: hsl(103 20% 50%);
+  background: hsl(140 20% 25%);
   padding: 2px 6px;
   border-radius: 10px;
   min-width: 20px;
@@ -213,7 +214,7 @@
 
 .category-arrow {
   font-size: 10px;
-  color: #888;
+  color: hsl(103 20% 50%);
   transition: transform 0.2s ease;
   transform: rotate(0deg);
 }
@@ -242,8 +243,8 @@
 
 /* Component Cards */
 .component-card {
-  background: #242424;
-  border: 1px solid #2d2d2d;
+  background: hsl(140 20% 20%);
+  border: 1px solid hsl(140 20% 25%);
   border-radius: 12px;
   padding: 16px;
   cursor: pointer;
@@ -253,10 +254,10 @@
 }
 
 .component-card:hover {
-  background: #2a2a2a;
-  border-color: #4f46e5;
+  background: hsl(140 20% 23%);
+  border-color: hsl(103 89% 29%);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(79, 70, 229, 0.15);
+  box-shadow: 0 8px 25px hsl(103 89% 29% / 0.2);
 }
 
 .component-card.dragging {
@@ -300,14 +301,14 @@
 .component-name {
   font-size: 13px;
   font-weight: 600;
-  color: #ffffff;
+  color: hsl(103 30% 30%);
   margin: 0 0 4px 0;
   line-height: 1.3;
 }
 
 .component-description {
   font-size: 11px;
-  color: #888;
+  color: hsl(103 20% 50%);
   margin: 0;
   line-height: 1.4;
   display: -webkit-box;
@@ -333,7 +334,7 @@
   background: #4f46e5;
   border: none;
   border-radius: 6px;
-  color: #ffffff;
+  color: hsl(103 30% 30%);
   width: 24px;
   height: 24px;
   display: flex;
@@ -357,7 +358,7 @@
   left: 400px;
   padding: 12px 20px;
   border-radius: 8px;
-  color: white;
+  color: hsl(103 30% 30%);
   font-weight: 500;
   z-index: 10001;
   transform: translateX(-400px);
@@ -388,16 +389,16 @@
     width: 320px;
     left: -320px;
   }
-  
+
   .component-grid {
     grid-template-columns: 1fr;
     gap: 8px;
   }
-  
+
   .component-card {
     padding: 12px;
   }
-  
+
   .component-preview {
     height: 50px;
   }
@@ -408,13 +409,13 @@
     width: 100%;
     left: -100%;
   }
-  
+
   .library-notification {
     left: 20px;
     right: 20px;
     transform: translateY(-100px);
   }
-  
+
   .library-notification.show {
     transform: translateY(0);
   }
@@ -457,7 +458,7 @@
 }
 
 .component-library.dark-theme .component-card:hover {
-  background: #202020;
+  background: hsl(140 20% 18%);
 }
 
 /* Accessibility */

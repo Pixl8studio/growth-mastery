@@ -69,11 +69,11 @@ export function EditorPageWrapper({
             root.style.setProperty(key, value);
         });
 
-        // Load editor CSS files dynamically
+        // Load editor CSS files dynamically (with cache-busting)
         const cssFiles = [
-            "/funnel-system/assets/css/editor.css",
-            "/funnel-system/assets/css/blocks.css",
-            "/funnel-system/assets/css/component-library.css",
+            "/funnel-system/assets/css/editor.css?v=6.0",
+            "/funnel-system/assets/css/blocks.css?v=6.0",
+            "/funnel-system/assets/css/component-library.css?v=6.0",
         ];
 
         cssFiles.forEach((href) => {
@@ -204,7 +204,7 @@ export function EditorPageWrapper({
 
             {/* Load icon mapper first */}
             <Script
-                src="/funnel-system/assets/js/icon-mapper.js"
+                src="/funnel-system/assets/js/icon-mapper.js?v=6.0"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Icon mapper script loaded");
@@ -213,7 +213,7 @@ export function EditorPageWrapper({
 
             {/* Load editor JavaScript - vanilla JS works as-is! */}
             <Script
-                src="/funnel-system/assets/js/visual-editor.js"
+                src="/funnel-system/assets/js/visual-editor.js?v=6.0"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Visual editor script loaded");
@@ -242,7 +242,7 @@ export function EditorPageWrapper({
                 }}
             />
             <Script
-                src="/funnel-system/assets/js/component-library.js"
+                src="/funnel-system/assets/js/component-library.js?v=6.0"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Component library script loaded");

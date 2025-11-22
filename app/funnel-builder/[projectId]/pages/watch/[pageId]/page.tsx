@@ -52,12 +52,19 @@ export default async function WatchPageEditor({ params, searchParams }: PageProp
         redirect(`/funnel-builder/${projectId}/pages/watch/${pageId}`);
     }
 
-    // Get theme from page or use defaults
+    // Get theme from brand design (Step 3)
+    const { data: brandDesign } = await supabase
+        .from("brand_designs")
+        .select("*")
+        .eq("funnel_project_id", projectId)
+        .maybeSingle();
+
     const theme = page.theme || {
-        primary: "#2563eb",
-        secondary: "#10b981",
-        background: "#ffffff",
-        text: "#1f2937",
+        primary: brandDesign?.primary_color || "#3b82f6",
+        secondary: brandDesign?.secondary_color || "#8b5cf6",
+        accent: brandDesign?.accent_color || "#ec4899",
+        background: brandDesign?.background_color || "#ffffff",
+        text: brandDesign?.text_color || "#1f2937",
     };
 
     // If no HTML content yet, show error

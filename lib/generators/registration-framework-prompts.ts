@@ -5,6 +5,10 @@
  */
 
 import type { Slide } from "@/lib/ai/types";
+import {
+    DESIGN_SYSTEM_GUIDELINES,
+    ICON_USAGE_GUIDELINES,
+} from "@/lib/ai/design-system-guidelines";
 
 interface IntakeData {
     targetAudience?: string;
@@ -79,6 +83,10 @@ export function createFullPageRegenerationPrompt(
     return `You are an expert conversion copywriter creating a high-converting webinar registration page.
 
 ${REGISTRATION_FRAMEWORK}
+
+${DESIGN_SYSTEM_GUIDELINES}
+
+${ICON_USAGE_GUIDELINES}
 
 ## Context About This Business:
 

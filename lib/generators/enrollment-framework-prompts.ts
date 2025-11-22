@@ -5,6 +5,10 @@
  */
 
 import type { Slide } from "@/lib/ai/types";
+import {
+    DESIGN_SYSTEM_GUIDELINES,
+    ICON_USAGE_GUIDELINES,
+} from "@/lib/ai/design-system-guidelines";
 
 interface OfferData {
     id?: string;
@@ -105,6 +109,10 @@ export function createFullPageEnrollmentPrompt(
     return `You are an expert sales copywriter creating a high-converting enrollment/sales page.
 
 ${ENROLLMENT_FRAMEWORK}
+
+${DESIGN_SYSTEM_GUIDELINES}
+
+${ICON_USAGE_GUIDELINES}
 
 ## Offer Details:
 

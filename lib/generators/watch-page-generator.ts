@@ -4,6 +4,7 @@
  */
 
 import type { Slide } from "@/lib/ai/types";
+import { getIconSvg } from "@/lib/utils/icon-mapper";
 
 interface Theme {
     primary: string;
@@ -46,19 +47,19 @@ function extractTakeawaysFromDeck(slides: Slide[]): Array<{
     if (solutionSlides.length === 0) {
         return [
             {
-                icon: "🎯",
+                icon: "target",
                 title: "Strategy #1",
                 description:
                     "The exact framework to identify and eliminate bottlenecks in your current business processes.",
             },
             {
-                icon: "⚡",
+                icon: "zap",
                 title: "Strategy #2",
                 description:
                     "How to automate your most time-consuming tasks using AI and proven systems.",
             },
             {
-                icon: "🚀",
+                icon: "rocket",
                 title: "Strategy #3",
                 description:
                     "The scaling blueprint that generates consistent results without burning you out.",
@@ -67,7 +68,7 @@ function extractTakeawaysFromDeck(slides: Slide[]): Array<{
     }
 
     return solutionSlides.slice(0, 6).map((slide, idx) => ({
-        icon: ["🎯", "⚡", "🚀", "💡", "🔥", "⭐"][idx] || "✨",
+        icon: ["target", "zap", "rocket", "lightbulb", "star", "star"][idx] || "star",
         title: slide.title || `Strategy #${idx + 1}`,
         description: slide.description || slide.title || "Key strategy revealed",
     }));
@@ -189,7 +190,7 @@ export function generateWatchPageHTML(options: WatchPageGeneratorOptions): strin
                     .map(
                         (takeaway) => `
                     <div class="feature-card" style="text-align: center; padding: var(--space-6); background: white; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
-                        <div class="feature-icon" style="font-size: 3rem; margin-bottom: var(--space-4);">${takeaway.icon}</div>
+                        <div class="feature-icon" style="width: 48px; height: 48px; margin: 0 auto var(--space-4); color: hsl(103 89% 29%);">${getIconSvg(takeaway.icon)}</div>
                         <h3 class="feature-title" data-editable="true" style="margin-bottom: var(--space-4); font-size: 1.3rem; font-weight: 700; color: #1f2937;">${takeaway.title}</h3>
                         <p class="feature-description" data-editable="true" style="color: #6b7280; line-height: 1.6;">${takeaway.description}</p>
                     </div>
@@ -223,7 +224,7 @@ export function generateWatchPageHTML(options: WatchPageGeneratorOptions): strin
     <div class="block bg-section-1" data-block-type="chat" style="padding: var(--space-16) 0; background: white;">
         <div class="container">
             <div style="max-width: 600px; margin: 0 auto; text-align: center;">
-                <h3 data-editable="true" style="margin-bottom: var(--space-6); font-size: 1.5rem; font-weight: 700; color: #1f2937;">💬 Join the Live Discussion</h3>
+                <h3 data-editable="true" style="margin-bottom: var(--space-6); font-size: 1.5rem; font-weight: 700; color: #1f2937;">Join the Live Discussion</h3>
                 <div class="chat-placeholder" style="background: #f9fafb; border: 2px solid #e5e7eb; border-radius: 12px; padding: var(--space-8); min-height: 200px;">
                     <p data-editable="true" style="color: #6b7280; margin-bottom: var(--space-4);">
                         Chat with other attendees and ask your questions live!

@@ -202,6 +202,15 @@ export function EditorPageWrapper({
 
             {/* Editor CSS loaded via useEffect */}
 
+            {/* Load icon mapper first */}
+            <Script
+                src="/funnel-system/assets/js/icon-mapper.js"
+                strategy="afterInteractive"
+                onLoad={() => {
+                    logger.info({}, "Icon mapper script loaded");
+                }}
+            />
+
             {/* Load editor JavaScript - vanilla JS works as-is! */}
             <Script
                 src="/funnel-system/assets/js/visual-editor.js"

@@ -184,13 +184,15 @@ class ComponentLibrary {
 
   renderComponentCard(item) {
     const color = item.color || '#6b7280';
+    // Convert emoji to SVG if available
+    const iconHtml = typeof window.emojiToSvg === 'function' ? window.emojiToSvg(item.icon) : item.icon;
     return `
-      <div class="component-card" 
-           data-component="${item.id}" 
+      <div class="component-card"
+           data-component="${item.id}"
            draggable="true"
            title="${item.description}">
         <div class="component-preview" style="background: linear-gradient(135deg, ${color}20, ${color}10);">
-          <span class="component-icon" style="color: ${color}">${item.icon}</span>
+          <span class="component-icon" style="color: ${color}">${iconHtml}</span>
         </div>
         <div class="component-info">
           <h4 class="component-name">${item.name}</h4>
@@ -263,7 +265,7 @@ class ComponentLibrary {
 
     this.isVisible = !this.isVisible;
     library.classList.toggle('visible', this.isVisible);
-    
+
     const toggleIcon = document.querySelector('#library-toggle .toggle-icon');
     if (toggleIcon) {
       toggleIcon.textContent = this.isVisible ? '←' : '→';
@@ -275,7 +277,7 @@ class ComponentLibrary {
     if (!category) return;
 
     const isExpanded = category.classList.contains('expanded');
-    
+
     // Collapse all categories first
     document.querySelectorAll('.component-category').forEach(cat => {
       cat.classList.remove('expanded');
@@ -292,7 +294,7 @@ class ComponentLibrary {
 
   addComponentToPage(componentId) {
     console.log('Adding component to page:', componentId);
-    
+
     // Find the component definition
     let componentData = null;
     Object.values(this.components).forEach(category => {
@@ -304,7 +306,7 @@ class ComponentLibrary {
 
     // Create the component HTML based on type
     const componentHTML = this.generateComponentHTML(componentId, componentData);
-    
+
     // Add to page (integrate with existing visual editor)
     if (window.visualEditor) {
       window.visualEditor.addCustomComponent(componentHTML, componentData);
@@ -508,13 +510,13 @@ class ComponentLibrary {
     const notification = document.createElement('div');
     notification.className = `library-notification ${type}`;
     notification.textContent = message;
-    
+
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
       notification.classList.add('show');
     }, 100);
-    
+
     setTimeout(() => {
       notification.classList.remove('show');
       setTimeout(() => {
@@ -527,7 +529,7 @@ class ComponentLibrary {
 // Initialize component library when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   window.componentLibrary = new ComponentLibrary();
-  
+
   // Show library by default
   setTimeout(() => {
     window.componentLibrary.toggleLibrary();

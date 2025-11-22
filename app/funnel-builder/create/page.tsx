@@ -201,9 +201,9 @@ export default function CreateFunnelPage() {
                             <li className="flex items-start">
                                 <span className="mr-2 font-bold text-primary">3.</span>
                                 <div>
-                                    <strong>Funnel Pages</strong> - Build your enrollment
-                                    page, watch room, registration page, and connect your
-                                    funnel flow
+                                    <strong>Funnel Pages</strong> - Build your
+                                    enrollment page, watch room, registration page, and
+                                    connect your funnel flow
                                 </div>
                             </li>
                             <li className="flex items-start">

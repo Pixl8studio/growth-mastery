@@ -1,5 +1,6 @@
 "use client";
 
+import * as React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,8 @@ interface StepperNavProps {
     currentStep: number;
     completedSteps?: number[]; // Array of step numbers that have generated content
     className?: string;
+    expandedMasterStep?: number | null; // Master step ID to force expand
+    onMasterStepExpanded?: () => void; // Callback when force expansion is handled
 }
 
 export function StepperNav({
@@ -56,6 +59,8 @@ export function StepperNav({
     currentStep,
     completedSteps = [],
     className,
+    expandedMasterStep = null,
+    onMasterStepExpanded,
 }: StepperNavProps) {
     const pathname = usePathname();
 
@@ -64,6 +69,24 @@ export function StepperNav({
     const defaultExpandedValue = currentMasterStep
         ? `master-${currentMasterStep.id}`
         : undefined;
+
+    // Handle forced expansion from collapsed sidebar
+    const [accordionValue, setAccordionValue] = React.useState<string[]>(
+        defaultExpandedValue ? [defaultExpandedValue] : []
+    );
+
+    // When expandedMasterStep changes, collapse all others and expand only the clicked one
+    React.useEffect(() => {
+        if (expandedMasterStep !== null) {
+            const masterStepValue = `master-${expandedMasterStep}`;
+            // Replace accordion value with only the clicked section
+            setAccordionValue([masterStepValue]);
+            // Notify parent that expansion has been handled
+            if (onMasterStepExpanded) {
+                onMasterStepExpanded();
+            }
+        }
+    }, [expandedMasterStep, onMasterStepExpanded]);
 
     // Calculate overall completion
     const totalSteps = 15;
@@ -92,7 +115,8 @@ export function StepperNav({
             {/* Master Steps Accordion */}
             <Accordion
                 type="multiple"
-                defaultValue={defaultExpandedValue ? [defaultExpandedValue] : []}
+                value={accordionValue}
+                onValueChange={setAccordionValue}
                 className="space-y-2"
             >
                 {MASTER_STEPS.map((masterStep) => {
@@ -113,15 +137,15 @@ export function StepperNav({
                         >
                             <AccordionTrigger
                                 className={cn(
-                                    "px-4 py-3 hover:no-underline transition-colors",
+                                    "px-3 py-3 hover:no-underline transition-colors",
                                     {
                                         "hover:bg-primary/10": isCurrentMaster,
                                         "hover:bg-muted/50": !isCurrentMaster,
                                     }
                                 )}
                             >
-                                <div className="flex items-center justify-between w-full pr-2">
-                                    <div className="flex items-center gap-3">
+                                <div className="flex items-center justify-between w-full pr-1 gap-2">
+                                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
                                         {/* Completion Indicator */}
                                         {completion.isFullyComplete ? (
                                             <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-green-500">
@@ -142,11 +166,11 @@ export function StepperNav({
                                         )}
 
                                         {/* Master Step Info */}
-                                        <div className="text-left">
-                                            <h3 className="text-sm font-semibold text-foreground leading-none mb-1">
+                                        <div className="text-left flex-1 min-w-0">
+                                            <h3 className="text-sm font-semibold text-foreground leading-tight mb-1 break-words">
                                                 {masterStep.title}
                                             </h3>
-                                            <p className="text-xs text-muted-foreground">
+                                            <p className="text-xs text-muted-foreground whitespace-nowrap">
                                                 {completion.completedCount}/
                                                 {completion.totalCount} complete
                                             </p>
@@ -157,7 +181,7 @@ export function StepperNav({
                                     {completion.percentage > 0 && (
                                         <span
                                             className={cn(
-                                                "text-xs font-medium px-2 py-1 rounded-full",
+                                                "text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap flex-shrink-0",
                                                 {
                                                     "bg-green-100 text-green-700":
                                                         completion.isFullyComplete,
@@ -172,8 +196,8 @@ export function StepperNav({
                                 </div>
                             </AccordionTrigger>
 
-                            <AccordionContent className="px-4 pb-3 pt-0">
-                                <div className="space-y-2 pl-2">
+                            <AccordionContent className="px-3 pb-3 pt-0">
+                                <div className="space-y-1.5 pl-1">
                                     {masterStep.subSteps.map((stepNumber) => {
                                         const step = STEPS.find(
                                             (s) => s.number === stepNumber
@@ -192,7 +216,7 @@ export function StepperNav({
                                                 key={step.number}
                                                 href={href}
                                                 className={cn(
-                                                    "block rounded-md border px-3 py-3 transition-all",
+                                                    "block rounded-md border px-2.5 py-2.5 transition-all",
                                                     {
                                                         // Current page
                                                         "border-primary bg-primary/10 shadow-sm":
@@ -207,8 +231,8 @@ export function StepperNav({
                                                 )}
                                             >
                                                 <div className="flex items-start justify-between gap-2">
-                                                    <div className="flex items-start gap-2 flex-1 min-w-0">
-                                                        {/* Step Number/Check */}
+                                                    <div className="flex items-start gap-2.5 flex-1 min-w-0">
+                                                        {/* Step Completion Indicator */}
                                                         {isCompleted ? (
                                                             <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-green-500 mt-0.5">
                                                                 <Check className="h-3 w-3 text-white" />
@@ -216,25 +240,23 @@ export function StepperNav({
                                                         ) : (
                                                             <div
                                                                 className={cn(
-                                                                    "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-medium mt-0.5",
+                                                                    "h-5 w-5 flex-shrink-0 rounded-full border-2 mt-0.5",
                                                                     {
-                                                                        "bg-primary text-white":
+                                                                        "border-primary bg-primary/10":
                                                                             isCurrentPage,
-                                                                        "bg-muted text-muted-foreground":
+                                                                        "border-muted-foreground/30 bg-transparent":
                                                                             !isCurrentPage,
                                                                     }
                                                                 )}
-                                                            >
-                                                                {step.number}
-                                                            </div>
+                                                            />
                                                         )}
 
                                                         {/* Step Info */}
                                                         <div className="flex-1 min-w-0">
-                                                            <div className="flex items-center gap-1.5 mb-0.5">
+                                                            <div className="flex items-center gap-1.5 mb-1">
                                                                 <h4
                                                                     className={cn(
-                                                                        "text-xs font-medium leading-none truncate",
+                                                                        "text-xs font-medium leading-tight break-words",
                                                                         {
                                                                             "text-foreground":
                                                                                 isCurrentPage ||
@@ -253,7 +275,7 @@ export function StepperNav({
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            <p className="text-xs text-muted-foreground leading-snug">
+                                                            <p className="text-[11px] text-muted-foreground leading-relaxed break-words">
                                                                 {step.description}
                                                             </p>
                                                         </div>

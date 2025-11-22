@@ -77,109 +77,115 @@ export function HorizontalMasterSteps({
                 <CardContent className="pt-6">
                     {/* Horizontal Master Steps Row */}
                     <div className="flex items-start justify-between gap-4">
-                {MASTER_STEPS.map((masterStep, index) => {
-                    const completion = masterStepCompletions.find(
-                        (c) => c.masterStepId === masterStep.id
-                    );
-                    if (!completion) return null;
+                        {MASTER_STEPS.map((masterStep, index) => {
+                            const completion = masterStepCompletions.find(
+                                (c) => c.masterStepId === masterStep.id
+                            );
+                            if (!completion) return null;
 
-                    const Icon =
-                        ICON_MAP[masterStep.id as keyof typeof ICON_MAP] || Building2;
-                    const isExpanded = expandedStep === masterStep.id;
-                    const isLastStep = index === MASTER_STEPS.length - 1;
+                            const Icon =
+                                ICON_MAP[masterStep.id as keyof typeof ICON_MAP] ||
+                                Building2;
+                            const isExpanded = expandedStep === masterStep.id;
+                            const isLastStep = index === MASTER_STEPS.length - 1;
 
-                    return (
-                        <div key={masterStep.id} className="flex items-start flex-1">
-                            {/* Master Step Button */}
-                            <div className="flex flex-col items-center flex-1">
-                                <button
-                                    onClick={() => toggleExpanded(masterStep.id)}
-                                    className={cn(
-                                        "group relative flex flex-col items-center gap-2 p-3 rounded-lg transition-all hover:bg-muted/50 w-full",
-                                        {
-                                            "bg-primary/5": isExpanded,
-                                        }
-                                    )}
+                            return (
+                                <div
+                                    key={masterStep.id}
+                                    className="flex items-start flex-1"
                                 >
-                                    {/* Icon Circle */}
-                                    <div
-                                        className={cn(
-                                            "relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full transition-all",
-                                            {
-                                                "bg-green-500 shadow-lg":
-                                                    completion.isFullyComplete,
-                                                "bg-primary shadow-md":
-                                                    completion.isPartiallyComplete,
-                                                "bg-muted border-2 border-border":
-                                                    !completion.isFullyComplete &&
-                                                    !completion.isPartiallyComplete,
+                                    {/* Master Step Button */}
+                                    <div className="flex flex-col items-center flex-1">
+                                        <button
+                                            onClick={() =>
+                                                toggleExpanded(masterStep.id)
                                             }
-                                        )}
-                                    >
-                                        {completion.isFullyComplete ? (
-                                            <Check className="h-8 w-8 text-white" />
-                                        ) : completion.isPartiallyComplete ? (
-                                            <div className="flex flex-col items-center">
-                                                <Icon className="h-6 w-6 text-white" />
-                                                <span className="text-[10px] font-bold text-white mt-0.5">
-                                                    {completion.completedCount}/
-                                                    {completion.totalCount}
-                                                </span>
-                                            </div>
-                                        ) : (
-                                            <Icon className="h-7 w-7 text-muted-foreground" />
-                                        )}
-
-                                        {/* Percentage Badge */}
-                                        {completion.percentage > 0 && (
+                                            className={cn(
+                                                "group relative flex flex-col items-center gap-2 p-3 rounded-lg transition-all hover:bg-muted/50 w-full",
+                                                {
+                                                    "bg-primary/5": isExpanded,
+                                                }
+                                            )}
+                                        >
+                                            {/* Icon Circle */}
                                             <div
                                                 className={cn(
-                                                    "absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold",
+                                                    "relative flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-full transition-all",
                                                     {
-                                                        "bg-green-600 text-white":
+                                                        "bg-green-500 shadow-lg":
                                                             completion.isFullyComplete,
-                                                        "bg-primary text-white":
+                                                        "bg-primary shadow-md":
                                                             completion.isPartiallyComplete,
+                                                        "bg-muted border-2 border-border":
+                                                            !completion.isFullyComplete &&
+                                                            !completion.isPartiallyComplete,
                                                     }
                                                 )}
                                             >
-                                                {completion.percentage}%
+                                                {completion.isFullyComplete ? (
+                                                    <Check className="h-8 w-8 text-white" />
+                                                ) : completion.isPartiallyComplete ? (
+                                                    <div className="flex flex-col items-center">
+                                                        <Icon className="h-6 w-6 text-white" />
+                                                        <span className="text-[10px] font-bold text-white mt-0.5">
+                                                            {completion.completedCount}/
+                                                            {completion.totalCount}
+                                                        </span>
+                                                    </div>
+                                                ) : (
+                                                    <Icon className="h-7 w-7 text-muted-foreground" />
+                                                )}
+
+                                                {/* Percentage Badge */}
+                                                {completion.percentage > 0 && (
+                                                    <div
+                                                        className={cn(
+                                                            "absolute -top-1 -right-1 flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold",
+                                                            {
+                                                                "bg-green-600 text-white":
+                                                                    completion.isFullyComplete,
+                                                                "bg-primary text-white":
+                                                                    completion.isPartiallyComplete,
+                                                            }
+                                                        )}
+                                                    >
+                                                        {completion.percentage}%
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
+
+                                            {/* Title */}
+                                            <div className="text-center">
+                                                <h3 className="text-sm font-semibold text-foreground leading-tight mb-1">
+                                                    {masterStep.title}
+                                                </h3>
+                                                <p className="text-xs text-muted-foreground leading-tight">
+                                                    {completion.completedCount}/
+                                                    {completion.totalCount} complete
+                                                </p>
+                                            </div>
+
+                                            {/* Expand Indicator */}
+                                            <ChevronDown
+                                                className={cn(
+                                                    "h-4 w-4 text-muted-foreground transition-transform",
+                                                    {
+                                                        "rotate-180": isExpanded,
+                                                    }
+                                                )}
+                                            />
+                                        </button>
                                     </div>
 
-                                    {/* Title */}
-                                    <div className="text-center">
-                                        <h3 className="text-sm font-semibold text-foreground leading-tight mb-1">
-                                            {masterStep.title}
-                                        </h3>
-                                        <p className="text-xs text-muted-foreground leading-tight">
-                                            {completion.completedCount}/
-                                            {completion.totalCount} complete
-                                        </p>
-                                    </div>
-
-                                    {/* Expand Indicator */}
-                                    <ChevronDown
-                                        className={cn(
-                                            "h-4 w-4 text-muted-foreground transition-transform",
-                                            {
-                                                "rotate-180": isExpanded,
-                                            }
-                                        )}
-                                    />
-                                </button>
-                            </div>
-
-                            {/* Connecting Line (not shown after last step) */}
-                            {!isLastStep && (
-                                <div className="flex items-center pt-8 px-2">
-                                    <div className="h-0.5 w-full bg-border" />
+                                    {/* Connecting Line (not shown after last step) */}
+                                    {!isLastStep && (
+                                        <div className="flex items-center pt-8 px-2">
+                                            <div className="h-0.5 w-full bg-border" />
+                                        </div>
+                                    )}
                                 </div>
-                            )}
-                        </div>
-                    );
-                })}
+                            );
+                        })}
                     </div>
                 </CardContent>
             </Card>

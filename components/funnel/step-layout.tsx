@@ -1,11 +1,22 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Check, LayoutDashboard } from "lucide-react";
+import {
+    ArrowLeft,
+    ArrowRight,
+    Check,
+    LayoutDashboard,
+    ChevronLeft,
+    ChevronRight,
+} from "lucide-react";
 import { StepperNav } from "./stepper-nav";
 import { GenerationProgressTracker } from "@/components/layout/generation-progress-tracker";
-import { getMasterStepForSubStep } from "@/app/funnel-builder/master-steps-config";
+import {
+    getMasterStepForSubStep,
+    MASTER_STEPS,
+    getFirstIncompleteSubStep,
+} from "@/app/funnel-builder/master-steps-config";
 
 interface StepLayoutProps {
     children: ReactNode;
@@ -58,47 +69,139 @@ export function StepLayout({
     const previousHref = getPreviousStepHref(currentStep, projectId);
     const masterStep = getMasterStepForSubStep(currentStep);
 
+    // Sidebar collapse state
+    const [isCollapsed, setIsCollapsed] = useState(false);
+    const [expandedMasterStep, setExpandedMasterStep] = useState<number | null>(null);
+
+    // Load collapse state from localStorage on mount
+    useEffect(() => {
+        const savedState = localStorage.getItem("sidebar-collapsed");
+        if (savedState !== null) {
+            setIsCollapsed(savedState === "true");
+        }
+    }, []);
+
+    // Save collapse state to localStorage
+    const toggleSidebar = () => {
+        const newState = !isCollapsed;
+        setIsCollapsed(newState);
+        localStorage.setItem("sidebar-collapsed", String(newState));
+    };
+
+    // Handle master step button click from collapsed sidebar
+    const handleMasterStepClick = (masterStepId: number) => {
+        setIsCollapsed(false);
+        setExpandedMasterStep(masterStepId);
+        localStorage.setItem("sidebar-collapsed", "false");
+    };
+
     return (
         <div className="min-h-screen bg-muted/50">
             {/* Step Navigation Sidebar */}
-            <div className="fixed left-0 top-0 h-screen w-64 overflow-y-auto border-r border-border bg-card">
-                <div className="p-6">
-                    {/* Back to Dashboard Button */}
-                    <Link
-                        href={`/funnel-builder/${projectId}`}
-                        className="mb-6 flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:border-border"
+            <div
+                className={`fixed left-0 top-0 h-screen overflow-y-auto border-r border-border bg-card transition-all duration-300 ${
+                    isCollapsed ? "w-16" : "w-80"
+                }`}
+            >
+                <div className="relative h-full">
+                    {/* Collapse/Expand Toggle Button */}
+                    <button
+                        onClick={toggleSidebar}
+                        className="absolute top-4 right-2 z-10 flex h-8 w-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground shadow-sm transition-colors hover:bg-muted hover:text-foreground"
+                        aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
                     >
-                        <LayoutDashboard className="h-4 w-4" />
-                        <span>Back to Dashboard</span>
-                    </Link>
+                        {isCollapsed ? (
+                            <ChevronRight className="h-4 w-4" />
+                        ) : (
+                            <ChevronLeft className="h-4 w-4" />
+                        )}
+                    </button>
 
-                    {/* Funnel Info */}
-                    <div className="mb-6">
-                        <h2 className="truncate text-lg font-semibold text-foreground">
-                            {funnelName || "Funnel Builder"}
-                        </h2>
-                        <div className="space-y-1">
-                            <p className="text-sm text-muted-foreground">
-                                Step {currentStep} of 15
-                            </p>
-                            {masterStep && (
-                                <p className="text-xs text-primary font-medium">
-                                    {masterStep.title}
-                                </p>
-                            )}
+                    {!isCollapsed && (
+                        <div className="p-6">
+                            {/* Back to Dashboard Button */}
+                            <Link
+                                href={`/funnel-builder/${projectId}`}
+                                className="mb-6 flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-4 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted hover:border-border"
+                            >
+                                <LayoutDashboard className="h-4 w-4" />
+                                <span>Back to Dashboard</span>
+                            </Link>
+
+                            {/* Funnel Info */}
+                            <div className="mb-6">
+                                <h2 className="text-lg font-semibold text-foreground break-words">
+                                    {funnelName || "Funnel Builder"}
+                                </h2>
+                                <div className="space-y-1">
+                                    <p className="text-sm text-muted-foreground">
+                                        Step {currentStep} of 15
+                                    </p>
+                                    {masterStep && (
+                                        <p className="text-xs text-primary font-medium">
+                                            {masterStep.title}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+
+                            <StepperNav
+                                projectId={projectId}
+                                currentStep={currentStep}
+                                completedSteps={completedSteps}
+                                expandedMasterStep={expandedMasterStep}
+                                onMasterStepExpanded={() => setExpandedMasterStep(null)}
+                            />
                         </div>
-                    </div>
+                    )}
 
-                    <StepperNav
-                        projectId={projectId}
-                        currentStep={currentStep}
-                        completedSteps={completedSteps}
-                    />
+                    {isCollapsed && (
+                        <div className="flex h-full flex-col items-center pt-16 gap-3 px-2">
+                            {/* Collapsed state - show minimal info */}
+                            <Link
+                                href={`/funnel-builder/${projectId}`}
+                                className="flex h-10 w-10 items-center justify-center rounded-lg border border-border bg-muted/50 text-foreground transition-colors hover:bg-muted hover:border-border"
+                                title="Back to Dashboard"
+                            >
+                                <LayoutDashboard className="h-5 w-5" />
+                            </Link>
+
+                            {/* Divider */}
+                            <div className="w-8 h-px bg-border my-1" />
+
+                            {/* Master Step Quick Nav Buttons */}
+                            {MASTER_STEPS.map((masterStep) => {
+                                const isCurrent =
+                                    masterStep.subSteps.includes(currentStep);
+
+                                return (
+                                    <button
+                                        key={masterStep.id}
+                                        onClick={() =>
+                                            handleMasterStepClick(masterStep.id)
+                                        }
+                                        className={`flex h-10 w-10 items-center justify-center rounded-lg border text-xs font-bold transition-colors ${
+                                            isCurrent
+                                                ? "border-primary bg-primary/10 text-primary hover:bg-primary/20"
+                                                : "border-border bg-card text-muted-foreground hover:bg-muted hover:border-border hover:text-foreground"
+                                        }`}
+                                        title={masterStep.title}
+                                    >
+                                        {masterStep.id}
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* Main Content */}
-            <div className="ml-64 min-h-screen">
+            <div
+                className={`min-h-screen transition-all duration-300 ${
+                    isCollapsed ? "ml-16" : "ml-80"
+                }`}
+            >
                 <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
                     {/* Step Header */}
                     {(stepTitle || stepDescription) && (

@@ -17,10 +17,10 @@ class IconPicker {
     }
 
     attachStyles() {
-        if (document.getElementById('icon-picker-styles')) return;
+        if (document.getElementById("icon-picker-styles")) return;
 
-        const styles = document.createElement('style');
-        styles.id = 'icon-picker-styles';
+        const styles = document.createElement("style");
+        styles.id = "icon-picker-styles";
         styles.textContent = `
             .icon-picker-overlay {
                 position: fixed;
@@ -262,9 +262,9 @@ class IconPicker {
     }
 
     createModal() {
-        const overlay = document.createElement('div');
-        overlay.className = 'icon-picker-overlay';
-        overlay.id = 'icon-picker-overlay';
+        const overlay = document.createElement("div");
+        overlay.className = "icon-picker-overlay";
+        overlay.id = "icon-picker-overlay";
 
         overlay.innerHTML = `
             <div class="icon-picker-modal" onclick="event.stopPropagation()">
@@ -300,25 +300,25 @@ class IconPicker {
         document.body.appendChild(overlay);
 
         // Event listeners
-        overlay.addEventListener('click', (e) => {
+        overlay.addEventListener("click", (e) => {
             if (e.target === overlay) this.close();
         });
 
-        document.getElementById('icon-search-input').addEventListener('input', (e) => {
+        document.getElementById("icon-search-input").addEventListener("input", (e) => {
             this.filterIcons(e.target.value);
         });
 
-        document.getElementById('icon-select-btn').addEventListener('click', () => {
+        document.getElementById("icon-select-btn").addEventListener("click", () => {
             this.selectIcon();
         });
 
         // Keyboard support
-        document.addEventListener('keydown', (e) => {
-            const overlay = document.getElementById('icon-picker-overlay');
-            if (overlay && overlay.classList.contains('active')) {
-                if (e.key === 'Escape') {
+        document.addEventListener("keydown", (e) => {
+            const overlay = document.getElementById("icon-picker-overlay");
+            if (overlay && overlay.classList.contains("active")) {
+                if (e.key === "Escape") {
                     this.close();
-                } else if (e.key === 'Enter' && this.currentIconName) {
+                } else if (e.key === "Enter" && this.currentIconName) {
                     this.selectIcon();
                 }
             }
@@ -327,49 +327,55 @@ class IconPicker {
 
     open(element, currentIconName, onSelect) {
         this.currentElement = element;
-        this.currentIconName = currentIconName || 'target';
+        this.currentIconName = currentIconName || "target";
         this.onSelectCallback = onSelect;
 
         this.renderIcons();
 
-        const overlay = document.getElementById('icon-picker-overlay');
-        overlay.classList.add('active');
+        const overlay = document.getElementById("icon-picker-overlay");
+        overlay.classList.add("active");
 
         // Focus search input
         setTimeout(() => {
-            document.getElementById('icon-search-input').focus();
+            document.getElementById("icon-search-input").focus();
         }, 100);
     }
 
     close() {
-        const overlay = document.getElementById('icon-picker-overlay');
-        overlay.classList.remove('active');
+        const overlay = document.getElementById("icon-picker-overlay");
+        overlay.classList.remove("active");
 
         // Reset
         this.currentElement = null;
         this.currentIconName = null;
         this.onSelectCallback = null;
-        document.getElementById('icon-search-input').value = '';
+        document.getElementById("icon-search-input").value = "";
     }
 
-    renderIcons(filter = '') {
-        const body = document.getElementById('icon-picker-body');
+    renderIcons(filter = "") {
+        const body = document.getElementById("icon-picker-body");
         const categories = window.ICON_CATEGORIES;
 
         if (!categories) {
-            body.innerHTML = '<div class="icon-picker-empty">Icon categories not loaded</div>';
+            body.innerHTML =
+                '<div class="icon-picker-empty">Icon categories not loaded</div>';
             return;
         }
 
         const filterLower = filter.toLowerCase();
         let hasResults = false;
-        let html = '';
+        let html = "";
 
         for (const [categoryKey, categoryData] of Object.entries(categories)) {
-            const filteredIcons = categoryData.icons.filter(iconName => {
+            const filteredIcons = categoryData.icons.filter((iconName) => {
                 if (!filter) return true;
-                return iconName.includes(filterLower) ||
-                       window.getIconDisplayName(iconName).toLowerCase().includes(filterLower);
+                return (
+                    iconName.includes(filterLower) ||
+                    window
+                        .getIconDisplayName(iconName)
+                        .toLowerCase()
+                        .includes(filterLower)
+                );
             });
 
             if (filteredIcons.length > 0) {
@@ -378,16 +384,20 @@ class IconPicker {
                     <div class="icon-category">
                         <div class="icon-category-title">${categoryData.name}</div>
                         <div class="icon-grid">
-                            ${filteredIcons.map(iconName => `
+                            ${filteredIcons
+                                .map(
+                                    (iconName) => `
                                 <div
-                                    class="icon-item ${iconName === this.currentIconName ? 'selected' : ''}"
+                                    class="icon-item ${iconName === this.currentIconName ? "selected" : ""}"
                                     data-icon="${iconName}"
                                     onclick="window.iconPicker.selectIconItem('${iconName}')"
                                 >
                                     ${window.getIconSvg(iconName)}
                                     <div class="icon-item-name">${window.getIconDisplayName(iconName)}</div>
                                 </div>
-                            `).join('')}
+                            `
+                                )
+                                .join("")}
                         </div>
                     </div>
                 `;
@@ -395,7 +405,10 @@ class IconPicker {
         }
 
         if (!hasResults) {
-            html = '<div class="icon-picker-empty">No icons found matching "' + filter + '"</div>';
+            html =
+                '<div class="icon-picker-empty">No icons found matching "' +
+                filter +
+                '"</div>';
         }
 
         body.innerHTML = html;
@@ -407,18 +420,18 @@ class IconPicker {
 
     selectIconItem(iconName) {
         // Update selection
-        const items = document.querySelectorAll('.icon-item');
-        items.forEach(item => item.classList.remove('selected'));
+        const items = document.querySelectorAll(".icon-item");
+        items.forEach((item) => item.classList.remove("selected"));
 
         const selectedItem = document.querySelector(`[data-icon="${iconName}"]`);
         if (selectedItem) {
-            selectedItem.classList.add('selected');
+            selectedItem.classList.add("selected");
         }
 
         this.currentIconName = iconName;
 
         // Enable select button
-        document.getElementById('icon-select-btn').disabled = false;
+        document.getElementById("icon-select-btn").disabled = false;
     }
 
     selectIcon() {
@@ -427,7 +440,7 @@ class IconPicker {
         // Update the icon in the DOM
         const newSvg = window.getIconSvg(this.currentIconName);
         this.currentElement.innerHTML = newSvg;
-        this.currentElement.setAttribute('data-icon', this.currentIconName);
+        this.currentElement.setAttribute("data-icon", this.currentIconName);
 
         // Trigger auto-save if available
         if (window.scheduleAutoSave) {
@@ -439,28 +452,38 @@ class IconPicker {
             this.onSelectCallback(this.currentIconName, newSvg);
         }
 
-        console.log('✅ Icon updated to:', this.currentIconName);
+        console.log("✅ Icon updated to:", this.currentIconName);
         this.close();
     }
 
     // Initialize click handlers for icons in the editor
     initializeIconClickHandlers() {
-        // Wait a bit for the DOM to be ready
-        setTimeout(() => {
+        console.log("🎯 Initializing icon click handlers...");
+        this.attachClickHandlers();
+
+        // Also set up a mutation observer to catch dynamically added icons
+        const observer = new MutationObserver(() => {
             this.attachClickHandlers();
-        }, 500);
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+
+        this.observer = observer;
     }
 
     attachClickHandlers() {
-        const iconElements = document.querySelectorAll('.feature-icon, .screen-icon');
+        const iconElements = document.querySelectorAll(".feature-icon, .screen-icon");
 
-        iconElements.forEach(icon => {
+        iconElements.forEach((icon) => {
             // Skip if already has handler
-            if (icon.hasAttribute('data-icon-picker-ready')) return;
+            if (icon.hasAttribute("data-icon-picker-ready")) return;
 
-            icon.setAttribute('data-icon-picker-ready', 'true');
-            icon.setAttribute('data-icon-picker-active', 'true'); // Mark for visual editor to skip
-            icon.style.cursor = 'pointer';
+            icon.setAttribute("data-icon-picker-ready", "true");
+            icon.setAttribute("data-icon-picker-active", "true"); // Mark for visual editor to skip
+            icon.style.cursor = "pointer";
 
             // Click handler
             const clickHandler = (e) => {
@@ -469,20 +492,20 @@ class IconPicker {
                 e.stopImmediatePropagation();
                 e.preventDefault();
 
-                console.log('🎨 Icon clicked - opening picker modal');
+                console.log("🎨 Icon clicked - opening picker modal");
 
                 // Get current icon name from data attribute or try to detect
-                let currentIcon = icon.getAttribute('data-icon') || 'target';
+                let currentIcon = icon.getAttribute("data-icon") || "target";
 
                 this.open(icon, currentIcon, (iconName) => {
-                    console.log('✅ Icon changed to:', iconName);
+                    console.log("✅ Icon changed to:", iconName);
                 });
 
                 return false;
             };
 
             // Add listener in capture phase to intercept BEFORE visual editor
-            icon.addEventListener('click', clickHandler, { capture: true });
+            icon.addEventListener("click", clickHandler, { capture: true });
         });
 
         console.log(`✅ Icon picker initialized for ${iconElements.length} icons`);
@@ -490,8 +513,7 @@ class IconPicker {
 }
 
 // Initialize globally
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
     window.IconPicker = IconPicker;
     // Don't auto-initialize - let editor-page-wrapper.tsx control initialization
 }
-

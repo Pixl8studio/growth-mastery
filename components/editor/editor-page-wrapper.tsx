@@ -345,23 +345,16 @@ export function EditorPageWrapper({
 
             {/* Load icon picker for interactive icon selection */}
             <Script
-                src="/funnel-system/assets/js/icon-picker.js?v=6.9"
+                src="/funnel-system/assets/js/icon-picker.js?v=7.0"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Icon picker script loaded");
-                    
-                    // Initialize icon picker
+
+                    // Initialize icon picker immediately
                     if (typeof IconPicker !== "undefined" && !window.iconPicker) {
                         window.iconPicker = new IconPicker();
                         console.log("✅ Icon picker instantiated!");
-                        
-                        // Attach click handlers to icons after a short delay to ensure DOM is ready
-                        setTimeout(() => {
-                            if (window.iconPicker) {
-                                window.iconPicker.initializeIconClickHandlers();
-                                console.log("✅ Icon click handlers attached!");
-                            }
-                        }, 1000);
+                        window.iconPicker.initializeIconClickHandlers();
                     }
                 }}
             />

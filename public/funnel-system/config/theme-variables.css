@@ -22,6 +22,13 @@
   --bg-gradient-subtle: linear-gradient(135deg, hsl(103 89% 29% / 0.03), hsl(120 55% 55% / 0.02));
   --bg-gradient-reverse: linear-gradient(135deg, hsl(103 89% 35%), hsl(103 89% 29%));
 
+  /* Section Backgrounds - Light and Clean */
+  --bg-section-1: #FFFFFF;
+  --bg-section-2: hsl(120 30% 96%);
+  --bg-section-3: hsl(48 38% 98%);
+  --bg-section-4: hsl(120 20% 97%);
+  --bg-section-5: #FFFFFF;
+
   /* Feature section background for contrast - Softer */
   --bg-features: linear-gradient(135deg, hsl(120 30% 96%), hsl(48 38% 98%));
 
@@ -112,8 +119,9 @@
   --container-2xl: 1536px;
 }
 
-/* Dark Mode Support */
-@media (prefers-color-scheme: dark) {
+/* Dark Mode Support - DISABLED for consistent light theme */
+/* Funnel pages should always use light, clean backgrounds for better readability */
+/* @media (prefers-color-scheme: dark) {
   :root {
     --text-primary: #F9FAFB;
     --text-secondary: #D1D5DB;
@@ -121,10 +129,8 @@
     --bg-secondary: #111827;
     --bg-tertiary: #0F172A;
     --bg-quaternary: #020617;
-
-    /* Dark mode: Individual section backgrounds controlled via editor */
   }
-}
+} */
 
 /* Utility Classes for Background Variations */
 /* Individual section backgrounds are now controlled via the editor */

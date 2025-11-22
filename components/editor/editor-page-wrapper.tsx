@@ -71,9 +71,10 @@ export function EditorPageWrapper({
 
         // Load editor CSS files dynamically (with cache-busting)
         const cssFiles = [
-            "/funnel-system/assets/css/editor.css?v=6.0",
-            "/funnel-system/assets/css/blocks.css?v=6.0",
-            "/funnel-system/assets/css/component-library.css?v=6.0",
+            "/funnel-system/config/theme-variables.css?v=6.1",
+            "/funnel-system/assets/css/editor.css?v=6.1",
+            "/funnel-system/assets/css/blocks.css?v=6.1",
+            "/funnel-system/assets/css/component-library.css?v=6.1",
         ];
 
         cssFiles.forEach((href) => {
@@ -156,6 +157,24 @@ export function EditorPageWrapper({
                         --secondary-color: ${theme.secondary};
                         --background-color: ${theme.background};
                         --text-color: ${theme.text};
+
+                        /* Force light theme - override any dark mode styles */
+                        --text-primary: #111827 !important;
+                        --text-secondary: #6B7280 !important;
+                        --text-light: #9CA3AF !important;
+                        --text-white: #FFFFFF !important;
+                        --bg-primary: #FFFFFF !important;
+                        --bg-secondary: hsl(120 30% 92%) !important;
+                        --bg-tertiary: hsl(120 20% 95%) !important;
+                        --bg-quaternary: hsl(120 15% 90%) !important;
+
+                        /* Section backgrounds - light and clean */
+                        --bg-section-1: #FFFFFF !important;
+                        --bg-section-2: hsl(120 30% 96%) !important;
+                        --bg-section-3: hsl(48 38% 98%) !important;
+                        --bg-section-4: hsl(120 20% 97%) !important;
+                        --bg-section-5: #FFFFFF !important;
+
                         --space-1: 0.25rem;
                         --space-2: 0.5rem;
                         --space-3: 0.75rem;
@@ -166,6 +185,19 @@ export function EditorPageWrapper({
                         --space-16: 4rem;
                         --space-20: 5rem;
                     }
+
+                    body {
+                        background: #FFFFFF !important;
+                        color: #111827 !important;
+                    }
+
+                    /* Ensure page content uses light backgrounds */
+                    .page-container,
+                    .block,
+                    section {
+                        background-color: var(--bg-primary, #FFFFFF);
+                        color: var(--text-primary, #111827);
+                    }
                 `}</style>
                 <div dangerouslySetInnerHTML={{ __html: htmlContent }} />
             </>
@@ -175,13 +207,31 @@ export function EditorPageWrapper({
     // Edit mode - load full editor
     return (
         <>
-            {/* Theme CSS variables */}
+            {/* Theme CSS variables - Light theme enforcement */}
             <style>{`
                 :root {
                     --primary-color: ${theme.primary};
                     --secondary-color: ${theme.secondary};
                     --background-color: ${theme.background};
                     --text-color: ${theme.text};
+
+                    /* Force light theme - override any dark mode styles */
+                    --text-primary: #111827 !important;
+                    --text-secondary: #6B7280 !important;
+                    --text-light: #9CA3AF !important;
+                    --text-white: #FFFFFF !important;
+                    --bg-primary: #FFFFFF !important;
+                    --bg-secondary: hsl(120 30% 92%) !important;
+                    --bg-tertiary: hsl(120 20% 95%) !important;
+                    --bg-quaternary: hsl(120 15% 90%) !important;
+
+                    /* Section backgrounds - light and clean */
+                    --bg-section-1: #FFFFFF !important;
+                    --bg-section-2: hsl(120 30% 96%) !important;
+                    --bg-section-3: hsl(48 38% 98%) !important;
+                    --bg-section-4: hsl(120 20% 97%) !important;
+                    --bg-section-5: #FFFFFF !important;
+
                     --space-1: 0.25rem;
                     --space-2: 0.5rem;
                     --space-3: 0.75rem;
@@ -197,6 +247,16 @@ export function EditorPageWrapper({
                     margin: 0;
                     padding: 0;
                     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                    background: #FFFFFF !important;
+                    color: #111827 !important;
+                }
+
+                /* Ensure page container uses light background */
+                .page-container,
+                .block,
+                section {
+                    background-color: var(--bg-primary, #FFFFFF);
+                    color: var(--text-primary, #111827);
                 }
             `}</style>
 
@@ -204,7 +264,7 @@ export function EditorPageWrapper({
 
             {/* Load icon mapper first */}
             <Script
-                src="/funnel-system/assets/js/icon-mapper.js?v=6.0"
+                src="/funnel-system/assets/js/icon-mapper.js?v=6.2"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Icon mapper script loaded");
@@ -213,7 +273,7 @@ export function EditorPageWrapper({
 
             {/* Load editor JavaScript - vanilla JS works as-is! */}
             <Script
-                src="/funnel-system/assets/js/visual-editor.js?v=6.0"
+                src="/funnel-system/assets/js/visual-editor.js?v=6.5"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Visual editor script loaded");
@@ -229,7 +289,7 @@ export function EditorPageWrapper({
                 }}
             />
             <Script
-                src="/funnel-system/assets/js/blocks.js"
+                src="/funnel-system/assets/js/blocks.js?v=6.1"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Blocks script loaded");
@@ -242,7 +302,7 @@ export function EditorPageWrapper({
                 }}
             />
             <Script
-                src="/funnel-system/assets/js/component-library.js?v=6.0"
+                src="/funnel-system/assets/js/component-library.js?v=6.1"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Component library script loaded");

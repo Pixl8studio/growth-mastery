@@ -15,6 +15,8 @@ import {
     Edit2,
     Check,
     X,
+    Palette,
+    DollarSign,
 } from "lucide-react";
 import { VapiCallWidget } from "@/components/funnel/vapi-call-widget";
 import {
@@ -24,6 +26,7 @@ import {
 import { PasteIntake } from "@/components/intake/paste-intake";
 import { UploadIntake } from "@/components/intake/upload-intake";
 import { ScrapeIntake } from "@/components/intake/scrape-intake";
+import { IntakeDataViewer } from "@/components/intake/intake-data-viewer";
 // REMOVED: import { AutoGenerationModal } from "@/components/funnel/auto-generation-modal";
 // REMOVED: import {
 //     AutoGenerationProgress,
@@ -42,11 +45,43 @@ interface IntakeSession {
     call_duration: number;
     call_status: string;
     created_at: string;
-    extracted_data?: unknown;
+    extracted_data?: {
+        pricing?: Array<{
+            amount: number;
+            currency: string;
+            context: string;
+            confidence: "high" | "medium" | "low";
+        }>;
+    };
+    brand_data?: {
+        colors: {
+            primary: string;
+            secondary: string;
+            accent: string;
+            background: string;
+            text: string;
+        };
+        fonts: {
+            primary?: string;
+            secondary?: string;
+            weights: string[];
+        };
+        style: {
+            borderRadius?: string;
+            shadows?: boolean;
+            gradients?: boolean;
+        };
+        confidence: {
+            colors: number;
+            fonts: number;
+            overall: number;
+        };
+    };
     intake_method: string;
     session_name?: string;
     file_urls?: string[];
     scraped_url?: string;
+    metadata?: Record<string, unknown>;
 }
 
 interface FunnelProject {
@@ -85,6 +120,8 @@ export default function Step1Page({
     const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
     const [editingSessionName, setEditingSessionName] = useState<string>("");
     const [isRenaming, setIsRenaming] = useState(false);
+    const [selectedSession, setSelectedSession] = useState<IntakeSession | null>(null);
+    const [isViewerOpen, setIsViewerOpen] = useState(false);
 
     // Load completion status
     const { completedSteps, refreshCompletion } = useStepCompletion(projectId);
@@ -132,7 +169,9 @@ export default function Step1Page({
             // Get all intake sessions for this project
             const { data: sessionData, error } = await supabase
                 .from("vapi_transcripts")
-                .select("*")
+                .select(
+                    "id, call_id, transcript_text, call_duration, call_status, created_at, extracted_data, brand_data, intake_method, session_name, file_urls, scraped_url, metadata"
+                )
                 .eq("funnel_project_id", projectId)
                 .order("created_at", { ascending: false });
 
@@ -608,7 +647,14 @@ export default function Step1Page({
                                 {intakeSessions.map((session) => (
                                     <div
                                         key={session.id}
-                                        className="rounded-lg border border-border bg-muted/50 p-4 transition-all hover:border-border hover:bg-muted"
+                                        className="cursor-pointer rounded-lg border border-border bg-muted/50 p-4 transition-all hover:border-primary/50 hover:bg-muted hover:shadow-md"
+                                        onClick={() => {
+                                            // Only open modal if not editing
+                                            if (editingSessionId !== session.id) {
+                                                setSelectedSession(session);
+                                                setIsViewerOpen(true);
+                                            }
+                                        }}
                                     >
                                         <div className="mb-3 flex items-center justify-between">
                                             <div className="flex items-center space-x-3 flex-1">
@@ -700,9 +746,10 @@ export default function Step1Page({
                                                     )}
                                                 {editingSessionId !== session.id && (
                                                     <button
-                                                        onClick={() =>
-                                                            handleStartRename(session)
-                                                        }
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleStartRename(session);
+                                                        }}
                                                         className="p-1 text-muted-foreground hover:text-foreground"
                                                         title="Rename session"
                                                     >
@@ -710,6 +757,39 @@ export default function Step1Page({
                                                     </button>
                                                 )}
                                             </div>
+                                        </div>
+
+                                        {/* Data Availability Badges */}
+                                        <div className="mb-3 flex flex-wrap gap-2">
+                                            {session.brand_data && (
+                                                <span className="flex items-center gap-1 rounded-full bg-purple-100 px-2 py-1 text-xs font-medium text-purple-800">
+                                                    <Palette className="h-3 w-3" />
+                                                    Brand Data
+                                                </span>
+                                            )}
+                                            {session.extracted_data?.pricing &&
+                                                session.extracted_data.pricing.length >
+                                                    0 && (
+                                                    <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                                                        <DollarSign className="h-3 w-3" />
+                                                        {
+                                                            session.extracted_data
+                                                                .pricing.length
+                                                        }{" "}
+                                                        Price
+                                                        {session.extracted_data.pricing
+                                                            .length !== 1
+                                                            ? "s"
+                                                            : ""}
+                                                    </span>
+                                                )}
+                                            {session.metadata &&
+                                                Object.keys(session.metadata).length >
+                                                    0 && (
+                                                    <span className="rounded-full bg-blue-100 px-2 py-1 text-xs font-medium text-blue-800">
+                                                        Metadata
+                                                    </span>
+                                                )}
                                         </div>
 
                                         {/* Additional Info Based on Method */}
@@ -730,23 +810,10 @@ export default function Step1Page({
                                                 </p>
                                             )}
 
-                                        {session.transcript_text && (
-                                            <div className="mt-3">
-                                                <details className="group">
-                                                    <summary className="cursor-pointer text-sm font-medium text-primary hover:text-primary">
-                                                        View Content
-                                                    </summary>
-                                                    <div className="mt-3 max-h-64 overflow-y-auto rounded bg-card p-3 text-sm text-foreground">
-                                                        {session.transcript_text.substring(
-                                                            0,
-                                                            500
-                                                        )}
-                                                        {session.transcript_text
-                                                            .length > 500 && "..."}
-                                                    </div>
-                                                </details>
-                                            </div>
-                                        )}
+                                        {/* Card is fully clickable - no preview needed */}
+                                        <p className="mt-2 text-xs text-muted-foreground">
+                                            Click to view all data →
+                                        </p>
                                     </div>
                                 ))}
                             </div>
@@ -860,6 +927,16 @@ export default function Step1Page({
                 mode={generationMode}
                 hasExistingContent={hasExistingContent}
             /> */}
+
+            {/* Intake Data Viewer Modal */}
+            <IntakeDataViewer
+                session={selectedSession}
+                isOpen={isViewerOpen}
+                onClose={() => {
+                    setIsViewerOpen(false);
+                    setSelectedSession(null);
+                }}
+            />
         </StepLayout>
     );
 }

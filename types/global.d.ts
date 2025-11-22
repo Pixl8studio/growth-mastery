@@ -69,4 +69,12 @@ interface Window {
     openImageGenerationModal?: () => void;
     openVideoSelectorModal?: () => void;
     openSectionGeneratorModal?: () => void;
+    openFieldRegenerateModal?: (
+        fieldId: string,
+        fieldContext: string,
+        element: HTMLElement
+    ) => void;
+
+    // AI field regeneration functions
+    addRegenerateIcons?: () => void;
 }

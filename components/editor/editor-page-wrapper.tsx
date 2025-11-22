@@ -16,22 +16,6 @@ import { SectionBlockGenerator } from "@/components/pages/section-block-generato
 import { FieldRegenerateModal } from "@/components/pages/field-regenerate-modal";
 import type { PitchVideo } from "@/types/pages";
 
-// Extend Window interface for custom properties
-declare global {
-    interface Window {
-        openFieldRegenerateModal?: (
-            fieldId: string,
-            fieldContext: string,
-            element: HTMLElement
-        ) => void;
-        addRegenerateIcons?: () => void;
-        visualEditor?: {
-            isEditMode: boolean;
-        };
-        scheduleAutoSave?: () => void;
-    }
-}
-
 interface EditorPageWrapperProps {
     pageId: string;
     projectId: string;

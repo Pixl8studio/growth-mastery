@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserWithProfile } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
-import { generateTextWithAI } from "@/lib/ai/client";
+import { generateTextWithAI, generateWithAI } from "@/lib/ai/client";
 import { createEnrollmentFieldPrompt } from "@/lib/generators/enrollment-framework-prompts";
 import * as cheerio from "cheerio";
 
@@ -21,7 +21,13 @@ export async function POST(
         const { user } = await getCurrentUserWithProfile();
         const { pageId } = await params;
         const body = await request.json();
-        const { fieldId, fieldContext } = body;
+        const {
+            fieldId,
+            fieldContext,
+            generateMultiple = false,
+            count = 3,
+            lengthPreference = "match",
+        } = body;
 
         if (!fieldId || !fieldContext) {
             return NextResponse.json(
@@ -29,6 +35,10 @@ export async function POST(
                 { status: 400 }
             );
         }
+
+        // Calculate current text metrics
+        const currentWordCount = fieldContext.trim().split(/\s+/).length;
+        const currentCharCount = fieldContext.length;
 
         const supabase = await createClient();
 
@@ -52,10 +62,10 @@ export async function POST(
             );
         }
 
-        // Fetch related data
+        // Fetch project and ALL intake data
         const { data: projectData, error: projectError } = await supabase
             .from("funnel_projects")
-            .select("*, intake_transcripts(*)")
+            .select("*")
             .eq("id", page.funnel_project_id)
             .single();
 
@@ -70,11 +80,87 @@ export async function POST(
             );
         }
 
-        const intakeData = projectData.intake_transcripts?.[0]?.extracted_data || {};
+        // Fetch ALL intake sessions for this project (all vapi_transcripts)
+        const { data: allIntakeSessions, error: intakeError } = await supabase
+            .from("vapi_transcripts")
+            .select("extracted_data, transcript_text, intake_method, session_name, created_at")
+            .eq("funnel_project_id", page.funnel_project_id)
+            .order("created_at", { ascending: false });
 
-        requestLogger.info({ pageId, fieldId }, "Regenerating enrollment field");
+        if (intakeError) {
+            requestLogger.warn(
+                { error: intakeError },
+                "Failed to fetch intake sessions, will use empty context"
+            );
+        }
 
-        // Generate new field content with AI
+        // Aggregate and CONDENSE all intake data from all sessions
+        const intakeData: any = {};
+        let condensedIntakeContext = "";
+
+        if (allIntakeSessions && allIntakeSessions.length > 0) {
+            requestLogger.info(
+                { sessionCount: allIntakeSessions.length },
+                "Aggregating data from all intake sessions"
+            );
+
+            // Merge extracted_data from all sessions, with newer sessions taking precedence
+            allIntakeSessions.reverse().forEach((session) => {
+                if (session.extracted_data) {
+                    Object.assign(intakeData, session.extracted_data);
+                }
+            });
+
+            // Create CONDENSED summary of key intake data (not full transcripts)
+            const keyFields = [
+                "targetAudience",
+                "businessNiche",
+                "desiredOutcome",
+                "painPoints",
+                "uniqueValue",
+                "mainProblem",
+                "currentSolution",
+                "transformationGoal",
+            ];
+
+            const condensedData: string[] = [];
+            keyFields.forEach((field) => {
+                if (intakeData[field]) {
+                    condensedData.push(`${field}: ${intakeData[field]}`);
+                }
+            });
+
+            condensedIntakeContext = condensedData.join("\n");
+
+            requestLogger.info(
+                { originalSessions: allIntakeSessions.length, condensedLength: condensedIntakeContext.length },
+                "Condensed intake data for AI processing"
+            );
+        } else {
+            requestLogger.warn("No intake sessions found for project");
+        }
+
+        // Determine length target based on preference
+        let lengthInstruction = "";
+        switch (lengthPreference) {
+            case "shorter":
+                lengthInstruction = `Keep it CONCISE - aim for ${Math.floor(currentWordCount * 0.7)}-${Math.floor(currentWordCount * 0.8)} words (current is ${currentWordCount} words).`;
+                break;
+            case "longer":
+                lengthInstruction = `Expand with MORE DETAIL - aim for ${Math.floor(currentWordCount * 1.3)}-${Math.floor(currentWordCount * 1.5)} words (current is ${currentWordCount} words).`;
+                break;
+            case "match":
+            default:
+                lengthInstruction = `MATCH THE CURRENT LENGTH closely - aim for ${Math.floor(currentWordCount * 0.9)}-${Math.floor(currentWordCount * 1.1)} words (current is ${currentWordCount} words).`;
+                break;
+        }
+
+        requestLogger.info(
+            { pageId, fieldId, generateMultiple, count, lengthPreference, currentWordCount },
+            "Regenerating enrollment field"
+        );
+
+        // Generate prompt for field content
         const prompt = createEnrollmentFieldPrompt(
             fieldId,
             fieldContext,
@@ -96,20 +182,117 @@ export async function POST(
                 targetAudience: intakeData.targetAudience,
                 businessNiche: intakeData.businessNiche || projectData.business_niche,
                 desiredOutcome: intakeData.desiredOutcome,
+                // Include all aggregated intake data
+                ...intakeData,
             }
         );
 
-        const newFieldContent = await generateTextWithAI(
+        // If generating multiple options, return array without updating page
+        if (generateMultiple) {
+            requestLogger.info({ count, lengthPreference }, "Generating multiple content options in ONE request");
+
+            const enhancedPrompt = `${prompt}
+
+CURRENT TEXT: "${fieldContext}"
+
+LENGTH REQUIREMENT: ${lengthInstruction}
+
+INTAKE DATA SUMMARY:
+${condensedIntakeContext}
+
+INSTRUCTIONS:
+1. Generate exactly 3 unique variations of the text
+2. ${lengthInstruction}
+3. Use the current text as a style guide
+4. Incorporate insights from the intake data
+5. Each variation should be PLAIN TEXT ONLY - no markdown, no **, no formatting
+6. Make each variation compelling and benefit-driven
+7. Make each variation UNIQUE from the others in approach and wording`;
+
+            // Single AI call that returns 3 variations as JSON
+            const result = await generateWithAI<{ variations: string[] }>(
+                [
+                    {
+                        role: "system",
+                        content: `You are an expert sales copywriter for enrollment pages. Generate exactly 3 unique content variations and return them as a JSON object with a "variations" array. Each variation should be plain text only - no markdown formatting, no **, no special characters. Match the requested length precisely. Use the current text as a style reference and incorporate the intake data naturally.
+
+Return format:
+{
+  "variations": [
+    "First variation here...",
+    "Second variation here...",
+    "Third variation here..."
+  ]
+}`,
+                    },
+                    { role: "user", content: enhancedPrompt },
+                ],
+                { maxTokens: 1500, temperature: 0.75 }
+            );
+
+            // Clean each variation by stripping any markdown that might have slipped through
+            const cleanOptions = result.variations.map((variation) =>
+                variation
+                    .trim()
+                    .replace(/\*\*/g, "") // Remove bold markers
+                    .replace(/\*/g, "") // Remove italic markers
+                    .replace(/#+\s/g, "") // Remove heading markers
+                    .replace(/`/g, "") // Remove code markers
+                    .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1") // Convert links to plain text
+                    .replace(/^[-*+]\s/gm, "") // Remove list markers
+                    .replace(/^\d+\.\s/gm, "") // Remove numbered list markers
+            );
+
+            requestLogger.info(
+                { optionCount: cleanOptions.length },
+                "Multiple options generated successfully in ONE request"
+            );
+
+            return NextResponse.json({
+                success: true,
+                fieldId,
+                options: cleanOptions,
+            });
+        }
+
+        // Single regeneration - generate and update page
+        const enhancedPromptSingle = `${prompt}
+
+CURRENT TEXT: "${fieldContext}"
+
+LENGTH REQUIREMENT: ${lengthInstruction}
+
+INTAKE DATA SUMMARY:
+${condensedIntakeContext}
+
+INSTRUCTIONS:
+1. ${lengthInstruction}
+2. Use the current text as a style guide
+3. Incorporate insights from the intake data
+4. Return PLAIN TEXT ONLY - no markdown, no **, no formatting`;
+
+        const rawFieldContent = await generateTextWithAI(
             [
                 {
                     role: "system",
                     content:
-                        "You are an expert sales copywriter for enrollment pages. Return only the regenerated text content, no JSON, no labels, no markup.",
+                        "You are an expert sales copywriter for enrollment pages. Return ONLY plain text content - no markdown formatting, no **, no JSON, no labels. Match the requested length precisely. Use insights from ALL intake sessions to create highly personalized, relevant copy.",
                 },
-                { role: "user", content: prompt },
+                { role: "user", content: enhancedPromptSingle },
             ],
-            { maxTokens: 500, temperature: 0.7 }
+            { maxTokens: 600, temperature: 0.7 }
         );
+
+        // Strip all markdown formatting
+        const newFieldContent = rawFieldContent
+            .trim()
+            .replace(/\*\*/g, "") // Remove bold markers
+            .replace(/\*/g, "") // Remove italic markers
+            .replace(/#+\s/g, "") // Remove heading markers
+            .replace(/`/g, "") // Remove code markers
+            .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1") // Convert links to plain text
+            .replace(/^[-*+]\s/gm, "") // Remove list markers
+            .replace(/^\d+\.\s/gm, ""); // Remove numbered list markers
 
         // Update the HTML content by finding and replacing the specific field
         let updatedHtml = page.html_content;

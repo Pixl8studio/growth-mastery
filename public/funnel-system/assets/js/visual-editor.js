@@ -370,6 +370,17 @@ class VisualEditor {
     handleBlockClick(e) {
         if (!this.isEditMode) return;
 
+        // Skip if this is an icon element (for icon picker)
+        if (e.target.classList.contains('feature-icon') ||
+            e.target.classList.contains('screen-icon') ||
+            e.target.closest('.feature-icon') ||
+            e.target.closest('.screen-icon')) {
+            console.log('🎨 Skipping block click - this is an icon element');
+            e.stopPropagation();
+            e.preventDefault();
+            return;
+        }
+
         // Ignore clicks on section control buttons (X, up arrow, down arrow)
         if (
             e.target.closest(".section-control-btn") ||
@@ -413,6 +424,17 @@ class VisualEditor {
      */
     handleTextElementClick(e) {
         if (!this.isEditMode) return;
+
+        // Skip if this is an icon element (for icon picker)
+        if (e.target.classList.contains('feature-icon') ||
+            e.target.classList.contains('screen-icon') ||
+            e.target.closest('.feature-icon') ||
+            e.target.closest('.screen-icon')) {
+            console.log('🎨 Skipping text element click - this is an icon');
+            e.stopPropagation();
+            e.preventDefault();
+            return;
+        }
 
         e.stopPropagation();
 
@@ -1558,6 +1580,13 @@ class VisualEditor {
      * Render settings panel HTML
      */
     renderSettingsPanel(settings, element, panelTitle = null) {
+        // Don't render settings panel for icon elements
+        if (element.classList.contains('feature-icon') ||
+            element.classList.contains('screen-icon')) {
+            console.log('🎨 Skipping settings panel for icon element');
+            return '';
+        }
+
         const blockType = element.dataset.blockType;
         const displayTitle =
             panelTitle || `${this.getBlockDisplayName(blockType)} Settings`;
@@ -2990,17 +3019,17 @@ class VisualEditor {
             </div>
             <div class="features-grid">
               <div class="feature-card">
-                <div class="feature-icon">🎯</div>
+                <div class="feature-icon" style="width: 48px; height: 48px; margin: 0 auto var(--space-4); color: hsl(103 89% 29%);">${typeof window !== 'undefined' && window.getIconSvg ? window.getIconSvg('target') : '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>'}</div>
                 <h3 class="feature-title" data-editable="true">Strategic Clarity</h3>
                 <p class="feature-description" data-editable="true">Get crystal clear on your path to success</p>
               </div>
               <div class="feature-card">
-                <div class="feature-icon">⚡</div>
+                <div class="feature-icon" style="width: 48px; height: 48px; margin: 0 auto var(--space-4); color: hsl(103 89% 29%);">${typeof window !== 'undefined' && window.getIconSvg ? window.getIconSvg('zap') : '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>'}</div>
                 <h3 class="feature-title" data-editable="true">Fast Implementation</h3>
                 <p class="feature-description" data-editable="true">See results in weeks, not months</p>
               </div>
               <div class="feature-card">
-                <div class="feature-icon">🚀</div>
+                <div class="feature-icon" style="width: 48px; height: 48px; margin: 0 auto var(--space-4); color: hsl(103 89% 29%);">${typeof window !== 'undefined' && window.getIconSvg ? window.getIconSvg('rocket') : '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>'}</div>
                 <h3 class="feature-title" data-editable="true">Scale With Confidence</h3>
                 <p class="feature-description" data-editable="true">Build systems that grow with you</p>
               </div>
@@ -3016,17 +3045,17 @@ class VisualEditor {
             </div>
             <div class="features-grid" style="grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
               <div class="feature-card">
-                <div class="feature-icon">💡</div>
+                <div class="feature-icon" style="width: 48px; height: 48px; margin: 0 auto var(--space-4); color: hsl(103 89% 29%);">${typeof window !== 'undefined' && window.getIconSvg ? window.getIconSvg('lightbulb') : '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>'}</div>
                 <h3 class="feature-title" data-editable="true">Strategic Clarity</h3>
                 <p class="feature-description" data-editable="true">Follow a proven process to transform your existing offer or craft a brand new, highly scalable with an irresistible, scalable value proposition that sells itself.</p>
               </div>
               <div class="feature-card">
-                <div class="feature-icon">🕐</div>
+                <div class="feature-icon" style="width: 48px; height: 48px; margin: 0 auto var(--space-4); color: hsl(103 89% 29%);">${typeof window !== 'undefined' && window.getIconSvg ? window.getIconSvg('clock') : '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'}</div>
                 <h3 class="feature-title" data-editable="true">Buy Back Time</h3>
                 <p class="feature-description" data-editable="true">Learn to replace chaos with the key hires in the right order and the right systems. Evolve from operator to architect - and build a business that can run without you.</p>
               </div>
               <div class="feature-card">
-                <div class="feature-icon">🚀</div>
+                <div class="feature-icon" style="width: 48px; height: 48px; margin: 0 auto var(--space-4); color: hsl(103 89% 29%);">${typeof window !== 'undefined' && window.getIconSvg ? window.getIconSvg('rocket') : '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>'}</div>
                 <h3 class="feature-title" data-editable="true">Scalable Momentum</h3>
                 <p class="feature-description" data-editable="true">Build a business that can scale and grow while you step back. Create systems, processes, and funnels that work 24/7 to bring in qualified leads and sales.</p>
               </div>
@@ -3219,7 +3248,7 @@ class VisualEditor {
                     <div class="device phone">
                       <div class="device-screen">
                         <div class="screen-content">
-                          <div class="screen-icon">🚀</div>
+                          <div class="screen-icon" style="width: 48px; height: 48px; color: hsl(103 89% 29%);">${typeof window !== 'undefined' && window.getIconSvg ? window.getIconSvg('rocket') : '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>'}</div>
                         </div>
                       </div>
                     </div>
@@ -5869,8 +5898,9 @@ class VisualEditor {
     addFeature(block, afterElement) {
         const newFeature = document.createElement("div");
         newFeature.className = "feature-card";
+        const iconSvg = (typeof window !== 'undefined' && window.getIconSvg) ? window.getIconSvg('target') : '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>';
         newFeature.innerHTML = `
-      <div class="feature-icon">⭐</div>
+      <div class="feature-icon" style="width: 48px; height: 48px; margin: 0 auto var(--space-4); color: hsl(103 89% 29%);">${iconSvg}</div>
       <h3 class="feature-title" data-editable="true">New Feature</h3>
       <p class="feature-description" data-editable="true">Describe your amazing new feature here</p>
     `;
@@ -6173,8 +6203,9 @@ class VisualEditor {
             // Create first feature if none exist
             const newFeature = document.createElement("div");
             newFeature.className = "feature-card";
+            const iconSvg = (typeof window !== 'undefined' && window.getIconSvg) ? window.getIconSvg('target') : '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>';
             newFeature.innerHTML = `
-        <div class="feature-icon">⭐</div>
+        <div class="feature-icon" style="width: 48px; height: 48px; margin: 0 auto var(--space-4); color: hsl(103 89% 29%);">${iconSvg}</div>
         <h3 class="feature-title" data-editable="true">New Feature</h3>
         <p class="feature-description" data-editable="true">Describe your amazing new feature here</p>
       `;

@@ -336,16 +336,25 @@ export function EditorPageWrapper({
 
             {/* Load icon mapper first */}
             <Script
-                src="/funnel-system/assets/js/icon-mapper.js?v=6.2"
+                src="/funnel-system/assets/js/icon-mapper.js?v=6.4"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Icon mapper script loaded");
                 }}
             />
 
+            {/* Load icon picker for interactive icon selection */}
+            <Script
+                src="/funnel-system/assets/js/icon-picker.js?v=6.4"
+                strategy="afterInteractive"
+                onLoad={() => {
+                    logger.info({}, "Icon picker script loaded");
+                }}
+            />
+
             {/* Load editor JavaScript - vanilla JS works as-is! */}
             <Script
-                src="/funnel-system/assets/js/visual-editor.js?v=6.5"
+                src="/funnel-system/assets/js/visual-editor.js?v=6.6"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Visual editor script loaded");
@@ -567,6 +576,14 @@ export function EditorPageWrapper({
                             console.log('🎨 Editor is now active and ready to use!');
                             console.log('📊 Toolbar should contain buttons, undo/redo, theme switcher');
                             console.log('💾 Auto-save hooks installed - edits will save in 3 seconds');
+
+                            // Initialize icon picker click handlers after a short delay
+                            setTimeout(() => {
+                                if (window.iconPicker && window.iconPicker.initializeIconClickHandlers) {
+                                    window.iconPicker.initializeIconClickHandlers();
+                                    console.log('🎨 Icon picker click handlers initialized');
+                                }
+                            }, 1000);
                         }
                     }, 100);
 

@@ -4,23 +4,19 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth/auth-options";
+import { getCurrentUserWithProfile } from "@/lib/auth";
 import { generateTextWithAI } from "@/lib/ai/client";
 import { logger } from "@/lib/logger";
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { pageId: string } }
+    { params }: { params: Promise<{ pageId: string }> }
 ) {
     try {
         // Authenticate user
-        const session = await getServerSession(authOptions);
-        if (!session?.user?.email) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-        }
+        const { user } = await getCurrentUserWithProfile();
 
-        const { pageId } = params;
+        const { pageId } = await params;
         const { fieldContent, fieldType } = await request.json();
 
         if (!fieldContent || !fieldType) {
@@ -31,7 +27,7 @@ export async function POST(
         }
 
         logger.info(
-            { pageId, fieldType, userEmail: session.user.email },
+            { pageId, fieldType, userEmail: user.email },
             "Generating field rewrites"
         );
 
@@ -77,10 +73,23 @@ Requirements:
 
 Provide ONLY the rewritten content, no explanations or quotes.`;
 
-            const rewrite = await generateTextWithAI(prompt, {
-                temperature: 0.8,
-                maxTokens: 150,
-            });
+            const rewrite = await generateTextWithAI(
+                [
+                    {
+                        role: "system",
+                        content:
+                            "You are an expert copywriter specializing in engaging video landing pages.",
+                    },
+                    {
+                        role: "user",
+                        content: prompt,
+                    },
+                ],
+                {
+                    temperature: 0.8,
+                    maxTokens: 150,
+                }
+            );
 
             return {
                 id: `option-${index + 1}`,
@@ -101,10 +110,8 @@ Provide ONLY the rewritten content, no explanations or quotes.`;
             options,
         });
     } catch (error) {
-        logger.error(
-            { error, pageId: params.pageId },
-            "Field rewrite generation failed"
-        );
+        const { pageId } = await params;
+        logger.error({ error, pageId }, "Field rewrite generation failed");
         return NextResponse.json(
             { error: "Failed to generate rewrites" },
             { status: 500 }

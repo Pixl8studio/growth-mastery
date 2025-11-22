@@ -45,7 +45,10 @@ export function FieldRegenerateModal({
         setOptions([]);
         setSelectedOption(null);
 
-        logger.info({ fieldId, pageId, lengthPreference }, "Generating 3 content options");
+        logger.info(
+            { fieldId, pageId, lengthPreference },
+            "Generating 3 content options"
+        );
 
         try {
             // Call API to generate 3 variations
@@ -91,7 +94,10 @@ export function FieldRegenerateModal({
 
     const handleSelectOption = (index: number) => {
         setSelectedOption(index);
-        logger.info({ index, optionPreview: options[index]?.substring(0, 50) }, "Option clicked");
+        logger.info(
+            { index, optionPreview: options[index]?.substring(0, 50) },
+            "Option clicked"
+        );
 
         // Auto-apply immediately when option is clicked
         if (options[index]) {
@@ -154,7 +160,8 @@ export function FieldRegenerateModal({
                                     Ready to Generate AI Options
                                 </h3>
                                 <p className="text-sm text-gray-600 mb-6">
-                                    Choose a length preference, then generate 3 unique variations
+                                    Choose a length preference, then generate 3 unique
+                                    variations
                                 </p>
 
                                 {/* Length Controls */}
@@ -254,7 +261,9 @@ export function FieldRegenerateModal({
                                             <div className="text-xs font-medium text-gray-500 mb-1">
                                                 Option {index + 1} - Click to use
                                             </div>
-                                            <p className="text-sm text-gray-900">{option}</p>
+                                            <p className="text-sm text-gray-900">
+                                                {option}
+                                            </p>
                                         </div>
                                     </div>
                                 </button>
@@ -283,4 +292,3 @@ export function FieldRegenerateModal({
         </div>
     );
 }
-

@@ -16,6 +16,22 @@ import { SectionBlockGenerator } from "@/components/pages/section-block-generato
 import { FieldRegenerateModal } from "@/components/pages/field-regenerate-modal";
 import type { PitchVideo } from "@/types/pages";
 
+// Extend Window interface for custom properties
+declare global {
+    interface Window {
+        openFieldRegenerateModal?: (
+            fieldId: string,
+            fieldContext: string,
+            element: HTMLElement
+        ) => void;
+        addRegenerateIcons?: () => void;
+        visualEditor?: {
+            isEditMode: boolean;
+        };
+        scheduleAutoSave?: () => void;
+    }
+}
+
 interface EditorPageWrapperProps {
     pageId: string;
     projectId: string;
@@ -170,7 +186,10 @@ export function EditorPageWrapper({
 
     // Handler for selected field option
     const handleFieldOptionSelected = (newContent: string) => {
-        logger.info({ hasContent: !!newContent, content: newContent.substring(0, 50) }, "Field option selected");
+        logger.info(
+            { hasContent: !!newContent, content: newContent.substring(0, 50) },
+            "Field option selected"
+        );
 
         if (fieldToRegenerate && newContent) {
             const element = fieldToRegenerate.element;
@@ -188,10 +207,13 @@ export function EditorPageWrapper({
             const textNode = document.createTextNode(newContent);
             element.insertBefore(textNode, element.firstChild);
 
-            logger.info({
-                newText: newContent.substring(0, 50),
-                hasSparkleButton: !!element.querySelector('.field-regenerate-btn')
-            }, "Content updated - sparkle button preserved");
+            logger.info(
+                {
+                    newText: newContent.substring(0, 50),
+                    hasSparkleButton: !!element.querySelector(".field-regenerate-btn"),
+                },
+                "Content updated - sparkle button preserved"
+            );
 
             // Flash success
             element.style.background = "#dcfce7";
@@ -206,7 +228,10 @@ export function EditorPageWrapper({
                 }
             }, 500);
 
-            logger.info({ fieldId: fieldToRegenerate.fieldId }, "Field update complete");
+            logger.info(
+                { fieldId: fieldToRegenerate.fieldId },
+                "Field update complete"
+            );
         }
     };
 

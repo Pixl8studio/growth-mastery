@@ -83,7 +83,9 @@ export async function POST(
         // Fetch ALL intake sessions for this project (all vapi_transcripts)
         const { data: allIntakeSessions, error: intakeError } = await supabase
             .from("vapi_transcripts")
-            .select("extracted_data, transcript_text, intake_method, session_name, created_at")
+            .select(
+                "extracted_data, transcript_text, intake_method, session_name, created_at"
+            )
             .eq("funnel_project_id", page.funnel_project_id)
             .order("created_at", { ascending: false });
 
@@ -133,7 +135,10 @@ export async function POST(
             condensedIntakeContext = condensedData.join("\n");
 
             requestLogger.info(
-                { originalSessions: allIntakeSessions.length, condensedLength: condensedIntakeContext.length },
+                {
+                    originalSessions: allIntakeSessions.length,
+                    condensedLength: condensedIntakeContext.length,
+                },
                 "Condensed intake data for AI processing"
             );
         } else {
@@ -156,7 +161,14 @@ export async function POST(
         }
 
         requestLogger.info(
-            { pageId, fieldId, generateMultiple, count, lengthPreference, currentWordCount },
+            {
+                pageId,
+                fieldId,
+                generateMultiple,
+                count,
+                lengthPreference,
+                currentWordCount,
+            },
             "Regenerating enrollment field"
         );
 
@@ -189,7 +201,10 @@ export async function POST(
 
         // If generating multiple options, return array without updating page
         if (generateMultiple) {
-            requestLogger.info({ count, lengthPreference }, "Generating multiple content options in ONE request");
+            requestLogger.info(
+                { count, lengthPreference },
+                "Generating multiple content options in ONE request"
+            );
 
             const enhancedPrompt = `${prompt}
 
@@ -231,16 +246,17 @@ Return format:
             );
 
             // Clean each variation by stripping any markdown that might have slipped through
-            const cleanOptions = result.variations.map((variation) =>
-                variation
-                    .trim()
-                    .replace(/\*\*/g, "") // Remove bold markers
-                    .replace(/\*/g, "") // Remove italic markers
-                    .replace(/#+\s/g, "") // Remove heading markers
-                    .replace(/`/g, "") // Remove code markers
-                    .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1") // Convert links to plain text
-                    .replace(/^[-*+]\s/gm, "") // Remove list markers
-                    .replace(/^\d+\.\s/gm, "") // Remove numbered list markers
+            const cleanOptions = result.variations.map(
+                (variation) =>
+                    variation
+                        .trim()
+                        .replace(/\*\*/g, "") // Remove bold markers
+                        .replace(/\*/g, "") // Remove italic markers
+                        .replace(/#+\s/g, "") // Remove heading markers
+                        .replace(/`/g, "") // Remove code markers
+                        .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1") // Convert links to plain text
+                        .replace(/^[-*+]\s/gm, "") // Remove list markers
+                        .replace(/^\d+\.\s/gm, "") // Remove numbered list markers
             );
 
             requestLogger.info(

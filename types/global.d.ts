@@ -60,7 +60,11 @@ declare class IconPicker {
     init(): void;
     initializeIconClickHandlers(): void;
     attachClickHandlers(): void;
-    open(element: HTMLElement, currentIcon: string, callback: (iconName: string) => void): void;
+    open(
+        element: HTMLElement,
+        currentIcon: string,
+        callback: (iconName: string) => void
+    ): void;
     close(): void;
     // Add other methods as needed
 }

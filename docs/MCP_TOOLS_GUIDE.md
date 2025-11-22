@@ -403,4 +403,3 @@ The Playwright MCP server allows you to automate browser interactions and testin
 
 The MCP tools are now ready to use! Just ask naturally and the AI will use the
 appropriate tools to help you.
-

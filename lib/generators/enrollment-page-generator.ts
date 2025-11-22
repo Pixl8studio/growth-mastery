@@ -205,7 +205,7 @@ export function generateEnrollmentHTML(
                     .map(
                         (feature) => `
                     <div class="feature-card" style="background: #f9fafb; padding: var(--space-6); border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
-                        <div class="feature-icon" style="width: 48px; height: 48px; margin: 0 auto var(--space-4); color: hsl(103 89% 29%);">${getIconSvg('book-open')}</div>
+                        <div class="feature-icon" style="width: 48px; height: 48px; margin: 0 auto var(--space-4); color: hsl(103 89% 29%);">${getIconSvg("book-open")}</div>
                         <h3 class="feature-title" data-editable="true" style="margin-bottom: var(--space-4); font-size: 1.3rem; font-weight: 700; color: #1f2937;">${feature.title}</h3>
                         <p class="feature-description" data-editable="true" style="color: #6b7280; margin-bottom: var(--space-3); line-height: 1.6;">${feature.description}</p>
                         <div class="feature-value" data-editable="true" style="font-weight: 600; color: ${theme.primary}; margin-top: var(--space-3);">Value: ${feature.value}</div>
@@ -259,7 +259,7 @@ export function generateEnrollmentHTML(
         <div class="container">
             <div style="text-align: center; max-width: 600px; margin: 0 auto;">
                 <h2 data-editable="true" style="color: #dc2626; margin-bottom: var(--space-4); font-size: 1.8rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
-                    <span style="width: 28px; height: 28px; display: inline-flex; align-items: center;">${getIconSvg('clock')}</span>
+                    <span style="width: 28px; height: 28px; display: inline-flex; align-items: center;">${getIconSvg("clock")}</span>
                     <strong>Limited Time Offer</strong>
                 </h2>
                 <p data-editable="true" style="color: #7f1d1d; margin-bottom: var(--space-6); font-size: 1.1rem;">
@@ -318,9 +318,9 @@ export function generateEnrollmentHTML(
                     COMPLETE YOUR ENROLLMENT - ${offer.currency} ${offer.price.toLocaleString()}
                 </button>
                 <p style="margin-top: var(--space-4); color: #6b7280; font-size: 0.8rem; text-align: center; display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap;" data-editable="true">
-                    <span style="display: inline-flex; align-items: center; gap: 0.25rem;"><span style="width: 14px; height: 14px;">${getIconSvg('lock')}</span> SSL secured</span> •
-                    <span style="display: inline-flex; align-items: center; gap: 0.25rem;"><span style="width: 14px; height: 14px;">${getIconSvg('credit-card')}</span> All major cards accepted</span> •
-                    <span style="display: inline-flex; align-items: center; gap: 0.25rem;"><span style="width: 14px; height: 14px;">${getIconSvg('shield-check')}</span> Money-back guarantee</span>
+                    <span style="display: inline-flex; align-items: center; gap: 0.25rem;"><span style="width: 14px; height: 14px;">${getIconSvg("lock")}</span> SSL secured</span> •
+                    <span style="display: inline-flex; align-items: center; gap: 0.25rem;"><span style="width: 14px; height: 14px;">${getIconSvg("credit-card")}</span> All major cards accepted</span> •
+                    <span style="display: inline-flex; align-items: center; gap: 0.25rem;"><span style="width: 14px; height: 14px;">${getIconSvg("shield-check")}</span> Money-back guarantee</span>
                 </p>
             </div>
 

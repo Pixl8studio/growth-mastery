@@ -215,7 +215,7 @@ export function generateWatchPageHTML(options: WatchPageGeneratorOptions): strin
                 GET INSTANT ACCESS NOW
             </a>
             <p style="color: white; margin-top: var(--space-4); font-size: 0.9rem; opacity: 0.9; display: flex; align-items: center; justify-content: center; gap: 0.5rem;" data-editable="true">
-                <span style="width: 20px; height: 20px; display: inline-flex; align-items: center;">${getIconSvg('clock')}</span> Limited time offer expires in 24 hours
+                <span style="width: 20px; height: 20px; display: inline-flex; align-items: center;">${getIconSvg("clock")}</span> Limited time offer expires in 24 hours
             </p>
         </div>
     </div>

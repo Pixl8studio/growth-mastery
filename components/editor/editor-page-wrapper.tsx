@@ -71,10 +71,10 @@ export function EditorPageWrapper({
 
         // Load editor CSS files dynamically (with cache-busting)
         const cssFiles = [
-            "/funnel-system/config/theme-variables.css?v=6.0",
-            "/funnel-system/assets/css/editor.css?v=6.0",
-            "/funnel-system/assets/css/blocks.css?v=6.0",
-            "/funnel-system/assets/css/component-library.css?v=6.0",
+            "/funnel-system/config/theme-variables.css?v=6.1",
+            "/funnel-system/assets/css/editor.css?v=6.1",
+            "/funnel-system/assets/css/blocks.css?v=6.1",
+            "/funnel-system/assets/css/component-library.css?v=6.1",
         ];
 
         cssFiles.forEach((href) => {
@@ -264,7 +264,7 @@ export function EditorPageWrapper({
 
             {/* Load icon mapper first */}
             <Script
-                src="/funnel-system/assets/js/icon-mapper.js?v=6.0"
+                src="/funnel-system/assets/js/icon-mapper.js?v=6.2"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Icon mapper script loaded");
@@ -273,7 +273,7 @@ export function EditorPageWrapper({
 
             {/* Load editor JavaScript - vanilla JS works as-is! */}
             <Script
-                src="/funnel-system/assets/js/visual-editor.js?v=6.0"
+                src="/funnel-system/assets/js/visual-editor.js?v=6.4"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Visual editor script loaded");
@@ -289,7 +289,7 @@ export function EditorPageWrapper({
                 }}
             />
             <Script
-                src="/funnel-system/assets/js/blocks.js"
+                src="/funnel-system/assets/js/blocks.js?v=6.1"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Blocks script loaded");
@@ -302,7 +302,7 @@ export function EditorPageWrapper({
                 }}
             />
             <Script
-                src="/funnel-system/assets/js/component-library.js?v=6.0"
+                src="/funnel-system/assets/js/component-library.js?v=6.1"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Component library script loaded");

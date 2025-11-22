@@ -10,6 +10,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { Card, CardContent } from "@/components/ui/card";
 import {
     Check,
     ChevronDown,
@@ -71,8 +72,11 @@ export function HorizontalMasterSteps({
 
     return (
         <div className="space-y-4">
-            {/* Horizontal Master Steps Row */}
-            <div className="flex items-start justify-between gap-4">
+            {/* Horizontal Master Steps Card */}
+            <Card>
+                <CardContent className="pt-6">
+                    {/* Horizontal Master Steps Row */}
+                    <div className="flex items-start justify-between gap-4">
                 {MASTER_STEPS.map((masterStep, index) => {
                     const completion = masterStepCompletions.find(
                         (c) => c.masterStepId === masterStep.id
@@ -176,7 +180,9 @@ export function HorizontalMasterSteps({
                         </div>
                     );
                 })}
-            </div>
+                    </div>
+                </CardContent>
+            </Card>
 
             {/* Expanded Sub-Steps Panel */}
             {expandedStep !== null && (

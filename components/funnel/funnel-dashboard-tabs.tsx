@@ -105,7 +105,7 @@ export function FunnelDashboardTabs({
                                     {loading
                                         ? "Loading..."
                                         : masterStepProgress
-                                          ? `${masterStepProgress.completedMasterSteps} of ${masterStepProgress.totalMasterSteps} sections complete • ${masterStepProgress.percentage}% done`
+                                          ? `${masterStepProgress.completedMasterSteps} of ${masterStepProgress.totalMasterSteps} sections complete • ${Math.round((completedSteps.length / 15) * 100)}% done`
                                           : "Complete each section to build your funnel"}
                                 </CardDescription>
                             </div>
@@ -125,7 +125,7 @@ export function FunnelDashboardTabs({
                                     <div
                                         className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
                                         style={{
-                                            width: `${masterStepProgress.percentage}%`,
+                                            width: `${Math.round((completedSteps.length / 15) * 100)}%`,
                                         }}
                                     />
                                 </div>
@@ -134,7 +134,7 @@ export function FunnelDashboardTabs({
                                         {completedSteps.length} of 15 steps completed
                                     </span>
                                     <span className="font-bold text-primary">
-                                        {masterStepProgress.percentage}%
+                                        {Math.round((completedSteps.length / 15) * 100)}%
                                     </span>
                                 </div>
                             </div>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, LayoutDashboard } from "lucide-react";
 import { StepperNav } from "./stepper-nav";
 import { GenerationProgressTracker } from "@/components/layout/generation-progress-tracker";
+import { getMasterStepForSubStep } from "@/app/funnel-builder/master-steps-config";
 
 interface StepLayoutProps {
     children: ReactNode;
@@ -55,6 +56,7 @@ export function StepLayout({
 }: StepLayoutProps) {
     const nextHref = getNextStepHref(currentStep, projectId);
     const previousHref = getPreviousStepHref(currentStep, projectId);
+    const masterStep = getMasterStepForSubStep(currentStep);
 
     return (
         <div className="min-h-screen bg-muted/50">
@@ -75,9 +77,16 @@ export function StepLayout({
                         <h2 className="truncate text-lg font-semibold text-foreground">
                             {funnelName || "Funnel Builder"}
                         </h2>
-                        <p className="text-sm text-muted-foreground">
-                            Step {currentStep} of 15
-                        </p>
+                        <div className="space-y-1">
+                            <p className="text-sm text-muted-foreground">
+                                Step {currentStep} of 15
+                            </p>
+                            {masterStep && (
+                                <p className="text-xs text-primary font-medium">
+                                    {masterStep.title}
+                                </p>
+                            )}
+                        </div>
                     </div>
 
                     <StepperNav

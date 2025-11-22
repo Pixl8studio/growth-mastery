@@ -3,7 +3,18 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Check } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
+import {
+    Accordion,
+    AccordionContent,
+    AccordionItem,
+    AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
+    MASTER_STEPS,
+    getMasterStepForSubStep,
+    calculateMasterStepCompletion,
+} from "@/app/funnel-builder/master-steps-config";
 
 interface Step {
     number: number;
@@ -47,91 +58,221 @@ export function StepperNav({
     className,
 }: StepperNavProps) {
     const pathname = usePathname();
-    const completionPercentage = Math.round((completedSteps.length / 15) * 100);
+
+    // Determine which master step should be expanded by default (current step's master)
+    const currentMasterStep = getMasterStepForSubStep(currentStep);
+    const defaultExpandedValue = currentMasterStep
+        ? `master-${currentMasterStep.id}`
+        : undefined;
+
+    // Calculate overall completion
+    const totalSteps = 15;
+    const completionPercentage = Math.round((completedSteps.length / totalSteps) * 100);
 
     return (
         <nav className={cn("space-y-2", className)}>
             {/* Completion Percentage */}
-            <div className="mb-4 text-right">
-                <span className="text-sm font-medium text-muted-foreground">
-                    {completionPercentage}% Complete
-                </span>
+            <div className="mb-4">
+                <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium text-muted-foreground">
+                        Overall Progress
+                    </span>
+                    <span className="text-sm font-bold text-primary">
+                        {completionPercentage}%
+                    </span>
+                </div>
+                <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                    <div
+                        className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
+                        style={{ width: `${completionPercentage}%` }}
+                    />
+                </div>
             </div>
 
-            {STEPS.map((step) => {
-                const isActive = step.number === currentStep;
-                const isCompleted = completedSteps.includes(step.number);
-                const isFuture = !isCompleted && step.number !== currentStep;
-                const href = `/funnel-builder/${projectId}/step/${step.number}`;
-                const isCurrentPage = pathname === href;
+            {/* Master Steps Accordion */}
+            <Accordion
+                type="multiple"
+                defaultValue={defaultExpandedValue ? [defaultExpandedValue] : []}
+                className="space-y-2"
+            >
+                {MASTER_STEPS.map((masterStep) => {
+                    const completion = calculateMasterStepCompletion(
+                        masterStep,
+                        completedSteps
+                    );
+                    const isCurrentMaster = currentMasterStep?.id === masterStep.id;
 
-                return (
-                    <Link
-                        key={step.number}
-                        href={href}
-                        className={cn(
-                            "group block rounded-lg border px-4 py-5 transition-all",
-                            {
-                                // Current page
-                                "border-primary bg-primary/5 shadow-soft":
-                                    isCurrentPage,
-                                // Active step (not on page)
-                                "border-primary/30 bg-card hover:border-primary/40 hover:bg-primary/5":
-                                    isActive && !isCurrentPage,
-                                // Completed or future steps (all clickable!)
-                                "border-border bg-card hover:border-border hover:bg-muted/50":
-                                    isCompleted || isFuture,
-                            }
-                        )}
-                    >
-                        {/* Step Info */}
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <span
-                                        className={cn(
-                                            "text-xs font-medium uppercase tracking-wider",
-                                            {
-                                                "text-primary":
-                                                    isCurrentPage || isActive,
-                                                "text-accent": isCompleted && !isActive,
-                                                "text-muted-foreground":
-                                                    isFuture ||
-                                                    (!isActive &&
-                                                        !isCompleted &&
-                                                        !isFuture),
-                                            }
+                    return (
+                        <AccordionItem
+                            key={masterStep.id}
+                            value={`master-${masterStep.id}`}
+                            className={cn("border rounded-lg transition-all", {
+                                "border-primary bg-primary/5": isCurrentMaster,
+                                "border-border bg-card": !isCurrentMaster,
+                            })}
+                        >
+                            <AccordionTrigger
+                                className={cn(
+                                    "px-4 py-3 hover:no-underline transition-colors",
+                                    {
+                                        "hover:bg-primary/10": isCurrentMaster,
+                                        "hover:bg-muted/50": !isCurrentMaster,
+                                    }
+                                )}
+                            >
+                                <div className="flex items-center justify-between w-full pr-2">
+                                    <div className="flex items-center gap-3">
+                                        {/* Completion Indicator */}
+                                        {completion.isFullyComplete ? (
+                                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-green-500">
+                                                <Check className="h-5 w-5 text-white" />
+                                            </div>
+                                        ) : completion.isPartiallyComplete ? (
+                                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-primary/20 border-2 border-primary">
+                                                <span className="text-xs font-bold text-primary">
+                                                    {completion.completedCount}
+                                                </span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-muted border-2 border-border">
+                                                <span className="text-xs font-bold text-muted-foreground">
+                                                    {masterStep.id}
+                                                </span>
+                                            </div>
                                         )}
-                                    >
-                                        Step {step.number}
-                                    </span>
-                                    {isCurrentPage && (
-                                        <span className="rounded-full bg-primary/50 px-2 py-0.5 text-xs font-medium text-white">
-                                            Current
-                                        </span>
-                                    )}
-                                    {isCompleted && !isCurrentPage && (
-                                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                                            Complete
+
+                                        {/* Master Step Info */}
+                                        <div className="text-left">
+                                            <h3 className="text-sm font-semibold text-foreground leading-none mb-1">
+                                                {masterStep.title}
+                                            </h3>
+                                            <p className="text-xs text-muted-foreground">
+                                                {completion.completedCount}/
+                                                {completion.totalCount} complete
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Progress Badge */}
+                                    {completion.percentage > 0 && (
+                                        <span
+                                            className={cn(
+                                                "text-xs font-medium px-2 py-1 rounded-full",
+                                                {
+                                                    "bg-green-100 text-green-700":
+                                                        completion.isFullyComplete,
+                                                    "bg-primary/20 text-primary":
+                                                        completion.isPartiallyComplete,
+                                                }
+                                            )}
+                                        >
+                                            {completion.percentage}%
                                         </span>
                                     )}
                                 </div>
-                                {isCompleted && (
-                                    <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-500">
-                                        <Check className="h-4 w-4 text-white" />
-                                    </div>
-                                )}
-                            </div>
-                            <h3 className="text-base font-semibold leading-snug text-foreground">
-                                {step.title}
-                            </h3>
-                            <p className="text-sm leading-relaxed text-muted-foreground">
-                                {step.description}
-                            </p>
-                        </div>
-                    </Link>
-                );
-            })}
+                            </AccordionTrigger>
+
+                            <AccordionContent className="px-4 pb-3 pt-0">
+                                <div className="space-y-2 pl-2">
+                                    {masterStep.subSteps.map((stepNumber) => {
+                                        const step = STEPS.find(
+                                            (s) => s.number === stepNumber
+                                        );
+                                        if (!step) return null;
+
+                                        const isActive = step.number === currentStep;
+                                        const isCompleted = completedSteps.includes(
+                                            step.number
+                                        );
+                                        const href = `/funnel-builder/${projectId}/step/${step.number}`;
+                                        const isCurrentPage = pathname === href;
+
+                                        return (
+                                            <Link
+                                                key={step.number}
+                                                href={href}
+                                                className={cn(
+                                                    "block rounded-md border px-3 py-3 transition-all",
+                                                    {
+                                                        // Current page
+                                                        "border-primary bg-primary/10 shadow-sm":
+                                                            isCurrentPage,
+                                                        // Active step (not on page)
+                                                        "border-primary/30 bg-card hover:border-primary/40 hover:bg-primary/5":
+                                                            isActive && !isCurrentPage,
+                                                        // Completed or future steps
+                                                        "border-border bg-card hover:border-border hover:bg-muted/50":
+                                                            !isActive,
+                                                    }
+                                                )}
+                                            >
+                                                <div className="flex items-start justify-between gap-2">
+                                                    <div className="flex items-start gap-2 flex-1 min-w-0">
+                                                        {/* Step Number/Check */}
+                                                        {isCompleted ? (
+                                                            <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-green-500 mt-0.5">
+                                                                <Check className="h-3 w-3 text-white" />
+                                                            </div>
+                                                        ) : (
+                                                            <div
+                                                                className={cn(
+                                                                    "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full text-xs font-medium mt-0.5",
+                                                                    {
+                                                                        "bg-primary text-white":
+                                                                            isCurrentPage,
+                                                                        "bg-muted text-muted-foreground":
+                                                                            !isCurrentPage,
+                                                                    }
+                                                                )}
+                                                            >
+                                                                {step.number}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Step Info */}
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="flex items-center gap-1.5 mb-0.5">
+                                                                <h4
+                                                                    className={cn(
+                                                                        "text-xs font-medium leading-none truncate",
+                                                                        {
+                                                                            "text-foreground":
+                                                                                isCurrentPage ||
+                                                                                isActive,
+                                                                            "text-foreground/80":
+                                                                                !isActive &&
+                                                                                !isCompleted,
+                                                                        }
+                                                                    )}
+                                                                >
+                                                                    {step.title}
+                                                                </h4>
+                                                                {isCurrentPage && (
+                                                                    <span className="text-xs font-medium text-primary flex-shrink-0">
+                                                                        •
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <p className="text-xs text-muted-foreground leading-snug">
+                                                                {step.description}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Arrow for current step */}
+                                                    {isCurrentPage && (
+                                                        <ChevronRight className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" />
+                                                    )}
+                                                </div>
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                            </AccordionContent>
+                        </AccordionItem>
+                    );
+                })}
+            </Accordion>
         </nav>
     );
 }

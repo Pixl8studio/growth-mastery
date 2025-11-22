@@ -19,14 +19,17 @@ import {
 import { Button } from "@/components/ui/button";
 import { BarChart3, FileText, Users, MessageSquare, Settings } from "lucide-react";
 import Link from "next/link";
-import { HorizontalProgress } from "@/components/funnel/horizontal-progress";
 import { FunnelAnalyticsDashboard } from "@/components/funnel/analytics-dashboard";
 import { FunnelPagesView } from "@/components/funnel/funnel-pages-view";
 import { FunnelFollowupView } from "@/components/funnel/funnel-followup-view";
 import { FunnelContactsView } from "@/components/funnel/funnel-contacts-view";
 import { FunnelSettingsView } from "@/components/funnel/funnel-settings-view";
-import { getStepCompletionStatus } from "@/app/funnel-builder/completion-utils";
-import { calculateCompletionPercentage } from "@/app/funnel-builder/completion-types";
+import {
+    getStepCompletionStatus,
+    getMasterStepCompletionStatus,
+} from "@/app/funnel-builder/completion-utils";
+import { MasterSectionCard } from "@/components/funnel-builder/master-section-card";
+import type { MasterStepProgress } from "@/app/funnel-builder/completion-types";
 
 interface FunnelDashboardTabsProps {
     projectId: string;
@@ -41,17 +44,18 @@ export function FunnelDashboardTabs({
 }: FunnelDashboardTabsProps) {
     const [activeTab, setActiveTab] = useState("dashboard");
     const [completedSteps, setCompletedSteps] = useState<number[]>([]);
-    const [completionPercentage, setCompletionPercentage] = useState(0);
+    const [masterStepProgress, setMasterStepProgress] =
+        useState<MasterStepProgress | null>(null);
     const [loading, setLoading] = useState(true);
 
     const loadCompletionStatus = useCallback(async () => {
         try {
             const status = await getStepCompletionStatus(projectId);
-            const percentage = calculateCompletionPercentage(status);
             const completed = status.filter((s) => s.isCompleted).map((s) => s.step);
+            const masterProgress = await getMasterStepCompletionStatus(projectId);
 
             setCompletedSteps(completed);
-            setCompletionPercentage(percentage);
+            setMasterStepProgress(masterProgress);
         } catch (error) {
             console.error("Failed to load completion status", error);
         } finally {
@@ -90,37 +94,77 @@ export function FunnelDashboardTabs({
 
             {/* Dashboard Tab */}
             <TabsContent value="dashboard" className="mt-6 space-y-6">
-                {/* Horizontal Progress Stepper */}
+                {/* Overall Progress Header */}
                 <Card>
                     <CardHeader>
                         <div className="flex items-center justify-between">
                             <div>
-                                <CardTitle>Funnel Progress</CardTitle>
+                                <CardTitle>Funnel Builder Progress</CardTitle>
                                 <CardDescription>
                                     {loading
                                         ? "Loading..."
-                                        : `${completedSteps.length} of 12 steps complete • ${completionPercentage}% done`}
+                                        : masterStepProgress
+                                          ? `${masterStepProgress.completedMasterSteps} of ${masterStepProgress.totalMasterSteps} sections complete • ${masterStepProgress.percentage}% done`
+                                          : "Complete each section to build your funnel"}
                                 </CardDescription>
                             </div>
                             <Link
                                 href={`/funnel-builder/${projectId}/step/${currentStep}`}
                             >
-                                <Button>Build Funnel</Button>
+                                <Button>Continue Building</Button>
                             </Link>
                         </div>
                     </CardHeader>
                     <CardContent>
                         {loading ? (
-                            <div className="h-24 animate-pulse rounded bg-gray-200" />
-                        ) : (
-                            <HorizontalProgress
-                                projectId={projectId}
-                                currentStep={currentStep}
-                                completedSteps={completedSteps}
-                            />
-                        )}
+                            <div className="h-4 animate-pulse rounded-full bg-gray-200" />
+                        ) : masterStepProgress ? (
+                            <div className="space-y-2">
+                                <div className="h-4 w-full bg-muted rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
+                                        style={{
+                                            width: `${masterStepProgress.percentage}%`,
+                                        }}
+                                    />
+                                </div>
+                                <div className="flex items-center justify-between text-sm text-muted-foreground">
+                                    <span>
+                                        {completedSteps.length} of 15 steps completed
+                                    </span>
+                                    <span className="font-bold text-primary">
+                                        {masterStepProgress.percentage}%
+                                    </span>
+                                </div>
+                            </div>
+                        ) : null}
                     </CardContent>
                 </Card>
+
+                {/* Master Section Cards */}
+                <div className="space-y-4">
+                    {loading ? (
+                        <>
+                            {[1, 2, 3, 4, 5].map((i) => (
+                                <Card
+                                    key={i}
+                                    className="h-48 animate-pulse bg-gray-200"
+                                />
+                            ))}
+                        </>
+                    ) : (
+                        masterStepProgress?.masterStepCompletions.map((completion) => (
+                            <MasterSectionCard
+                                key={completion.masterStepId}
+                                masterStepId={completion.masterStepId}
+                                completion={completion}
+                                completedSubSteps={completedSteps}
+                                projectId={projectId}
+                                subStepDetails={[]}
+                            />
+                        ))
+                    )}
+                </div>
 
                 {/* Analytics Dashboard */}
                 <Card>

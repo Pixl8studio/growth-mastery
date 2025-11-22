@@ -273,7 +273,7 @@ export function EditorPageWrapper({
 
             {/* Load editor JavaScript - vanilla JS works as-is! */}
             <Script
-                src="/funnel-system/assets/js/visual-editor.js?v=6.4"
+                src="/funnel-system/assets/js/visual-editor.js?v=6.5"
                 strategy="afterInteractive"
                 onLoad={() => {
                     logger.info({}, "Visual editor script loaded");

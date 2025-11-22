@@ -166,42 +166,30 @@ class VisualEditor {
         const deleteBtn = controls.querySelector(".delete-section-btn");
 
         if (moveUpBtn) {
-            moveUpBtn.addEventListener(
-                "click",
-                (e) => {
-                    console.log("⬆️ Move up button clicked!");
-                    e.stopPropagation();
-                    e.preventDefault();
-                    this.handleSectionAction(block, "move-up");
-                },
-                true
-            );
+            moveUpBtn.addEventListener("click", (e) => {
+                console.log("⬆️ Move up button clicked!");
+                e.stopPropagation();
+                e.preventDefault();
+                this.handleSectionAction(block, "move-up");
+            });
         }
 
         if (moveDownBtn) {
-            moveDownBtn.addEventListener(
-                "click",
-                (e) => {
-                    console.log("⬇️ Move down button clicked!");
-                    e.stopPropagation();
-                    e.preventDefault();
-                    this.handleSectionAction(block, "move-down");
-                },
-                true
-            );
+            moveDownBtn.addEventListener("click", (e) => {
+                console.log("⬇️ Move down button clicked!");
+                e.stopPropagation();
+                e.preventDefault();
+                this.handleSectionAction(block, "move-down");
+            });
         }
 
         if (deleteBtn) {
-            deleteBtn.addEventListener(
-                "click",
-                (e) => {
-                    console.log("❌ Delete button clicked!");
-                    e.stopPropagation();
-                    e.preventDefault();
-                    this.handleSectionAction(block, "delete");
-                },
-                true
-            );
+            deleteBtn.addEventListener("click", (e) => {
+                console.log("❌ Delete button clicked!");
+                e.stopPropagation();
+                e.preventDefault();
+                this.handleSectionAction(block, "delete");
+            });
         }
 
         console.log(

@@ -2,10 +2,21 @@
 
 import { ReactNode, useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, ArrowRight, Check, LayoutDashboard, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+    ArrowLeft,
+    ArrowRight,
+    Check,
+    LayoutDashboard,
+    ChevronLeft,
+    ChevronRight,
+} from "lucide-react";
 import { StepperNav } from "./stepper-nav";
 import { GenerationProgressTracker } from "@/components/layout/generation-progress-tracker";
-import { getMasterStepForSubStep, MASTER_STEPS, getFirstIncompleteSubStep } from "@/app/funnel-builder/master-steps-config";
+import {
+    getMasterStepForSubStep,
+    MASTER_STEPS,
+    getFirstIncompleteSubStep,
+} from "@/app/funnel-builder/master-steps-config";
 
 interface StepLayoutProps {
     children: ReactNode;
@@ -87,9 +98,11 @@ export function StepLayout({
     return (
         <div className="min-h-screen bg-muted/50">
             {/* Step Navigation Sidebar */}
-            <div className={`fixed left-0 top-0 h-screen overflow-y-auto border-r border-border bg-card transition-all duration-300 ${
-                isCollapsed ? "w-16" : "w-80"
-            }`}>
+            <div
+                className={`fixed left-0 top-0 h-screen overflow-y-auto border-r border-border bg-card transition-all duration-300 ${
+                    isCollapsed ? "w-16" : "w-80"
+                }`}
+            >
                 <div className="relative h-full">
                     {/* Collapse/Expand Toggle Button */}
                     <button
@@ -158,12 +171,15 @@ export function StepLayout({
 
                             {/* Master Step Quick Nav Buttons */}
                             {MASTER_STEPS.map((masterStep) => {
-                                const isCurrent = masterStep.subSteps.includes(currentStep);
+                                const isCurrent =
+                                    masterStep.subSteps.includes(currentStep);
 
                                 return (
                                     <button
                                         key={masterStep.id}
-                                        onClick={() => handleMasterStepClick(masterStep.id)}
+                                        onClick={() =>
+                                            handleMasterStepClick(masterStep.id)
+                                        }
                                         className={`flex h-10 w-10 items-center justify-center rounded-lg border text-xs font-bold transition-colors ${
                                             isCurrent
                                                 ? "border-primary bg-primary/10 text-primary hover:bg-primary/20"
@@ -181,9 +197,11 @@ export function StepLayout({
             </div>
 
             {/* Main Content */}
-            <div className={`min-h-screen transition-all duration-300 ${
-                isCollapsed ? "ml-16" : "ml-80"
-            }`}>
+            <div
+                className={`min-h-screen transition-all duration-300 ${
+                    isCollapsed ? "ml-16" : "ml-80"
+                }`}
+            >
                 <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
                     {/* Step Header */}
                     {(stepTitle || stepDescription) && (

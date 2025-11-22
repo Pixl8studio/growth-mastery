@@ -7,13 +7,13 @@
     left: 0 !important;
     right: 0 !important;
     z-index: 10000 !important;
-    background: hsl(48 38% 97%) !important;
+    background: hsl(103 20% 96%) !important; /* Light emerald-tinted background */
     backdrop-filter: blur(20px) !important;
-    border-bottom: 1px solid hsl(120 15% 85%) !important;
+    border-bottom: 1px solid hsl(103 30% 80%) !important; /* Emerald border */
     padding: 12px 24px !important;
     display: none !important;
     animation: slideDown 0.3s ease !important;
-    box-shadow: 0 4px 20px hsl(103 89% 29% / 0.1) !important;
+    box-shadow: 0 4px 20px hsl(103 89% 29% / 0.08) !important; /* Emerald shadow */
 }
 
 .editor-interface.active {
@@ -65,14 +65,14 @@
     flex: 0 0 auto;
     justify-content: flex-start;
     padding-left: 0;
-    border-right: 1px solid hsl(120 15% 85%);
+    border-right: 1px solid hsl(103 30% 80%); /* Emerald border */
 }
 
 .toolbar-center {
     flex: 1;
     justify-content: center;
     padding: 0 16px;
-    border-right: 1px solid hsl(120 15% 85%);
+    border-right: 1px solid hsl(103 30% 80%); /* Emerald border */
 }
 
 .toolbar-right {
@@ -90,13 +90,13 @@
     align-items: center !important;
     gap: 6px !important;
     padding: 10px 16px !important;
-    border: 1px solid hsl(120 15% 85%) !important;
-    background: hsl(0 0% 100%) !important;
+    border: 1px solid hsl(103 40% 85%) !important;
+    background: hsl(103 60% 97%) !important; /* Subtle light emerald */
     border-radius: 8px !important;
     cursor: pointer !important;
     font-size: 14px !important;
     font-weight: 500 !important;
-    color: hsl(0 0% 12%) !important;
+    color: hsl(103 50% 25%) !important; /* Emerald text */
     transition: all 0.2s ease !important;
     white-space: nowrap !important;
     position: relative !important;
@@ -119,10 +119,10 @@
 }
 
 .toolbar-btn:hover {
-    background: hsl(103 89% 95%);
-    border-color: hsl(103 89% 29%);
+    background: hsl(103 70% 94%);
+    border-color: hsl(103 60% 60%);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px hsl(103 89% 29% / 0.15);
+    box-shadow: 0 2px 8px hsl(103 60% 70% / 0.3);
 }
 
 .toolbar-btn:active {
@@ -130,9 +130,10 @@
 }
 
 .toolbar-btn.active {
-    background: hsl(103 89% 29%);
+    background: hsl(103 60% 50%);
     color: hsl(0 0% 100%);
-    border-color: hsl(103 89% 29%);
+    border-color: hsl(103 60% 45%);
+    box-shadow: 0 2px 8px hsl(103 60% 50% / 0.3);
     box-shadow: 0 4px 12px hsl(103 89% 29% / 0.3);
 }
 
@@ -581,8 +582,9 @@
   min-width: 80px;
   padding: 8px 12px;
   border: 1px solid #4b5563;
-  background: #374151;
-  color: #f9fafb;
+  background: hsl(103 70% 97%);
+  color: hsl(103 50% 25%);
+  border: 1px solid hsl(103 40% 85%);
   border-radius: 6px;
   font-size: 12px;
   font-weight: 600;
@@ -1394,8 +1396,8 @@ body.resizing .hero-content {
 }
 
 .management-btn-secondary:hover {
-    background: linear-gradient(135deg, #4b5563, #374151);
-    box-shadow: 0 6px 16px rgba(107, 114, 128, 0.4);
+    background: linear-gradient(135deg, hsl(103 70% 96%), hsl(103 70% 94%));
+    box-shadow: 0 4px 12px hsl(103 60% 70% / 0.3);
 }
 
 .btn-icon {
@@ -1598,7 +1600,7 @@ body.resizing .hero-content {
     height: 40px;
     padding: 4px 5px;
     border: 1.5px solid #4b5563 !important;
-    background: #374151 !important;
+    background: hsl(103 70% 96%) !important;
     border-radius: 8px !important;
     cursor: pointer !important;
     transition: all 0.2s ease !important;
@@ -1839,14 +1841,15 @@ body.resizing .hero-content {
 }
 
 .theme-card {
-    background: linear-gradient(145deg, #374151, #2d3748);
-    border: 2px solid rgba(75, 85, 99, 0.6);
+    background: hsl(0 0% 100%);
+    border: 2px solid hsl(103 40% 85%);
     border-radius: 16px;
     padding: 0;
     cursor: pointer;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;
     overflow: hidden;
+    box-shadow: 0 2px 8px hsl(103 30% 80% / 0.3);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08);
     backdrop-filter: blur(12px);
     min-height: 200px;
@@ -1866,9 +1869,9 @@ body.resizing .hero-content {
 }
 
 .theme-card:hover {
-    border-color: rgba(16, 185, 129, 0.8);
-    transform: translateY(-6px) scale(1.02);
-    box-shadow: 0 20px 40px rgba(16, 185, 129, 0.2), 0 8px 16px rgba(0, 0, 0, 0.1);
+    border-color: hsl(103 60% 60%);
+    transform: translateY(-4px) scale(1.01);
+    box-shadow: 0 8px 24px hsl(103 60% 70% / 0.4);
 }
 
 .theme-card:hover::before {
@@ -1876,9 +1879,9 @@ body.resizing .hero-content {
 }
 
 .theme-card.active {
-    border-color: #10b981;
-    background: linear-gradient(145deg, rgba(16, 185, 129, 0.1), rgba(16, 185, 129, 0.05));
-    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.3), 0 12px 30px rgba(16, 185, 129, 0.25);
+    border-color: hsl(103 60% 50%);
+    background: hsl(103 70% 97%);
+    box-shadow: 0 0 0 3px hsl(103 60% 50% / 0.2), 0 8px 24px hsl(103 60% 50% / 0.3);
     transform: translateY(-4px);
     animation: activeThemePulse 3s ease-in-out infinite;
 }
@@ -1967,7 +1970,7 @@ body.resizing .hero-content {
 .apply-theme-btn {
     width: 100%;
     padding: 12px 20px;
-    background: linear-gradient(135deg, #4f46e5, #7c3aed);
+    background: linear-gradient(135deg, hsl(103 60% 50%), hsl(103 60% 45%));
     color: white;
     border: none;
     border-radius: 10px;
@@ -1992,8 +1995,8 @@ body.resizing .hero-content {
 
 .apply-theme-btn:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
-    background: linear-gradient(135deg, #4338ca, #6d28d9);
+    box-shadow: 0 8px 20px hsl(103 60% 50% / 0.4);
+    background: linear-gradient(135deg, hsl(103 60% 45%), hsl(103 60% 40%));
 }
 
 .apply-theme-btn:hover::before {
@@ -2036,8 +2039,8 @@ body.resizing .hero-content {
     padding: 12px 20px;
     border: 2px solid rgba(75, 85, 99, 0.6);
     border-radius: 12px;
-    background: linear-gradient(145deg, #374151, #2d3748);
-    color: #f9fafb;
+    background: hsl(103 70% 96%);
+    color: hsl(103 50% 25%);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -2425,8 +2428,8 @@ body.resizing .hero-content {
     padding: 12px 20px;
     border: 2px solid rgba(75, 85, 99, 0.6);
     border-radius: 12px;
-    background: linear-gradient(145deg, #374151, #2d3748);
-    color: #f9fafb;
+    background: hsl(103 70% 96%);
+    color: hsl(103 50% 25%);
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
@@ -2749,51 +2752,60 @@ body.resizing .hero-content {
     align-items: center;
     gap: 6px;
     padding: 10px 8px;
-    border: 2px solid #374151;
+    border: 2px solid hsl(103 40% 85%);
+    background: hsl(0 0% 100%);
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s ease;
-    background: #2d3748;
+    background: hsl(103 70% 94%);
 }
 
 .theme-option:hover {
-    border-color: var(--primary-color, #4f46e5);
-    background: #374151;
+    border-color: hsl(103 60% 60%);
+    background: hsl(103 70% 97%);
     transform: translateY(-2px);
+    box-shadow: 0 2px 8px hsl(103 60% 70% / 0.3);
 }
 
 .theme-option.selected {
-    border-color: var(--secondary-color, #10b981);
-    background: rgba(16, 185, 129, 0.1);
-    box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    border-color: hsl(103 60% 50%);
+    border-width: 3px;
+    background: hsl(103 70% 95%);
+    box-shadow: 0 0 0 3px hsl(103 60% 50% / 0.25), 0 4px 12px hsl(103 60% 50% / 0.2);
 }
 
 .theme-preview {
     width: 40px;
     height: 24px;
     border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 2px solid hsl(103 30% 85%);
+    box-shadow: 0 2px 4px hsl(103 30% 80% / 0.2);
 }
 
 .theme-label {
     font-size: 10px;
     font-weight: 500;
-    color: #d1d5db;
+    color: hsl(103 30% 35%);
     text-align: center;
     line-height: 1.2;
 }
 
+.theme-option.selected .theme-preview {
+    border-color: hsl(103 60% 50%);
+    border-width: 3px;
+    box-shadow: 0 2px 8px hsl(103 60% 50% / 0.3);
+}
+
 .theme-option.selected .theme-label {
-    color: #10b981;
-    font-weight: 600;
+    color: hsl(103 60% 35%);
+    font-weight: 700;
 }
 
 /* Custom Theme Editor */
 .custom-theme-editor {
     margin-top: 20px;
     padding: 20px;
-    background: #2d3748;
+    background: hsl(103 70% 94%);
     border-radius: 12px;
     border: 1px solid #4a5568;
 }
@@ -2871,9 +2883,9 @@ body.resizing .hero-content {
 .theme-color-text {
     flex: 1;
     padding: 6px 8px;
-    background: #374151;
-    color: #f9fafb;
-    border: 1px solid #4b5563;
+    background: hsl(103 70% 97%);
+    color: hsl(103 50% 25%);
+    border: 1px solid hsl(103 40% 85%);
     border-radius: 4px;
     font-size: 11px;
     font-family: monospace;
@@ -2895,9 +2907,9 @@ body.resizing .hero-content {
 .theme-btn {
     flex: 1;
     padding: 8px 12px;
-    background: #374151;
-    color: #f9fafb;
-    border: 1px solid #4b5563;
+    background: hsl(103 70% 97%);
+    color: hsl(103 50% 25%);
+    border: 1px solid hsl(103 40% 85%);
     border-radius: 6px;
     cursor: pointer;
     font-size: 11px;

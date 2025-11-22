@@ -5,6 +5,7 @@
  */
 
 import type { Slide } from "@/lib/ai/types";
+import { getIconSvg } from "@/lib/utils/icon-mapper";
 
 interface Theme {
     primary: string;
@@ -90,7 +91,15 @@ function extractBenefits(
     // Priority 1: Use offer features if available
     if (offerData?.features && Array.isArray(offerData.features)) {
         const featuresBenefits = offerData.features.slice(0, 6).map((feature, idx) => ({
-            icon: ["🎯", "⚡", "🚀", "💡", "🎓", "💰"][idx] || "✨",
+            icon:
+                [
+                    "target",
+                    "zap",
+                    "rocket",
+                    "lightbulb",
+                    "graduation-cap",
+                    "dollar-sign",
+                ][idx] || "star",
             title:
                 typeof feature === "string"
                     ? feature
@@ -113,7 +122,14 @@ function extractBenefits(
             .slice(0, 6 - benefits.length)
             .map((slide, idx) => ({
                 icon:
-                    ["🎯", "⚡", "🚀", "💡", "🎓", "💰"][benefits.length + idx] || "✨",
+                    [
+                        "target",
+                        "zap",
+                        "rocket",
+                        "lightbulb",
+                        "graduation-cap",
+                        "dollar-sign",
+                    ][benefits.length + idx] || "star",
                 title: slide.title || `Benefit ${idx + 1}`,
                 description: slide.description || slide.title || "Key learning point",
             }));
@@ -131,7 +147,7 @@ function extractBenefits(
 
         if (intakeData.desiredOutcome) {
             personalizedBenefits.push({
-                icon: "🎯",
+                icon: "target",
                 title: "Achieve Your Goals",
                 description: `Discover how to ${intakeData.desiredOutcome.toLowerCase()}`,
             });
@@ -139,7 +155,7 @@ function extractBenefits(
 
         if (intakeData.mainProblem) {
             personalizedBenefits.push({
-                icon: "⚡",
+                icon: "zap",
                 title: "Solve Your Challenges",
                 description: `Get proven solutions for ${intakeData.mainProblem.toLowerCase()}`,
             });
@@ -147,7 +163,7 @@ function extractBenefits(
 
         if (intakeData.targetAudience) {
             personalizedBenefits.push({
-                icon: "🚀",
+                icon: "rocket",
                 title: "Built For You",
                 description: `Specifically designed for ${intakeData.targetAudience.toLowerCase()}`,
             });
@@ -160,19 +176,19 @@ function extractBenefits(
     if (benefits.length === 0) {
         return [
             {
-                icon: "🎯",
+                icon: "target",
                 title: "Strategic Clarity",
                 description:
                     "Follow a proven process to transform your existing offer into a highly scalable, irresistible value proposition.",
             },
             {
-                icon: "⚡",
+                icon: "zap",
                 title: "Buy Back Time",
                 description:
                     "Learn to replace chaos with key hires in the right order and build systems that run without you.",
             },
             {
-                icon: "🚀",
+                icon: "rocket",
                 title: "Scalable Growth",
                 description:
                     "Scale with AI, evergreen content, and leveraged marketing so growth compounds without burnout.",
@@ -416,7 +432,7 @@ export function generateRegistrationHTML(
                     .map(
                         (benefit) => `
                     <div class="feature-card" style="background: #f9fafb; padding: var(--space-6); border-radius: 12px; text-align: center; transition: transform 0.2s;">
-                        <div class="feature-icon" style="font-size: 3rem; margin-bottom: var(--space-4);">${benefit.icon}</div>
+                        <div class="feature-icon" style="width: 48px; height: 48px; margin: 0 auto var(--space-4); color: hsl(103 89% 29%);">${getIconSvg(benefit.icon)}</div>
                         <h3 class="feature-title" data-editable="true" style="font-size: 1.3rem; font-weight: 700; color: #1f2937; margin-bottom: var(--space-3);">${benefit.title}</h3>
                         <p class="feature-description" data-editable="true" style="color: #6b7280; font-size: 1rem; line-height: 1.6;">${benefit.description}</p>
                     </div>

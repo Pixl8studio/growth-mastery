@@ -23,7 +23,7 @@ class VisualEditor {
     this.redoStack = [];
     this.copiedSettings = null;
     this.selectedElement = null;
-    
+
     this.init();
   }
 
@@ -35,16 +35,16 @@ class VisualEditor {
     this.initializeBlocks();
     this.loadSavedTheme();
     this.loadSavedCustomTheme();
-    
+
     // Set initial UI state based on edit mode
     document.body.setAttribute('data-editor-mode', this.isEditMode);
-    
+
     // Ensure all social proof elements and other theme-dependent elements are properly styled
     setTimeout(() => {
       const allBlocks = document.querySelectorAll('.block');
       allBlocks.forEach(block => {
         this.applyThemeColorsToBlock(block);
-        
+
         // Add responsive classes to existing card grids
         const cardGrids = block.querySelectorAll('.features-grid, .testimonial-grid, .learn-grid, .pricing-options, .social-proof-strip');
         cardGrids.forEach(grid => {
@@ -55,13 +55,13 @@ class VisualEditor {
       });
       console.log('Theme colors and responsive classes applied to all blocks on initialization');
     }, 50);
-    
+
     // Save initial state for undo functionality
     setTimeout(() => {
       this.saveState();
       console.log('Initial state saved for undo/redo functionality');
       console.log(`Visual Editor initialized in ${this.isEditMode ? 'EDIT' : 'PREVIEW'} mode`);
-      
+
       // Ensure section controls are properly attached if in edit mode
       if (this.isEditMode) {
         this.ensureSectionControls();
@@ -77,24 +77,24 @@ class VisualEditor {
     this.cleanupDragOperation();
     this.removeHeroResizeHandles();
     this.selectedHeroElement = null;
-    
+
     this.isEditMode = !this.isEditMode;
-    
+
     // Persist edit mode state
     localStorage.setItem('visualEditor_editMode', this.isEditMode.toString());
-    
+
     document.body.setAttribute('data-editor-mode', this.isEditMode);
-    
+
     const blocks = document.querySelectorAll('.block');
     blocks.forEach(block => {
       block.setAttribute('data-editor-mode', this.isEditMode);
-      
+
       if (this.isEditMode) {
         this.makeBlockEditable(block);
       } else {
         this.makeBlockReadOnly(block);
       }
-      
+
       // Apply theme colors to ensure social proof and other elements are properly styled
       this.applyThemeColorsToBlock(block);
     });
@@ -106,11 +106,15 @@ class VisualEditor {
    * Make a block editable with Framer-like interactions
    */
   makeBlockEditable(block) {
-    // Add edit handles
+    // Add edit handles with drag icon
     if (!block.querySelector('.block-handle')) {
       const handle = document.createElement('div');
       handle.className = 'block-handle';
-      handle.textContent = block.dataset.blockType || 'Block';
+      handle.title = 'Drag to reorder section';
+      const blockType = block.dataset.blockType || 'Block';
+      // Add grip icon for drag indication
+      const gripIcon = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>';
+      handle.innerHTML = `<span class="grip-icon">${gripIcon}</span><span class="block-type-label">${blockType}</span>`;
       block.appendChild(handle);
     }
 
@@ -130,7 +134,7 @@ class VisualEditor {
         </button>
       `;
       block.appendChild(controls);
-      
+
       // Bind section control events
       controls.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -182,7 +186,7 @@ class VisualEditor {
    */
   handleSectionAction(block, action) {
     this.saveState(); // Save state for undo functionality
-    
+
     switch (action) {
       case 'move-up':
         this.moveSectionUp(block);
@@ -218,26 +222,26 @@ class VisualEditor {
 
   deleteSection(block) {
     const deleteBtn = block.querySelector('.delete-section-btn');
-    
+
     // Check if button is already in confirmation state
     if (deleteBtn.classList.contains('confirm-delete')) {
       // Actually delete the section
       const sectionType = block.dataset.blockType || 'section';
       block.remove();
-      
+
       // Clear selection if this was the selected block
       if (this.selectedBlock === block) {
         this.selectedBlock = null;
         document.getElementById('block-settings').style.display = 'none';
       }
-      
+
       this.showNotification(`${sectionType.charAt(0).toUpperCase() + sectionType.slice(1)} section deleted!`, 'success');
     } else {
       // Enter confirmation state
       deleteBtn.classList.add('confirm-delete');
       deleteBtn.innerHTML = '<span>✓</span>';
       deleteBtn.title = 'Click again to confirm deletion';
-      
+
       // Revert after 5 seconds if not clicked again
       setTimeout(() => {
         if (deleteBtn && deleteBtn.classList.contains('confirm-delete')) {
@@ -254,7 +258,7 @@ class VisualEditor {
    */
   ensureSectionControls() {
     if (!this.isEditMode) return;
-    
+
     const blocks = document.querySelectorAll('.block');
     blocks.forEach(block => {
       // Check if section controls are missing and add them
@@ -262,7 +266,7 @@ class VisualEditor {
         this.makeBlockEditable(block);
       }
     });
-    
+
     console.log('Section controls ensured for all blocks in edit mode');
   }
 
@@ -271,16 +275,16 @@ class VisualEditor {
    */
   makeBlockReadOnly(block) {
     block.draggable = false;
-    
+
     // Clean up any drag-related classes and styles that might persist
     block.classList.remove('dragging', 'drop-target');
     block.style.borderTop = '';
     block.style.opacity = '';
-    
+
     // Remove edit handles
     const handle = block.querySelector('.block-handle');
     if (handle) handle.remove();
-    
+
     // Remove section controls
     const sectionControls = block.querySelector('.section-controls');
     if (sectionControls) sectionControls.remove();
@@ -308,9 +312,9 @@ class VisualEditor {
    */
   handleBlockClick(e) {
     if (!this.isEditMode) return;
-    
+
     e.stopPropagation();
-    
+
     // Remove previous selections
     if (this.selectedBlock) {
       this.selectedBlock.classList.remove('block-selected');
@@ -324,7 +328,7 @@ class VisualEditor {
     if (this.selectedButtonElement) {
       this.selectedButtonElement.classList.remove('button-selected');
     }
-    
+
     // Select new block
     this.selectedBlock = e.currentTarget;
     this.selectedBlock.classList.add('block-selected');
@@ -333,7 +337,7 @@ class VisualEditor {
     this.selectedButtonElement = null;
     this.removeHeroResizeHandles();
     this.selectedHeroElement = null;
-    
+
     this.showBlockSettings(this.selectedBlock, 'section');
   }
 
@@ -342,9 +346,9 @@ class VisualEditor {
    */
   handleTextElementClick(e) {
     if (!this.isEditMode) return;
-    
+
     e.stopPropagation();
-    
+
     // Remove previous selections
     if (this.selectedBlock) {
       this.selectedBlock.classList.remove('block-selected');
@@ -358,14 +362,14 @@ class VisualEditor {
     if (this.selectedButtonElement) {
       this.selectedButtonElement.classList.remove('button-selected');
     }
-    
+
     // Select text element
     this.selectedTextElement = e.currentTarget;
     this.selectedTextElement.classList.add('text-selected');
     this.selectedBlock = e.currentTarget.closest('.block');
     this.selectedCardElement = null;
     this.selectedButtonElement = null;
-    
+
     // Check if this is a hero text element and add resize functionality
     if (this.isHeroTextElement(e.currentTarget)) {
       this.selectedHeroElement = e.currentTarget.closest('.hero-content') || e.currentTarget;
@@ -374,7 +378,7 @@ class VisualEditor {
       this.removeHeroResizeHandles();
       this.selectedHeroElement = null;
     }
-    
+
     this.showBlockSettings(this.selectedTextElement, 'text');
   }
 
@@ -383,9 +387,9 @@ class VisualEditor {
    */
   handleCardClick(e) {
     if (!this.isEditMode) return;
-    
+
     e.stopPropagation();
-    
+
     // Remove previous selections
     if (this.selectedBlock) {
       this.selectedBlock.classList.remove('block-selected');
@@ -396,7 +400,7 @@ class VisualEditor {
     if (this.selectedCardElement) {
       this.selectedCardElement.classList.remove('card-selected');
     }
-    
+
     // Select card element
     this.selectedCardElement = e.currentTarget;
     this.selectedCardElement.classList.add('card-selected');
@@ -405,7 +409,7 @@ class VisualEditor {
     this.selectedButtonElement = null;
     this.removeHeroResizeHandles();
     this.selectedHeroElement = null;
-    
+
     this.showBlockSettings(this.selectedCardElement, 'card');
   }
 
@@ -414,10 +418,10 @@ class VisualEditor {
    */
   handleButtonClick(e) {
     if (!this.isEditMode) return;
-    
+
     e.stopPropagation();
     e.preventDefault(); // Prevent button default action
-    
+
     // Remove previous selections
     if (this.selectedBlock) {
       this.selectedBlock.classList.remove('block-selected');
@@ -431,7 +435,7 @@ class VisualEditor {
     if (this.selectedButtonElement) {
       this.selectedButtonElement.classList.remove('button-selected');
     }
-    
+
     // Select button element
     this.selectedButtonElement = e.currentTarget;
     this.selectedButtonElement.classList.add('button-selected');
@@ -440,7 +444,7 @@ class VisualEditor {
     this.selectedCardElement = null;
     this.removeHeroResizeHandles();
     this.selectedHeroElement = null;
-    
+
     this.showBlockSettings(this.selectedButtonElement, 'button');
   }
 
@@ -453,7 +457,7 @@ class VisualEditor {
 
     let settings;
     let panelTitle;
-    
+
     if (type === 'text') {
       settings = this.getTextSettings();
       panelTitle = 'Text Settings';
@@ -471,15 +475,15 @@ class VisualEditor {
       if (!element.id) {
         element.id = element.dataset.blockType + '-block-' + Date.now();
       }
-      
+
       const blockType = element.dataset.blockType || 'generic';
       settings = this.getBlockSettings(blockType, element);
       panelTitle = 'Block Settings';
       settingsPanel.innerHTML = this.renderSettingsPanel(settings, element, panelTitle);
     }
-    
+
     settingsPanel.style.display = 'block';
-    
+
     // Make panel draggable and add controls
     this.makeSettingsPanelDraggable(settingsPanel);
     this.addPanelControls(settingsPanel);
@@ -497,18 +501,18 @@ class VisualEditor {
   getBlockSettings(blockType, element) {
     // Check if this section actually contains cards
     const hasCards = this.sectionHasCards(element, blockType);
-    
+
     // Base settings that apply to all sections
     let commonSettings = {
-      sectionBackground: { 
-        type: 'section-background-select', 
-        label: 'This Section Background', 
+      sectionBackground: {
+        type: 'section-background-select',
+        label: 'This Section Background',
         options: [
           // Clean Solid Colors
           { value: '#FFFFFF', label: 'Clean White', preview: '#FFFFFF' },
           { value: '#F8FAFC', label: 'Light Gray', preview: '#F8FAFC' },
-          
-          // Professional Gradients  
+
+          // Professional Gradients
           { value: 'linear-gradient(135deg, #667eea, #764ba2)', label: '🌊 Ocean', preview: 'linear-gradient(135deg, #667eea, #764ba2)' },
           { value: 'linear-gradient(135deg, #ff9a9e, #fecfef)', label: '🌅 Sunset', preview: 'linear-gradient(135deg, #ff9a9e, #fecfef)' },
           { value: 'linear-gradient(135deg, #134e5e, #71b280)', label: '🌲 Forest', preview: 'linear-gradient(135deg, #134e5e, #71b280)' },
@@ -524,10 +528,10 @@ class VisualEditor {
           { value: 'linear-gradient(135deg, #4f46e5, #7c3aed)', label: '👑 Royal', preview: 'linear-gradient(135deg, #4f46e5, #7c3aed)' },
           { value: 'linear-gradient(135deg, #ff0099, #493240)', label: '🌙 Cosmic', preview: 'linear-gradient(135deg, #ff0099, #493240)' },
           { value: 'linear-gradient(135deg, #4facfe, #00f2fe)', label: '💧 Aqua', preview: 'linear-gradient(135deg, #4facfe, #00f2fe)' },
-          
+
           { value: 'custom', label: '🎨 Custom Color', preview: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)' }
         ],
-        default: '#FFFFFF' 
+        default: '#FFFFFF'
       },
       customTheme: {
         type: 'custom-theme-editor',
@@ -550,14 +554,14 @@ class VisualEditor {
 
     // Add card color options only if this section has cards
     if (hasCards) {
-      commonSettings.blockColor = { 
-        type: 'block-color-select', 
-        label: '🎴 Cards & Blocks Color', 
+      commonSettings.blockColor = {
+        type: 'block-color-select',
+        label: '🎴 Cards & Blocks Color',
         options: [
           // Clean Solid Colors for Cards
           { value: '#FFFFFF', label: 'Clean White', preview: '#FFFFFF' },
           { value: '#F8FAFC', label: 'Light Gray', preview: '#F8FAFC' },
-          
+
           // Beautiful Card Gradients (same as sections!)
           { value: 'linear-gradient(135deg, #667eea, #764ba2)', label: '🌊 Ocean', preview: 'linear-gradient(135deg, #667eea, #764ba2)' },
           { value: 'linear-gradient(135deg, #ff9a9e, #fecfef)', label: '🌅 Sunset', preview: 'linear-gradient(135deg, #ff9a9e, #fecfef)' },
@@ -574,10 +578,10 @@ class VisualEditor {
           { value: 'linear-gradient(135deg, #4f46e5, #7c3aed)', label: '👑 Royal', preview: 'linear-gradient(135deg, #4f46e5, #7c3aed)' },
           { value: 'linear-gradient(135deg, #ff0099, #493240)', label: '🌙 Cosmic', preview: 'linear-gradient(135deg, #ff0099, #493240)' },
           { value: 'linear-gradient(135deg, #4facfe, #00f2fe)', label: '💧 Aqua', preview: 'linear-gradient(135deg, #4facfe, #00f2fe)' },
-          
+
           { value: 'custom', label: '🎨 Custom Card Color', preview: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)' }
         ],
-        default: '#FFFFFF' 
+        default: '#FFFFFF'
       };
     }
 
@@ -652,23 +656,23 @@ class VisualEditor {
   sectionHasCards(element, blockType) {
     // Define block types that typically have cards
     const blockTypesWithCards = ['features', 'testimonial', 'learn', 'pricing', 'faq', 'steps', 'process', 'story'];
-    
+
     // Block types that definitely don't have cards
     const blockTypesWithoutCards = ['hero', 'navigation', 'footer', 'header', 'text', 'image', 'video'];
-    
+
     if (blockTypesWithoutCards.includes(blockType)) {
       return false;
     }
-    
+
     if (blockTypesWithCards.includes(blockType)) {
       return true;
     }
-    
+
     // For unknown block types, check the actual DOM content
     if (element) {
       const cardSelectors = [
         '.feature-card',
-        '.testimonial-card', 
+        '.testimonial-card',
         '.learn-card',
         '.pricing-card',
         '.step-card',
@@ -678,10 +682,10 @@ class VisualEditor {
         '[class*="card"]',
         '[class*="item"]'
       ];
-      
+
       return cardSelectors.some(selector => element.querySelector(selector));
     }
-    
+
     // Default to false for unknown cases
     return false;
   }
@@ -691,16 +695,16 @@ class VisualEditor {
    */
   getTextSettings() {
     return {
-      textColor: { 
-        type: 'text-color-select', 
-        label: 'Text Color', 
+      textColor: {
+        type: 'text-color-select',
+        label: 'Text Color',
         options: [
           // Standard Text Colors
           { value: '#1F2937', label: 'Dark Gray', preview: '#1F2937' },
           { value: '#6B7280', label: 'Light Gray', preview: '#6B7280' },
           { value: '#FFFFFF', label: 'White', preview: '#FFFFFF' },
           { value: '#000000', label: 'Black', preview: '#000000' },
-          
+
           // Vibrant Colors (adapted from gradients)
           { value: '#667eea', label: '🌊 Ocean Blue', preview: '#667eea' },
           { value: '#764ba2', label: '💜 Deep Purple', preview: '#764ba2' },
@@ -714,10 +718,10 @@ class VisualEditor {
           { value: '#11998e', label: '💎 Emerald', preview: '#11998e' },
           { value: '#74b9ff', label: '🧊 Arctic Blue', preview: '#74b9ff' },
           { value: '#feca57', label: '⭐ Golden Yellow', preview: '#feca57' },
-          
+
           { value: 'custom', label: '🎨 Custom Color', preview: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)' }
         ],
-        default: '#1F2937' 
+        default: '#1F2937'
       },
       customTextColor: {
         type: 'text-color-editor',
@@ -741,14 +745,14 @@ class VisualEditor {
    */
   getCardSettings() {
     return {
-      cardBackground: { 
-        type: 'card-color-select', 
-        label: 'Card Background Color', 
+      cardBackground: {
+        type: 'card-color-select',
+        label: 'Card Background Color',
         options: [
           // Clean Solid Colors for Cards
           { value: '#FFFFFF', label: 'Clean White', preview: '#FFFFFF' },
           { value: '#F8FAFC', label: 'Light Gray', preview: '#F8FAFC' },
-          
+
           // Beautiful Card Gradients (same as sections!)
           { value: 'linear-gradient(135deg, #667eea, #764ba2)', label: '🌊 Ocean', preview: 'linear-gradient(135deg, #667eea, #764ba2)' },
           { value: 'linear-gradient(135deg, #ff9a9e, #fecfef)', label: '🌅 Sunset', preview: 'linear-gradient(135deg, #ff9a9e, #fecfef)' },
@@ -765,10 +769,10 @@ class VisualEditor {
           { value: 'linear-gradient(135deg, #4f46e5, #7c3aed)', label: '👑 Royal', preview: 'linear-gradient(135deg, #4f46e5, #7c3aed)' },
           { value: 'linear-gradient(135deg, #ff0099, #493240)', label: '🌙 Cosmic', preview: 'linear-gradient(135deg, #ff0099, #493240)' },
           { value: 'linear-gradient(135deg, #4facfe, #00f2fe)', label: '💧 Aqua', preview: 'linear-gradient(135deg, #4facfe, #00f2fe)' },
-          
+
           { value: 'custom', label: '🎨 Custom Card Color', preview: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)' }
         ],
-        default: '#FFFFFF' 
+        default: '#FFFFFF'
       },
       applyToAllCards: {
         type: 'action-button',
@@ -793,14 +797,14 @@ class VisualEditor {
    */
   getButtonSettings() {
     return {
-      buttonBackground: { 
-        type: 'button-color-select', 
-        label: 'Button Background Color', 
+      buttonBackground: {
+        type: 'button-color-select',
+        label: 'Button Background Color',
         options: [
           // Clean Solid Colors for Buttons
           { value: '#FFFFFF', label: 'Clean White', preview: '#FFFFFF' },
           { value: '#F8FAFC', label: 'Light Gray', preview: '#F8FAFC' },
-          
+
           // Beautiful Button Gradients (same as sections/cards!)
           { value: 'linear-gradient(135deg, #667eea, #764ba2)', label: '🌊 Ocean', preview: 'linear-gradient(135deg, #667eea, #764ba2)' },
           { value: 'linear-gradient(135deg, #ff9a9e, #fecfef)', label: '🌅 Sunset', preview: 'linear-gradient(135deg, #ff9a9e, #fecfef)' },
@@ -817,14 +821,14 @@ class VisualEditor {
           { value: 'linear-gradient(135deg, #4f46e5, #7c3aed)', label: '👑 Royal', preview: 'linear-gradient(135deg, #4f46e5, #7c3aed)' },
           { value: 'linear-gradient(135deg, #ff0099, #493240)', label: '🌙 Cosmic', preview: 'linear-gradient(135deg, #ff0099, #493240)' },
           { value: 'linear-gradient(135deg, #4facfe, #00f2fe)', label: '💧 Aqua', preview: 'linear-gradient(135deg, #4facfe, #00f2fe)' },
-          
+
           { value: 'custom', label: '🎨 Custom Button Color', preview: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)' }
         ],
-        default: '#4F46E5' 
+        default: '#4F46E5'
       },
-      buttonTextColor: { 
-        type: 'button-text-color-select', 
-        label: 'Button Text Color', 
+      buttonTextColor: {
+        type: 'button-text-color-select',
+        label: 'Button Text Color',
         options: [
           { value: '#FFFFFF', label: 'White', preview: '#FFFFFF' },
           { value: '#1F2937', label: 'Dark Gray', preview: '#1F2937' },
@@ -832,7 +836,7 @@ class VisualEditor {
           { value: '#000000', label: 'Black', preview: '#000000' },
           { value: 'custom', label: '🎨 Custom Text Color', preview: 'linear-gradient(45deg, #ff6b6b, #4ecdc4)' }
         ],
-        default: '#FFFFFF' 
+        default: '#FFFFFF'
       },
       applyToAllButtons: {
         type: 'action-button',
@@ -840,16 +844,16 @@ class VisualEditor {
         buttonText: '✨ Apply to All Buttons in Section',
         action: 'apply-button-style-to-all'
       },
-      buttonLink: { 
-        type: 'text', 
-        label: '🔗 Button Redirect URL', 
+      buttonLink: {
+        type: 'text',
+        label: '🔗 Button Redirect URL',
         placeholder: 'https://example.com or /page.html',
         description: 'Enter the URL where this button should redirect when clicked',
-        default: '' 
+        default: ''
       },
-      buttonTarget: { 
-        type: 'select', 
-        label: '🎯 Link Target', 
+      buttonTarget: {
+        type: 'select',
+        label: '🎯 Link Target',
         options: [
           { value: '_self', label: 'Same Window' },
           { value: '_blank', label: 'New Tab/Window' }
@@ -876,7 +880,7 @@ class VisualEditor {
   renderSettingsPanel(settings, element, panelTitle = null) {
     const blockType = element.dataset.blockType;
     const displayTitle = panelTitle || `${this.getBlockDisplayName(blockType)} Settings`;
-    
+
     // Start with panel header including controls
     let html = `
       <div class="settings-panel-header">
@@ -893,14 +897,14 @@ class VisualEditor {
         </div>
       </div>
       <div class="settings-panel-content">`;
-    
+
     // Add element management section first (only for block elements, not text)
     if (element.classList.contains('block')) {
       html += this.renderElementManagementSection(element);
     }
-    
+
     // Funnel-level settings are now handled at dashboard level
-    
+
     // Add image upload controls for specific block types
     console.log('🖼️ Checking block type for image upload:', blockType);
     if (blockType === 'quote') {
@@ -910,10 +914,10 @@ class VisualEditor {
       html += this.renderImageUploadSection('Founder Photo', 'photo', element, 'Upload a photo of the founder/presenter');
       console.log('✅ Added story photo upload controls');
     }
-    
+
     // Then add the styling settings
     html += `<div class="settings-form">`;
-    
+
     Object.entries(settings).forEach(([key, setting]) => {
       // Get current value based on element type
       let currentValue;
@@ -926,10 +930,10 @@ class VisualEditor {
       } else {
         currentValue = this.getTextProperty(element, key) || setting.default;
       }
-      
+
       html += `<div class="setting-group">
         <label>${setting.label}</label>`;
-      
+
       switch (setting.type) {
         case 'section-background-select':
           html += `<div class="theme-background-selector">`;
@@ -1039,7 +1043,7 @@ class VisualEditor {
                 <h4>🎨 Custom Text Color</h4>
                 <p>Choose any color for this text element</p>
               </div>
-              
+
               <div class="text-custom-color">
                 <label class="theme-variable-label">Text Color</label>
                 <div class="theme-color-wrapper">
@@ -1060,7 +1064,7 @@ class VisualEditor {
                 <h4>🎨 Custom Card Color</h4>
                 <p>Choose any color for cards/blocks in this section</p>
               </div>
-              
+
               <div class="block-custom-color">
                 <label class="theme-variable-label">Card Background Color</label>
                 <div class="theme-color-wrapper">
@@ -1081,7 +1085,7 @@ class VisualEditor {
                 <h4>🎨 Custom Card Color</h4>
                 <p>Choose any color for this card</p>
               </div>
-              
+
               <div class="card-custom-color">
                 <label class="theme-variable-label">Card Background Color</label>
                 <div class="theme-color-wrapper">
@@ -1102,7 +1106,7 @@ class VisualEditor {
                 <h4>🎨 Custom Section Background</h4>
                 <p>Choose any color for this section</p>
               </div>
-              
+
               <div class="section-custom-color">
                 <label class="theme-variable-label">Section Background Color</label>
                 <div class="theme-color-wrapper">
@@ -1111,13 +1115,13 @@ class VisualEditor {
                   <input type="text" class="section-color-text" data-section-property="sectionBackground" value="${this.getCurrentSectionBackground(element)}" placeholder="#FFFFFF">
                 </div>
               </div>
-              
+
               <div class="theme-editor-header" style="margin-top: 20px;">
                 <h4>🌐 Global Theme Colors</h4>
                 <p>Modify colors used throughout the entire site</p>
               </div>
               <div class="theme-variables-grid">`;
-            
+
             setting.variables.forEach(variable => {
               const currentValue = this.getCustomVariable(variable.name) || variable.default;
               html += `
@@ -1131,7 +1135,7 @@ class VisualEditor {
                 </div>
               `;
             });
-            
+
             html += `
               </div>
               <div class="theme-actions">
@@ -1189,10 +1193,10 @@ class VisualEditor {
           }
           break;
       }
-      
+
       html += `</div>`;
     });
-    
+
     html += `
       <div class="settings-actions">
         <button class="reset-btn" onclick="window.visualEditor.resetBlockSettings()">↺ Reset</button>
@@ -1218,14 +1222,14 @@ class VisualEditor {
 
   renderElementManagementSection(block) {
     const blockType = block.dataset.blockType;
-    
+
     if (!['testimonial', 'learn', 'features', 'faq', 'pricing'].includes(blockType)) {
       return '';
     }
-    
+
     let managementHTML = '<div class="element-management-section element-management-top">';
     managementHTML += '<div class="management-header"><h4>📝 Manage Elements</h4></div>';
-    
+
     switch (blockType) {
       case 'testimonial':
         const testimonialCount = block.querySelectorAll('.testimonial-card').length;
@@ -1329,7 +1333,7 @@ class VisualEditor {
         `;
         break;
     }
-    
+
     managementHTML += '</div>';
     return managementHTML;
   }
@@ -1342,10 +1346,10 @@ class VisualEditor {
     this.dropHandled = false; // Reset the flag for new drag operation
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/html', ''); // Required for Firefox
-    
+
     // Add visual feedback - use class instead of inline style to avoid conflicts
     e.currentTarget.classList.add('dragging');
-    
+
     console.log('=== DRAG START ===');
     console.log('Dragged block:', this.draggedBlock);
     console.log('Block classes:', this.draggedBlock.className);
@@ -1355,7 +1359,7 @@ class VisualEditor {
   handleDragOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    
+
     // Visual feedback for drop zones
     const dropZone = e.currentTarget;
     if (dropZone !== this.draggedBlock && dropZone.classList.contains('block')) {
@@ -1370,61 +1374,61 @@ class VisualEditor {
   handleDrop(e) {
     e.preventDefault();
     e.stopPropagation();
-    
+
     const dropZone = e.currentTarget;
-    
+
     console.log('=== DROP EVENT TRIGGERED ===');
     console.log('Drop zone:', dropZone);
     console.log('Dragged block:', this.draggedBlock);
     console.log('Drop zone has block class:', dropZone.classList.contains('block'));
     console.log('Are they different?', dropZone !== this.draggedBlock);
-    
+
     if (!this.draggedBlock) {
       console.log('❌ No dragged block found');
       this.cleanupDragOperation();
       return;
     }
-    
+
     if (dropZone === this.draggedBlock) {
       console.log('❌ Dropped on same element');
       this.cleanupDragOperation();
       return;
     }
-    
+
     if (!dropZone.classList.contains('block')) {
       console.log('❌ Drop zone is not a block');
       this.cleanupDragOperation();
       return;
     }
-    
+
     // Save state for undo
     this.saveState();
-    
-    // Get the containers - ensure we're working with the right elements  
+
+    // Get the containers - ensure we're working with the right elements
     const pageContainer = document.querySelector('.page-container') || document.body;
     console.log('Page container:', pageContainer);
     console.log('Page container tag name:', pageContainer.tagName);
     console.log('Page container classes:', pageContainer.className);
-    
+
     const allBlocks = Array.from(pageContainer.querySelectorAll('.block'));
     console.log('Total blocks found:', allBlocks.length);
-    console.log('All blocks:', allBlocks.map(block => ({ 
-      tag: block.tagName, 
-      classes: block.className, 
+    console.log('All blocks:', allBlocks.map(block => ({
+      tag: block.tagName,
+      classes: block.className,
       type: block.dataset.blockType,
-      parent: block.parentNode.tagName 
+      parent: block.parentNode.tagName
     })));
-    
+
     const draggedIndex = allBlocks.indexOf(this.draggedBlock);
     const dropIndex = allBlocks.indexOf(dropZone);
-    
+
     console.log(`Dragged block index: ${draggedIndex}`);
     console.log(`Drop zone index: ${dropIndex}`);
-    
+
     // Perform the reorder
     if (draggedIndex !== -1 && dropIndex !== -1 && draggedIndex !== dropIndex) {
       console.log('✅ Proceeding with move operation');
-      
+
       try {
         if (draggedIndex < dropIndex) {
           // Moving down: insert after the drop target
@@ -1442,26 +1446,26 @@ class VisualEditor {
           pageContainer.insertBefore(this.draggedBlock, dropZone);
           console.log('Inserted before drop target');
         }
-        
+
         console.log('✅ Block movement completed successfully');
-        
+
         // Verify the move worked
         const newAllBlocks = Array.from(pageContainer.querySelectorAll('.block'));
         const newDraggedIndex = newAllBlocks.indexOf(this.draggedBlock);
         console.log('New dragged block index:', newDraggedIndex);
-        
+
       } catch (error) {
         console.error('❌ Error during block movement:', error);
       }
     } else {
       console.log('❌ Invalid indices or same position', { draggedIndex, dropIndex });
     }
-    
+
     console.log('=== DROP EVENT COMPLETE ===');
-    
+
     // Mark drop as handled to prevent dragend interference
     this.dropHandled = true;
-    
+
     // Always clean up regardless of success
     this.cleanupDragOperation();
   }
@@ -1470,7 +1474,7 @@ class VisualEditor {
     console.log('=== DRAG END ===');
     console.log('Dragged block still exists:', !!this.draggedBlock);
     console.log('Drop was handled:', this.dropHandled);
-    
+
     // Only clean up if drop wasn't handled
     if (!this.dropHandled) {
       setTimeout(() => {
@@ -1484,7 +1488,7 @@ class VisualEditor {
 
   cleanupDragOperation() {
     console.log('=== CLEANUP OPERATION ===');
-    
+
     // Remove dragging class from the dragged element
     if (this.draggedBlock) {
       this.draggedBlock.classList.remove('dragging');
@@ -1493,10 +1497,10 @@ class VisualEditor {
     } else {
       console.log('No dragged block to clean up');
     }
-    
+
     // Clear all drop indicators
     this.clearDropIndicators();
-    
+
     // Reset dragged block reference and flags
     this.draggedBlock = null;
     this.dropHandled = false;
@@ -1519,41 +1523,41 @@ class VisualEditor {
     // Check if element is within a hero block and is a text element
     const heroBlock = element.closest('.hero-block');
     if (!heroBlock) return false;
-    
+
     // Check if it's a hero text element (title, subtitle, or within hero-content)
-    return element.classList.contains('hero-title') || 
-           element.classList.contains('hero-subtitle') || 
+    return element.classList.contains('hero-title') ||
+           element.classList.contains('hero-subtitle') ||
            element.closest('.hero-content');
   }
 
   addHeroResizeHandles(heroContent) {
     this.removeHeroResizeHandles(); // Remove any existing handles
-    
+
     if (!heroContent) return;
-    
+
     // Ensure the hero content is relatively positioned for handle positioning
     heroContent.style.position = 'relative';
-    
+
     // Create left resize handle
     const leftHandle = document.createElement('div');
     leftHandle.className = 'hero-resize-handle hero-resize-left';
     leftHandle.innerHTML = '⟷';
     leftHandle.setAttribute('data-resize-direction', 'left');
-    
+
     // Create right resize handle
     const rightHandle = document.createElement('div');
     rightHandle.className = 'hero-resize-handle hero-resize-right';
     rightHandle.innerHTML = '⟷';
     rightHandle.setAttribute('data-resize-direction', 'right');
-    
+
     // Add event listeners
     this.addResizeEventListeners(leftHandle);
     this.addResizeEventListeners(rightHandle);
-    
+
     // Append handles to hero content
     heroContent.appendChild(leftHandle);
     heroContent.appendChild(rightHandle);
-    
+
     console.log('Added resize handles to hero content:', heroContent);
   }
 
@@ -1565,75 +1569,75 @@ class VisualEditor {
   handleResizeStart(e) {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (!this.selectedHeroElement) return;
-    
+
     this.isResizing = true;
     this.resizeStartX = e.clientX;
-    
+
     // Get current width
     const computedStyle = getComputedStyle(this.selectedHeroElement);
     this.resizeStartWidth = parseInt(computedStyle.maxWidth) || 800;
-    
+
     // Add resize cursor and visual feedback to body
     document.body.style.cursor = 'ew-resize';
     document.body.style.userSelect = 'none';
     document.body.classList.add('resizing');
-    
+
     // Add global mouse events
     document.addEventListener('mousemove', this.handleResizeMove.bind(this));
     document.addEventListener('mouseup', this.handleResizeEnd.bind(this));
-    
+
     console.log('Started resizing hero content, start width:', this.resizeStartWidth);
   }
 
   handleResizeMove(e) {
     if (!this.isResizing || !this.selectedHeroElement) return;
-    
+
     const deltaX = e.clientX - this.resizeStartX;
     let newWidth = this.resizeStartWidth + (deltaX * 2); // Multiply by 2 for both sides
-    
+
     // Set constraints
     newWidth = Math.max(300, Math.min(1200, newWidth)); // Min 300px, Max 1200px
-    
+
     // Apply the new width
     this.selectedHeroElement.style.maxWidth = newWidth + 'px';
-    
+
     // Store the custom width
     this.selectedHeroElement.dataset.customWidth = newWidth;
-    
+
     // Show width indicator
     this.showWidthIndicator(newWidth);
-    
+
     console.log('Resizing hero content to:', newWidth + 'px');
   }
 
   handleResizeEnd(e) {
     if (!this.isResizing) return;
-    
+
     this.isResizing = false;
-    
+
     // Remove global styles and events
     document.body.style.cursor = '';
     document.body.style.userSelect = '';
     document.body.classList.remove('resizing');
-    
+
     document.removeEventListener('mousemove', this.handleResizeMove.bind(this));
     document.removeEventListener('mouseup', this.handleResizeEnd.bind(this));
-    
+
     // Hide width indicator
     this.hideWidthIndicator();
-    
+
     // Save state for undo
     this.saveState();
-    
+
     console.log('Finished resizing hero content');
   }
 
   removeHeroResizeHandles() {
     const existingHandles = document.querySelectorAll('.hero-resize-handle');
     existingHandles.forEach(handle => handle.remove());
-    
+
     if (this.selectedHeroElement) {
       this.selectedHeroElement.style.position = '';
     }
@@ -1641,10 +1645,10 @@ class VisualEditor {
 
   initializeHeroContent(block) {
     if (!block.classList.contains('hero-block')) return;
-    
+
     const heroContent = block.querySelector('.hero-content');
     if (!heroContent) return;
-    
+
     // Restore custom width if it exists
     if (heroContent.dataset.customWidth) {
       const customWidth = parseInt(heroContent.dataset.customWidth);
@@ -1663,10 +1667,10 @@ class VisualEditor {
       indicator.className = 'width-indicator';
       document.body.appendChild(indicator);
     }
-    
+
     indicator.textContent = `${width}px`;
     indicator.style.display = 'block';
-    
+
     // Position near the hero content if possible
     if (this.selectedHeroElement) {
       const rect = this.selectedHeroElement.getBoundingClientRect();
@@ -1696,7 +1700,7 @@ class VisualEditor {
       e.preventDefault();
       e.target.blur();
     }
-    
+
     if (e.key === 'Escape') {
       e.target.blur();
       this.selectedBlock = null;
@@ -1735,32 +1739,46 @@ class VisualEditor {
    */
   addBlock(blockType, insertAfter = null) {
     this.saveState();
-    
+
     const blockHTML = this.getBlockTemplate(blockType);
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = blockHTML;
     const newBlock = tempDiv.firstElementChild;
-    
+
     const container = document.querySelector('.page-container') || document.body;
-    
+
     if (insertAfter) {
       insertAfter.insertAdjacentElement('afterend', newBlock);
     } else {
       container.appendChild(newBlock);
     }
-    
+
     // Initialize FAQ toggle functionality if it's an FAQ block
     if (blockType === 'faq') {
       this.initializeFaqToggle(newBlock);
     }
-    
+
     // Apply current theme colors to the new block
     this.applyThemeColorsToBlock(newBlock);
-    
+
     if (this.isEditMode) {
       this.makeBlockEditable(newBlock);
     }
-    
+
+    // Auto-scroll to new section with smooth behavior
+    setTimeout(() => {
+      newBlock.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center'
+      });
+
+      // Add pulse animation to highlight the new section
+      newBlock.style.animation = 'pulse-highlight 1.5s ease-in-out';
+      setTimeout(() => {
+        newBlock.style.animation = '';
+      }, 1500);
+    }, 100);
+
     // Auto-select new block
     this.handleBlockClick({ currentTarget: newBlock, stopPropagation: () => {} });
   }
@@ -1770,9 +1788,9 @@ class VisualEditor {
    */
   applyThemeColorsToBlock(block) {
     if (!block) return;
-    
+
     console.log('🎨 Applying SMART theme colors to block:', block.dataset.blockType);
-    
+
     // Get current theme colors from CSS variables
     const root = document.documentElement;
     const currentTheme = {
@@ -1784,7 +1802,7 @@ class VisualEditor {
       bgPrimary: getComputedStyle(root).getPropertyValue('--bg-primary').trim(),
       bgSecondary: getComputedStyle(root).getPropertyValue('--bg-secondary').trim()
     };
-    
+
     // === BUTTONS: Auto-contrast text on themed backgrounds ===
     const primaryButtons = block.querySelectorAll('.btn-primary');
     primaryButtons.forEach(btn => {
@@ -1793,7 +1811,7 @@ class VisualEditor {
       // SMART: Auto-calculate contrast color instead of hardcoded white
       btn.style.setProperty('color', this.getContrastColor(currentTheme.accent), 'important');
     });
-    
+
     const secondaryButtons = block.querySelectorAll('.btn-secondary');
     secondaryButtons.forEach(btn => {
       btn.style.setProperty('background', currentTheme.secondary, 'important');
@@ -1801,10 +1819,10 @@ class VisualEditor {
       // SMART: Auto-calculate contrast color
       btn.style.setProperty('color', this.getContrastColor(currentTheme.secondary), 'important');
     });
-    
+
     // === CARDS: Auto-contrast text on gradient backgrounds ===
     const gradientBg = `linear-gradient(135deg, ${currentTheme.primary}, ${currentTheme.secondary})`;
-    
+
     // Pricing badges
     const pricingBadges = block.querySelectorAll('.pricing-badge, .popular-badge');
     pricingBadges.forEach(badge => {
@@ -1812,14 +1830,14 @@ class VisualEditor {
       // SMART: Use primary color for contrast calculation (gradients are tricky, so we use the primary)
       badge.style.setProperty('color', this.getContrastColor(currentTheme.primary), 'important');
     });
-    
+
     // Feature icons
     const featureIcons = block.querySelectorAll('.feature-icon');
     featureIcons.forEach(icon => {
       icon.style.setProperty('background', gradientBg, 'important');
       icon.style.setProperty('color', this.getContrastColor(currentTheme.primary), 'important');
     });
-    
+
     // Cards with gradients
     const gradientCards = block.querySelectorAll('.testimonial-card, .pricing-card');
     gradientCards.forEach(card => {
@@ -1832,7 +1850,7 @@ class VisualEditor {
         }
       });
     });
-    
+
     // === FAQ SECTIONS: Auto-contrast on gradient backgrounds ===
     const faqQuestions = block.querySelectorAll('.faq-question');
     faqQuestions.forEach(question => {
@@ -1841,7 +1859,7 @@ class VisualEditor {
       question.style.removeProperty('background-color');
       question.style.removeProperty('background-image');
       question.style.removeProperty('background');
-      
+
       // Apply gradient background with smart text color
       question.style.setProperty('background', gradientBg, 'important');
       question.style.setProperty('color', this.getContrastColor(currentTheme.primary), 'important');
@@ -1852,7 +1870,7 @@ class VisualEditor {
       question.style.setProperty('transition', 'all 0.3s ease', 'important');
       question.style.setProperty('font-weight', '600', 'important');
     });
-    
+
     // === HERO SECTIONS: Auto-contrast on gradient backgrounds ===
     if (block.classList.contains('hero-block')) {
       block.style.setProperty('background', gradientBg, 'important');
@@ -1873,25 +1891,25 @@ class VisualEditor {
         text.style.setProperty('color', this.getContrastColor(currentTheme.primary), 'important');
       });
     }
-    
+
     // === STORY CARDS: Keep white background, use theme variables ===
     const storyCards = block.querySelectorAll('.story-card');
     storyCards.forEach(card => {
       card.style.setProperty('background', 'white', 'important');
       card.style.setProperty('box-shadow', 'var(--shadow-lg)', 'important');
     });
-    
+
     // === ACCENT ELEMENTS: Use theme colors directly ===
     const socialProofNumbers = block.querySelectorAll('.social-proof-number');
     socialProofNumbers.forEach(number => {
       number.style.setProperty('color', currentTheme.primary, 'important');
     });
-    
+
     const accentElements = block.querySelectorAll('.accent-color, .highlight');
     accentElements.forEach(element => {
       element.style.setProperty('color', currentTheme.accent, 'important');
     });
-    
+
     // === HEADINGS: Use CSS variables (will auto-update with themes) ===
     const headings = block.querySelectorAll('h1, h2, h3, .hero-title, .heading-1, .heading-2, .heading-3');
     headings.forEach(heading => {
@@ -1899,7 +1917,7 @@ class VisualEditor {
         heading.style.setProperty('color', 'var(--text-primary)', 'important');
       }
     });
-    
+
     // FAQ items cleanup
     const faqItems = block.querySelectorAll('.faq-item');
     faqItems.forEach(item => {
@@ -1910,7 +1928,7 @@ class VisualEditor {
       item.style.setProperty('border-radius', '8px', 'important');
       item.style.setProperty('overflow', 'hidden', 'important');
     });
-    
+
     // === RESPONSIVE BEHAVIOR ===
     const cardGrids = block.querySelectorAll('.features-grid, .testimonial-grid, .learn-grid, .pricing-options, .social-proof-strip');
     cardGrids.forEach(grid => {
@@ -1918,7 +1936,7 @@ class VisualEditor {
         grid.classList.add('cards-per-row-responsive');
       }
     });
-    
+
     console.log('✅ SMART theme colors applied - all text will auto-contrast!');
   }
 
@@ -1933,7 +1951,7 @@ class VisualEditor {
         // Remove any existing event listeners to prevent duplicates
         const newQuestion = question.cloneNode(true);
         question.parentNode.replaceChild(newQuestion, question);
-        
+
         // Add toggle functionality
         newQuestion.addEventListener('click', (e) => {
           // In edit mode, allow toggling unless specifically editing text
@@ -1944,14 +1962,14 @@ class VisualEditor {
               return; // Allow text editing
             }
           }
-          
+
           // Toggle FAQ
           e.preventDefault();
           e.stopPropagation();
-          
+
           const answer = item.querySelector('.faq-answer');
           const isActive = item.classList.contains('active');
-          
+
           // Close all other FAQ items first
           const allFaqItems = item.parentElement.querySelectorAll('.faq-item');
           allFaqItems.forEach(otherItem => {
@@ -1963,7 +1981,7 @@ class VisualEditor {
               }
             }
           });
-          
+
           // Toggle current item
           if (!isActive) {
             item.classList.add('active');
@@ -1983,7 +2001,7 @@ class VisualEditor {
               answer.style.maxHeight = '0px';
             }
           }
-          
+
           console.log('FAQ toggled:', item.classList.contains('active'));
         });
       }
@@ -1995,9 +2013,9 @@ class VisualEditor {
    */
   applyThemeColorsToElement(element) {
     if (!element) return;
-    
+
     console.log('🎨 Applying SMART theme colors to element:', element.className);
-    
+
     // Get current theme colors from CSS variables
     const root = document.documentElement;
     const currentTheme = {
@@ -2005,9 +2023,9 @@ class VisualEditor {
       secondary: getComputedStyle(root).getPropertyValue('--secondary-color').trim(),
       accent: getComputedStyle(root).getPropertyValue('--accent-color').trim()
     };
-    
+
     const gradientBg = `linear-gradient(135deg, ${currentTheme.primary}, ${currentTheme.secondary})`;
-    
+
     // Apply theme colors to FAQ questions within this element
     const faqQuestions = element.querySelectorAll('.faq-question');
     faqQuestions.forEach(question => {
@@ -2016,7 +2034,7 @@ class VisualEditor {
       question.style.removeProperty('background-color');
       question.style.removeProperty('background-image');
       question.style.removeProperty('background');
-      
+
       // Apply gradient background with SMART contrast text color
       question.style.setProperty('background', gradientBg, 'important');
       question.style.setProperty('color', this.getContrastColor(currentTheme.primary), 'important');
@@ -2027,16 +2045,16 @@ class VisualEditor {
       question.style.setProperty('transition', 'all 0.3s ease', 'important');
       question.style.setProperty('font-weight', '600', 'important');
     });
-    
+
     // Apply theme colors to other card elements
-    if (element.classList.contains('feature-card') || 
-        element.classList.contains('testimonial-card') || 
-        element.classList.contains('learn-card') || 
+    if (element.classList.contains('feature-card') ||
+        element.classList.contains('testimonial-card') ||
+        element.classList.contains('learn-card') ||
         element.classList.contains('pricing-card')) {
       element.style.setProperty('background', gradientBg, 'important');
       // SMART: Auto-calculate contrast color instead of hardcoded white
       element.style.setProperty('color', this.getContrastColor(currentTheme.primary), 'important');
-      
+
       // Apply smart text colors to ALL text in this card
       const cardTexts = element.querySelectorAll('*');
       cardTexts.forEach(text => {
@@ -2045,42 +2063,42 @@ class VisualEditor {
         }
       });
     }
-    
+
     // Story cards get special treatment - theme-aware background with proper contrast
     if (element.classList.contains('story-card')) {
       // Use a theme-aware background that provides good contrast
       const bgColor = currentTheme.primary;
       const lightBg = this.isLightColor(bgColor) ? 'rgba(255, 255, 255, 0.95)' : 'rgba(255, 255, 255, 0.98)';
-      
+
       element.style.setProperty('background', lightBg, 'important');
       element.style.setProperty('border', `2px solid ${currentTheme.primary}20`, 'important');
       element.style.setProperty('box-shadow', 'var(--shadow-lg)', 'important');
-      
+
       // Apply standard theme variables like other sections
       const storyTexts = element.querySelectorAll('p, .story-bio p, .credential-item span:not(:first-child)');
       storyTexts.forEach(text => {
         text.style.setProperty('color', 'var(--text-secondary)', 'important');
       });
-      
+
       // Headings use primary text color
       const storyHeadings = element.querySelectorAll('h1, h2, h3, h4, .story-name');
       storyHeadings.forEach(heading => {
         heading.style.setProperty('color', 'var(--text-primary)', 'important');
       });
-      
+
       // Accent elements use primary color
       const accentElements = element.querySelectorAll('.story-label, .credential-item span:first-child');
       accentElements.forEach(accent => {
         accent.style.setProperty('color', 'var(--primary-color)', 'important');
       });
     }
-    
+
     // Apply theme colors to social proof numbers within this element
     const socialProofNumbers = element.querySelectorAll('.social-proof-number');
     socialProofNumbers.forEach(number => {
       number.style.setProperty('color', currentTheme.primary, 'important');
     });
-    
+
     // Apply theme colors to buttons within this element
     const primaryButtons = element.querySelectorAll('.btn-primary');
     primaryButtons.forEach(btn => {
@@ -2089,7 +2107,7 @@ class VisualEditor {
       // SMART: Auto-calculate contrast color instead of hardcoded white
       btn.style.setProperty('color', this.getContrastColor(currentTheme.accent), 'important');
     });
-    
+
     console.log('✅ SMART theme colors applied to element');
   }
 
@@ -2098,12 +2116,12 @@ class VisualEditor {
    */
   refreshAllSectionThemes() {
     console.log('🔄 Refreshing theme colors for all existing sections');
-    
+
     const allBlocks = document.querySelectorAll('.block');
     allBlocks.forEach(block => {
       this.applyThemeColorsToBlock(block);
     });
-    
+
     console.log('✅ All sections refreshed with current theme');
   }
 
@@ -2317,7 +2335,7 @@ class VisualEditor {
               <h2 class="heading-2" data-editable="true">Your Section Title</h2>
               <p class="subheading" data-editable="true">Add your content description here</p>
               <p data-editable="true">
-                This is a flexible content section. You can add paragraphs, lists, images, 
+                This is a flexible content section. You can add paragraphs, lists, images,
                 and any other content you need for your page.
               </p>
             </div>
@@ -2555,7 +2573,7 @@ class VisualEditor {
         </div>
       `
     };
-    
+
     // Add quote template
     templates.quote = `
       <div class="block quote-block" data-block-type="quote" style="background: linear-gradient(rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0.4)), url('/Screenshot 2568-09-30 at 2.22.29 AM.png') center/cover; padding: var(--space-20) 0; text-align: center; color: white; position: relative;">
@@ -2588,12 +2606,12 @@ class VisualEditor {
     const state = document.querySelector('.page-container').innerHTML;
     this.undoStack.push(state);
     this.redoStack = []; // Clear redo stack on new action
-    
+
     // Limit undo stack size
     if (this.undoStack.length > 50) {
       this.undoStack.shift();
     }
-    
+
     // Update toolbar to reflect new state
     this.updateToolbar();
   }
@@ -2602,7 +2620,7 @@ class VisualEditor {
     if (this.undoStack.length > 1) {
       const currentState = this.undoStack.pop();
       this.redoStack.push(currentState);
-      
+
       const previousState = this.undoStack[this.undoStack.length - 1];
       document.querySelector('.page-container').innerHTML = previousState;
       this.initializeBlocks();
@@ -2615,7 +2633,7 @@ class VisualEditor {
     if (this.redoStack.length > 0) {
       const state = this.redoStack.pop();
       this.undoStack.push(state);
-      
+
       document.querySelector('.page-container').innerHTML = state;
       this.initializeBlocks();
       this.updateToolbar();
@@ -2641,20 +2659,24 @@ class VisualEditor {
           <span class="btn-text">Theme</span>
         </button>
       </div>
-      
+
       <div class="toolbar-section toolbar-center">
         <div class="quick-add-section">
           <div class="quick-add-icons">
-            ${Array.from(this.components.entries()).map(([type, component]) => 
-              `<button class="quick-add-btn" data-component="${type}" title="Add ${component.name}">
-                <span class="quick-icon">${component.icon}</span>
+            ${Array.from(this.components.entries()).map(([type, component]) => {
+              // Convert emoji to SVG if emojiToSvg is available
+              const iconHtml = typeof window.emojiToSvg === 'function'
+                ? window.emojiToSvg(component.icon)
+                : component.icon;
+              return `<button class="quick-add-btn" data-component="${type}" title="Add ${component.name}">
+                <span class="quick-icon">${iconHtml}</span>
                 <span class="quick-label">${component.name.split(' ')[0]}</span>
-              </button>`
-            ).join('')}
+              </button>`;
+            }).join('')}
           </div>
         </div>
       </div>
-      
+
       <div class="toolbar-section toolbar-right">
         <button id="undo-btn" class="toolbar-btn">
           <span class="btn-icon">↶</span>
@@ -2677,24 +2699,24 @@ class VisualEditor {
     if (toggleBtn) {
       const icon = toggleBtn.querySelector('.btn-icon');
       const text = toggleBtn.querySelector('.btn-text');
-      
+
       if (icon && text) {
         icon.textContent = this.isEditMode ? '👁️' : '✏️';
         text.textContent = this.isEditMode ? 'Preview' : 'Edit';
       }
-      
+
       toggleBtn.classList.toggle('active', this.isEditMode);
     }
-    
+
     // Update undo/redo button states
     const undoBtn = document.getElementById('undo-btn');
     const redoBtn = document.getElementById('redo-btn');
-    
+
     if (undoBtn) {
       undoBtn.disabled = this.undoStack.length <= 1;
       undoBtn.style.opacity = this.undoStack.length <= 1 ? '0.5' : '1';
     }
-    
+
     if (redoBtn) {
       redoBtn.disabled = this.redoStack.length === 0;
       redoBtn.style.opacity = this.redoStack.length === 0 ? '0.5' : '1';
@@ -2710,48 +2732,48 @@ class VisualEditor {
         this.toggleComponentLibrary();
       }
       */
-      
+
       if (e.target.id === 'toggle-edit' || e.target.closest('#toggle-edit')) {
         this.toggleEditMode();
       }
-      
+
       if (e.target.id === 'theme-switcher' || e.target.closest('#theme-switcher')) {
         this.showThemeSelector();
       }
-      
+
       if (e.target.id === 'undo-btn' || e.target.closest('#undo-btn')) {
         this.undo();
       }
-      
+
       if (e.target.id === 'redo-btn' || e.target.closest('#redo-btn')) {
         this.redo();
       }
-      
+
       // Component library handlers (legacy quick add)
       const componentBtn = e.target.closest('.component-btn') || e.target.closest('.quick-add-btn');
       if (componentBtn) {
         const componentType = componentBtn.dataset.component;
         this.addBlock(componentType, this.selectedBlock);
       }
-      
+
       // Save handler
       if (e.target.id === 'save-btn' || e.target.closest('#save-btn')) {
         this.savePage();
       }
-      
+
       // Image upload button handlers
       if (e.target.classList.contains('image-upload-btn')) {
         const type = e.target.dataset.type;
-        const targetElement = type === 'background' ? this.selectedBlock : 
+        const targetElement = type === 'background' ? this.selectedBlock :
                             this.selectedBlock.querySelector('img[data-editable="true"], .story-image img');
-        
+
         if (type === 'background') {
           this.showImageUploadForBackground(this.selectedBlock);
         } else if (type === 'photo') {
           this.showImageUploadForPhoto(targetElement);
         }
       }
-      
+
       // Image remove button handlers
       if (e.target.classList.contains('image-remove-btn')) {
         const type = e.target.dataset.type;
@@ -2761,7 +2783,7 @@ class VisualEditor {
           this.removePhotoImage(this.selectedBlock);
         }
       }
-      
+
       // Slug update button handler
       if (e.target.classList.contains('update-slug-btn')) {
         const funnelId = e.target.dataset.funnelId;
@@ -2776,12 +2798,12 @@ class VisualEditor {
     document.addEventListener('input', (e) => {
       if (e.target.dataset.property && this.selectedBlock) {
         let value = e.target.value;
-        
+
         // Handle checkbox values
         if (e.target.type === 'checkbox') {
           value = e.target.checked;
         }
-        
+
         // Handle color text inputs
         if (e.target.classList.contains('color-text')) {
           const colorPicker = document.querySelector(`input[data-property="${e.target.dataset.property.replace('-text', '')}"]`);
@@ -2792,7 +2814,7 @@ class VisualEditor {
           this.updateBlockProperty(this.selectedBlock, e.target.dataset.property.replace('-text', ''), value);
           return;
         }
-        
+
         // Immediate update for real-time feedback based on what's selected
         if (this.selectedButtonElement) {
           this.updateButtonProperty(this.selectedButtonElement, e.target.dataset.property, value);
@@ -2805,16 +2827,16 @@ class VisualEditor {
         }
       }
     });
-    
+
     document.addEventListener('change', (e) => {
       if (e.target.dataset.property) {
         let value = e.target.value;
-        
+
         // Handle checkbox values
         if (e.target.type === 'checkbox') {
           value = e.target.checked;
         }
-        
+
         // Apply the change based on what's selected
         if (this.selectedButtonElement) {
           this.updateButtonProperty(this.selectedButtonElement, e.target.dataset.property, value);
@@ -2844,17 +2866,17 @@ class VisualEditor {
         const themeOption = e.target.closest('.theme-option');
         const property = themeOption.dataset.property;
         const value = themeOption.dataset.value;
-        
+
         // Update selection UI
         const selector = themeOption.parentElement;
         selector.querySelectorAll('.theme-option').forEach(opt => opt.classList.remove('selected'));
         themeOption.classList.add('selected');
-        
+
         // Apply property based on what's selected
         if (this.selectedTextElement && property === 'textColor') {
           // Apply text color to text element
           this.updateTextProperty(this.selectedTextElement, property, value);
-          
+
           // Refresh settings if custom was selected to show text color picker
           if (value === 'custom') {
             this.showNotification('🎨 Custom text color picker activated!', 'info');
@@ -2865,7 +2887,7 @@ class VisualEditor {
         } else if (this.selectedButtonElement && (property === 'buttonBackground' || property === 'buttonTextColor')) {
           // Apply button color to button element
           this.updateButtonProperty(this.selectedButtonElement, property, value);
-          
+
           // Refresh settings if custom was selected to show button color picker
           if (value === 'custom') {
             this.showNotification('🎨 Custom button color picker activated!', 'info');
@@ -2876,7 +2898,7 @@ class VisualEditor {
         } else if (this.selectedCardElement && property === 'cardBackground') {
           // Apply card color to card element
           this.updateCardProperty(this.selectedCardElement, property, value);
-          
+
           // Refresh settings if custom was selected to show card color picker
           if (value === 'custom') {
             this.showNotification('🎨 Custom card color picker activated!', 'info');
@@ -2887,7 +2909,7 @@ class VisualEditor {
         } else if (this.selectedBlock) {
           // Apply block property (background, etc.)
           this.updateBlockProperty(this.selectedBlock, property, value);
-          
+
           // Refresh settings if custom was selected to show color editor
           if (value === 'custom') {
             this.showNotification('🎨 Custom color picker activated! Modify colors below.', 'info');
@@ -2904,17 +2926,17 @@ class VisualEditor {
       if (e.target && (e.target.classList.contains('theme-color-picker') || e.target.classList.contains('theme-color-text'))) {
         const variable = e.target.getAttribute('data-css-variable');
         const value = e.target.value;
-        
+
         if (variable && value) {
           this.updateCustomVariable(variable, value);
-          
+
           // Sync color picker and text input
           const wrapper = e.target.closest && e.target.closest('.theme-color-wrapper');
           if (wrapper) {
             const preview = wrapper.querySelector('.theme-color-preview');
             const colorPicker = wrapper.querySelector('.theme-color-picker');
             const textInput = wrapper.querySelector('.theme-color-text');
-            
+
             if (preview) preview.style.background = value;
             if (colorPicker && e.target !== colorPicker) colorPicker.value = value;
             if (textInput && e.target !== textInput) textInput.value = value;
@@ -2928,27 +2950,27 @@ class VisualEditor {
       if (e.target && (e.target.classList.contains('section-color-picker') || e.target.classList.contains('section-color-text'))) {
         const property = e.target.getAttribute('data-section-property');
         const value = e.target.value;
-        
+
         if (property && value && this.selectedBlock) {
           // Apply directly to the selected section
           this.selectedBlock.style.setProperty('background', value, 'important');
           this.selectedBlock.dataset.sectionBackground = value;
-          
+
           // Update text color for readability
           this.updateTextColorForBackground(this.selectedBlock, value);
-          
+
           // Sync color picker and text input
           const wrapper = e.target.closest('.theme-color-wrapper');
           if (wrapper) {
             const preview = wrapper.querySelector('.theme-color-preview');
             const colorPicker = wrapper.querySelector('.section-color-picker');
             const textInput = wrapper.querySelector('.section-color-text');
-            
+
             if (preview) preview.style.background = value;
             if (colorPicker && e.target !== colorPicker) colorPicker.value = value;
             if (textInput && e.target !== textInput) textInput.value = value;
           }
-          
+
           this.showNotification(`Section background updated!`, 'success');
         }
       }
@@ -2959,24 +2981,24 @@ class VisualEditor {
       if (e.target && (e.target.classList.contains('text-color-picker') || e.target.classList.contains('text-color-text'))) {
         const property = e.target.getAttribute('data-text-property');
         const value = e.target.value;
-        
+
         if (property && value && this.selectedTextElement) {
           // Apply directly to the selected text element
           this.selectedTextElement.style.setProperty('color', value, 'important');
           this.selectedTextElement.dataset.textColor = value;
-          
+
           // Sync color picker and text input
           const wrapper = e.target.closest('.theme-color-wrapper');
           if (wrapper) {
             const preview = wrapper.querySelector('.theme-color-preview');
             const colorPicker = wrapper.querySelector('.text-color-picker');
             const textInput = wrapper.querySelector('.text-color-text');
-            
+
             if (preview) preview.style.background = value;
             if (colorPicker && e.target !== colorPicker) colorPicker.value = value;
             if (textInput && e.target !== textInput) textInput.value = value;
           }
-          
+
           this.showNotification(`Text color updated!`, 'success');
         }
       }
@@ -2987,24 +3009,24 @@ class VisualEditor {
       if (e.target && (e.target.classList.contains('card-color-picker') || e.target.classList.contains('card-color-text'))) {
         const property = e.target.getAttribute('data-card-property');
         const value = e.target.value;
-        
+
         if (property && value && this.selectedCardElement) {
           // Apply directly to the selected card element
           this.selectedCardElement.style.setProperty('background-color', value, 'important');
           this.selectedCardElement.dataset.cardBackground = value;
-          
+
           // Sync color picker and text input
           const wrapper = e.target.closest('.theme-color-wrapper');
           if (wrapper) {
             const preview = wrapper.querySelector('.theme-color-preview');
             const colorPicker = wrapper.querySelector('.card-color-picker');
             const textInput = wrapper.querySelector('.card-color-text');
-            
+
             if (preview) preview.style.background = value;
             if (colorPicker && e.target !== colorPicker) colorPicker.value = value;
             if (textInput && e.target !== textInput) textInput.value = value;
           }
-          
+
           this.showNotification(`Card color updated!`, 'success');
         }
       }
@@ -3060,23 +3082,23 @@ class VisualEditor {
     blocks.forEach(block => {
       // Set the data-editor-mode attribute on each block
       block.setAttribute('data-editor-mode', this.isEditMode);
-      
+
       if (this.isEditMode) {
         this.makeBlockEditable(block);
       } else {
         this.makeBlockReadOnly(block);
       }
-      
+
       // Initialize FAQ toggle functionality for existing FAQ items
       this.initializeFaqToggle(block);
-      
+
       // Apply theme colors to ensure all elements have proper styling
       this.applyThemeColorsToBlock(block);
-      
+
       // Initialize hero content with custom widths if they exist
       this.initializeHeroContent(block);
     });
-    
+
     console.log(`Initialized ${blocks.length} blocks in ${this.isEditMode ? 'EDIT' : 'PREVIEW'} mode`);
   }
 
@@ -3087,25 +3109,25 @@ class VisualEditor {
       if (block.dataset.sectionBackground) {
         return block.dataset.sectionBackground;
       }
-      
+
       // Check for existing inline background style
       const bgStyle = block.style.background;
       if (bgStyle) {
         return bgStyle;
       }
-      
+
       // Default to clean white
       return '#FFFFFF';
     }
-    
+
     // First check dataset for stored values
     if (block.dataset[property]) {
       return block.dataset[property];
     }
-    
+
     // Then check computed styles for current values
     const computedStyle = getComputedStyle(block);
-    
+
     // Map property names to actual CSS properties
     switch (property) {
       case 'backgroundColor':
@@ -3152,14 +3174,14 @@ class VisualEditor {
         return computedStyle.getPropertyValue(`--${property}`) || '';
     }
   }
-  
+
   // Helper function to convert RGB to Hex
   rgbToHex(rgb) {
     if (!rgb || rgb === 'rgba(0, 0, 0, 0)' || rgb === 'transparent') return '#ffffff';
-    
+
     // Handle hex values that are already in hex format
     if (rgb.startsWith('#')) return rgb;
-    
+
     // Handle rgb/rgba values
     const rgbMatch = rgb.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
     if (rgbMatch) {
@@ -3168,16 +3190,16 @@ class VisualEditor {
       const b = parseInt(rgbMatch[3]);
       return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
     }
-    
+
     return '#ffffff';
   }
 
   updateBlockProperty(block, property, value) {
     // Don't save state on every change to avoid performance issues
     // this.saveState();
-    
+
     console.log(`Updating ${property} to ${value} on block:`, block);
-    
+
     // Apply the property based on its type - FOCUS ON COLORS FIRST
     switch (property) {
       case 'sectionBackground':
@@ -3188,18 +3210,18 @@ class VisualEditor {
           // Apply the background color directly to this section
           block.style.setProperty('background', value, 'important');
           block.removeAttribute('data-custom-background');
-          
+
           // Remove any old background classes since we're using direct colors now
           const bgClasses = ['bg-section-1', 'bg-section-2', 'bg-section-3', 'bg-section-4', 'bg-section-5', 'bg-hero', 'bg-cta', 'bg-testimonial', 'bg-pricing'];
           bgClasses.forEach(cls => block.classList.remove(cls));
-          
+
           // Update text color based on background brightness
           this.updateTextColorForBackground(block, value);
         }
-        
+
         // Store the value in dataset for persistence
         block.dataset.sectionBackground = value;
-        
+
         console.log(`Applied section background: ${value}`);
         break;
       case 'backgroundColor':
@@ -3207,7 +3229,7 @@ class VisualEditor {
         block.style.setProperty('background-color', value, 'important');
         console.log(`Applied backgroundColor: ${value}`);
         break;
-        
+
       case 'titleColor':
         const titles = block.querySelectorAll('h1, h2, .hero-title, .heading-1, .heading-2, .heading-3');
         titles.forEach(title => {
@@ -3215,7 +3237,7 @@ class VisualEditor {
           console.log(`Applied titleColor: ${value} to`, title);
         });
         break;
-        
+
       case 'subtitleColor':
         const subtitles = block.querySelectorAll('.hero-subtitle, .subheading');
         subtitles.forEach(subtitle => {
@@ -3223,7 +3245,7 @@ class VisualEditor {
           console.log(`Applied subtitleColor: ${value} to`, subtitle);
         });
         break;
-        
+
       case 'buttonColor':
         const buttons = block.querySelectorAll('.btn');
         buttons.forEach(btn => {
@@ -3237,7 +3259,7 @@ class VisualEditor {
           }
         });
         break;
-        
+
       case 'cardBackground':
         const cards = block.querySelectorAll('.feature-card, .testimonial-card, .learn-card, .pricing-card');
         cards.forEach(card => {
@@ -3245,7 +3267,7 @@ class VisualEditor {
           console.log(`Applied cardBackground: ${value} to`, card);
         });
         break;
-        
+
       case 'iconColor':
         const icons = block.querySelectorAll('.feature-icon');
         icons.forEach(icon => {
@@ -3253,7 +3275,7 @@ class VisualEditor {
           console.log(`Applied iconColor: ${value} to`, icon);
         });
         break;
-        
+
       case 'textColor':
         const textElements = block.querySelectorAll('.feature-description, p:not(.hero-subtitle):not(.subheading)');
         textElements.forEach(text => {
@@ -3261,7 +3283,7 @@ class VisualEditor {
           console.log(`Applied textColor: ${value} to`, text);
         });
         break;
-        
+
       case 'quoteColor':
         const quotes = block.querySelectorAll('.testimonial-quote');
         quotes.forEach(quote => {
@@ -3269,7 +3291,7 @@ class VisualEditor {
           console.log(`Applied quoteColor: ${value} to`, quote);
         });
         break;
-        
+
       case 'authorColor':
         const authors = block.querySelectorAll('.testimonial-info h4');
         authors.forEach(author => {
@@ -3277,7 +3299,7 @@ class VisualEditor {
           console.log(`Applied authorColor: ${value} to`, author);
         });
         break;
-        
+
       case 'borderColor':
         const testimonialCards = block.querySelectorAll('.testimonial-card');
         testimonialCards.forEach(card => {
@@ -3285,7 +3307,7 @@ class VisualEditor {
           console.log(`Applied borderColor: ${value} to`, card);
         });
         break;
-        
+
       // Spacing properties
       case 'paddingTop':
         block.style.setProperty('padding-top', value + 'px', 'important');
@@ -3302,7 +3324,7 @@ class VisualEditor {
       case 'borderRadius':
         block.style.setProperty('border-radius', value + 'px', 'important');
         break;
-        
+
       // Typography
       case 'titleSize':
         const titleElements = block.querySelectorAll('h1, .hero-title, .heading-1');
@@ -3316,7 +3338,7 @@ class VisualEditor {
           subtitle.style.setProperty('font-size', value + 'px', 'important');
         });
         break;
-        
+
       // Layout
       case 'textAlign':
         block.style.setProperty('text-align', value, 'important');
@@ -3330,7 +3352,7 @@ class VisualEditor {
       case 'cardsPerRow':
         // Set a CSS custom property for responsive behavior
         block.style.setProperty('--cards-per-row', value);
-        
+
         // Apply cards per row to all grid-based card containers
         const cardGrids = block.querySelectorAll('.features-grid, .testimonial-grid, .learn-grid, .pricing-options, .social-proof-strip');
         cardGrids.forEach(grid => {
@@ -3338,20 +3360,20 @@ class VisualEditor {
           grid.style.setProperty('grid-template-columns', `repeat(var(--cards-per-row, ${value}), 1fr)`, 'important');
           grid.style.setProperty('display', 'grid', 'important');
           grid.style.setProperty('gap', 'var(--space-6, 1.5rem)', 'important');
-          
+
           // Ensure proper centering for all grid layouts
           grid.style.setProperty('justify-content', 'center', 'important');
           grid.style.setProperty('place-content', 'center', 'important');
-          
+
           // Add responsive class for mobile override
           grid.classList.add('cards-per-row-responsive');
         });
-        
+
         // Store the value for persistence
         block.dataset.cardsPerRow = value;
         console.log(`Applied cardsPerRow: ${value} cards per row with responsive behavior`);
         break;
-        
+
       // Effects
       case 'backgroundGradient':
         if (value) {
@@ -3376,7 +3398,7 @@ class VisualEditor {
           avatar.style.setProperty('display', value ? 'block' : 'none', 'important');
         });
         break;
-        
+
       // Social Proof specific properties
       case 'cardSpacing':
         block.style.setProperty('--social-proof-gap', value + 'rem');
@@ -3424,20 +3446,20 @@ class VisualEditor {
           }
         });
         break;
-        
+
       default:
         // Fallback to CSS custom property
         block.style.setProperty(`--${property}`, value);
         console.log(`Applied custom property --${property}: ${value}`);
         break;
     }
-    
+
     // Store the value in dataset for persistence
     block.dataset[property] = value;
-    
+
     // Update any related UI elements
     this.updateSettingsUI(property, value);
-    
+
     console.log(`Property ${property} updated successfully`);
   }
 
@@ -3446,9 +3468,9 @@ class VisualEditor {
    */
   updateTextProperty(textElement, property, value) {
     if (!textElement) return;
-    
+
     console.log(`Updating text ${property} to ${value} on element:`, textElement);
-    
+
     // Apply the property based on its type
     switch (property) {
       case 'textColor':
@@ -3484,13 +3506,13 @@ class VisualEditor {
         console.log(`Applied custom text property --${property}: ${value}`);
         break;
     }
-    
+
     // Store the value in dataset for persistence
     textElement.dataset[property] = value;
-    
-    // Update any related UI elements  
+
+    // Update any related UI elements
     this.updateSettingsUI(property, value);
-    
+
     console.log(`Text property ${property} updated successfully`);
   }
 
@@ -3499,9 +3521,9 @@ class VisualEditor {
    */
   updateCardProperty(cardElement, property, value) {
     if (!cardElement) return;
-    
+
     console.log(`Updating card ${property} to ${value} on element:`, cardElement);
-    
+
     // Apply the property based on its type
     switch (property) {
       case 'cardBackground':
@@ -3546,13 +3568,13 @@ class VisualEditor {
         console.log(`Applied custom card property --${property}: ${value}`);
         break;
     }
-    
+
     // Store the value in dataset for persistence
     cardElement.dataset[property] = value;
-    
-    // Update any related UI elements  
+
+    // Update any related UI elements
     this.updateSettingsUI(property, value);
-    
+
     console.log(`Card property ${property} updated successfully`);
   }
 
@@ -3566,11 +3588,11 @@ class VisualEditor {
     }
 
     // Get the current card's background color (handle gradients and solid colors)
-    const currentColor = this.selectedCardElement.style.background || 
-                        this.selectedCardElement.style.backgroundColor || 
-                        this.selectedCardElement.dataset.cardBackground || 
+    const currentColor = this.selectedCardElement.style.background ||
+                        this.selectedCardElement.style.backgroundColor ||
+                        this.selectedCardElement.dataset.cardBackground ||
                         '#FFFFFF';
-    
+
     // Get the parent section
     const parentSection = this.selectedCardElement.closest('.block');
     if (!parentSection) {
@@ -3580,7 +3602,7 @@ class VisualEditor {
 
     // Find all cards in the same section
     const allCards = parentSection.querySelectorAll('.feature-card, .testimonial-card, .pricing-card, .faq-item');
-    
+
     if (allCards.length === 0) {
       this.showNotification('No cards found in this section', 'error');
       return;
@@ -3596,7 +3618,7 @@ class VisualEditor {
 
     // Show success notification
     this.showNotification(`🎨 Applied card color to ${updatedCount} cards in this section!`, 'success');
-    
+
     // Save state for undo
     this.saveState();
   }
@@ -3611,16 +3633,16 @@ class VisualEditor {
     }
 
     // Get the current button's styles
-    const currentBgColor = this.selectedButtonElement.style.background || 
-                          this.selectedButtonElement.style.backgroundColor || 
-                          this.selectedButtonElement.dataset.buttonBackground || 
+    const currentBgColor = this.selectedButtonElement.style.background ||
+                          this.selectedButtonElement.style.backgroundColor ||
+                          this.selectedButtonElement.dataset.buttonBackground ||
                           '#4F46E5';
     const currentTextColor = this.selectedButtonElement.style.color || '#FFFFFF';
     const currentRadius = this.selectedButtonElement.style.borderRadius || '8px';
     const currentPadding = this.selectedButtonElement.style.padding || '12px';
     const currentShadow = this.selectedButtonElement.style.boxShadow;
     const currentBorder = this.selectedButtonElement.style.border;
-    
+
     // Get the parent section
     const parentSection = this.selectedButtonElement.closest('.block');
     if (!parentSection) {
@@ -3630,7 +3652,7 @@ class VisualEditor {
 
     // Find all buttons in the same section
     const allButtons = parentSection.querySelectorAll('.btn');
-    
+
     if (allButtons.length === 0) {
       this.showNotification('No buttons found in this section', 'error');
       return;
@@ -3643,21 +3665,21 @@ class VisualEditor {
       button.style.setProperty('color', currentTextColor, 'important');
       button.style.setProperty('border-radius', currentRadius, 'important');
       button.style.setProperty('padding', currentPadding, 'important');
-      
+
       if (currentShadow) {
         button.style.setProperty('box-shadow', currentShadow, 'important');
       }
       if (currentBorder) {
         button.style.setProperty('border', currentBorder, 'important');
       }
-      
+
       button.dataset.buttonBackground = currentBgColor;
       updatedCount++;
     });
 
     // Show success notification
     this.showNotification(`🎨 Applied button style to ${updatedCount} buttons in this section!`, 'success');
-    
+
     // Save state for undo
     this.saveState();
   }
@@ -3667,9 +3689,9 @@ class VisualEditor {
    */
   updateButtonProperty(buttonElement, property, value) {
     if (!buttonElement) return;
-    
+
     console.log(`Updating button ${property} to ${value} on element:`, buttonElement);
-    
+
     // Apply the property based on its type
     switch (property) {
       case 'buttonBackground':
@@ -3749,13 +3771,13 @@ class VisualEditor {
         console.log(`Applied custom button property --${property}: ${value}`);
         break;
     }
-    
+
     // Store the value in dataset for persistence
     buttonElement.dataset[property] = value;
-    
-    // Update any related UI elements  
+
+    // Update any related UI elements
     this.updateSettingsUI(property, value);
-    
+
     console.log(`Button property ${property} updated successfully`);
   }
 
@@ -3764,21 +3786,21 @@ class VisualEditor {
    */
   setButtonRedirect(buttonElement, url, target = '_self') {
     if (!buttonElement || !url) return;
-    
+
     // Store the redirect data
     buttonElement.dataset.buttonLink = url;
     buttonElement.dataset.buttonTarget = target || '_self';
-    
+
     // Remove any existing click handlers by cloning the element
     const newButton = buttonElement.cloneNode(true);
     buttonElement.parentNode.replaceChild(newButton, buttonElement);
-    
+
     // Re-add editor click handler if in edit mode
     if (this.isEditMode) {
       newButton.addEventListener('click', this.handleButtonClick.bind(this));
       newButton.style.cursor = 'pointer';
     }
-    
+
     // Add redirect click handler
     newButton.addEventListener('click', (e) => {
       // Only redirect if not in edit mode
@@ -3791,17 +3813,17 @@ class VisualEditor {
         }
       }
     });
-    
+
     // Visual indicator that button has a link
     newButton.setAttribute('title', `Redirects to: ${url}`);
     newButton.style.setProperty('cursor', this.isEditMode ? 'pointer' : 'pointer', 'important');
-    
+
     // Update the selected element reference if this was the selected button
     if (this.selectedButtonElement === buttonElement) {
       this.selectedButtonElement = newButton;
       newButton.classList.add('button-selected');
     }
-    
+
     console.log(`Set button redirect: ${url} (target: ${target})`);
   }
 
@@ -3810,37 +3832,37 @@ class VisualEditor {
    */
   removeButtonRedirect(buttonElement) {
     if (!buttonElement) return;
-    
+
     // Clear redirect data
     delete buttonElement.dataset.buttonLink;
     delete buttonElement.dataset.buttonTarget;
-    
+
     // Remove title attribute
     buttonElement.removeAttribute('title');
-    
+
     // Remove any existing click handlers by cloning the element
     const newButton = buttonElement.cloneNode(true);
     buttonElement.parentNode.replaceChild(newButton, buttonElement);
-    
+
     // Re-add only editor click handler if in edit mode
     if (this.isEditMode) {
       newButton.addEventListener('click', this.handleButtonClick.bind(this));
       newButton.style.cursor = 'pointer';
     }
-    
+
     // Update the selected element reference if this was the selected button
     if (this.selectedButtonElement === buttonElement) {
       this.selectedButtonElement = newButton;
       newButton.classList.add('button-selected');
     }
-    
+
     console.log('Removed button redirect');
   }
 
   updateSettingsUI(property, value) {
     const rangeValue = document.querySelector(`.range-value`);
     const colorText = document.querySelector(`input[data-property="${property}-text"]`);
-    
+
     // Update range display
     const rangeInput = document.querySelector(`input[data-property="${property}"]`);
     if (rangeInput && rangeInput.type === 'range') {
@@ -3852,7 +3874,7 @@ class VisualEditor {
         nextSibling.textContent = value + unit;
       }
     }
-    
+
     // Update color text input
     if (colorText && rangeInput && rangeInput.type === 'color') {
       colorText.value = value;
@@ -3862,16 +3884,16 @@ class VisualEditor {
   // New methods for enhanced functionality
   resetBlockSettings() {
     if (!this.selectedBlock) return;
-    
+
     const blockType = this.selectedBlock.dataset.blockType || 'generic';
     const settings = this.getBlockSettings(blockType);
-    
+
     Object.entries(settings).forEach(([key, setting]) => {
       if (setting.default !== undefined) {
         this.updateBlockProperty(this.selectedBlock, key, setting.default);
       }
     });
-    
+
     // Refresh the settings panel
     this.showBlockSettings(this.selectedBlock);
     this.showNotification('Block settings reset to defaults', 'success');
@@ -3879,15 +3901,15 @@ class VisualEditor {
 
   copyBlockSettings() {
     if (!this.selectedBlock) return;
-    
+
     const settings = {};
     const blockType = this.selectedBlock.dataset.blockType || 'generic';
     const availableSettings = this.getBlockSettings(blockType);
-    
+
     Object.keys(availableSettings).forEach(key => {
       settings[key] = this.getBlockProperty(this.selectedBlock, key);
     });
-    
+
     this.copiedSettings = settings;
     this.showNotification('Block styles copied!', 'success');
   }
@@ -3897,13 +3919,13 @@ class VisualEditor {
       this.showNotification('No copied styles to paste', 'error');
       return;
     }
-    
+
     Object.entries(this.copiedSettings).forEach(([key, value]) => {
       if (value) {
         this.updateBlockProperty(this.selectedBlock, key, value);
       }
     });
-    
+
     // Refresh the settings panel
     this.showBlockSettings(this.selectedBlock);
     this.showNotification('Block styles pasted!', 'success');
@@ -3912,16 +3934,16 @@ class VisualEditor {
   async savePage() {
     // Clean up animation states before saving
     this.cleanAnimationStatesForSave();
-    
+
     // Check if we're in database mode by looking at URL parameters or global variables
     const urlParams = new URLSearchParams(window.location.search);
     const dbMode = urlParams.get('dbMode') === 'true';
     const userEmail = urlParams.get('user');
     const funnelId = urlParams.get('funnel');
     const isUserMode = !!(userEmail && funnelId);
-    
+
     console.log('🔄 Visual editor save - dbMode:', dbMode, 'isUserMode:', isUserMode);
-    
+
     if (isUserMode && dbMode && window.saveToDatabaseSync && typeof window.saveToDatabaseSync === 'function') {
       console.log('💾 Using database save from visual editor');
       try {
@@ -3938,7 +3960,7 @@ class VisualEditor {
         return;
       }
     }
-    
+
     // Check if there's a custom localStorage save function from the parent page (funnel.html)
     if (window.saveUserFunnelContent && typeof window.saveUserFunnelContent === 'function') {
       console.log('🔄 Using custom localStorage save function from parent page');
@@ -3954,17 +3976,17 @@ class VisualEditor {
         console.error('❌ Custom save function failed, falling back to default:', e);
       }
     }
-    
+
     // Fallback to simple localStorage save
     const pageData = {
       html: document.querySelector('.page-container').innerHTML,
       timestamp: new Date().toISOString(),
       version: '1.0'
     };
-    
+
     // In a real implementation, this would save to a backend
     localStorage.setItem('funnel-page-data', JSON.stringify(pageData));
-    
+
     // Show save confirmation
     this.showNotification('Page saved successfully!', 'success');
   }
@@ -3975,16 +3997,16 @@ class VisualEditor {
     // SMART: Use automatic contrast calculation instead of hardcoded rules
     const primaryColor = this.getContrastColor(backgroundColor);
     const secondaryColor = this.getSecondaryTextColor(backgroundColor);
-    
+
     // Apply smart colors to all text elements
     block.style.setProperty('color', primaryColor, 'important');
-    
+
     const headings = block.querySelectorAll('h1, h2, h3, .heading-1, .heading-2, .heading-3');
     headings.forEach(h => h.style.setProperty('color', primaryColor, 'important'));
-    
+
     const paragraphs = block.querySelectorAll('p, .subheading');
     paragraphs.forEach(p => p.style.setProperty('color', secondaryColor, 'important'));
-    
+
     console.log(`🎨 Smart text colors applied: primary=${primaryColor}, secondary=${secondaryColor} for background=${backgroundColor}`);
   }
 
@@ -3994,49 +4016,49 @@ class VisualEditor {
     if (block.dataset.sectionBackground) {
       return block.dataset.sectionBackground;
     }
-    
+
     // Check inline style
     if (block.style.background) {
       return block.style.background;
     }
-    
+
     // Check computed style
     const computed = getComputedStyle(block).backgroundColor;
     if (computed && computed !== 'rgba(0, 0, 0, 0)' && computed !== 'transparent') {
       return this.rgbToHex(computed) || '#FFFFFF';
     }
-    
+
     return '#FFFFFF';
   }
 
-  // Get current text color  
+  // Get current text color
   getCurrentTextColor(textElement) {
     // Check dataset first
     if (textElement.dataset.textColor) {
       return textElement.dataset.textColor;
     }
-    
+
     // Check inline style
     if (textElement.style.color) {
       return textElement.style.color;
     }
-    
+
     // Check computed style
     const computed = getComputedStyle(textElement).color;
     if (computed && computed !== 'rgba(0, 0, 0, 0)' && computed !== 'transparent') {
       return this.rgbToHex(computed) || '#1F2937';
     }
-    
+
     return '#1F2937';
   }
 
-  // Get current block color  
+  // Get current block color
   getCurrentBlockColor(block) {
     // Check dataset first
     if (block.dataset.blockColor) {
       return block.dataset.blockColor;
     }
-    
+
     // Check first card/block element in the section
     const cardElements = block.querySelectorAll('.feature-card, .testimonial-card, .pricing-card, .faq-item');
     if (cardElements.length > 0) {
@@ -4045,7 +4067,7 @@ class VisualEditor {
         return firstCard.style.backgroundColor;
       }
     }
-    
+
     return '#FFFFFF';
   }
 
@@ -4055,7 +4077,7 @@ class VisualEditor {
     if (cardElement.dataset.cardBackground) {
       return cardElement.dataset.cardBackground;
     }
-    
+
     // Check inline style - handle both background and background-color
     if (cardElement.style.background) {
       return cardElement.style.background;
@@ -4063,13 +4085,13 @@ class VisualEditor {
     if (cardElement.style.backgroundColor) {
       return cardElement.style.backgroundColor;
     }
-    
+
     // Check computed style
     const computed = getComputedStyle(cardElement).backgroundColor;
     if (computed && computed !== 'rgba(0, 0, 0, 0)' && computed !== 'transparent') {
       return this.rgbToHex(computed) || '#FFFFFF';
     }
-    
+
     return '#FFFFFF';
   }
 
@@ -4081,22 +4103,22 @@ class VisualEditor {
       if (textElement.dataset.textColor) {
         return textElement.dataset.textColor;
       }
-      
+
       // Check for existing inline color style
       const colorStyle = textElement.style.color;
       if (colorStyle) {
         return colorStyle;
       }
-      
+
       // Default to dark gray
       return '#1F2937';
     }
-    
+
     // For other properties, check dataset or return default
     if (textElement.dataset[property]) {
       return textElement.dataset[property];
     }
-    
+
     // Return appropriate defaults based on property
     const defaults = {
       fontSize: '16',
@@ -4106,7 +4128,7 @@ class VisualEditor {
       textAlign: 'left',
       textTransform: 'none'
     };
-    
+
     return defaults[property] || '';
   }
 
@@ -4116,7 +4138,7 @@ class VisualEditor {
     if (cardElement.dataset[property]) {
       return cardElement.dataset[property];
     }
-    
+
     // Handle specific card properties
     switch (property) {
       case 'cardBackground':
@@ -4157,7 +4179,7 @@ class VisualEditor {
     if (buttonElement.dataset[property]) {
       return buttonElement.dataset[property];
     }
-    
+
     // Handle specific button properties
     switch (property) {
       case 'buttonBackground':
@@ -4211,7 +4233,7 @@ class VisualEditor {
     if (buttonElement.dataset.buttonBackground) {
       return buttonElement.dataset.buttonBackground;
     }
-    
+
     // Check inline style - handle both background and background-color
     if (buttonElement.style.background) {
       return buttonElement.style.background;
@@ -4219,13 +4241,13 @@ class VisualEditor {
     if (buttonElement.style.backgroundColor) {
       return buttonElement.style.backgroundColor;
     }
-    
+
     // Check computed style
     const computed = getComputedStyle(buttonElement).backgroundColor;
     if (computed && computed !== 'rgba(0, 0, 0, 0)' && computed !== 'transparent') {
       return this.rgbToHex(computed) || '#4F46E5';
     }
-    
+
     return '#4F46E5';
   }
 
@@ -4241,7 +4263,7 @@ class VisualEditor {
         console.error('Error parsing saved theme:', e);
       }
     }
-    
+
     // Fall back to computed style
     return getComputedStyle(document.documentElement).getPropertyValue(variableName).trim();
   }
@@ -4249,7 +4271,7 @@ class VisualEditor {
   updateCustomVariable(variableName, value) {
     // Update CSS custom property in real-time
     document.documentElement.style.setProperty(variableName, value);
-    
+
     // Force a stronger override by updating all matching elements directly
     switch (variableName) {
       case '--text-primary':
@@ -4293,11 +4315,11 @@ class VisualEditor {
         });
         break;
     }
-    
+
     // Save to localStorage for persistence
     const savedTheme = localStorage.getItem('custom-theme-variables');
     let themeData = {};
-    
+
     if (savedTheme) {
       try {
         themeData = JSON.parse(savedTheme);
@@ -4305,10 +4327,10 @@ class VisualEditor {
         console.error('Error parsing saved theme:', e);
       }
     }
-    
+
     themeData[variableName] = value;
     localStorage.setItem('custom-theme-variables', JSON.stringify(themeData));
-    
+
     console.log(`Updated ${variableName} to ${value} and applied to specific elements`);
     this.showNotification(`Updated ${variableName.replace('--', '')} color`, 'success');
   }
@@ -4317,18 +4339,18 @@ class VisualEditor {
     // Reset all custom variables to defaults
     const commonSettings = this.getBlockSettings('');
     const customTheme = commonSettings.customTheme;
-    
+
     if (customTheme && customTheme.variables) {
       customTheme.variables.forEach(variable => {
         document.documentElement.style.setProperty(variable.name, variable.default);
       });
-      
+
       // Clear saved theme
       localStorage.removeItem('custom-theme-variables');
-      
+
       // Refresh settings panel
       this.showBlockSettings(this.selectedBlock);
-      
+
       this.showNotification('Theme reset to defaults!', 'success');
     }
   }
@@ -4371,13 +4393,13 @@ class VisualEditor {
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
     notification.textContent = message;
-    
+
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
       notification.classList.add('show');
     }, 100);
-    
+
     setTimeout(() => {
       notification.classList.remove('show');
       setTimeout(() => {
@@ -4390,10 +4412,10 @@ class VisualEditor {
    * Element Management System
    * Handles add/remove/reorganize functionality for dynamic elements
    */
-  
+
   makeElementsManageable(block) {
     const blockType = block.dataset.blockType;
-    
+
     // Add management controls based on block type
     switch (blockType) {
       case 'testimonial':
@@ -4473,7 +4495,7 @@ class VisualEditor {
         onMoveDown: () => this.movePricingCardDown(card)
       });
     });
-    
+
     // Handle pricing features within each card
     const pricingFeatures = block.querySelectorAll('.pricing-features li');
     pricingFeatures.forEach((feature, index) => {
@@ -4565,7 +4587,7 @@ class VisualEditor {
         <p class="learn-description" data-editable="true">Describe what the user will learn and how it will benefit them in their journey.</p>
       </div>
     `;
-    
+
     afterElement.insertAdjacentElement('afterend', newLearn);
     this.makeContentEditable(newLearn);
     this.updateLearnNumbers(afterElement.closest('.learn-grid'));
@@ -4615,7 +4637,7 @@ class VisualEditor {
         numberElement.textContent = index + 1;
       }
     });
-  }  
+  }
 
   // Testimonial Management
   addTestimonial(block, afterElement) {
@@ -4632,7 +4654,7 @@ class VisualEditor {
         </div>
       </div>
     `;
-    
+
     afterElement.insertAdjacentElement('afterend', newTestimonial);
     this.makeContentEditable(newTestimonial);
     this.showNotification('Testimonial added!', 'success');
@@ -4673,7 +4695,7 @@ class VisualEditor {
       <h3 class="feature-title" data-editable="true">New Feature</h3>
       <p class="feature-description" data-editable="true">Describe your amazing new feature here</p>
     `;
-    
+
     afterElement.insertAdjacentElement('afterend', newFeature);
     this.makeContentEditable(newFeature);
     this.showNotification('Feature added!', 'success');
@@ -4713,13 +4735,13 @@ class VisualEditor {
       <div class="faq-question" data-editable="true">Your new question here?</div>
       <div class="faq-answer" data-editable="true">Your detailed answer here.</div>
     `;
-    
+
     afterElement.insertAdjacentElement('afterend', newFaq);
     this.makeContentEditable(newFaq);
-    
+
     // Apply current theme colors to the new FAQ
     this.applyThemeColorsToElement(newFaq);
-    
+
     // Add FAQ toggle functionality
     const question = newFaq.querySelector('.faq-question');
     question.addEventListener('click', (e) => {
@@ -4730,14 +4752,14 @@ class VisualEditor {
           return; // Allow text editing
         }
       }
-      
+
       // Toggle FAQ
       e.preventDefault();
       e.stopPropagation();
-      
+
       const answer = newFaq.querySelector('.faq-answer');
       const isActive = newFaq.classList.contains('active');
-      
+
       // Close all other FAQ items first
       const allFaqItems = newFaq.parentElement.querySelectorAll('.faq-item');
       allFaqItems.forEach(otherItem => {
@@ -4749,7 +4771,7 @@ class VisualEditor {
           }
         }
       });
-      
+
       // Toggle current item
       if (!isActive) {
         newFaq.classList.add('active');
@@ -4770,7 +4792,7 @@ class VisualEditor {
         }
       }
     });
-    
+
     this.showNotification('FAQ added!', 'success');
   }
 
@@ -4805,7 +4827,7 @@ class VisualEditor {
     const newFeature = document.createElement('li');
     newFeature.setAttribute('data-editable', 'true');
     newFeature.textContent = 'New feature or benefit';
-    
+
     afterElement.insertAdjacentElement('afterend', newFeature);
     this.makeContentEditable(newFeature);
     this.showNotification('Pricing feature added!', 'success');
@@ -4848,18 +4870,18 @@ class VisualEditor {
 
   attachManagementButtonListeners(settingsPanel, block) {
     const managementButtons = settingsPanel.querySelectorAll('[data-action]');
-    
+
     managementButtons.forEach(button => {
       button.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        
+
         const action = button.dataset.action;
         const blockId = button.dataset.blockId;
         const targetBlock = document.getElementById(blockId) || block;
-        
+
         this.saveState();
-        
+
         switch (action) {
           case 'add-testimonial':
             this.addTestimonialAtEnd(targetBlock);
@@ -4880,7 +4902,7 @@ class VisualEditor {
             this.addPricingFeatureAtEnd(targetBlock);
             break;
         }
-        
+
         // Refresh the settings panel to show updated counts
         setTimeout(() => {
           this.showBlockSettings(targetBlock);
@@ -4899,7 +4921,7 @@ class VisualEditor {
       this.showNotification('Error: Learn grid not found', 'error');
       return;
     }
-    
+
     const lastLearn = learnGrid.lastElementChild;
     if (lastLearn) {
       this.addLearn(block, lastLearn);
@@ -4929,7 +4951,7 @@ class VisualEditor {
       this.showNotification('Error: Testimonial grid not found', 'error');
       return;
     }
-    
+
     const lastTestimonial = testimonialGrid.lastElementChild;
     if (lastTestimonial) {
       this.addTestimonial(block, lastTestimonial);
@@ -4963,7 +4985,7 @@ class VisualEditor {
       this.showNotification('Error: Features grid not found', 'error');
       return;
     }
-    
+
     const lastFeature = featuresGrid.lastElementChild;
     if (lastFeature) {
       this.addFeature(block, lastFeature);
@@ -4985,20 +5007,20 @@ class VisualEditor {
 
   addFaqAtEnd(block) {
     console.log('Adding FAQ to block:', block);
-    const faqContainer = block.querySelector('.faq-container') || 
+    const faqContainer = block.querySelector('.faq-container') ||
                         block.querySelector('div[style*="max-width: 800px"]') ||
                         block.querySelector('.container > div:last-child');
-    
+
     if (!faqContainer) {
       console.error('FAQ container not found in block');
       this.showNotification('Error: FAQ container not found', 'error');
       return;
     }
-    
-    const lastFaq = Array.from(faqContainer.children).reverse().find(child => 
+
+    const lastFaq = Array.from(faqContainer.children).reverse().find(child =>
       child.classList.contains('faq-item')
     );
-    
+
     if (lastFaq) {
       this.addFaq(block, lastFaq);
       this.showNotification('FAQ added successfully!', 'success');
@@ -5012,10 +5034,10 @@ class VisualEditor {
       `;
       faqContainer.appendChild(newFaq);
       this.makeContentEditable(newFaq);
-      
+
       // Apply current theme colors to the new FAQ
       this.applyThemeColorsToElement(newFaq);
-      
+
       // Add FAQ toggle functionality
       const question = newFaq.querySelector('.faq-question');
       question.addEventListener('click', (e) => {
@@ -5026,14 +5048,14 @@ class VisualEditor {
             return; // Allow text editing
           }
         }
-        
+
         // Toggle FAQ
         e.preventDefault();
         e.stopPropagation();
-        
+
         const answer = newFaq.querySelector('.faq-answer');
         const isActive = newFaq.classList.contains('active');
-        
+
         // Close all other FAQ items first
         const allFaqItems = newFaq.parentElement.querySelectorAll('.faq-item');
         allFaqItems.forEach(otherItem => {
@@ -5045,7 +5067,7 @@ class VisualEditor {
             }
           }
         });
-        
+
         // Toggle current item
         if (!isActive) {
           newFaq.classList.add('active');
@@ -5066,7 +5088,7 @@ class VisualEditor {
           }
         }
       });
-      
+
       this.showNotification('First FAQ created!', 'success');
     }
   }
@@ -5079,7 +5101,7 @@ class VisualEditor {
       this.showNotification('Error: Pricing options container not found', 'error');
       return;
     }
-    
+
     const lastCard = pricingOptions.lastElementChild;
     if (lastCard) {
       this.addPricingCard(block, lastCard);
@@ -5115,7 +5137,7 @@ class VisualEditor {
       this.showNotification('No pricing plans found. Add a pricing plan first.', 'error');
       return;
     }
-    
+
     // Add to the first pricing card by default
     const firstCard = pricingCards[0];
     const pricingFeatures = firstCard.querySelector('.pricing-features');
@@ -5123,7 +5145,7 @@ class VisualEditor {
       this.showNotification('Error: Pricing features list not found', 'error');
       return;
     }
-    
+
     const lastFeature = pricingFeatures.lastElementChild;
     if (lastFeature) {
       this.addPricingFeature(firstCard, lastFeature);
@@ -5152,7 +5174,7 @@ class VisualEditor {
 
   addCustomComponent(componentHTML, componentData) {
     this.saveState();
-    
+
     // Find insertion point
     const pageContainer = document.querySelector('.page-container');
     if (!pageContainer) {
@@ -5189,7 +5211,7 @@ class VisualEditor {
     pageContainer.addEventListener('dragover', (e) => {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'copy';
-      
+
       // Visual feedback
       const dropIndicator = this.createDropIndicator(e);
       this.showDropIndicator(dropIndicator, e);
@@ -5197,16 +5219,16 @@ class VisualEditor {
 
     pageContainer.addEventListener('drop', (e) => {
       e.preventDefault();
-      
+
       const componentId = e.dataTransfer.getData('text/plain');
       if (componentId && window.componentLibrary) {
         // Find the closest block to insert after
         const closestBlock = this.findClosestBlock(e.clientY);
-        
+
         // Add the component
         window.componentLibrary.addComponentToPage(componentId);
       }
-      
+
       this.hideDropIndicator();
     });
 
@@ -5257,7 +5279,7 @@ class VisualEditor {
       const rect = block.getBoundingClientRect();
       const blockCenter = rect.top + rect.height / 2;
       const distance = Math.abs(clientY - blockCenter);
-      
+
       if (distance < closestDistance) {
         closestDistance = distance;
         closestBlock = block;
@@ -5289,11 +5311,11 @@ class VisualEditor {
     header.addEventListener('mousedown', (e) => {
       // Don't start drag if clicking on control buttons
       if (e.target.closest('.panel-control-btn')) return;
-      
+
       initialX = e.clientX - xOffset;
       initialY = e.clientY - yOffset;
       isDragging = true;
-      
+
       panel.classList.add('dragging');
       document.body.style.userSelect = 'none';
     });
@@ -5301,7 +5323,7 @@ class VisualEditor {
     // Double-click to reset position
     header.addEventListener('dblclick', (e) => {
       if (e.target.closest('.panel-control-btn')) return;
-      
+
       xOffset = 0;
       yOffset = 0;
       panel.style.transform = '';
@@ -5309,29 +5331,29 @@ class VisualEditor {
       panel.style.top = '80px';
       panel.style.right = '24px';
       panel.style.left = 'auto';
-      
+
       localStorage.removeItem('settings-panel-position');
       this.showNotification('Panel position reset', 'info');
     });
 
     document.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
-      
+
       e.preventDefault();
       currentX = e.clientX - initialX;
       currentY = e.clientY - initialY;
-      
+
       xOffset = currentX;
       yOffset = currentY;
-      
+
       // Constrain to viewport
       const rect = panel.getBoundingClientRect();
       const maxX = window.innerWidth - rect.width;
       const maxY = window.innerHeight - rect.height;
-      
+
       xOffset = Math.max(0, Math.min(maxX, xOffset));
       yOffset = Math.max(0, Math.min(maxY, yOffset));
-      
+
       panel.style.transform = `translate(${xOffset}px, ${yOffset}px)`;
       panel.style.position = 'fixed';
       panel.style.top = 'auto';
@@ -5344,7 +5366,7 @@ class VisualEditor {
         isDragging = false;
         panel.classList.remove('dragging');
         document.body.style.userSelect = '';
-        
+
         // Save position
         localStorage.setItem('settings-panel-position', JSON.stringify({ x: xOffset, y: yOffset }));
       }
@@ -5374,14 +5396,14 @@ class VisualEditor {
     // Add event listeners for panel controls
     const collapseBtn = panel.querySelector('.panel-collapse-btn');
     const closeBtn = panel.querySelector('.panel-close-btn');
-    
+
     if (collapseBtn) {
       collapseBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         this.togglePanelCollapse(panel);
       });
     }
-    
+
     if (closeBtn) {
       closeBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -5393,11 +5415,11 @@ class VisualEditor {
   togglePanelCollapse(panel) {
     const content = panel.querySelector('.settings-panel-content');
     const collapseIcon = panel.querySelector('.collapse-icon');
-    
+
     if (!content || !collapseIcon) return;
-    
+
     const isCollapsed = panel.classList.contains('collapsed');
-    
+
     if (isCollapsed) {
       // Expand
       panel.classList.remove('collapsed');
@@ -5411,20 +5433,20 @@ class VisualEditor {
       collapseIcon.textContent = '+';
       collapseIcon.parentElement.setAttribute('title', 'Expand panel');
     }
-    
+
     // Save collapse state
     localStorage.setItem('settings-panel-collapsed', isCollapsed ? 'false' : 'true');
   }
 
   closePanelSettings(panel) {
     panel.style.display = 'none';
-    
+
     // Clear selected block
     if (this.selectedBlock) {
       this.selectedBlock.classList.remove('block-selected');
       this.selectedBlock = null;
     }
-    
+
     this.showNotification('Settings panel closed', 'info');
   }
 
@@ -5454,14 +5476,14 @@ class VisualEditor {
     modal.id = 'theme-selector-modal';
     modal.className = 'theme-selector-modal';
     modal.innerHTML = this.renderThemeSelector();
-    
+
     document.body.appendChild(modal);
-    
+
     // Show modal with animation
     setTimeout(() => {
       modal.classList.add('show');
     }, 10);
-    
+
     // Add event listeners
     this.attachThemeSelectorListeners(modal);
   }
@@ -5469,7 +5491,7 @@ class VisualEditor {
   renderThemeSelector() {
     const themes = this.getThemePresets();
     const currentTheme = localStorage.getItem('selected-theme') || 'default';
-    
+
     return `
       <div class="theme-modal-backdrop">
         <div class="theme-modal-content">
@@ -5872,13 +5894,13 @@ class VisualEditor {
     modal.querySelector('.theme-modal-close').addEventListener('click', () => {
       this.closeThemeSelector(modal);
     });
-    
+
     modal.querySelector('.theme-modal-backdrop').addEventListener('click', (e) => {
       if (e.target === modal.querySelector('.theme-modal-backdrop')) {
         this.closeThemeSelector(modal);
       }
     });
-    
+
     // Apply theme buttons
     modal.querySelectorAll('.apply-theme-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -5887,25 +5909,25 @@ class VisualEditor {
         this.closeThemeSelector(modal);
       });
     });
-    
+
     // Theme card selection
     modal.querySelectorAll('.theme-card').forEach(card => {
       card.addEventListener('click', (e) => {
         if (e.target.closest('.apply-theme-btn')) return;
-        
+
         // Remove active from all cards
         modal.querySelectorAll('.theme-card').forEach(c => c.classList.remove('active'));
         // Add active to clicked card
         card.classList.add('active');
       });
     });
-    
-    // Reset button  
+
+    // Reset button
     modal.querySelector('.reset-btn').addEventListener('click', () => {
       this.applyTheme('default');
       this.closeThemeSelector(modal);
     });
-    
+
     // Custom colors button
     modal.querySelector('.custom-btn').addEventListener('click', () => {
       this.closeThemeSelector(modal);
@@ -5916,74 +5938,74 @@ class VisualEditor {
   applyTheme(themeId) {
     const themes = this.getThemePresets();
     const theme = themes.find(t => t.id === themeId);
-    
+
     if (!theme) {
       this.showNotification('Theme not found', 'error');
       return;
     }
-    
+
     // Apply CSS custom properties
     const root = document.documentElement;
     root.style.setProperty('--primary-color', theme.colors.primary);
     root.style.setProperty('--secondary-color', theme.colors.secondary);
     root.style.setProperty('--accent-color', theme.colors.accent);
     root.style.setProperty('--bg-primary', theme.colors.background);
-    
+
     // Smart contrast detection for text colors
     const primaryTextColor = this.getContrastColor(theme.colors.background);
     const secondaryTextColor = this.getSecondaryTextColor(theme.colors.background);
-    
+
     root.style.setProperty('--text-primary', primaryTextColor);
     root.style.setProperty('--text-secondary', secondaryTextColor);
     root.style.setProperty('--text-white', '#ffffff');
-    
+
     // Update additional theme variables with contrast awareness
     root.style.setProperty('--primary-dark', this.darkenColor(theme.colors.primary, 20));
     root.style.setProperty('--bg-secondary', this.lightenColor(theme.colors.background, 3));
     root.style.setProperty('--bg-tertiary', this.lightenColor(theme.colors.background, 6));
-    
+
     // Update gradients
     root.style.setProperty('--bg-gradient', `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.secondary})`);
     root.style.setProperty('--bg-hero', `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.secondary})`);
     root.style.setProperty('--bg-cta', `linear-gradient(135deg, ${theme.colors.primary}, ${theme.colors.accent})`);
     root.style.setProperty('--bg-footer', `linear-gradient(135deg, ${theme.colors.secondary}, ${theme.colors.primary})`);
-    
+
     // Set all section backgrounds with smart contrast
     const lightBg1 = this.lightenColor(theme.colors.background, 2);
     const lightBg2 = this.lightenColor(theme.colors.background, 5);
     const lightBg3 = this.lightenColor(theme.colors.background, 8);
     const lightBg4 = this.lightenColor(theme.colors.background, 11);
     const lightBg5 = this.lightenColor(theme.colors.background, 14);
-    
+
     root.style.setProperty('--bg-section-1', lightBg1);
     root.style.setProperty('--bg-section-2', lightBg2);
     root.style.setProperty('--bg-section-3', lightBg3);
     root.style.setProperty('--bg-section-4', lightBg4);
     root.style.setProperty('--bg-section-5', lightBg5);
     root.style.setProperty('--bg-features', `linear-gradient(135deg, ${theme.colors.secondary}15, ${theme.colors.primary}08)`);
-    
+
     // Update section backgrounds with smart contrast
     this.updateSectionBackgrounds(theme.colors);
-    
+
     // Update card colors to use theme colors
     this.updateCardColors(theme.colors);
-    
+
     // Save theme preference
     localStorage.setItem('selected-theme', themeId);
-    
+
     // Clear custom colors if switching to preset theme
     if (themeId !== 'custom') {
       localStorage.removeItem('custom-theme-colors');
     }
-    
+
     // Show success notification
     this.showNotification(`${theme.name} theme applied!`, 'success');
-    
+
     // Refresh all existing sections with new theme colors
     setTimeout(() => {
       this.refreshAllSectionThemes();
     }, 100);
-    
+
     // Update theme button appearance
     this.updateThemeButton(theme);
   }
@@ -6029,25 +6051,25 @@ class VisualEditor {
     const modal = document.createElement('div');
     modal.className = 'custom-color-modal';
     modal.innerHTML = this.renderCustomColorEditor(currentTheme);
-    
+
     document.body.appendChild(modal);
-    
+
     // Animate in
     setTimeout(() => {
       modal.classList.add('show');
     }, 10);
-    
+
     this.attachCustomColorListeners(modal);
   }
 
   getCurrentThemeColors() {
     const currentThemeId = localStorage.getItem('selected-theme') || 'default';
     const customColors = localStorage.getItem('custom-theme-colors');
-    
+
     if (customColors) {
       return JSON.parse(customColors);
     }
-    
+
     const themes = this.getThemePresets();
     const theme = themes.find(t => t.id === currentThemeId);
     return theme ? theme.colors : this.getThemePresets()[0].colors;
@@ -6064,7 +6086,7 @@ class VisualEditor {
             </div>
             <button class="custom-color-close" title="Close">&times;</button>
           </div>
-          
+
           <div class="custom-color-body">
             <div class="color-sections">
               <div class="color-section">
@@ -6078,7 +6100,7 @@ class VisualEditor {
                       <input type="text" class="color-text" data-property="primary" value="${colors.primary}" placeholder="#4F46E5">
                     </div>
                   </div>
-                  
+
                   <div class="color-control">
                     <label>Secondary Color <span class="color-usage">(Secondary buttons, gradients)</span></label>
                     <div class="color-input-group">
@@ -6087,7 +6109,7 @@ class VisualEditor {
                       <input type="text" class="color-text" data-property="secondary" value="${colors.secondary}" placeholder="#10B981">
                     </div>
                   </div>
-                  
+
                   <div class="color-control">
                     <label>Accent Color <span class="color-usage">(Primary buttons, CTAs)</span></label>
                     <div class="color-input-group">
@@ -6098,7 +6120,7 @@ class VisualEditor {
                   </div>
                 </div>
               </div>
-              
+
               <div class="color-section">
                 <h4>📄 Background & Text</h4>
                 <div class="color-controls">
@@ -6110,7 +6132,7 @@ class VisualEditor {
                       <input type="text" class="color-text" data-property="background" value="${colors.background}" placeholder="#FFFFFF">
                     </div>
                   </div>
-                  
+
                   <div class="color-control">
                     <label>Text Color</label>
                     <div class="color-input-group">
@@ -6122,7 +6144,7 @@ class VisualEditor {
                 </div>
               </div>
             </div>
-            
+
             <div class="color-preview-section">
               <h4>✨ Live Preview</h4>
               <div class="theme-preview-card" id="live-preview">
@@ -6149,7 +6171,7 @@ class VisualEditor {
               </div>
             </div>
           </div>
-          
+
           <div class="custom-color-footer">
             <div class="custom-footer-actions">
               <button class="custom-action-btn cancel-btn">
@@ -6178,7 +6200,7 @@ class VisualEditor {
     modal.querySelector('.custom-color-close').addEventListener('click', () => {
       this.closeCustomColorEditor(modal);
     });
-    
+
     modal.querySelector('.cancel-btn').addEventListener('click', () => {
       this.closeCustomColorEditor(modal);
     });
@@ -6204,7 +6226,7 @@ class VisualEditor {
       input.addEventListener('input', (e) => {
         const property = e.target.dataset.property;
         const value = e.target.value;
-        
+
         // Validate hex color
         if (/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/.test(value)) {
           this.updateColorPreview(modal, property, value);
@@ -6242,7 +6264,7 @@ class VisualEditor {
   updateLivePreview(modal) {
     const colors = this.getColorsFromEditor(modal);
     const preview = modal.querySelector('#live-preview');
-    
+
     if (preview) {
       const header = preview.querySelector('.preview-header');
       const content = preview.querySelector('.preview-content');
@@ -6250,34 +6272,34 @@ class VisualEditor {
       const primaryButton = hero.querySelector('button');
       const secondaryButton = preview.querySelector('.preview-text button');
       const secondaryText = preview.querySelector('p[style*="color:"]');
-      
+
       header.style.background = colors.primary;
       content.style.background = colors.background;
       content.style.color = colors.text;
       hero.style.background = `linear-gradient(135deg, ${colors.primary}, ${colors.secondary})`;
-      
+
       // Primary buttons use accent color for maximum contrast
       if (primaryButton) {
         primaryButton.style.background = colors.accent;
       }
-      
-      // Secondary buttons use secondary color  
+
+      // Secondary buttons use secondary color
       if (secondaryButton) {
         secondaryButton.style.background = colors.secondary;
       }
-      
+
       // Update helper text colors
       const primaryHelper = hero.querySelector('span');
       if (primaryHelper) {
         primaryHelper.style.color = 'rgba(255,255,255,0.8)';
       }
-      
+
       const secondaryHelper = preview.querySelector('.preview-text span');
       if (secondaryHelper) {
         secondaryHelper.style.color = colors.text;
         secondaryHelper.style.opacity = '0.7';
       }
-      
+
       secondaryText.style.color = colors.secondary;
     }
   }
@@ -6297,77 +6319,77 @@ class VisualEditor {
       const picker = modal.querySelector(`.color-picker[data-property="${property}"]`);
       const textInput = modal.querySelector(`.color-text[data-property="${property}"]`);
       const preview = modal.querySelector(`[data-color="${property}"]`);
-      
+
       if (picker) picker.value = color;
       if (textInput) textInput.value = color;
       if (preview) preview.style.background = color;
     });
-    
+
     this.updateLivePreview(modal);
   }
 
   applyCustomTheme(modal) {
     const customColors = this.getColorsFromEditor(modal);
-    
+
     // Save custom colors
     localStorage.setItem('custom-theme-colors', JSON.stringify(customColors));
     localStorage.setItem('selected-theme', 'custom');
-    
+
     // Apply to CSS variables
     const root = document.documentElement;
     root.style.setProperty('--primary-color', customColors.primary);
     root.style.setProperty('--secondary-color', customColors.secondary);
     root.style.setProperty('--accent-color', customColors.accent);
     root.style.setProperty('--bg-primary', customColors.background);
-    
+
     // Smart contrast detection for custom colors
     const primaryTextColor = this.getContrastColor(customColors.background);
     const secondaryTextColor = this.getSecondaryTextColor(customColors.background);
-    
+
     root.style.setProperty('--text-primary', primaryTextColor);
     root.style.setProperty('--text-secondary', secondaryTextColor);
-    
+
     // Update additional theme variables with all section backgrounds
     root.style.setProperty('--primary-dark', this.darkenColor(customColors.primary, 20));
     root.style.setProperty('--bg-secondary', this.lightenColor(customColors.background, 3));
     root.style.setProperty('--bg-tertiary', this.lightenColor(customColors.background, 6));
-    
+
     // Set all section backgrounds for custom colors too
     const lightBg1 = this.lightenColor(customColors.background, 2);
     const lightBg2 = this.lightenColor(customColors.background, 5);
     const lightBg3 = this.lightenColor(customColors.background, 8);
     const lightBg4 = this.lightenColor(customColors.background, 11);
     const lightBg5 = this.lightenColor(customColors.background, 14);
-    
+
     root.style.setProperty('--bg-section-1', lightBg1);
     root.style.setProperty('--bg-section-2', lightBg2);
     root.style.setProperty('--bg-section-3', lightBg3);
     root.style.setProperty('--bg-section-4', lightBg4);
     root.style.setProperty('--bg-section-5', lightBg5);
-    
+
     // Update gradients
     root.style.setProperty('--bg-gradient', `linear-gradient(135deg, ${customColors.primary}, ${customColors.secondary})`);
     root.style.setProperty('--bg-hero', `linear-gradient(135deg, ${customColors.primary}, ${customColors.secondary})`);
     root.style.setProperty('--bg-cta', `linear-gradient(135deg, ${customColors.primary}, ${customColors.accent})`);
     root.style.setProperty('--bg-footer', `linear-gradient(135deg, ${customColors.secondary}, ${customColors.primary})`);
-    
+
     // Set feature section to use secondary color for contrast
     root.style.setProperty('--bg-features', `linear-gradient(135deg, ${customColors.secondary}15, ${customColors.primary}08)`);
-    
+
     // Update section backgrounds with smart contrast for custom colors
     this.updateSectionBackgrounds(customColors);
-    
+
     // Update card colors to use theme colors
     this.updateCardColors(customColors);
-    
+
     this.closeCustomColorEditor(modal);
     this.showNotification('🎨 Custom theme applied successfully!', 'success');
-    
+
     // Refresh all existing sections with new custom theme colors
     setTimeout(() => {
       this.refreshAllSectionThemes();
     }, 100);
-    
+
     // Update theme button to show custom
     this.updateThemeButton({ name: 'Custom Theme', colors: customColors });
   }
@@ -6386,8 +6408,8 @@ class VisualEditor {
     const R = (num >> 16) - amt;
     const B = (num >> 8 & 0x00FF) - amt;
     const G = (num & 0x0000FF) - amt;
-    return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + 
-           (B < 255 ? B < 1 ? 0 : B : 255) * 0x100 + 
+    return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+           (B < 255 ? B < 1 ? 0 : B : 255) * 0x100 +
            (G < 255 ? G < 1 ? 0 : G : 255)).toString(16).slice(1);
   }
 
@@ -6397,8 +6419,8 @@ class VisualEditor {
     const R = (num >> 16) + amt;
     const B = (num >> 8 & 0x00FF) + amt;
     const G = (num & 0x0000FF) + amt;
-    return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 + 
-           (B < 255 ? B < 1 ? 0 : B : 255) * 0x100 + 
+    return "#" + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+           (B < 255 ? B < 1 ? 0 : B : 255) * 0x100 +
            (G < 255 ? G < 1 ? 0 : G : 255)).toString(16).slice(1);
   }
 
@@ -6406,7 +6428,7 @@ class VisualEditor {
   isLightColor(color) {
     // Convert color to RGB values
     let r, g, b;
-    
+
     if (color.startsWith('#')) {
       const hex = color.replace('#', '');
       r = parseInt(hex.substr(0, 2), 16);
@@ -6423,10 +6445,10 @@ class VisualEditor {
       // Default to light for unknown formats
       return true;
     }
-    
+
     // Calculate luminance using the standard formula
     const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-    
+
     // Return true if light (luminance > 0.5), false if dark
     return luminance > 0.5;
   }
@@ -6444,10 +6466,10 @@ class VisualEditor {
   // New function to update section backgrounds with smart contrast
   updateSectionBackgrounds(colors) {
     const sections = document.querySelectorAll('.block');
-    
+
     sections.forEach(section => {
       let bgColor, textColor, secondaryTextColor;
-      
+
       // Handle all section background classes
       if (section.classList.contains('bg-section-1')) {
         bgColor = this.lightenColor(colors.background, 2);
@@ -6460,11 +6482,11 @@ class VisualEditor {
       } else if (section.classList.contains('bg-section-5')) {
         bgColor = this.lightenColor(colors.background, 14);
       }
-      
+
       if (bgColor) {
         textColor = this.getContrastColor(bgColor);
         secondaryTextColor = this.getSecondaryTextColor(bgColor);
-        
+
         // Update text colors for this section
         const headings = section.querySelectorAll('h1, h2, h3, h4, .heading-1, .heading-2, .heading-3');
         headings.forEach(heading => {
@@ -6472,7 +6494,7 @@ class VisualEditor {
             heading.style.setProperty('color', textColor, 'important');
           }
         });
-        
+
         const paragraphs = section.querySelectorAll('p, .subheading');
         paragraphs.forEach(p => {
           if (!p.style.color || p.style.color.includes('var(')) {
@@ -6505,7 +6527,7 @@ class VisualEditor {
 
   applyThemeToSections(colors) {
     const root = document.documentElement;
-    
+
     // Set feature section background to contrast with main background
     const featureBlocks = document.querySelectorAll('.features-block, [class*="features"], .why-choose');
     featureBlocks.forEach(block => {
@@ -6538,17 +6560,17 @@ class VisualEditor {
         // Remove any existing overlays - clean slate!
         const overlays = card.querySelectorAll('.card-overlay, .card-gradient-overlay');
         overlays.forEach(overlay => overlay.remove());
-        
+
         // Apply clean header-style gradient
         card.style.background = gradient;
         card.style.color = 'white';
         card.style.border = 'none';
         card.style.boxShadow = '0 8px 24px rgba(0, 0, 0, 0.15)';
-        
+
         // Reset positioning and z-index - no more complex layering
         card.style.position = 'relative';
         card.style.zIndex = 'auto';
-        
+
         // Make sure all text in cards is white for contrast
         const textElements = card.querySelectorAll('h1, h2, h3, h4, h5, h6, p, span, div, li');
         textElements.forEach(el => {
@@ -6594,7 +6616,7 @@ class VisualEditor {
         Terms and conditions
       </p>
     `;
-    
+
     afterElement.insertAdjacentElement('afterend', newCard);
     this.makeContentEditable(newCard);
     this.showNotification('Pricing plan added!', 'success');
@@ -6657,16 +6679,16 @@ class VisualEditor {
 
     try {
       this.showNotification('Uploading image...', 'info');
-      
+
       // Create FormData with just the image
       const formData = new FormData();
       formData.append('image', file);
 
       // Smart API URL detection for development vs production
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:3000' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:3000'
         : window.location.origin;
-      
+
       // Try to upload to Next.js server (check multiple ports)
       let response;
       const uploadUrls = [
@@ -6703,7 +6725,7 @@ class VisualEditor {
       }
 
       const result = await response.json();
-      
+
       if (result.success) {
         // Use the hosted image URL directly
         this.updateImageSource(result.imageUrl, result.filename);
@@ -6714,7 +6736,7 @@ class VisualEditor {
 
     } catch (error) {
       console.error('Server upload failed, using local fallback:', error);
-      
+
       // Fallback to base64 for static server environments
       this.showNotification('Server unavailable, storing image locally...', 'info');
       this.handleImageUploadFallback(file);
@@ -6784,7 +6806,7 @@ class VisualEditor {
    */
   renderImageUploadSection(title, type, element, description) {
     const currentImageSrc = this.getCurrentImageSource(element, type);
-    const previewHtml = currentImageSrc ? 
+    const previewHtml = currentImageSrc ?
       `<div class="current-image-preview">
         <img src="${currentImageSrc}" alt="Current ${title}" style="max-width: 100px; max-height: 100px; border-radius: 8px; object-fit: cover;">
       </div>` : '';
@@ -6832,7 +6854,7 @@ class VisualEditor {
       "url('/Screenshot 2568-09-30 at 2.22.29 AM.png')"
     );
     element.setAttribute('style', newStyle);
-    
+
     // Refresh the settings panel to update the preview
     this.showBlockSettings(element);
     this.showNotification('Background restored to default!', 'success');
@@ -6848,7 +6870,7 @@ class VisualEditor {
       // Use a reliable placeholder that works offline
       img.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjMwMCIgdmlld0JveD0iMCAwIDMwMCAzMDAiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxyZWN0IHdpZHRoPSIzMDAiIGhlaWdodD0iMzAwIiBmaWxsPSIjNEY0NkU1Ci8+Cjx0ZXh0IHg9IjE1MCIgeT0iMTUwIiBmaWxsPSJ3aGl0ZSIgZm9udC1mYW1pbHk9IkFyaWFsLCBzYW5zLXNlcmlmIiBmb250LXNpemU9IjI0IiBmb250LXdlaWdodD0iYm9sZCIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZG9taW5hbnQtYmFzZWxpbmU9ImNlbnRyYWwiPlBob3RvPC90ZXh0Pgo8L3N2Zz4K';
     }
-    
+
     // Refresh the settings panel to update the preview
     this.showBlockSettings(element);
     this.showNotification('Photo restored to placeholder!', 'success');
@@ -6864,7 +6886,7 @@ class VisualEditor {
     const funnelId = urlParams.get('funnel');
     const currentSlug = this.getCurrentSlug();
     const currentName = this.getCurrentFunnelName();
-    
+
     return `
       <div class="funnel-settings-section">
         <div class="setting-group">
@@ -6872,7 +6894,7 @@ class VisualEditor {
           <p class="setting-description">Customize your funnel's public URL</p>
           <div class="url-preview">
             <span class="base-url">${window.location.origin}/funnel/</span>
-            <input type="text" class="slug-input" value="${currentSlug || 'your-slug'}" 
+            <input type="text" class="slug-input" value="${currentSlug || 'your-slug'}"
                    placeholder="your-custom-slug" data-funnel-id="${funnelId}">
           </div>
           <button type="button" class="update-slug-btn" data-funnel-id="${funnelId}">
@@ -6909,7 +6931,7 @@ class VisualEditor {
   async updateFunnelSlug(funnelId, newSlug) {
     try {
       this.showNotification('Updating URL...', 'info');
-      
+
       // Validate slug format
       const validSlug = newSlug.toLowerCase()
         .replace(/[^a-z0-9\s-]/g, '')
@@ -6922,24 +6944,24 @@ class VisualEditor {
       }
 
       // Smart API URL detection
-      const apiBaseUrl = window.location.hostname === 'localhost' 
-        ? 'http://localhost:3000' 
+      const apiBaseUrl = window.location.hostname === 'localhost'
+        ? 'http://localhost:3000'
         : window.location.origin;
 
       const response = await fetch(`${apiBaseUrl}/api/funnels/${funnelId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ 
-          funnel_slug: validSlug 
+        body: JSON.stringify({
+          funnel_slug: validSlug
         })
       });
 
       const result = await response.json();
-      
+
       if (result.success) {
         this.showNotification('URL updated successfully!', 'success');
-        
+
         // Update the URL preview in settings
         const urlPreview = document.querySelector('.current-url a');
         if (urlPreview) {
@@ -6947,17 +6969,17 @@ class VisualEditor {
           urlPreview.href = newUrl;
           urlPreview.textContent = newUrl;
         }
-        
+
         // Update the slug input to show the cleaned version
         const slugInput = document.querySelector('.slug-input');
         if (slugInput) {
           slugInput.value = validSlug;
         }
-        
+
       } else {
         throw new Error(result.error || 'Failed to update URL');
       }
-      
+
     } catch (error) {
       console.error('Slug update error:', error);
       this.showNotification(`Failed to update URL: ${error.message}`, 'error');
@@ -6969,30 +6991,30 @@ class VisualEditor {
    */
   cleanAnimationStatesForSave() {
     console.log('🧹 Cleaning animation states before save...');
-    
+
     // Get all blocks with fade-in animations
     const fadeInElements = document.querySelectorAll('.fade-in');
     let cleanedCount = 0;
-    
+
     fadeInElements.forEach(element => {
       // Ensure all fade-in elements are visible before saving
       if (!element.classList.contains('visible')) {
         element.classList.add('visible');
         cleanedCount++;
       }
-      
+
       // Also clean up any editor-specific classes that shouldn't be saved
       element.classList.remove('block-selected', 'text-selected', 'card-selected', 'button-selected');
       element.setAttribute('data-editor-mode', 'false');
       element.setAttribute('contenteditable', 'false');
     });
-    
+
     // Clean up any editor controls that shouldn't be saved
     const editorControls = document.querySelectorAll('.element-controls, .section-controls, .block-handle');
     editorControls.forEach(control => {
       control.style.display = 'none';
     });
-    
+
     console.log(`✅ Animation cleanup completed - made ${cleanedCount} sections visible before save`);
   }
 }
@@ -7000,12 +7022,12 @@ class VisualEditor {
 // Initialize the visual editor when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   window.visualEditor = new VisualEditor();
-  
+
   // Setup component drag and drop
   if (window.visualEditor.setupComponentDragDrop) {
     window.visualEditor.setupComponentDragDrop();
   }
-  
+
   // Add global click handler to hide element controls when clicking outside
   document.addEventListener('click', (e) => {
     if (!e.target.closest('.manageable-element') && !e.target.closest('.element-controls')) {
@@ -7016,7 +7038,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   });
-  
+
   // Show element controls on hover when in edit mode
   document.addEventListener('mouseover', (e) => {
     if (window.visualEditor && window.visualEditor.isEditMode) {
@@ -7029,7 +7051,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
-  
+
   document.addEventListener('mouseleave', (e) => {
     if (window.visualEditor && window.visualEditor.isEditMode && e.target && e.target.closest) {
       const manageableElement = e.target.closest('.manageable-element');

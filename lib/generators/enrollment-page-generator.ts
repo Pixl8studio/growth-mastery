@@ -185,7 +185,7 @@ export function generateEnrollmentHTML(
                     ENROLL NOW - SECURE YOUR SPOT
                 </button>
                 <p style="color: white; margin-top: var(--space-4); font-size: 0.9rem; opacity: 0.9;" data-editable="true">
-                    🔒 Secure checkout • 💯 30-day money-back guarantee • ⚡ Instant access
+                    Secure checkout • 30-day money-back guarantee • Instant access
                 </p>
             </div>
         </div>

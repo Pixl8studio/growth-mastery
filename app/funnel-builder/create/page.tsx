@@ -175,8 +175,8 @@ export default function CreateFunnelPage() {
                     <CardHeader>
                         <CardTitle>What Happens Next?</CardTitle>
                         <CardDescription>
-                            After creating your funnel, you'll complete 5 main sections
-                            with 15 guided steps
+                            After creating your funnel, you'll complete 4 main sections
+                            with 14 guided steps
                         </CardDescription>
                     </CardHeader>
                     <CardContent>

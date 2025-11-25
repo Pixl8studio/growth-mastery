@@ -81,7 +81,7 @@ describe("CreateFunnelPage", () => {
         expect(screen.getByText("What Happens Next?")).toBeInTheDocument();
         expect(
             screen.getByText(
-                /After creating your funnel, you'll complete 5 main sections with 15 guided steps/i
+                /After creating your funnel, you'll complete 4 main sections with 14 guided steps/i
             )
         ).toBeInTheDocument();
     });

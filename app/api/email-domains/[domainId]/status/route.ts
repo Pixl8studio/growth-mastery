@@ -7,7 +7,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import * as Sentry from "@sentry/nextjs";
 import { getMailgunProvider } from "@/lib/followup/providers/mailgun-provider";
 
 /**
@@ -102,9 +101,6 @@ export async function GET(
         });
     } catch (error) {
         logger.error({ error }, "❌ Failed to get email domain status");
-        Sentry.captureException(error, {
-            tags: { component: "api", action: "get_email_domain_status" },
-        });
 
         return NextResponse.json(
             { success: false, error: "Failed to get email domain status" },

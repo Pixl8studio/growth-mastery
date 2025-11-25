@@ -8,7 +8,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import * as Sentry from "@sentry/nextjs";
 import { MailgunEmailProvider } from "@/lib/followup/providers/mailgun-provider";
 
 /**
@@ -62,7 +61,6 @@ export async function POST(request: NextRequest) {
         const statusUpdates: Record<string, string> = {
             delivered: "sent",
             bounced: "failed",
-            failed: "failed",
         };
 
         if (statusUpdates[event.event_type]) {
@@ -70,7 +68,7 @@ export async function POST(request: NextRequest) {
                 .from("followup_deliveries")
                 .update({
                     delivery_status: statusUpdates[event.event_type],
-                    ...(event.event_type === "failed" || event.event_type === "bounced"
+                    ...(event.event_type === "bounced"
                         ? { error_message: "Email bounced or failed" }
                         : {}),
                 })
@@ -148,17 +146,6 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        Sentry.addBreadcrumb({
-            category: "email_webhook",
-            message: `Mailgun ${event.event_type} event`,
-            level: "info",
-            data: {
-                event: event.event_type,
-                deliveryId,
-                prospectId,
-            },
-        });
-
         logger.info(
             { event: event.event_type, deliveryId, prospectId },
             "✅ Mailgun webhook processed"
@@ -167,9 +154,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true });
     } catch (error) {
         logger.error({ error }, "❌ Failed to process Mailgun webhook");
-        Sentry.captureException(error, {
-            tags: { component: "webhook", service: "mailgun" },
-        });
 
         // Return 200 to prevent Mailgun from retrying
         return NextResponse.json(

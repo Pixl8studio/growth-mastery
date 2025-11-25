@@ -8,7 +8,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import * as Sentry from "@sentry/nextjs";
 import { getMailgunProvider } from "@/lib/followup/providers/mailgun-provider";
 import type { CreateEmailDomainRequest, EmailDomain } from "@/types/integrations";
 
@@ -65,9 +64,6 @@ export async function GET(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "❌ Failed to list email domains");
-        Sentry.captureException(error, {
-            tags: { component: "api", action: "list_email_domains" },
-        });
 
         return NextResponse.json(
             { success: false, error: "Failed to list email domains" },
@@ -216,22 +212,12 @@ export async function POST(request: NextRequest) {
             "✅ Email domain created"
         );
 
-        Sentry.addBreadcrumb({
-            category: "email_domain",
-            message: `Created email domain ${fullDomain}`,
-            level: "info",
-            data: { userId: user.id, domain: fullDomain },
-        });
-
         return NextResponse.json({
             success: true,
             domain: newDomain as EmailDomain,
         });
     } catch (error) {
         logger.error({ error }, "❌ Failed to create email domain");
-        Sentry.captureException(error, {
-            tags: { component: "api", action: "create_email_domain" },
-        });
 
         return NextResponse.json(
             { success: false, error: "Failed to create email domain" },

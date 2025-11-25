@@ -7,7 +7,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import * as Sentry from "@sentry/nextjs";
 import { getMailgunProvider } from "@/lib/followup/providers/mailgun-provider";
 
 /**
@@ -97,17 +96,6 @@ export async function POST(
             "🔍 Email domain verification checked"
         );
 
-        Sentry.addBreadcrumb({
-            category: "email_domain",
-            message: `Verified email domain ${domain.full_domain}`,
-            level: "info",
-            data: {
-                userId: user.id,
-                domain: domain.full_domain,
-                verified: verificationResult.verified,
-            },
-        });
-
         return NextResponse.json({
             success: true,
             domain: updatedDomain,
@@ -118,9 +106,6 @@ export async function POST(
         });
     } catch (error) {
         logger.error({ error }, "❌ Failed to verify email domain");
-        Sentry.captureException(error, {
-            tags: { component: "api", action: "verify_email_domain" },
-        });
 
         return NextResponse.json(
             { success: false, error: "Failed to verify email domain" },

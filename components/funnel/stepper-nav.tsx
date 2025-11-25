@@ -42,7 +42,6 @@ const STEPS: Step[] = [
     { number: 12, title: "AI Follow-Up", description: "Smart automation" },
     { number: 13, title: "Marketing Content", description: "Social content engine" },
     { number: 14, title: "Ads Manager", description: "Meta/Instagram ads" },
-    { number: 15, title: "Analytics", description: "Track performance" },
 ];
 
 interface StepperNavProps {
@@ -89,7 +88,7 @@ export function StepperNav({
     }, [expandedMasterStep, onMasterStepExpanded]);
 
     // Calculate overall completion
-    const totalSteps = 15;
+    const totalSteps = 14;
     const completionPercentage = Math.round((completedSteps.length / totalSteps) * 100);
 
     return (

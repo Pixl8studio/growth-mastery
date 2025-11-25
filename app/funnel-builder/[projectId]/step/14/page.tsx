@@ -269,13 +269,9 @@ export default function Step14Page({
 
             toast({
                 title: "Campaign Created! 🎉",
-                description: "Your ads are now live and running.",
+                description:
+                    "Your ads are now live and running. Your funnel is complete!",
             });
-
-            // Redirect to analytics after a delay
-            setTimeout(() => {
-                router.push(`/funnel-builder/${projectId}/step/15`);
-            }, 3000);
         } catch (error) {
             logger.error({ error }, "Error deploying campaign");
             toast({
@@ -668,9 +664,9 @@ export default function Step14Page({
                                         Campaign Successfully Launched! 🎉
                                     </h3>
                                     <p className="text-green-800 mb-4">
-                                        Your ads are now running on Meta/Instagram.
-                                        You'll be redirected to analytics to track
-                                        performance.
+                                        Your ads are now running on Meta/Instagram. Your
+                                        complete funnel is ready! Track performance from
+                                        the main dashboard.
                                     </p>
                                 </div>
                             )}

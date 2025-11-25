@@ -43,15 +43,12 @@ export interface MasterStepProgress {
 
 /**
  * Calculate completion percentage
- * Note: Step 15 (Analytics) is not counted in completion as it's always accessible
  */
 export function calculateCompletionPercentage(
     completionStatus: StepCompletion[]
 ): number {
-    const completableSteps = 14; // Steps 1-14 (Step 15 is analytics/viewing)
-    const completedSteps = completionStatus.filter(
-        (s) => s.step !== 15 && s.isCompleted
-    ).length;
+    const completableSteps = 14; // Steps 1-14
+    const completedSteps = completionStatus.filter((s) => s.isCompleted).length;
 
     return Math.round((completedSteps / completableSteps) * 100);
 }

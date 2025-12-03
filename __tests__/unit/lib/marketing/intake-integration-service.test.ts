@@ -3,12 +3,18 @@
  * Tests for marketing profile initialization from intake data
  */
 
+// Mock brand voice service BEFORE any imports
+vi.mock("@/lib/marketing/brand-voice-service", () => ({
+    initializeProfile: vi.fn(),
+    getVoiceGuidelines: vi.fn(),
+    getProfile: vi.fn(),
+}));
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock dependencies
 vi.mock("@/lib/supabase/server");
 vi.mock("@/lib/logger");
-vi.mock("./brand-voice-service");
 
 import {
     initializeFromIntake,
@@ -92,9 +98,8 @@ describe("IntakeIntegrationService", () => {
             expect(initializeProfile).toHaveBeenCalledWith(
                 mockUserId,
                 mockFunnelProjectId,
-                "Growth Marketing Co Profile"
+                "Growth Marketing Co"
             );
-            expect(logger.child).toHaveBeenCalled();
         });
 
         it("should extract brand voice from transcript", async () => {

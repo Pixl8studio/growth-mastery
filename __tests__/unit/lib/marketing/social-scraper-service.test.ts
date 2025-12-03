@@ -145,6 +145,7 @@ describe("SocialScraperService", () => {
                 access_token_encrypted: "encrypted",
                 token_expires_at: expiredDate.toISOString(),
                 platform_user_id: "user-123",
+                status: "active",
             };
 
             const mockSupabase = {
@@ -153,9 +154,11 @@ describe("SocialScraperService", () => {
                         eq: vi.fn().mockReturnValue({
                             eq: vi.fn().mockReturnValue({
                                 eq: vi.fn().mockReturnValue({
-                                    maybeSingle: vi.fn().mockResolvedValue({
-                                        data: mockConnection,
-                                        error: null,
+                                    eq: vi.fn().mockReturnValue({
+                                        maybeSingle: vi.fn().mockResolvedValue({
+                                            data: mockConnection,
+                                            error: null,
+                                        }),
                                     }),
                                 }),
                             }),
@@ -173,12 +176,13 @@ describe("SocialScraperService", () => {
             );
 
             expect(result.success).toBe(false);
-            expect(result.error).toContain("connection has expired");
+            expect(result.error).toContain("instagram connection has expired");
             expect(result.data?.metadata?.connectionStatus).toBe("expired");
         });
 
         it("should scrape generic websites", async () => {
-            const mockContent = "This is extracted content from the website.";
+            const mockContent =
+                "This is a meaningful paragraph of content extracted from the website. It contains enough text to pass the minimum length requirements.\n\nThis is another paragraph with substantial content that will be parsed correctly.";
 
             vi.mocked(extractTextFromUrl).mockResolvedValue(mockContent as any);
 
@@ -200,12 +204,15 @@ describe("SocialScraperService", () => {
         });
 
         it("should validate minimum content length", async () => {
-            vi.mocked(extractTextFromUrl).mockResolvedValue("Short" as any);
+            // Content that passes paragraph filter (>50 chars) but fails total length check (<100 chars)
+            const shortContent =
+                "This paragraph has exactly 60 characters for validation.";
+            vi.mocked(extractTextFromUrl).mockResolvedValue(shortContent as any);
 
             const result = await scrapeAndExtractContent("https://example.com");
 
             expect(result.success).toBe(false);
-            expect(result.error).toContain("Insufficient content");
+            expect(result.error).toContain("Insufficient content found");
         });
 
         it("should handle 403 errors with helpful message", async () => {
@@ -239,7 +246,7 @@ describe("SocialScraperService", () => {
 
         it("should extract long content successfully", async () => {
             const longContent =
-                "Paragraph 1.\n\nParagraph 2 with enough content.\n\nParagraph 3 continues the article.";
+                "This is the first substantial paragraph with enough content to meet the minimum requirements for meaningful analysis.\n\nThis is the second paragraph with enough content to be considered valid and meaningful for processing.\n\nThe third paragraph continues the article with substantial content that provides value.";
 
             vi.mocked(extractTextFromUrl).mockResolvedValue(longContent as any);
 
@@ -257,15 +264,14 @@ describe("SocialScraperService", () => {
             expect(result.error).toContain("paste sample posts manually");
         });
 
-        it("should log platform detection", async () => {
-            vi.mocked(extractTextFromUrl).mockResolvedValue("a".repeat(200) as any);
-
-            await scrapeAndExtractContent("https://linkedin.com/in/user");
-
-            expect(logger.info).toHaveBeenCalledWith(
-                expect.objectContaining({ platform: "linkedin" }),
-                expect.any(String)
+        it("should detect linkedin platform", async () => {
+            const result = await scrapeAndExtractContent(
+                "https://linkedin.com/in/user"
             );
+
+            expect(result.success).toBe(false);
+            expect(result.data?.platform).toBe("linkedin");
+            expect(result.error).toContain("connect your linkedin account");
         });
     });
 });

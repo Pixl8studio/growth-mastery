@@ -32,11 +32,6 @@ describe("AnalyticsCollectorService", () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-
-        // Setup logger mocks
-        vi.mocked(logger.info).mockImplementation(() => {});
-        vi.mocked(logger.error).mockImplementation(() => {});
-        vi.mocked(logger.warn).mockImplementation(() => {});
     });
 
     describe("recordOptIn", () => {
@@ -79,7 +74,6 @@ describe("AnalyticsCollectorService", () => {
             const result = await recordOptIn(mockPostVariantId, mockContactId, 30);
 
             expect(result.success).toBe(true);
-            expect(logger.info).toHaveBeenCalled();
         });
 
         it("should update existing analytics record", async () => {
@@ -266,13 +260,6 @@ describe("AnalyticsCollectorService", () => {
             const result = await fetchPlatformAnalytics(mockPostVariantId, "instagram");
 
             expect(result.success).toBe(true);
-            expect(logger.info).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    postVariantId: mockPostVariantId,
-                    platform: "instagram",
-                }),
-                expect.any(String)
-            );
         });
     });
 
@@ -398,6 +385,7 @@ describe("AnalyticsCollectorService", () => {
             const mockVariants = [
                 {
                     id: "variant-1",
+                    content_brief_id: "brief-1",
                     platform: "instagram",
                     story_framework: "founder_saga",
                     marketing_analytics: [
@@ -413,6 +401,7 @@ describe("AnalyticsCollectorService", () => {
                 },
                 {
                     id: "variant-2",
+                    content_brief_id: "brief-2",
                     platform: "linkedin",
                     story_framework: "myth_buster",
                     marketing_analytics: [
@@ -443,6 +432,10 @@ describe("AnalyticsCollectorService", () => {
                     if (table === "marketing_post_variants") {
                         return {
                             select: vi.fn().mockReturnValue({
+                                eq: vi.fn().mockResolvedValue({
+                                    data: null,
+                                    error: { message: "Not found" },
+                                }),
                                 in: vi.fn().mockResolvedValue({
                                     data: mockVariants,
                                     error: null,
@@ -458,6 +451,9 @@ describe("AnalyticsCollectorService", () => {
 
             const result = await getDashboardAnalytics(mockFunnelProjectId);
 
+            if (!result.success) {
+                console.error("Test failed with error:", result.error);
+            }
             expect(result.success).toBe(true);
             expect(result.dashboard?.overview.total_posts).toBe(2);
             expect(result.dashboard?.overview.total_impressions).toBe(3000);

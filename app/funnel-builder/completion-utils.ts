@@ -75,7 +75,7 @@ export async function getStepCompletionStatus(
         } = await supabase.auth.getUser();
 
         if (!user) {
-            return Array.from({ length: 15 }, (_, i) => ({
+            return Array.from({ length: 14 }, (_, i) => ({
                 step: i + 1,
                 isCompleted: false,
                 hasContent: false,
@@ -273,16 +273,11 @@ export async function getStepCompletionStatus(
                 isCompleted: (adCampaigns.count ?? 0) > 0,
                 hasContent: (adCampaigns.count ?? 0) > 0,
             },
-            {
-                step: 15,
-                isCompleted: false, // Analytics is always accessible, not "completable"
-                hasContent: false,
-            },
         ];
 
         const completedCount = completionStatus.filter((s) => s.isCompleted).length;
         requestLogger.info(
-            { completedSteps: completedCount, totalSteps: 15 },
+            { completedSteps: completedCount, totalSteps: 14 },
             "Step completion status retrieved"
         );
 
@@ -290,7 +285,7 @@ export async function getStepCompletionStatus(
     } catch (error) {
         requestLogger.error({ error }, "Failed to check step completion");
         // Return empty completion status on error
-        return Array.from({ length: 15 }, (_, i) => ({
+        return Array.from({ length: 14 }, (_, i) => ({
             step: i + 1,
             isCompleted: false,
             hasContent: false,

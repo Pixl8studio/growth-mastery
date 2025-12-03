@@ -27,8 +27,8 @@ describe("config", () => {
 
     describe("FUNNEL_CONFIG", () => {
         it("should have correct total steps", () => {
-            expect(FUNNEL_CONFIG.totalSteps).toBe(15);
-            expect(FUNNEL_CONFIG.stepNames).toHaveLength(15);
+            expect(FUNNEL_CONFIG.totalSteps).toBe(14);
+            expect(FUNNEL_CONFIG.stepNames).toHaveLength(14);
         });
 
         it("should have correct deck structure", () => {

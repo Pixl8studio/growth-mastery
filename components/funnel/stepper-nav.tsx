@@ -42,7 +42,6 @@ const STEPS: Step[] = [
     { number: 12, title: "AI Follow-Up", description: "Smart automation" },
     { number: 13, title: "Marketing Content", description: "Social content engine" },
     { number: 14, title: "Ads Manager", description: "Meta/Instagram ads" },
-    { number: 15, title: "Analytics", description: "Track performance" },
 ];
 
 interface StepperNavProps {
@@ -89,7 +88,7 @@ export function StepperNav({
     }, [expandedMasterStep, onMasterStepExpanded]);
 
     // Calculate overall completion
-    const totalSteps = 15;
+    const totalSteps = 14;
     const completionPercentage = Math.round((completedSteps.length / totalSteps) * 100);
 
     return (
@@ -166,8 +165,8 @@ export function StepperNav({
                                         )}
 
                                         {/* Master Step Info */}
-                                        <div className="text-left flex-1 min-w-0">
-                                            <h3 className="text-sm font-semibold text-foreground leading-tight mb-1 break-words">
+                                        <div className="text-left flex-1 min-w-0 max-w-[180px]">
+                                            <h3 className="text-sm font-semibold text-foreground leading-tight mb-1 line-clamp-2">
                                                 {masterStep.title}
                                             </h3>
                                             <p className="text-xs text-muted-foreground whitespace-nowrap">
@@ -252,11 +251,11 @@ export function StepperNav({
                                                         )}
 
                                                         {/* Step Info */}
-                                                        <div className="flex-1 min-w-0">
+                                                        <div className="flex-1 min-w-0 max-w-[180px]">
                                                             <div className="flex items-center gap-1.5 mb-1">
                                                                 <h4
                                                                     className={cn(
-                                                                        "text-xs font-medium leading-tight break-words",
+                                                                        "text-xs font-medium leading-tight line-clamp-2",
                                                                         {
                                                                             "text-foreground":
                                                                                 isCurrentPage ||
@@ -275,7 +274,7 @@ export function StepperNav({
                                                                     </span>
                                                                 )}
                                                             </div>
-                                                            <p className="text-[11px] text-muted-foreground leading-relaxed break-words">
+                                                            <p className="text-[11px] text-muted-foreground leading-relaxed line-clamp-2">
                                                                 {step.description}
                                                             </p>
                                                         </div>

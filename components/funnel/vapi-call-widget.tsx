@@ -45,6 +45,7 @@ export function VapiCallWidget({
     // Use ref to avoid closure issues in event handlers
     const callIdRef = useRef<string | null>(null);
     const callStartTimestampRef = useRef<string | null>(null);
+    const vapiRef = useRef<any>(null);
 
     // Get VAPI credentials
     const publicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY;
@@ -99,13 +100,14 @@ export function VapiCallWidget({
                     {
                         role: "system",
                         content:
-                            "⏳ Processing transcript (this takes a few seconds)...",
+                            "⏳ Processing transcript (this takes 10-15 seconds)...",
                         timestamp: new Date(),
                     },
                 ]);
 
-                // Wait for VAPI to process the call
-                await new Promise((resolve) => setTimeout(resolve, 5000));
+                // Wait longer for VAPI to process the call (increased from 5 to 12 seconds)
+                // VAPI needs time to process the call and make it available via API
+                await new Promise((resolve) => setTimeout(resolve, 12000));
 
                 logger.info(
                     { callId, callStartTimestamp },
@@ -190,6 +192,7 @@ export function VapiCallWidget({
                 // Dynamically import VAPI SDK
                 const { default: Vapi } = await import("@vapi-ai/web");
                 const vapiInstance = new Vapi(publicKey);
+                vapiRef.current = vapiInstance;
                 setVapi(vapiInstance);
 
                 // Set up event listeners
@@ -198,9 +201,14 @@ export function VapiCallWidget({
                     const timestamp = new Date().toISOString();
                     callStartTimestampRef.current = timestamp;
 
-                    // Try to capture call ID from event data
+                    // Try to capture call ID from event data - check multiple locations
+                    const dataObj = callData as any;
                     const capturedId =
-                        (callData as any)?.call?.id || (callData as any)?.callId;
+                        dataObj?.call?.id ||
+                        dataObj?.callId ||
+                        dataObj?.id ||
+                        dataObj?.data?.call?.id;
+
                     if (capturedId) {
                         logger.info(
                             { callId: capturedId, timestamp },
@@ -209,9 +217,13 @@ export function VapiCallWidget({
                         callIdRef.current = capturedId;
                         setCurrentCallId(capturedId);
                     } else {
-                        logger.info(
-                            { timestamp },
-                            "🎙️ Call started (ID will be captured from messages)"
+                        logger.warn(
+                            {
+                                timestamp,
+                                callData: JSON.stringify(callData, null, 2),
+                                callDataKeys: callData ? Object.keys(callData) : [],
+                            },
+                            "🎙️ Call started but no ID found - will try to capture from messages"
                         );
                     }
 
@@ -314,42 +326,51 @@ export function VapiCallWidget({
                 });
 
                 vapiInstance.on("message", (message: any) => {
+                    // Try to capture call ID from various possible locations in the message
+                    const possibleCallId =
+                        message.call?.id ||
+                        message.callId ||
+                        message.id ||
+                        message.data?.call?.id ||
+                        message.data?.callId;
+
                     // Log all message types to see what we're getting
                     logger.debug(
                         {
                             messageType: message.type,
                             hasCall: !!message.call,
                             hasCallId: !!message.call?.id,
+                            possibleCallId: possibleCallId || "none",
+                            messageKeys: Object.keys(message),
                         },
                         "Received VAPI message"
                     );
 
                     // Track call ID from multiple possible locations
                     if (message.type === "call-start") {
-                        const callId = message.call?.id || message.callId;
-                        if (callId) {
+                        if (possibleCallId) {
                             logger.info(
-                                { callId, messageType: message.type },
+                                { callId: possibleCallId, messageType: message.type },
                                 "📞 Captured call ID from call-start message"
                             );
-                            callIdRef.current = callId;
-                            setCurrentCallId(callId);
+                            callIdRef.current = possibleCallId;
+                            setCurrentCallId(possibleCallId);
                         } else {
                             logger.warn(
-                                { message },
-                                "⚠️ call-start message but no call ID found"
+                                { message: JSON.stringify(message, null, 2) },
+                                "⚠️ call-start message but no call ID found in any location"
                             );
                         }
                     }
 
                     // Also check for call ID in other message types
-                    if (!callIdRef.current && message.call?.id) {
+                    if (!callIdRef.current && possibleCallId) {
                         logger.info(
-                            { callId: message.call.id, messageType: message.type },
+                            { callId: possibleCallId, messageType: message.type },
                             "📞 Captured call ID from message"
                         );
-                        callIdRef.current = message.call.id;
-                        setCurrentCallId(message.call.id);
+                        callIdRef.current = possibleCallId;
+                        setCurrentCallId(possibleCallId);
                     }
 
                     // Only show final transcripts
@@ -418,6 +439,15 @@ export function VapiCallWidget({
 
         return () => {
             stopTimer();
+            // Cleanup: Stop any active call when component unmounts
+            if (vapiRef.current) {
+                try {
+                    vapiRef.current.stop();
+                    logger.info({}, "🧹 Cleanup: Stopped active call on unmount");
+                } catch (err) {
+                    logger.error({ error: err }, "Error stopping call during cleanup");
+                }
+            }
         };
     }, [publicKey, isConnecting, saveTranscript]);
 
@@ -478,7 +508,10 @@ export function VapiCallWidget({
         if (!vapi) return;
 
         try {
-            logger.info({ currentCallId }, "🔴 User clicked End Call");
+            logger.info(
+                { currentCallId, callId: callIdRef.current },
+                "🔴 User clicked End Call"
+            );
 
             setMessages((prev) => [
                 ...prev,
@@ -489,8 +522,31 @@ export function VapiCallWidget({
                 },
             ]);
 
+            // Stop the call
             await vapi.stop();
-            // The call-end event handler will fire and save the transcript
+
+            // The call-end event handler should fire automatically
+            // But in case it doesn't (due to VAPI SDK issues), we'll set a fallback timeout
+            setTimeout(() => {
+                if (isCallActive) {
+                    logger.warn({}, "⚠️ Call-end event didn't fire, forcing cleanup");
+                    setIsCallActive(false);
+                    setIsConnecting(false);
+                    stopTimer();
+
+                    // Manually trigger transcript save if we have call data
+                    const capturedCallId = callIdRef.current;
+                    const capturedTimestamp = callStartTimestampRef.current;
+
+                    if (capturedCallId || capturedTimestamp) {
+                        logger.info(
+                            { callId: capturedCallId, timestamp: capturedTimestamp },
+                            "Manually saving transcript after timeout"
+                        );
+                        saveTranscript(capturedCallId, capturedTimestamp);
+                    }
+                }
+            }, 3000); // Wait 3 seconds for normal call-end event
         } catch (err) {
             logger.error({ error: err }, "Failed to end call");
             setError("Failed to end call properly");

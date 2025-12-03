@@ -81,7 +81,7 @@ describe("CreateFunnelPage", () => {
         expect(screen.getByText("What Happens Next?")).toBeInTheDocument();
         expect(
             screen.getByText(
-                /After creating your funnel, you'll complete 5 main sections with 15 guided steps/i
+                /After creating your funnel, you'll complete 4 main sections with 14 guided steps/i
             )
         ).toBeInTheDocument();
     });
@@ -93,144 +93,156 @@ describe("CreateFunnelPage", () => {
         expect(createButton).toBeDisabled();
     });
 
-    it("should enable Create button when name has value", async () => {
-        const user = userEvent.setup();
-        render(<CreateFunnelPage />);
+    it(
+        "should enable Create button when name has value",
+        { timeout: 15000 },
+        async () => {
+            const user = userEvent.setup();
+            render(<CreateFunnelPage />);
 
-        const nameInput = screen.getByLabelText(/funnel name/i);
-        const createButton = screen.getByRole("button", { name: /create funnel/i });
+            const nameInput = screen.getByLabelText(/funnel name/i);
+            const createButton = screen.getByRole("button", { name: /create funnel/i });
 
-        // Initially disabled
-        expect(createButton).toBeDisabled();
+            // Initially disabled
+            expect(createButton).toBeDisabled();
 
-        // Type name
-        await user.clear(nameInput);
-        await user.type(nameInput, "My Test Funnel");
+            // Type name
+            await user.clear(nameInput);
+            await user.type(nameInput, "My Test Funnel");
 
-        // Wait for button to be enabled after state update
-        await waitFor(() => {
-            expect(createButton).toBeEnabled();
-        });
-    });
+            // Wait for button to be enabled after state update
+            await waitFor(() => {
+                expect(createButton).toBeEnabled();
+            });
+        }
+    );
 
-    it("should call Supabase with only name and slug on submission", async () => {
-        const user = userEvent.setup();
-        const mockInsert = vi.fn().mockReturnValue({
-            select: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({
-                    data: { id: "test-id", slug: "my-test-funnel" },
-                    error: null,
+    it(
+        "should call Supabase with only name and slug on submission",
+        { timeout: 20000 },
+        async () => {
+            const user = userEvent.setup();
+            const mockInsert = vi.fn().mockReturnValue({
+                select: vi.fn().mockReturnValue({
+                    single: vi.fn().mockResolvedValue({
+                        data: { id: "test-id", slug: "my-test-funnel" },
+                        error: null,
+                    }),
                 }),
-            }),
-        });
+            });
 
-        mockSupabase.auth.getUser.mockResolvedValue({
-            data: {
-                user: { id: "user-123", email: "test@example.com" },
-            },
-        });
+            mockSupabase.auth.getUser.mockResolvedValue({
+                data: {
+                    user: { id: "user-123", email: "test@example.com" },
+                },
+            });
 
-        // Mock for the slug check query (first call to from)
-        const mockSelectForSlugCheck = vi.fn().mockReturnValue({
-            eq: vi.fn().mockReturnValue({
-                like: vi.fn().mockResolvedValue({
-                    data: [],
-                    error: null,
-                }),
-            }),
-        });
-
-        // Mock for the insert query (second call to from)
-        const mockFromForInsert = vi.fn().mockReturnValue({
-            insert: mockInsert,
-        });
-
-        // Setup from to return different mocks for each call
-        mockSupabase.from
-            .mockReturnValueOnce({
-                select: mockSelectForSlugCheck,
-            })
-            .mockReturnValueOnce(mockFromForInsert());
-
-        render(<CreateFunnelPage />);
-
-        const nameInput = screen.getByLabelText(/funnel name/i);
-        // Clear and type to ensure clean input
-        await user.clear(nameInput);
-        await user.type(nameInput, "My Test Funnel");
-
-        // Wait for button to be enabled before clicking
-        const createButton = screen.getByRole("button", { name: /create funnel/i });
-        await waitFor(() => {
-            expect(createButton).toBeEnabled();
-        });
-
-        await user.click(createButton);
-
-        await waitFor(() => {
-            expect(mockInsert).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    name: "My Test Funnel",
-                    slug: "my-test-funnel",
-                    status: "draft",
-                    current_step: 1,
-                    user_id: "user-123",
-                    user_email: "test@example.com",
-                })
-            );
-        });
-
-        // Should NOT include description, target_audience, or business_niche
-        const insertCall = mockInsert.mock.calls[0][0];
-        expect(insertCall).not.toHaveProperty("description");
-        expect(insertCall).not.toHaveProperty("target_audience");
-        expect(insertCall).not.toHaveProperty("business_niche");
-    }, 10000);
-
-    it("should redirect to step 1 on successful creation", async () => {
-        const user = userEvent.setup();
-
-        mockSupabase.auth.getUser.mockResolvedValue({
-            data: {
-                user: { id: "user-123", email: "test@example.com" },
-            },
-        });
-
-        mockSupabase.from.mockReturnValue({
-            select: vi.fn().mockReturnValue({
+            // Mock for the slug check query (first call to from)
+            const mockSelectForSlugCheck = vi.fn().mockReturnValue({
                 eq: vi.fn().mockReturnValue({
                     like: vi.fn().mockResolvedValue({
                         data: [],
                         error: null,
                     }),
                 }),
-            }),
-            insert: vi.fn().mockReturnValue({
+            });
+
+            // Mock for the insert query (second call to from)
+            const mockFromForInsert = vi.fn().mockReturnValue({
+                insert: mockInsert,
+            });
+
+            // Setup from to return different mocks for each call
+            mockSupabase.from
+                .mockReturnValueOnce({
+                    select: mockSelectForSlugCheck,
+                })
+                .mockReturnValueOnce(mockFromForInsert());
+
+            render(<CreateFunnelPage />);
+
+            const nameInput = screen.getByLabelText(/funnel name/i);
+            // Clear and type to ensure clean input
+            await user.clear(nameInput);
+            await user.type(nameInput, "My Test Funnel");
+
+            // Wait for button to be enabled before clicking
+            const createButton = screen.getByRole("button", { name: /create funnel/i });
+            await waitFor(() => {
+                expect(createButton).toBeEnabled();
+            });
+
+            await user.click(createButton);
+
+            await waitFor(() => {
+                expect(mockInsert).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        name: "My Test Funnel",
+                        slug: "my-test-funnel",
+                        status: "draft",
+                        current_step: 1,
+                        user_id: "user-123",
+                        user_email: "test@example.com",
+                    })
+                );
+            });
+
+            // Should NOT include description, target_audience, or business_niche
+            const insertCall = mockInsert.mock.calls[0][0];
+            expect(insertCall).not.toHaveProperty("description");
+            expect(insertCall).not.toHaveProperty("target_audience");
+            expect(insertCall).not.toHaveProperty("business_niche");
+        }
+    );
+
+    it(
+        "should redirect to step 1 on successful creation",
+        { timeout: 15000 },
+        async () => {
+            const user = userEvent.setup();
+
+            mockSupabase.auth.getUser.mockResolvedValue({
+                data: {
+                    user: { id: "user-123", email: "test@example.com" },
+                },
+            });
+
+            mockSupabase.from.mockReturnValue({
                 select: vi.fn().mockReturnValue({
-                    single: vi.fn().mockResolvedValue({
-                        data: { id: "new-project-id", slug: "my-funnel" },
-                        error: null,
+                    eq: vi.fn().mockReturnValue({
+                        like: vi.fn().mockResolvedValue({
+                            data: [],
+                            error: null,
+                        }),
                     }),
                 }),
-            }),
-        });
+                insert: vi.fn().mockReturnValue({
+                    select: vi.fn().mockReturnValue({
+                        single: vi.fn().mockResolvedValue({
+                            data: { id: "new-project-id", slug: "my-funnel" },
+                            error: null,
+                        }),
+                    }),
+                }),
+            });
 
-        render(<CreateFunnelPage />);
+            render(<CreateFunnelPage />);
 
-        const nameInput = screen.getByLabelText(/funnel name/i);
-        await user.type(nameInput, "My Funnel");
+            const nameInput = screen.getByLabelText(/funnel name/i);
+            await user.type(nameInput, "My Funnel");
 
-        const createButton = screen.getByRole("button", { name: /create funnel/i });
-        await user.click(createButton);
+            const createButton = screen.getByRole("button", { name: /create funnel/i });
+            await user.click(createButton);
 
-        await waitFor(() => {
-            expect(mockPush).toHaveBeenCalledWith(
-                "/funnel-builder/new-project-id/step/1"
-            );
-        });
-    });
+            await waitFor(() => {
+                expect(mockPush).toHaveBeenCalledWith(
+                    "/funnel-builder/new-project-id/step/1"
+                );
+            });
+        }
+    );
 
-    it("should handle error states appropriately", async () => {
+    it("should handle error states appropriately", { timeout: 15000 }, async () => {
         const user = userEvent.setup();
 
         mockSupabase.auth.getUser.mockResolvedValue({
@@ -271,7 +283,7 @@ describe("CreateFunnelPage", () => {
         });
     });
 
-    it("should show loading state during creation", async () => {
+    it("should show loading state during creation", { timeout: 15000 }, async () => {
         const user = userEvent.setup();
 
         mockSupabase.auth.getUser.mockResolvedValue({

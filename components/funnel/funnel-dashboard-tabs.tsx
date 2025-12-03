@@ -125,16 +125,16 @@ export function FunnelDashboardTabs({
                                     <div
                                         className="h-full bg-gradient-to-r from-primary to-accent transition-all duration-300"
                                         style={{
-                                            width: `${Math.round((completedSteps.length / 15) * 100)}%`,
+                                            width: `${Math.round((completedSteps.length / 14) * 100)}%`,
                                         }}
                                     />
                                 </div>
                                 <div className="flex items-center justify-between text-sm text-muted-foreground">
                                     <span>
-                                        {completedSteps.length} of 15 steps completed
+                                        {completedSteps.length} of 14 steps completed
                                     </span>
                                     <span className="font-bold text-primary">
-                                        {Math.round((completedSteps.length / 15) * 100)}
+                                        {Math.round((completedSteps.length / 14) * 100)}
                                         %
                                     </span>
                                 </div>

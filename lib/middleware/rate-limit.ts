@@ -108,8 +108,8 @@ export function getRateLimitIdentifier(request: NextRequest, userId?: string): s
 
     // Fall back to IP address
     const ip =
-        request.headers.get("x-forwarded-for")?.split(",")[0] ||
-        request.headers.get("x-real-ip") ||
+        request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+        request.headers.get("x-real-ip")?.trim() ||
         "anonymous";
 
     return `ip:${ip}`;

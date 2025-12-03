@@ -6,6 +6,9 @@
     },
     "supabase": {
       "url": "https://mcp.supabase.com/mcp"
+    },
+    "Sentry": {
+      "url": "https://mcp.sentry.dev/mcp/growth-mastery/growth-mastery"
     }
   }
 }

@@ -9,6 +9,10 @@ import { generateEnrollmentHTML } from "./enrollment-page-generator";
 import { generateRegistrationHTML } from "./registration-page-generator";
 import { generateWatchPageHTML } from "./watch-page-generator";
 import { initializeFromIntake } from "@/lib/marketing/intake-integration-service";
+import {
+    getMergedGenerationContext,
+    type GeneratorContext,
+} from "@/lib/business-profile/generator-integration";
 import type { Slide } from "@/lib/ai/types";
 
 export interface GenerationProgress {

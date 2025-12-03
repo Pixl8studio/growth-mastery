@@ -42,6 +42,7 @@ describe("Supabase Validator - Environment Variables", () => {
     it("should warn when NEXT_PUBLIC_SUPABASE_URL is missing", () => {
         delete process.env.NEXT_PUBLIC_SUPABASE_URL;
         delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+        delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 
         const result = validateEnvVariables();
 
@@ -79,6 +80,7 @@ describe("Supabase Validator - Environment Variables", () => {
     it("should handle empty string environment variables as missing", () => {
         process.env.NEXT_PUBLIC_SUPABASE_URL = "";
         process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "";
+        delete process.env.SUPABASE_SERVICE_ROLE_KEY;
 
         const result = validateEnvVariables();
 

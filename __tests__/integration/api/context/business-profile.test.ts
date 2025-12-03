@@ -73,7 +73,7 @@ describe("Business Profile API Routes", () => {
             // Mock profile retrieval
             vi.mocked(getOrCreateProfile).mockResolvedValue({
                 success: true,
-                profile,
+                profile: profile as any,
             });
 
             const request = new NextRequest(

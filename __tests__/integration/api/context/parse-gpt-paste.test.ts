@@ -467,7 +467,7 @@ describe("Parse GPT Paste API Route", () => {
 
             vi.mocked(parseGptPasteResponse).mockResolvedValue({
                 success: true,
-                data: { parsed: "data" },
+                data: { parsed: "data" } as any,
                 generatedFields: ["parsed"],
             });
 

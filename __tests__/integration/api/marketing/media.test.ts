@@ -21,12 +21,16 @@ vi.mock("@/lib/logger", () => ({
 
 describe("GET /api/marketing/media", () => {
     let mockSupabase: any;
+    let mockLogger: any;
 
     beforeEach(async () => {
         vi.clearAllMocks();
         mockSupabase = createMockSupabaseClient();
         const { createClient } = await import("@/lib/supabase/server");
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
+
+        const { logger } = await import("@/lib/logger");
+        mockLogger = logger;
     });
 
     it("should return media library for authenticated user", async () => {
@@ -102,12 +106,16 @@ describe("GET /api/marketing/media", () => {
 
 describe("POST /api/marketing/media", () => {
     let mockSupabase: any;
+    let mockLogger: any;
 
     beforeEach(async () => {
         vi.clearAllMocks();
         mockSupabase = createMockSupabaseClient();
         const { createClient } = await import("@/lib/supabase/server");
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
+
+        const { logger } = await import("@/lib/logger");
+        mockLogger = logger;
     });
 
     it("should handle media upload request for authenticated user", async () => {

@@ -64,15 +64,31 @@ export function GenerationProgressTracker({
         }
     };
 
-    // Start polling when component mounts
+    // Only start polling when we detect generation is in progress
+    // Check once on mount, then only poll if isGenerating is true
     useEffect(() => {
         if (!projectId) return;
 
-        // Check initial status
+        // Check initial status once
         pollGenerationStatus();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [projectId]);
 
-        // Start polling every 3 seconds
-        pollingIntervalRef.current = setInterval(pollGenerationStatus, 3000);
+    // Only poll while generation is actually in progress
+    useEffect(() => {
+        if (!projectId || !isGenerating) {
+            // Stop polling if not generating
+            if (pollingIntervalRef.current) {
+                clearInterval(pollingIntervalRef.current);
+                pollingIntervalRef.current = null;
+            }
+            return;
+        }
+
+        // Start polling every 3 seconds only when generating
+        if (!pollingIntervalRef.current) {
+            pollingIntervalRef.current = setInterval(pollGenerationStatus, 3000);
+        }
 
         return () => {
             if (pollingIntervalRef.current) {
@@ -81,7 +97,7 @@ export function GenerationProgressTracker({
             }
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [projectId]);
+    }, [projectId, isGenerating]);
 
     // Don't show on intake step (step 1)
     const isIntakePage = pathname?.includes("/step/1");

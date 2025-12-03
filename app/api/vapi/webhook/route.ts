@@ -9,6 +9,7 @@ import { verifyWebhookSignature } from "@/lib/vapi/client";
 import { logger as pinoLogger } from "@/lib/logger";
 import { env } from "@/lib/env";
 import type { VapiWebhookEvent } from "@/lib/vapi/types";
+import { getOrCreateProfile, populateFromIntake } from "@/lib/business-profile/service";
 
 // Environment-aware logging: console in dev, Pino in production
 const isDev = process.env.NODE_ENV === "development";
@@ -231,6 +232,26 @@ async function handleCallEnded(event: VapiWebhookEvent) {
             "duration:",
             duration
         );
+
+        // Populate Business Profile from the call transcript
+        try {
+            const profileResult = await getOrCreateProfile(userId, funnelProjectId);
+            if (profileResult.success && profileResult.profile) {
+                await populateFromIntake(
+                    profileResult.profile.id,
+                    {
+                        transcriptText:
+                            event.call.artifact?.transcript || summary.transcript,
+                        extractedData: summary.extractedData,
+                    },
+                    "voice"
+                );
+                console.log("✅ Business profile populated from voice call");
+            }
+        } catch (profileError) {
+            console.error("⚠️ Failed to populate business profile:", profileError);
+            // Don't throw - this is non-critical
+        }
     } catch (error) {
         console.error("❌ Failed to handle call ended event:", error);
     }
@@ -398,6 +419,27 @@ async function handleClientTranscriptRequest(
         }
 
         log.info("Transcript saved successfully", { callId: targetCallId, duration });
+
+        // Populate Business Profile from the call transcript
+        try {
+            const profileResult = await getOrCreateProfile(userId, projectId);
+            if (profileResult.success && profileResult.profile) {
+                await populateFromIntake(
+                    profileResult.profile.id,
+                    {
+                        transcriptText: summary.transcript,
+                        extractedData: summary.extractedData,
+                    },
+                    "voice"
+                );
+                log.info("Business profile populated from voice call", {
+                    profileId: profileResult.profile.id,
+                });
+            }
+        } catch (profileError) {
+            log.warn("Failed to populate business profile", profileError);
+            // Don't throw - this is non-critical
+        }
 
         return NextResponse.json({
             success: true,

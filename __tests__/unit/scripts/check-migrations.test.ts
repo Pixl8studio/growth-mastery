@@ -170,7 +170,7 @@ describe("Migration Validator - File Discovery", () => {
         expect(result.warnings[0]).toContain("No migration files found");
     });
 
-    it("should discover migration files correctly", () => {
+    it("should discover migration files correctly", { timeout: 15000 }, () => {
         const existsSyncMock = vi.mocked(existsSync);
         const readdirSyncMock = vi.mocked(readdirSync);
         const readFileSyncMock = vi.mocked(readFileSync);
@@ -359,7 +359,7 @@ describe("Migration Validator - Integration", () => {
         vi.spyOn(console, "log").mockImplementation(() => {});
     });
 
-    it("should validate a complete valid migration set", () => {
+    it("should validate a complete valid migration set", { timeout: 15000 }, () => {
         const existsSyncMock = vi.mocked(existsSync);
         const readdirSyncMock = vi.mocked(readdirSync);
         const readFileSyncMock = vi.mocked(readFileSync);

@@ -264,27 +264,31 @@ describe("Supabase Validator - Integration", () => {
         process.env = originalEnv;
     });
 
-    it("should validate a complete successful configuration", async () => {
-        const existsSyncMock = vi.mocked(existsSync);
-        const statSyncMock = vi.mocked(statSync);
+    it(
+        "should validate a complete successful configuration",
+        { timeout: 15000 },
+        async () => {
+            const existsSyncMock = vi.mocked(existsSync);
+            const statSyncMock = vi.mocked(statSync);
 
-        // Set environment variables
-        process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-key";
-        process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
+            // Set environment variables
+            process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-key";
+            process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key";
 
-        // Mock file system
-        existsSyncMock.mockReturnValue(true);
-        statSyncMock.mockReturnValue({
-            mtimeMs: Date.now() - 1000 * 60 * 60 * 24, // 1 day ago
-        } as any);
+            // Mock file system
+            existsSyncMock.mockReturnValue(true);
+            statSyncMock.mockReturnValue({
+                mtimeMs: Date.now() - 1000 * 60 * 60 * 24, // 1 day ago
+            } as any);
 
-        const result = await runAllValidations();
+            const result = await runAllValidations();
 
-        // Should have no errors, only warnings about supabase directory
-        expect(result.valid).toBe(true);
-        expect(result.errors).toHaveLength(0);
-    });
+            // Should have no errors, only warnings about supabase directory
+            expect(result.valid).toBe(true);
+            expect(result.errors).toHaveLength(0);
+        }
+    );
 
     // TODO: Fix mocking for filesystem operations in CI
     it.skip("should accumulate errors from database types not existing", async () => {

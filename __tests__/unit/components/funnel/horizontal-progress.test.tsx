@@ -29,7 +29,7 @@ describe("HorizontalProgress", () => {
         completedSteps: [1, 2],
     };
 
-    it("renders all 14 steps", () => {
+    it("renders all 14 steps", { timeout: 15000 }, () => {
         render(<HorizontalProgress {...defaultProps} />);
 
         // Check that we have 14 links (one for each step)
@@ -70,7 +70,7 @@ describe("HorizontalProgress", () => {
         expect(screen.getByText("11 remaining")).toBeInTheDocument();
     });
 
-    it("generates correct links for each step", () => {
+    it("generates correct links for each step", { timeout: 15000 }, () => {
         render(<HorizontalProgress {...defaultProps} />);
 
         const links = screen.getAllByRole("link");

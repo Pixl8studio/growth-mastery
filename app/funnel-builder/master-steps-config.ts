@@ -40,13 +40,6 @@ export const MASTER_STEPS: MasterStepConfig[] = [
         icon: "users",
         subSteps: [12, 13, 14],
     },
-    {
-        id: 5,
-        title: "Analytics",
-        description: "Track your funnel performance and metrics",
-        icon: "chart",
-        subSteps: [15],
-    },
 ];
 
 /**

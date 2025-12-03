@@ -266,7 +266,7 @@ export default function Step12Page({
             currentStep={12}
             projectId={projectId}
             completedSteps={completedSteps}
-            nextLabel="Continue to Analytics"
+            nextLabel="Continue to Ads Manager"
         >
             <div className="space-y-6">
                 {/* Enable/Disable Section */}

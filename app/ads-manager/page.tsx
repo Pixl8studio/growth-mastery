@@ -178,7 +178,7 @@ export default function AdsManagerPage() {
     };
 
     const handleViewCampaign = (funnelId: string) => {
-        router.push(`/funnel-builder/${funnelId}/step/15`);
+        router.push(`/funnel-builder/${funnelId}`);
     };
 
     if (loading) {

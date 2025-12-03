@@ -55,7 +55,7 @@ const FUNNEL_STEPS: Array<{ step: number; name: string; path: string }> = [
     { step: 10, name: "Funnel Flow", path: "/step/10" },
     { step: 11, name: "AI Follow-Up", path: "/step/11" },
     { step: 12, name: "Marketing Content", path: "/step/12" },
-    { step: 13, name: "Analytics", path: "/step/13" },
+    { step: 13, name: "Ads Manager", path: "/step/13" },
 ];
 
 export function AdvancedAIAssistant() {

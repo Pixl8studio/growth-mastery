@@ -56,12 +56,40 @@ describe("ContentArchitectService", () => {
         it("should generate variants for multiple platforms", async () => {
             const mockVoiceGuidelines = "Use conversational tone";
             const mockPlatformSpec = {
+                id: "spec-4",
+                platform: "instagram" as const,
+                spec_version: "1.0",
                 max_text_length: 2200,
+                max_hashtags: 30,
+                media_specs: {
+                    image: {
+                        max_size_mb: 10,
+                        recommended_dimensions: "1080x1080",
+                        formats: ["jpg"],
+                    },
+                    video: {
+                        max_size_mb: 100,
+                        max_duration_seconds: 60,
+                        formats: ["mp4"],
+                    },
+                },
+                hashtag_rules: {
+                    max_per_post: 30,
+                    optimal_count: 10,
+                    placement: "end",
+                },
                 best_practices: {
                     optimal_post_length: 150,
                     link_handling: "bio_link",
                     cta_placement: "end",
                 },
+                accessibility_requirements: {
+                    alt_text_required: true,
+                    caption_required: false,
+                    max_reading_level: 8,
+                },
+                last_updated: "2025-01-01T00:00:00Z",
+                created_at: "2025-01-01T00:00:00Z",
             };
 
             const mockAIResponse = {
@@ -84,6 +112,7 @@ describe("ContentArchitectService", () => {
                 success: true,
                 valid: true,
                 violations: [],
+                warnings: [],
             });
 
             vi.mocked(generateWithAI).mockResolvedValue(mockAIResponse);
@@ -122,8 +151,40 @@ describe("ContentArchitectService", () => {
         it("should format hashtags with # prefix", async () => {
             const mockVoiceGuidelines = "Use conversational tone";
             const mockPlatformSpec = {
+                id: "spec-5",
+                platform: "instagram" as const,
+                spec_version: "1.0",
                 max_text_length: 2200,
-                best_practices: {},
+                max_hashtags: 30,
+                media_specs: {
+                    image: {
+                        max_size_mb: 10,
+                        recommended_dimensions: "1080x1080",
+                        formats: ["jpg"],
+                    },
+                    video: {
+                        max_size_mb: 100,
+                        max_duration_seconds: 60,
+                        formats: ["mp4"],
+                    },
+                },
+                hashtag_rules: {
+                    max_per_post: 30,
+                    optimal_count: 10,
+                    placement: "end",
+                },
+                best_practices: {
+                    optimal_post_length: 150,
+                    cta_placement: "end",
+                    link_handling: "bio_link",
+                },
+                accessibility_requirements: {
+                    alt_text_required: true,
+                    caption_required: false,
+                    max_reading_level: 8,
+                },
+                last_updated: "2025-01-01T00:00:00Z",
+                created_at: "2025-01-01T00:00:00Z",
             };
 
             const mockAIResponse = {
@@ -146,6 +207,7 @@ describe("ContentArchitectService", () => {
                 success: true,
                 valid: true,
                 violations: [],
+                warnings: [],
             });
 
             vi.mocked(generateWithAI).mockResolvedValue(mockAIResponse);
@@ -185,7 +247,42 @@ describe("ContentArchitectService", () => {
 
         it("should log validation warnings when content violates platform rules", async () => {
             const mockVoiceGuidelines = "Guidelines";
-            const mockPlatformSpec = { max_text_length: 280, best_practices: {} };
+            const mockPlatformSpec = {
+                id: "spec-6",
+                platform: "twitter" as const,
+                spec_version: "1.0",
+                max_text_length: 280,
+                max_hashtags: 10,
+                media_specs: {
+                    image: {
+                        max_size_mb: 5,
+                        recommended_dimensions: "1200x675",
+                        formats: ["jpg"],
+                    },
+                    video: {
+                        max_size_mb: 512,
+                        max_duration_seconds: 140,
+                        formats: ["mp4"],
+                    },
+                },
+                hashtag_rules: {
+                    max_per_post: 10,
+                    optimal_count: 3,
+                    placement: "inline",
+                },
+                best_practices: {
+                    optimal_post_length: 100,
+                    cta_placement: "inline",
+                    link_handling: "direct_link",
+                },
+                accessibility_requirements: {
+                    alt_text_required: true,
+                    caption_required: false,
+                    max_reading_level: 8,
+                },
+                last_updated: "2025-01-01T00:00:00Z",
+                created_at: "2025-01-01T00:00:00Z",
+            };
             const mockAIResponse = {
                 copy_text: "Content",
                 hashtags: [],
@@ -206,6 +303,7 @@ describe("ContentArchitectService", () => {
                 success: true,
                 valid: false,
                 violations: ["Too long"],
+                warnings: [],
             });
 
             vi.mocked(generateWithAI).mockResolvedValue(mockAIResponse);
@@ -225,7 +323,42 @@ describe("ContentArchitectService", () => {
     describe("optimizeForPlatform", () => {
         it("should optimize content for specific platform", async () => {
             const mockVoiceGuidelines = "Use conversational tone";
-            const mockPlatformSpec = { max_text_length: 280, best_practices: {} };
+            const mockPlatformSpec = {
+                id: "spec-7",
+                platform: "twitter" as const,
+                spec_version: "1.0",
+                max_text_length: 280,
+                max_hashtags: 10,
+                media_specs: {
+                    image: {
+                        max_size_mb: 5,
+                        recommended_dimensions: "1200x675",
+                        formats: ["jpg"],
+                    },
+                    video: {
+                        max_size_mb: 512,
+                        max_duration_seconds: 140,
+                        formats: ["mp4"],
+                    },
+                },
+                hashtag_rules: {
+                    max_per_post: 10,
+                    optimal_count: 3,
+                    placement: "inline",
+                },
+                best_practices: {
+                    optimal_post_length: 100,
+                    cta_placement: "inline",
+                    link_handling: "direct_link",
+                },
+                accessibility_requirements: {
+                    alt_text_required: true,
+                    caption_required: false,
+                    max_reading_level: 8,
+                },
+                last_updated: "2025-01-01T00:00:00Z",
+                created_at: "2025-01-01T00:00:00Z",
+            };
             const mockAIResponse = {
                 optimized: "Optimized content",
                 suggestions: ["Make it shorter", "Add urgency"],
@@ -295,8 +428,40 @@ describe("ContentArchitectService", () => {
     describe("generateHashtags", () => {
         it("should generate hashtags for content and platform", async () => {
             const mockPlatformSpec = {
+                id: "spec-8",
+                platform: "instagram" as const,
+                spec_version: "1.0",
+                max_text_length: 2200,
                 max_hashtags: 30,
-                hashtag_rules: { optimal_count: 10 },
+                media_specs: {
+                    image: {
+                        max_size_mb: 10,
+                        recommended_dimensions: "1080x1080",
+                        formats: ["jpg"],
+                    },
+                    video: {
+                        max_size_mb: 100,
+                        max_duration_seconds: 60,
+                        formats: ["mp4"],
+                    },
+                },
+                hashtag_rules: {
+                    max_per_post: 30,
+                    optimal_count: 10,
+                    placement: "end",
+                },
+                best_practices: {
+                    optimal_post_length: 150,
+                    cta_placement: "end",
+                    link_handling: "bio_link",
+                },
+                accessibility_requirements: {
+                    alt_text_required: true,
+                    caption_required: false,
+                    max_reading_level: 8,
+                },
+                last_updated: "2025-01-01T00:00:00Z",
+                created_at: "2025-01-01T00:00:00Z",
             };
 
             const mockAIResponse = {
@@ -324,8 +489,40 @@ describe("ContentArchitectService", () => {
 
         it("should limit hashtags to requested count", async () => {
             const mockPlatformSpec = {
+                id: "spec-1",
+                platform: "instagram" as const,
+                spec_version: "1.0",
+                max_text_length: 2200,
                 max_hashtags: 30,
-                hashtag_rules: {},
+                media_specs: {
+                    image: {
+                        max_size_mb: 10,
+                        recommended_dimensions: "1080x1080",
+                        formats: ["jpg"],
+                    },
+                    video: {
+                        max_size_mb: 100,
+                        max_duration_seconds: 60,
+                        formats: ["mp4"],
+                    },
+                },
+                hashtag_rules: {
+                    max_per_post: 30,
+                    optimal_count: 10,
+                    placement: "end",
+                },
+                best_practices: {
+                    optimal_post_length: 150,
+                    cta_placement: "end",
+                    link_handling: "bio_link",
+                },
+                accessibility_requirements: {
+                    alt_text_required: true,
+                    caption_required: false,
+                    max_reading_level: 8,
+                },
+                last_updated: "2025-01-01T00:00:00Z",
+                created_at: "2025-01-01T00:00:00Z",
             };
 
             const mockAIResponse = {
@@ -366,8 +563,40 @@ describe("ContentArchitectService", () => {
             };
 
             const mockPlatformSpec = {
+                id: "spec-2",
+                platform: "instagram" as const,
+                spec_version: "1.0",
                 max_text_length: 2200,
-                best_practices: { optimal_post_length: 150 },
+                max_hashtags: 30,
+                media_specs: {
+                    image: {
+                        max_size_mb: 10,
+                        recommended_dimensions: "1080x1080",
+                        formats: ["jpg"],
+                    },
+                    video: {
+                        max_size_mb: 100,
+                        max_duration_seconds: 60,
+                        formats: ["mp4"],
+                    },
+                },
+                hashtag_rules: {
+                    max_per_post: 30,
+                    optimal_count: 10,
+                    placement: "end",
+                },
+                best_practices: {
+                    optimal_post_length: 150,
+                    cta_placement: "end",
+                    link_handling: "bio_link",
+                },
+                accessibility_requirements: {
+                    alt_text_required: true,
+                    caption_required: false,
+                    max_reading_level: 8,
+                },
+                last_updated: "2025-01-01T00:00:00Z",
+                created_at: "2025-01-01T00:00:00Z",
             };
 
             vi.mocked(getPlatformSpec).mockResolvedValue({
@@ -395,7 +624,45 @@ describe("ContentArchitectService", () => {
             vi.mocked(getPlatformSpec).mockImplementation(async () => {
                 callCount++;
                 if (callCount === 1) {
-                    return { success: true, spec: { best_practices: {} } };
+                    return {
+                        success: true,
+                        spec: {
+                            id: "spec-3",
+                            platform: "instagram" as const,
+                            spec_version: "1.0",
+                            max_text_length: 2200,
+                            max_hashtags: 30,
+                            media_specs: {
+                                image: {
+                                    max_size_mb: 10,
+                                    recommended_dimensions: "1080x1080",
+                                    formats: ["jpg"],
+                                },
+                                video: {
+                                    max_size_mb: 100,
+                                    max_duration_seconds: 60,
+                                    formats: ["mp4"],
+                                },
+                            },
+                            hashtag_rules: {
+                                max_per_post: 30,
+                                optimal_count: 10,
+                                placement: "end",
+                            },
+                            best_practices: {
+                                optimal_post_length: 150,
+                                cta_placement: "end",
+                                link_handling: "bio_link",
+                            },
+                            accessibility_requirements: {
+                                alt_text_required: true,
+                                caption_required: false,
+                                max_reading_level: 8,
+                            },
+                            last_updated: "2025-01-01T00:00:00Z",
+                            created_at: "2025-01-01T00:00:00Z",
+                        },
+                    };
                 }
                 return { success: false, error: "Failed" };
             });

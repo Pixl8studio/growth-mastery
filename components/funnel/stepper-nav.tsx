@@ -26,8 +26,8 @@ interface Step {
 const STEPS: Step[] = [
     {
         number: 1,
-        title: "Intake",
-        description: "Multiple input options",
+        title: "Context",
+        description: "Business profile setup",
     },
     { number: 2, title: "Define Offer", description: "7 P's framework" },
     { number: 3, title: "Brand Design", description: "Visual identity" },

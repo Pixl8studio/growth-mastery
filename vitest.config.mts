@@ -7,7 +7,10 @@ export default defineConfig({
     test: {
         environment: "jsdom",
         setupFiles: ["./vitest.setup.tsx"],
-        include: ["__tests__/unit/**/*.{test,spec}.{ts,tsx}"],
+        include: [
+            "__tests__/unit/**/*.{test,spec}.{ts,tsx}",
+            "__tests__/integration/**/*.{test,spec}.{ts,tsx}",
+        ],
         // Parallel execution settings - optimized for 4-core GitHub Actions runner
         pool: "forks",
         poolOptions: {

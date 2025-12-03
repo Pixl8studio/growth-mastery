@@ -434,7 +434,7 @@ function BeliefShiftField({
     label: string;
     value: Record<string, unknown>;
     onChange: (value: Record<string, unknown>) => void;
-    subfields: Array<{ key: string; label: string }>;
+    subfields: ReadonlyArray<{ readonly key: string; readonly label: string }>;
     isAiGenerated: boolean;
     disabled: boolean;
 }) {

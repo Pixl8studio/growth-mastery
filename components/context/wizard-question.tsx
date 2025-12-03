@@ -16,7 +16,7 @@ interface WizardQuestionProps {
     value: unknown;
     onChange: (key: string, value: unknown) => void;
     isAiGenerated?: boolean;
-    subfields?: Array<{ key: string; label: string }>;
+    subfields?: ReadonlyArray<{ readonly key: string; readonly label: string }>;
     disabled?: boolean;
 }
 

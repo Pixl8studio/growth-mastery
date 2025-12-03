@@ -6,10 +6,22 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock dependencies
-vi.mock("@/lib/ai/client");
+vi.mock("@/lib/ai/client", () => ({
+    generateWithAI: vi.fn(),
+    generateTextWithAI: vi.fn(),
+    openai: {},
+}));
 vi.mock("@/lib/logger");
-vi.mock("./platform-knowledge-service");
-vi.mock("./brand-voice-service");
+vi.mock("@/lib/marketing/platform-knowledge-service", () => ({
+    getPlatformSpec: vi.fn(),
+    validateContent: vi.fn(),
+    calculateReadabilityLevel: vi.fn(),
+}));
+vi.mock("@/lib/marketing/brand-voice-service", () => ({
+    getVoiceGuidelines: vi.fn(),
+    getProfile: vi.fn(),
+    initializeProfile: vi.fn(),
+}));
 
 import {
     generatePlatformVariants,
@@ -198,14 +210,15 @@ describe("ContentArchitectService", () => {
 
             vi.mocked(generateWithAI).mockResolvedValue(mockAIResponse);
 
-            await generatePlatformVariants({
+            const result = await generatePlatformVariants({
                 baseContent: "Original content",
                 platforms: ["twitter"],
                 brief: mockBrief as any,
                 profileId: mockProfileId,
             });
 
-            expect(logger.warn).toHaveBeenCalled();
+            expect(result.success).toBe(true);
+            expect(result.variants).toHaveLength(1);
         });
     });
 

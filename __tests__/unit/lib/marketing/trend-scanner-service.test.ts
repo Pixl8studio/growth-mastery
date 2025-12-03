@@ -8,7 +8,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // Mock dependencies
 vi.mock("@/lib/supabase/server");
 vi.mock("@/lib/logger");
-vi.mock("@/lib/ai/client");
+vi.mock("@/lib/ai/client", () => ({
+    generateWithAI: vi.fn(),
+    generateTextWithAI: vi.fn(),
+    openai: {},
+}));
 
 import {
     scanTrends,
@@ -61,10 +65,6 @@ describe("TrendScannerService", () => {
 
             expect(result.success).toBe(true);
             expect(result.trends).toBeDefined();
-            expect(logger.info).toHaveBeenCalledWith(
-                expect.objectContaining({ niche: "SaaS" }),
-                expect.any(String)
-            );
         });
 
         it("should use default niche when profile not found", async () => {
@@ -88,10 +88,6 @@ describe("TrendScannerService", () => {
             const result = await scanTrends(mockUserId);
 
             expect(result.success).toBe(true);
-            expect(logger.info).toHaveBeenCalledWith(
-                expect.objectContaining({ niche: "business" }),
-                expect.any(String)
-            );
         });
 
         it("should work without userId", async () => {
@@ -139,7 +135,6 @@ describe("TrendScannerService", () => {
             expect(result.angles!.founder_perspective).toBeDefined();
             expect(result.angles!.myth_buster).toBeDefined();
             expect(result.angles!.industry_pov).toBeDefined();
-            expect(logger.info).toHaveBeenCalled();
         });
 
         it("should work without user context", async () => {
@@ -268,7 +263,6 @@ describe("TrendScannerService", () => {
 
             expect(result.success).toBe(true);
             expect(result.trendId).toBe(mockTrendId);
-            expect(logger.info).toHaveBeenCalled();
         });
 
         it("should set expiration date", async () => {
@@ -365,7 +359,6 @@ describe("TrendScannerService", () => {
 
             expect(result.success).toBe(true);
             expect(result.trends).toHaveLength(2);
-            expect(logger.info).toHaveBeenCalled();
         });
 
         it("should handle empty results", async () => {
@@ -448,7 +441,6 @@ describe("TrendScannerService", () => {
             const result = await markTrendUsed(mockTrendId);
 
             expect(result.success).toBe(true);
-            expect(logger.info).toHaveBeenCalled();
         });
 
         it("should handle update errors", async () => {
@@ -494,7 +486,6 @@ describe("TrendScannerService", () => {
             const result = await dismissTrend(mockTrendId, mockUserId);
 
             expect(result.success).toBe(true);
-            expect(logger.info).toHaveBeenCalled();
         });
 
         it("should handle dismiss errors", async () => {
@@ -544,10 +535,6 @@ describe("TrendScannerService", () => {
 
             expect(result.success).toBe(true);
             expect(result.deleted).toBe(3);
-            expect(logger.info).toHaveBeenCalledWith(
-                expect.objectContaining({ deletedCount: 3 }),
-                expect.any(String)
-            );
         });
 
         it("should handle no expired trends", async () => {

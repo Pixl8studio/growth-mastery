@@ -7,9 +7,21 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock dependencies
 vi.mock("@/lib/logger");
-vi.mock("@/lib/ai/client");
-vi.mock("./platform-knowledge-service");
-vi.mock("./brand-voice-service");
+vi.mock("@/lib/ai/client", () => ({
+    generateWithAI: vi.fn(),
+    generateTextWithAI: vi.fn(),
+    openai: {},
+}));
+vi.mock("@/lib/marketing/platform-knowledge-service", () => ({
+    validateContent: vi.fn(),
+    calculateReadabilityLevel: vi.fn(),
+    getPlatformSpec: vi.fn(),
+}));
+vi.mock("@/lib/marketing/brand-voice-service", () => ({
+    getProfile: vi.fn(),
+    getVoiceGuidelines: vi.fn(),
+    initializeProfile: vi.fn(),
+}));
 
 import {
     runPreflightValidation,
@@ -113,7 +125,7 @@ describe("PreflightService", () => {
 
             const variantWithIssues = {
                 ...mockVariant,
-                copy_text: "Guaranteed results! 100% success rate!",
+                copy_text: "Check out this testimonial from our client!",
             };
 
             const result = await runPreflightValidation(

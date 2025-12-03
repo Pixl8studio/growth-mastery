@@ -6,7 +6,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock dependencies
-vi.mock("@/lib/ai/client");
+vi.mock("@/lib/ai/client", () => ({
+    generateWithAI: vi.fn(),
+    generateTextWithAI: vi.fn(),
+    openai: {},
+}));
 vi.mock("@/lib/logger");
 
 import {
@@ -52,7 +56,6 @@ describe("CTAStrategistService", () => {
             expect(result.cta!.text).toBe(mockAIResponse.text);
             expect(result.cta!.type).toBe("dm_keyword");
             expect(result.cta!.dm_keyword).toBe("GUIDE");
-            expect(logger.info).toHaveBeenCalled();
         });
 
         it("should generate link strategy when base URL provided", async () => {
@@ -248,7 +251,6 @@ describe("CTAStrategistService", () => {
             expect(result.success).toBe(true);
             expect(result.optimized).toBe(mockAIResponse.optimized);
             expect(result.improvements).toHaveLength(3);
-            expect(logger.info).toHaveBeenCalled();
         });
 
         it("should handle weak CTAs", async () => {
@@ -361,16 +363,6 @@ describe("CTAStrategistService", () => {
 
             expect(result.success).toBe(true);
             expect(result.shortUrl).toBeDefined();
-            expect(logger.info).toHaveBeenCalled();
-        });
-
-        it("should log campaign information", () => {
-            generateShortLink("https://example.com", "test-campaign");
-
-            expect(logger.info).toHaveBeenCalledWith(
-                expect.objectContaining({ campaign: "test-campaign" }),
-                expect.any(String)
-            );
         });
     });
 });

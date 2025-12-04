@@ -267,7 +267,9 @@ export function WizardSection({
                                 onChange={handleFieldChange}
                                 isAiGenerated={aiGeneratedFields.includes(field.key)}
                                 subfields={
-                                    "subfields" in field ? field.subfields : undefined
+                                    "subfields" in field
+                                        ? [...field.subfields]
+                                        : undefined
                                 }
                                 disabled={isGenerating}
                             />

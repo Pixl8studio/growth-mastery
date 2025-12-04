@@ -524,7 +524,7 @@ Please provide detailed, specific answers for each question. Format your respons
                                                     isAiGenerated={false}
                                                     subfields={
                                                         "subfields" in field
-                                                            ? field.subfields
+                                                            ? [...field.subfields]
                                                             : undefined
                                                     }
                                                 />

@@ -31,24 +31,20 @@ describe("POST /api/followup/trigger", () => {
                     return {
                         select: vi.fn().mockReturnThis(),
                         eq: vi.fn().mockReturnThis(),
-                        single: vi
-                            .fn()
-                            .mockResolvedValue({
-                                data: { user_id: "user-123" },
-                                error: null,
-                            }),
+                        single: vi.fn().mockResolvedValue({
+                            data: { user_id: "user-123" },
+                            error: null,
+                        }),
                     };
                 }
                 if (table === "followup_sequences") {
                     return {
                         select: vi.fn().mockReturnThis(),
                         eq: vi.fn().mockReturnThis(),
-                        single: vi
-                            .fn()
-                            .mockResolvedValue({
-                                data: { agent_config_id: "config-123" },
-                                error: null,
-                            }),
+                        single: vi.fn().mockResolvedValue({
+                            data: { agent_config_id: "config-123" },
+                            error: null,
+                        }),
                     };
                 }
                 return {
@@ -81,12 +77,10 @@ describe("POST /api/followup/trigger", () => {
     it("should return 401 for unauthenticated users", async () => {
         const mockSupabase = {
             auth: {
-                getUser: vi
-                    .fn()
-                    .mockResolvedValue({
-                        data: { user: null },
-                        error: { message: "Unauthorized" },
-                    }),
+                getUser: vi.fn().mockResolvedValue({
+                    data: { user: null },
+                    error: { message: "Unauthorized" },
+                }),
             },
         };
 

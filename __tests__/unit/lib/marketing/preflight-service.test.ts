@@ -3,31 +3,25 @@
  * Tests for content validation before publishing
  */
 
-// Mock AI client BEFORE any imports
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// Mock dependencies
+vi.mock("@/lib/logger");
 vi.mock("@/lib/ai/client", () => ({
     generateWithAI: vi.fn(),
     generateTextWithAI: vi.fn(),
     openai: {},
 }));
-
-// Mock brand voice service BEFORE any imports
-vi.mock("@/lib/marketing/brand-voice-service", () => ({
-    getVoiceGuidelines: vi.fn(),
-    getProfile: vi.fn(),
-    initializeProfile: vi.fn(),
-}));
-
-// Mock platform knowledge service BEFORE any imports
 vi.mock("@/lib/marketing/platform-knowledge-service", () => ({
-    getPlatformSpec: vi.fn(),
     validateContent: vi.fn(),
     calculateReadabilityLevel: vi.fn(),
+    getPlatformSpec: vi.fn(),
 }));
-
-import { describe, it, expect, vi, beforeEach } from "vitest";
-
-// Mock dependencies
-vi.mock("@/lib/logger");
+vi.mock("@/lib/marketing/brand-voice-service", () => ({
+    getProfile: vi.fn(),
+    getVoiceGuidelines: vi.fn(),
+    initializeProfile: vi.fn(),
+}));
 
 import {
     runPreflightValidation,
@@ -64,6 +58,7 @@ describe("PreflightService", () => {
                 success: true,
                 valid: true,
                 violations: [],
+                warnings: [],
             });
 
             vi.mocked(getProfile).mockResolvedValue({
@@ -109,6 +104,7 @@ describe("PreflightService", () => {
                 success: true,
                 valid: true,
                 violations: [],
+                warnings: [],
             });
 
             vi.mocked(getProfile).mockResolvedValue({
@@ -131,7 +127,7 @@ describe("PreflightService", () => {
 
             const variantWithIssues = {
                 ...mockVariant,
-                copy_text: "Check out this amazing testimonial from our client!",
+                copy_text: "Check out this testimonial from our client!",
             };
 
             const result = await runPreflightValidation(

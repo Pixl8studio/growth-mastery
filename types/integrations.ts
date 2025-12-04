@@ -20,7 +20,7 @@ export interface SocialConnection {
     refresh_token: string | null;
     token_expires_at: string | null;
     scopes: string[] | null;
-    profile_data: Record<string, any>;
+    profile_data: Record<string, unknown>;
     is_active: boolean;
     connected_at: string;
     last_verified_at: string | null;
@@ -42,7 +42,7 @@ export interface CalendarConnection {
     is_active: boolean;
     connected_at: string;
     last_synced_at: string | null;
-    metadata: Record<string, any>;
+    metadata: Record<string, unknown>;
     created_at: string;
     updated_at: string;
 }
@@ -101,4 +101,94 @@ export interface IntegrationConnectionState {
     connected_at: string | null;
     needs_reconnection: boolean;
     error_message?: string;
+}
+
+/**
+ * Email Domain Types - Mailgun Integration
+ */
+
+export type EmailDomainVerificationStatus = "pending" | "verified" | "failed";
+
+export interface EmailDomainDNSRecords {
+    spf: string;
+    dkim1: {
+        host: string;
+        value: string;
+    };
+    dkim2: {
+        host: string;
+        value: string;
+    };
+    mx: {
+        host: string;
+        value: string;
+    };
+    tracking_cname: {
+        host: string;
+        value: string;
+    };
+}
+
+export interface EmailDomain {
+    id: string;
+    user_id: string;
+    funnel_project_id: string | null;
+    domain: string;
+    subdomain: string;
+    full_domain: string;
+    mailgun_domain_id: string | null;
+    spf_record: string | null;
+    dkim1_record: string | null;
+    dkim1_host: string | null;
+    dkim2_record: string | null;
+    dkim2_host: string | null;
+    mx_record: string | null;
+    mx_host: string | null;
+    tracking_cname: string | null;
+    tracking_host: string | null;
+    verification_status: EmailDomainVerificationStatus;
+    verified_at: string | null;
+    last_checked_at: string | null;
+    error_message: string | null;
+    is_active: boolean;
+    sender_email: string | null;
+    metadata: Record<string, unknown>;
+    created_at: string;
+    updated_at: string;
+}
+
+export interface MailgunDomainConfig {
+    name: string;
+    smtp_login: string;
+    smtp_password: string;
+    state: string;
+    wildcard: boolean;
+    spam_action: string;
+    web_scheme: string;
+    created_at: string;
+}
+
+export interface MailgunDNSRecord {
+    record_type: string;
+    valid: string;
+    name: string;
+    value: string;
+}
+
+export interface MailgunDomainResponse {
+    domain: MailgunDomainConfig;
+    receiving_dns_records: MailgunDNSRecord[];
+    sending_dns_records: MailgunDNSRecord[];
+}
+
+export interface CreateEmailDomainRequest {
+    domain: string;
+    subdomain?: string;
+    funnel_project_id?: string | null;
+}
+
+export interface CreateEmailDomainResponse {
+    success: boolean;
+    domain?: EmailDomain;
+    error?: string;
 }

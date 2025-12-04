@@ -3,20 +3,24 @@
  * Tests for story angle generation and content expansion
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-
-// Mock dependencies
+// Mock AI client BEFORE any imports
 vi.mock("@/lib/ai/client", () => ({
     generateWithAI: vi.fn(),
     generateTextWithAI: vi.fn(),
     openai: {},
 }));
-vi.mock("@/lib/logger");
+
+// Mock brand voice service BEFORE any imports
 vi.mock("@/lib/marketing/brand-voice-service", () => ({
     getVoiceGuidelines: vi.fn(),
     getProfile: vi.fn(),
     initializeProfile: vi.fn(),
 }));
+
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// Mock dependencies
+vi.mock("@/lib/logger");
 
 import {
     generateStoryAngles,
@@ -117,7 +121,7 @@ describe("StoryWeaverService", () => {
     describe("expandStory", () => {
         it("should expand story angle into full content", async () => {
             const mockAngle = {
-                angle: "Founder" as const,
+                angle: "Founder",
                 framework: "founder_saga" as const,
                 hook: "3 years ago, I almost gave up...",
                 story_outline: "Struggle → Discovery → Transformation",

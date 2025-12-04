@@ -30,11 +30,8 @@ describe("POST /api/followup/generate-brand-voice", () => {
             },
         };
 
-        const mockBrandVoice = {
-            tone: "professional",
-            style: "conversational",
-            voice_attributes: ["friendly", "authoritative"],
-        };
+        const mockBrandVoice =
+            "## Brand Voice Guidelines\n\n**Tone:** Professional\n**Style:** Conversational\n**Voice Attributes:** Friendly, Authoritative";
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
         vi.mocked(generateBrandVoiceGuidelines).mockResolvedValue(

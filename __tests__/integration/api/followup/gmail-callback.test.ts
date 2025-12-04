@@ -59,7 +59,9 @@ describe("GET /api/followup/gmail/callback", () => {
         const mockTokens = {
             access_token: "access-token-123",
             refresh_token: "refresh-token-123",
-            expiry_date: Date.now() + 3600000,
+            expires_in: 3600,
+            token_type: "Bearer",
+            scope: "https://www.googleapis.com/auth/gmail.send",
         };
 
         const mockUserInfo = {

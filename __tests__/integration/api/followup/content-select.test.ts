@@ -56,7 +56,25 @@ describe("POST /api/followup/content/select", () => {
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
         vi.mocked(selectStoriesForProspect).mockResolvedValue({
             success: true,
-            stories: [{ id: "story-1", title: "Success Story" }],
+            stories: [
+                {
+                    id: "story-1",
+                    user_id: "user-123",
+                    agent_config_id: "config-123",
+                    title: "Success Story",
+                    story_type: "case_study" as const,
+                    content: "Amazing results story",
+                    objection_category: "price",
+                    business_niche: ["tech"],
+                    price_band: "mid" as const,
+                    persona_match: ["ceo"],
+                    times_used: 5,
+                    effectiveness_score: 0.9,
+                    metadata: {},
+                    created_at: new Date().toISOString(),
+                    updated_at: new Date().toISOString(),
+                },
+            ],
         });
         vi.mocked(detectObjections).mockReturnValue(["price", "time"]);
         vi.mocked(getRecommendedStoryTypes).mockReturnValue([

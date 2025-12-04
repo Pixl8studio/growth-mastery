@@ -29,14 +29,12 @@ describe("GET /api/followup/messages", () => {
                     return {
                         select: vi.fn().mockReturnThis(),
                         eq: vi.fn().mockReturnThis(),
-                        single: vi
-                            .fn()
-                            .mockResolvedValue({
-                                data: {
-                                    followup_agent_configs: { user_id: "user-123" },
-                                },
-                                error: null,
-                            }),
+                        single: vi.fn().mockResolvedValue({
+                            data: {
+                                followup_agent_configs: { user_id: "user-123" },
+                            },
+                            error: null,
+                        }),
                     };
                 }
                 return {
@@ -79,12 +77,10 @@ describe("GET /api/followup/messages", () => {
     it("should return 401 for unauthenticated users", async () => {
         const mockSupabase = {
             auth: {
-                getUser: vi
-                    .fn()
-                    .mockResolvedValue({
-                        data: { user: null },
-                        error: { message: "Unauthorized" },
-                    }),
+                getUser: vi.fn().mockResolvedValue({
+                    data: { user: null },
+                    error: { message: "Unauthorized" },
+                }),
             },
         };
 

@@ -385,6 +385,7 @@ describe("AnalyticsCollectorService", () => {
             const mockVariants = [
                 {
                     id: "variant-1",
+                    content_brief_id: "brief-1",
                     platform: "instagram",
                     story_framework: "founder_saga",
                     marketing_analytics: [
@@ -400,6 +401,7 @@ describe("AnalyticsCollectorService", () => {
                 },
                 {
                     id: "variant-2",
+                    content_brief_id: "brief-2",
                     platform: "linkedin",
                     story_framework: "myth_buster",
                     marketing_analytics: [
@@ -449,6 +451,9 @@ describe("AnalyticsCollectorService", () => {
 
             const result = await getDashboardAnalytics(mockFunnelProjectId);
 
+            if (!result.success) {
+                console.error("Test failed with error:", result.error);
+            }
             expect(result.success).toBe(true);
             expect(result.dashboard?.overview.total_posts).toBe(2);
             expect(result.dashboard?.overview.total_impressions).toBe(3000);

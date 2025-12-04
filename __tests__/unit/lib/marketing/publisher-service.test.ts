@@ -3,12 +3,17 @@
  * Tests for social media publishing functionality
  */
 
+// Mock crypto BEFORE any imports
+vi.mock("@/lib/integrations/crypto", () => ({
+    decryptToken: vi.fn(),
+    encryptToken: vi.fn(),
+}));
+
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock dependencies
 vi.mock("@/lib/supabase/server");
 vi.mock("@/lib/logger");
-vi.mock("@/lib/integrations/crypto");
 
 import {
     publishNow,

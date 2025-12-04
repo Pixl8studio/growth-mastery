@@ -3,16 +3,18 @@
  * Tests for marketing profile initialization from intake data
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
-
-// Mock dependencies
-vi.mock("@/lib/supabase/server");
-vi.mock("@/lib/logger");
+// Mock brand voice service BEFORE any imports
 vi.mock("@/lib/marketing/brand-voice-service", () => ({
     initializeProfile: vi.fn(),
     getVoiceGuidelines: vi.fn(),
     getProfile: vi.fn(),
 }));
+
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// Mock dependencies
+vi.mock("@/lib/supabase/server");
+vi.mock("@/lib/logger");
 
 import {
     initializeFromIntake,

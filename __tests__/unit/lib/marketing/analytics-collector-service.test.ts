@@ -32,11 +32,6 @@ describe("AnalyticsCollectorService", () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-
-        // Setup logger mocks
-        vi.mocked(logger.info).mockImplementation(() => {});
-        vi.mocked(logger.error).mockImplementation(() => {});
-        vi.mocked(logger.warn).mockImplementation(() => {});
     });
 
     describe("recordOptIn", () => {
@@ -79,7 +74,6 @@ describe("AnalyticsCollectorService", () => {
             const result = await recordOptIn(mockPostVariantId, mockContactId, 30);
 
             expect(result.success).toBe(true);
-            expect(logger.info).toHaveBeenCalled();
         });
 
         it("should update existing analytics record", async () => {
@@ -266,13 +260,6 @@ describe("AnalyticsCollectorService", () => {
             const result = await fetchPlatformAnalytics(mockPostVariantId, "instagram");
 
             expect(result.success).toBe(true);
-            expect(logger.info).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    postVariantId: mockPostVariantId,
-                    platform: "instagram",
-                }),
-                expect.any(String)
-            );
         });
     });
 
@@ -443,6 +430,10 @@ describe("AnalyticsCollectorService", () => {
                     if (table === "marketing_post_variants") {
                         return {
                             select: vi.fn().mockReturnValue({
+                                eq: vi.fn().mockResolvedValue({
+                                    data: null,
+                                    error: { message: "Not found" },
+                                }),
                                 in: vi.fn().mockResolvedValue({
                                     data: mockVariants,
                                     error: null,

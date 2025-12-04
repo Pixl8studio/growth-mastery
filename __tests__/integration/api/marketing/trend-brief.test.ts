@@ -91,7 +91,7 @@ describe("POST /api/marketing/trends/[trendId]/brief", () => {
                 funnel_project_id: "funnel-1",
             },
         });
-        const context = createMockContext({ trendId: "trend-1" });
+        const context = createMockContext({ trendId: "trend-1" }) as any;
 
         const response = await POST(request, context);
         const data = await response.json();
@@ -113,7 +113,7 @@ describe("POST /api/marketing/trends/[trendId]/brief", () => {
             url: "http://localhost:3000/api/marketing/trends/trend-1/brief",
             body: {},
         });
-        const context = createMockContext({ trendId: "trend-1" });
+        const context = createMockContext({ trendId: "trend-1" }) as any;
 
         const response = await POST(request, context);
         const data = await response.json();
@@ -137,7 +137,7 @@ describe("POST /api/marketing/trends/[trendId]/brief", () => {
             url: "http://localhost:3000/api/marketing/trends/nonexistent/brief",
             body: {},
         });
-        const context = createMockContext({ trendId: "nonexistent" });
+        const context = createMockContext({ trendId: "nonexistent" }) as any;
 
         const response = await POST(request, context);
         const data = await response.json();
@@ -195,7 +195,7 @@ describe("POST /api/marketing/trends/[trendId]/brief", () => {
                 selected_angle: "industry_impact",
             },
         });
-        const context = createMockContext({ trendId: "trend-1" });
+        const context = createMockContext({ trendId: "trend-1" }) as any;
 
         const response = await POST(request, context);
         const data = await response.json();
@@ -245,7 +245,7 @@ describe("POST /api/marketing/trends/[trendId]/brief", () => {
             url: "http://localhost:3000/api/marketing/trends/trend-1/brief",
             body: {},
         });
-        const context = createMockContext({ trendId: "trend-1" });
+        const context = createMockContext({ trendId: "trend-1" }) as any;
 
         const response = await POST(request, context);
         const data = await response.json();
@@ -299,7 +299,7 @@ describe("POST /api/marketing/trends/[trendId]/brief", () => {
             url: "http://localhost:3000/api/marketing/trends/trend-1/brief",
             body: {},
         });
-        const context = createMockContext({ trendId: "trend-1" });
+        const context = createMockContext({ trendId: "trend-1" }) as any;
 
         await POST(request, context);
 
@@ -352,7 +352,7 @@ describe("POST /api/marketing/trends/[trendId]/brief", () => {
             url: "http://localhost:3000/api/marketing/trends/trend-1/brief",
             body: {},
         });
-        const context = createMockContext({ trendId: "trend-1" });
+        const context = createMockContext({ trendId: "trend-1" }) as any;
 
         await POST(request, context);
 
@@ -403,7 +403,7 @@ describe("POST /api/marketing/trends/[trendId]/brief", () => {
             url: "http://localhost:3000/api/marketing/trends/trend-1/brief",
             body: {},
         });
-        const context = createMockContext({ trendId: "trend-1" });
+        const context = createMockContext({ trendId: "trend-1" }) as any;
 
         const response = await POST(request, context);
         const data = await response.json();

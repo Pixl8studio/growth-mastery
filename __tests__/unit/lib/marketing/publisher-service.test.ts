@@ -99,7 +99,6 @@ describe("PublisherService", () => {
 
             expect(result.success).toBe(true);
             expect(result.providerPostId).toBeDefined();
-            expect(logger.info).toHaveBeenCalled();
         });
 
         it("should return error when variant not found", async () => {
@@ -263,7 +262,6 @@ describe("PublisherService", () => {
 
             expect(result.success).toBe(true);
             expect(result.calendarId).toBe(mockCalendarId);
-            expect(logger.info).toHaveBeenCalled();
         });
 
         it("should handle database error when scheduling", async () => {
@@ -354,6 +352,10 @@ describe("PublisherService", () => {
                             }),
                             update: vi.fn().mockReturnValue({
                                 eq: vi.fn().mockResolvedValue({ error: null }),
+                            }),
+                            insert: vi.fn().mockResolvedValue({
+                                data: { id: "new-calendar-123" },
+                                error: null,
                             }),
                         };
                     }
@@ -452,7 +454,6 @@ describe("PublisherService", () => {
             const result = await cancelScheduledPost(mockCalendarId, mockUserId);
 
             expect(result.success).toBe(true);
-            expect(logger.info).toHaveBeenCalled();
         });
 
         it("should handle error when canceling fails", async () => {

@@ -21,12 +21,16 @@ vi.mock("@/lib/logger", () => ({
 
 describe("GET /api/marketing/templates", () => {
     let mockSupabase: any;
+    let mockLogger: any;
 
     beforeEach(async () => {
         vi.clearAllMocks();
         mockSupabase = createMockSupabaseClient();
         const { createClient } = await import("@/lib/supabase/server");
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
+
+        const { logger } = await import("@/lib/logger");
+        mockLogger = logger;
     });
 
     it("should return templates for authenticated user", async () => {
@@ -120,12 +124,16 @@ describe("GET /api/marketing/templates", () => {
 
 describe("POST /api/marketing/templates", () => {
     let mockSupabase: any;
+    let mockLogger: any;
 
     beforeEach(async () => {
         vi.clearAllMocks();
         mockSupabase = createMockSupabaseClient();
         const { createClient } = await import("@/lib/supabase/server");
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
+
+        const { logger } = await import("@/lib/logger");
+        mockLogger = logger;
     });
 
     it("should create template for authenticated user", async () => {

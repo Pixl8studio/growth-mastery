@@ -16,7 +16,7 @@ interface WizardQuestionProps {
     value: unknown;
     onChange: (key: string, value: unknown) => void;
     isAiGenerated?: boolean;
-    subfields?: ReadonlyArray<{ readonly key: string; readonly label: string }>;
+    subfields?: Array<{ key: string; label: string }>;
     disabled?: boolean;
 }
 
@@ -434,7 +434,7 @@ function BeliefShiftField({
     label: string;
     value: Record<string, unknown>;
     onChange: (value: Record<string, unknown>) => void;
-    subfields: ReadonlyArray<{ readonly key: string; readonly label: string }>;
+    subfields: Array<{ key: string; label: string }>;
     isAiGenerated: boolean;
     disabled: boolean;
 }) {

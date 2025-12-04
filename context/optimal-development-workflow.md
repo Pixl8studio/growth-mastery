@@ -46,10 +46,13 @@ Create isolated development environment:
 
 ```bash
 mkdir -p .gitworktrees
-git worktree add -b feature/task-name .gitworktrees/task-name main
+git worktree add -b feature/task-name .gitworktrees/task-name development
 cd .gitworktrees/task-name
 /setup-environment  # Install deps, copy env files, setup git hooks
 ```
+
+Note: Worktrees are created from `development` branch to ensure PRs target the correct
+base.
 
 ### Phase 3: Autonomous Execution
 
@@ -120,8 +123,9 @@ git commit -m "feat: Add OAuth2 authentication
 # Push to origin
 git push -u origin feature/task-name
 
-# Create PR
+# Create PR targeting development branch
 gh pr create \
+  --base development \
   --title "Add OAuth2 authentication" \
   --body "Summary of changes..."
 ```

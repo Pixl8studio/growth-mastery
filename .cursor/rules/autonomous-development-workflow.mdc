@@ -59,8 +59,7 @@ pleased with.
 
 Generate commit message following git-commit-message.mdc (if present).
 
-Use `gh pr create` to submit a high-quality pull request with clear description of what
-changed and why.
+Use `gh pr create --base development` to submit a high-quality pull request targeting the `development` branch with clear description of what changed and why.
 
 ## Boundaries
 

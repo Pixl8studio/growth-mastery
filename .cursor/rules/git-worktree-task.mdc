@@ -14,9 +14,11 @@ Create git worktree in .gitworktrees/ directory:
 
 ```bash
 mkdir -p .gitworktrees
-git worktree add -b feature/task-name .gitworktrees/task-name main
+git worktree add -b feature/task-name .gitworktrees/task-name development
 cd .gitworktrees/task-name
 ```
+
+Note: Worktrees are created from the `development` branch to ensure PRs target the correct base branch for this project.
 </workspace-setup>
 
 <environment-initialization>
@@ -53,7 +55,13 @@ Invoke code reviewer agent (Rivera in .claude/agents/rivera.md if available) to 
 </self-review>
 
 <pull-request-creation>
-Once local validation passes and code review is addressed, push commits. Create pull request with clear description of what changed and why. Help reviewers understand context and decisions made.
+Once local validation passes and code review is addressed, push commits. Create pull request targeting the `development` branch with clear description of what changed and why:
+
+```bash
+gh pr create --base development --title "Title" --body "Description"
+```
+
+Help reviewers understand context and decisions made.
 </pull-request-creation>
 
 <ci-validation>

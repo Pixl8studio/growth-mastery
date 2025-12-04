@@ -3,16 +3,14 @@
  * Tests for call-to-action generation and optimization
  */
 
-// Mock AI client BEFORE any imports
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+// Mock dependencies
 vi.mock("@/lib/ai/client", () => ({
     generateWithAI: vi.fn(),
     generateTextWithAI: vi.fn(),
     openai: {},
 }));
-
-import { describe, it, expect, vi, beforeEach } from "vitest";
-
-// Mock dependencies
 vi.mock("@/lib/logger");
 
 import {
@@ -365,10 +363,6 @@ describe("CTAStrategistService", () => {
 
             expect(result.success).toBe(true);
             expect(result.shortUrl).toBeDefined();
-        });
-
-        it("should log campaign information", () => {
-            generateShortLink("https://example.com", "test-campaign");
         });
     });
 });

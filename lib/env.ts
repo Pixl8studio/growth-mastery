@@ -86,6 +86,27 @@ const envSchema = z.object({
     INTEGRATION_ENCRYPTION_KEY: z.string().optional(),
 
     // ===========================================
+    // Email Services
+    // ===========================================
+    // Mailgun (Primary Email Provider)
+    MAILGUN_API_KEY: z.string().optional(),
+    MAILGUN_REGION: z.enum(["us", "eu"]).default("us"),
+    MAILGUN_WEBHOOK_SIGNING_KEY: z.string().optional(),
+
+    // SendGrid (Legacy Email Provider)
+    SENDGRID_API_KEY: z.string().optional(),
+    SENDGRID_VERIFIED_SENDER_EMAIL: z.string().optional(),
+
+    // Twilio (SMS Provider)
+    TWILIO_ACCOUNT_SID: z.string().optional(),
+    TWILIO_AUTH_TOKEN: z.string().optional(),
+    TWILIO_PHONE_NUMBER: z.string().optional(),
+
+    // Follow-Up Configuration
+    FOLLOWUP_FROM_EMAIL: z.string().optional(),
+    FOLLOWUP_FROM_NAME: z.string().optional(),
+
+    // ===========================================
     // Vercel Domains API
     // ===========================================
     VERCEL_TOKEN: z.string().optional(),

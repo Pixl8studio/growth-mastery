@@ -358,6 +358,10 @@ describe("PublisherService", () => {
                             update: vi.fn().mockReturnValue({
                                 eq: vi.fn().mockResolvedValue({ error: null }),
                             }),
+                            insert: vi.fn().mockResolvedValue({
+                                data: { id: "new-calendar-123" },
+                                error: null,
+                            }),
                         };
                     }
                     if (table === "marketing_post_variants") {

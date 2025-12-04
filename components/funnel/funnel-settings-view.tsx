@@ -8,10 +8,11 @@
 "use client";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Globe, Share2, Calendar, Settings } from "lucide-react";
+import { Globe, Share2, Calendar, Settings, Mail } from "lucide-react";
 import { DomainSettings } from "@/components/funnel/settings/domain-settings";
 import { SocialIntegrations } from "@/components/funnel/settings/social-integrations";
 import { CalendarIntegration } from "@/components/funnel/settings/calendar-integration";
+import { EmailDomainSettings } from "@/components/funnel/settings/email-domain-settings";
 
 interface FunnelSettingsViewProps {
     projectId: string;
@@ -29,10 +30,14 @@ export function FunnelSettingsView({ projectId }: FunnelSettingsViewProps) {
             </div>
 
             <Tabs defaultValue="domain" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="grid w-full grid-cols-5">
                     <TabsTrigger value="domain">
                         <Globe className="h-4 w-4 mr-2" />
                         Domain
+                    </TabsTrigger>
+                    <TabsTrigger value="email">
+                        <Mail className="h-4 w-4 mr-2" />
+                        Email Domain
                     </TabsTrigger>
                     <TabsTrigger value="social">
                         <Share2 className="h-4 w-4 mr-2" />
@@ -50,6 +55,10 @@ export function FunnelSettingsView({ projectId }: FunnelSettingsViewProps) {
 
                 <TabsContent value="domain" className="mt-6">
                     <DomainSettings projectId={projectId} />
+                </TabsContent>
+
+                <TabsContent value="email" className="mt-6">
+                    <EmailDomainSettings projectId={projectId} />
                 </TabsContent>
 
                 <TabsContent value="social" className="mt-6">

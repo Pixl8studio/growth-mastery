@@ -3,18 +3,16 @@
  * Tests for trend identification and content opportunity suggestions
  */
 
-// Mock AI client BEFORE any imports
-vi.mock("@/lib/ai/client", () => ({
-    generateWithAI: vi.fn(),
-    generateTextWithAI: vi.fn(),
-    openai: {},
-}));
-
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock dependencies
 vi.mock("@/lib/supabase/server");
 vi.mock("@/lib/logger");
+vi.mock("@/lib/ai/client", () => ({
+    generateWithAI: vi.fn(),
+    generateTextWithAI: vi.fn(),
+    openai: {},
+}));
 
 import {
     scanTrends,

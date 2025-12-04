@@ -82,12 +82,10 @@ describe("POST /api/followup/sequences", () => {
     it("should return 401 for unauthenticated users", async () => {
         const mockSupabase = {
             auth: {
-                getUser: vi
-                    .fn()
-                    .mockResolvedValue({
-                        data: { user: null },
-                        error: { message: "Unauthorized" },
-                    }),
+                getUser: vi.fn().mockResolvedValue({
+                    data: { user: null },
+                    error: { message: "Unauthorized" },
+                }),
             },
         };
 
@@ -188,12 +186,10 @@ describe("POST /api/followup/sequences", () => {
             from: vi.fn(() => ({
                 select: vi.fn().mockReturnThis(),
                 eq: vi.fn().mockReturnThis(),
-                single: vi
-                    .fn()
-                    .mockResolvedValue({
-                        data: { user_id: "other-user" },
-                        error: null,
-                    }),
+                single: vi.fn().mockResolvedValue({
+                    data: { user_id: "other-user" },
+                    error: null,
+                }),
             })),
         };
 
@@ -303,12 +299,10 @@ describe("GET /api/followup/sequences", () => {
     it("should return 401 for unauthenticated users", async () => {
         const mockSupabase = {
             auth: {
-                getUser: vi
-                    .fn()
-                    .mockResolvedValue({
-                        data: { user: null },
-                        error: { message: "Unauthorized" },
-                    }),
+                getUser: vi.fn().mockResolvedValue({
+                    data: { user: null },
+                    error: { message: "Unauthorized" },
+                }),
             },
         };
 
@@ -357,12 +351,10 @@ describe("GET /api/followup/sequences", () => {
             from: vi.fn(() => ({
                 select: vi.fn().mockReturnThis(),
                 eq: vi.fn().mockReturnThis(),
-                single: vi
-                    .fn()
-                    .mockResolvedValue({
-                        data: { user_id: "other-user" },
-                        error: null,
-                    }),
+                single: vi.fn().mockResolvedValue({
+                    data: { user_id: "other-user" },
+                    error: null,
+                }),
             })),
         };
 

@@ -64,6 +64,7 @@ describe("PreflightService", () => {
                 success: true,
                 valid: true,
                 violations: [],
+                warnings: [],
             });
 
             vi.mocked(getProfile).mockResolvedValue({
@@ -109,6 +110,7 @@ describe("PreflightService", () => {
                 success: true,
                 valid: true,
                 violations: [],
+                warnings: [],
             });
 
             vi.mocked(getProfile).mockResolvedValue({
@@ -131,7 +133,7 @@ describe("PreflightService", () => {
 
             const variantWithIssues = {
                 ...mockVariant,
-                copy_text: "Check out this amazing testimonial from our client!",
+                copy_text: "Check out this testimonial from our client!",
             };
 
             const result = await runPreflightValidation(

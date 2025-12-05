@@ -28,3 +28,16 @@ coverage
 resources
 docs/reference-design
 
+# Git worktrees (separate branches)
+.gitworktrees
+
+# Swarm temp files
+.swarm
+
+# Claude/Cursor configs (markdown templates, not code)
+.claude
+.cursor
+
+# Tests (have their own linting/formatting)
+__tests__
+

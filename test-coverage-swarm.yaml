@@ -1,0 +1,331 @@
+# Auto-generated Work Manifest for Test Coverage Issues #109-#117
+# Generated: 2025-12-04
+# Description: Comprehensive test coverage improvement across all modules
+
+name: "Test Coverage Sprint - Issues #109-#117"
+base_branch: development
+
+tasks:
+  # Priority 1: Fix existing tests first (issues #109-113)
+
+  - id: "109"
+    prompt: |
+      Issue #109: Test Coverage 1/10: Fix Component Tests - UI & Core
+
+      Fix failing tests in core UI and component modules to establish a stable test foundation.
+
+      ## Tasks
+      - Fix 21 tests in `__tests__/unit/components/ui/`
+      - Fix 25 tests in `__tests__/unit/components/funnel/`
+      - Fix 26 tests in `__tests__/unit/components/marketing/`
+
+      ## Common Issues to Fix
+      1. Mock `cn` function from `@/lib/utils` - ensure mock returns className argument
+      2. Stub `scrollIntoView` on `Element.prototype` (jsdom limitation)
+      3. Handle `hasPointerCapture`/`setPointerCapture` for Radix UI components
+      4. Fix async state updates with proper `waitFor()` usage
+
+      ## Verification
+      ```bash
+      pnpm vitest run __tests__/unit/components/ui/
+      pnpm vitest run __tests__/unit/components/funnel/
+      pnpm vitest run __tests__/unit/components/marketing/
+      ```
+
+      ## Reference
+      - See `.swarm/test-standards.md` for common fix patterns
+
+      Original issue: https://github.com/lawl3ss/growth-mastery/issues/109
+    branch: fix/tests-components-core-109
+    priority: high
+
+  - id: "110"
+    prompt: |
+      Issue #110: Test Coverage 2/10: Fix Component Tests - Feature Modules
+
+      Fix failing tests in feature component modules.
+
+      ## Tasks
+      - Fix 17 tests in `__tests__/unit/components/followup/`
+      - Fix 15 tests in `__tests__/unit/components/pages/`
+      - Fix 10 tests in `__tests__/unit/components/public/`
+      - Fix 9 tests in `__tests__/unit/components/intake/`
+      - Fix 4 tests in `__tests__/unit/components/settings/`
+
+      ## Common Issues to Fix
+      1. Mock `cn` function from `@/lib/utils`
+      2. Fix `pages-list.test.tsx` mock export issues
+      3. Fix `domains-settings.test.tsx` undefined property access
+      4. Handle async state updates with proper `waitFor()` usage
+
+      ## Verification
+      ```bash
+      pnpm vitest run __tests__/unit/components/followup/
+      pnpm vitest run __tests__/unit/components/pages/
+      pnpm vitest run __tests__/unit/components/public/
+      pnpm vitest run __tests__/unit/components/intake/
+      pnpm vitest run __tests__/unit/components/settings/
+      ```
+
+      ## Reference
+      - See `.swarm/test-standards.md` for common fix patterns
+
+      Original issue: https://github.com/lawl3ss/growth-mastery/issues/110
+    branch: fix/tests-components-feature-110
+    priority: high
+    depends_on: ["109"]
+
+  - id: "111"
+    prompt: |
+      Issue #111: Test Coverage 3/10: Fix Component Tests - Remaining & Misc
+
+      Fix failing tests in remaining component modules.
+
+      ## Tasks
+      - Fix 4 tests in `__tests__/unit/components/contacts/`
+      - Fix 5 tests in `__tests__/unit/components/ads/`
+      - Fix tests in remaining component directories
+
+      ## Common Issues to Fix
+      1. Fix `global-prospects-table.tsx` undefined `consent_state.replace` error
+      2. Mock `cn` function from `@/lib/utils`
+      3. Stub `scrollIntoView` on `Element.prototype`
+      4. Handle async state updates with proper `waitFor()` usage
+
+      ## Verification
+      ```bash
+      pnpm vitest run __tests__/unit/components/contacts/
+      pnpm vitest run __tests__/unit/components/ads/
+      pnpm vitest run __tests__/unit/components/
+      ```
+
+      ## Reference
+      - See `.swarm/test-standards.md` for common fix patterns
+
+      Original issue: https://github.com/lawl3ss/growth-mastery/issues/111
+    branch: fix/tests-components-misc-111
+    priority: medium
+    depends_on: ["110"]
+
+  - id: "112"
+    prompt: |
+      Issue #112: Test Coverage 4/10: Fix Lib & Integration Tests
+
+      Fix failing tests in lib modules and integration tests.
+
+      ## Tasks
+      - Fix 27 tests in `__tests__/unit/lib/followup/`
+      - Fix 16 tests in `__tests__/unit/lib/generators/`
+      - Fix 10 tests in `__tests__/unit/lib/marketing/`
+      - Fix 9 tests in `__tests__/unit/lib/scraping/`
+      - Fix tests in remaining lib modules
+
+      ## Common Issues to Fix
+      1. Ensure mocks return all expected exports
+      2. Fix async/await handling in tests
+      3. Update mock data to match current interfaces
+      4. Handle Supabase/OpenAI client mocking properly
+
+      ## Verification
+      ```bash
+      pnpm vitest run __tests__/unit/lib/followup/
+      pnpm vitest run __tests__/unit/lib/generators/
+      pnpm vitest run __tests__/unit/lib/marketing/
+      pnpm vitest run __tests__/unit/lib/scraping/
+      pnpm vitest run __tests__/unit/lib/
+      ```
+
+      ## Reference
+      - See `.swarm/test-standards.md` for common fix patterns
+
+      Original issue: https://github.com/lawl3ss/growth-mastery/issues/112
+    branch: fix/tests-lib-modules-112
+    priority: high
+    depends_on: ["111"]
+
+  - id: "113"
+    prompt: |
+      Issue #113: Test Coverage 5/10: Fix Integration Tests
+
+      Fix failing integration tests for API routes.
+
+      ## Tasks
+      - Fix 30 tests in `__tests__/integration/api/marketing/`
+      - Fix 30 tests in `__tests__/integration/api/followup/`
+      - Fix 20 tests in `__tests__/integration/api/pages/`
+      - Fix 10 tests in `__tests__/integration/api/generate/`
+      - Fix tests in remaining integration modules
+
+      ## Common Issues to Fix
+      1. Mock Next.js request/response properly
+      2. Mock Supabase server client
+      3. Handle authentication mocking
+      4. Fix async route handler testing
+
+      ## Verification
+      ```bash
+      pnpm vitest run __tests__/integration/api/marketing/
+      pnpm vitest run __tests__/integration/api/followup/
+      pnpm vitest run __tests__/integration/api/pages/
+      pnpm vitest run __tests__/integration/api/generate/
+      pnpm vitest run __tests__/integration/
+      ```
+
+      ## Reference
+      - See `.swarm/test-standards.md` for API route test patterns
+
+      Original issue: https://github.com/lawl3ss/growth-mastery/issues/113
+    branch: fix/tests-integration-113
+    priority: high
+    depends_on: ["112"]
+
+  # Priority 2: Add new critical tests (issues #114-117)
+
+  - id: "114"
+    prompt: |
+      Issue #114: Test Coverage 6/10: Add Critical Tests (P0) - Auth, Stripe, Crypto
+
+      Add comprehensive tests for critical security and payment modules.
+
+      ## Tasks
+      - Add tests for `lib/stripe/` (3 files)
+      - Add tests for `lib/crypto/token-encryption.ts`
+      - Add tests for `lib/auth.ts`
+      - Add integration tests for `app/api/stripe/` (4 routes)
+      - Add integration tests for `app/api/auth/` (2 routes)
+
+      ## Requirements
+      1. Mock Stripe SDK completely
+      2. Test encryption/decryption roundtrips
+      3. Test all authentication functions
+      4. Achieve **90%+ line coverage** (critical security code)
+      5. Test error handling paths thoroughly
+
+      ## Verification
+      ```bash
+      pnpm vitest run __tests__/unit/lib/stripe/ --coverage
+      pnpm vitest run __tests__/unit/lib/crypto/ --coverage
+      pnpm vitest run __tests__/unit/lib/auth.test.ts --coverage
+      pnpm vitest run __tests__/integration/api/stripe/ --coverage
+      pnpm vitest run __tests__/integration/api/auth/ --coverage
+      ```
+
+      ## Reference
+      - See `docs/TEST_COVERAGE_GAPS.md` for file list
+      - See `.swarm/test-standards.md` for mock patterns
+
+      Original issue: https://github.com/lawl3ss/growth-mastery/issues/114
+    branch: add/tests-critical-p0-114
+    priority: high
+    depends_on: ["113"]
+
+  - id: "115"
+    prompt: |
+      Issue #115: Test Coverage 7/10: Add Critical Tests (P0) - Business Profile & Integrations
+
+      Add comprehensive tests for core AI context and OAuth integration modules.
+
+      ## Tasks
+      - Add tests for `lib/business-profile/` (4 files)
+      - Add tests for `lib/integrations/` (8 files)
+      - Add tests for critical marketing files (3 files)
+
+      ## Requirements
+      1. Mock Supabase client and OpenAI/AI providers
+      2. Mock all external OAuth API calls
+      3. Test OAuth flows and token refresh logic
+      4. Achieve **80%+ line coverage**
+
+      ## Verification
+      ```bash
+      pnpm vitest run __tests__/unit/lib/business-profile/ --coverage
+      pnpm vitest run __tests__/unit/lib/integrations/ --coverage
+      pnpm vitest run __tests__/unit/lib/marketing/ --coverage
+      ```
+
+      ## Reference
+      - See `docs/TEST_COVERAGE_GAPS.md` for file list
+      - See `.swarm/test-standards.md` for mock patterns
+
+      Original issue: https://github.com/lawl3ss/growth-mastery/issues/115
+    branch: add/tests-critical-p0-business-115
+    priority: high
+    depends_on: ["114"]
+
+  - id: "116"
+    prompt: |
+      Issue #116: Test Coverage 8/10: Add Important Tests (P1) - Marketing & Followup
+
+      Add comprehensive tests for marketing and followup service modules.
+
+      ## Tasks
+      - Add tests for `lib/marketing/` P1 files (7 files)
+      - Add tests for `lib/followup/` (15 files)
+      - Add integration tests for key marketing routes (10 routes)
+
+      ## Requirements
+      1. Mock external API calls and Supabase client
+      2. Test all public methods
+      3. Test message generation and delivery logic
+      4. Achieve **70%+ line coverage**
+
+      ## Verification
+      ```bash
+      pnpm vitest run __tests__/unit/lib/marketing/ --coverage
+      pnpm vitest run __tests__/unit/lib/followup/ --coverage
+      pnpm vitest run __tests__/integration/api/marketing/ --coverage
+      ```
+
+      ## Reference
+      - See `docs/TEST_COVERAGE_GAPS.md` for complete file list
+
+      Original issue: https://github.com/lawl3ss/growth-mastery/issues/116
+    branch: add/tests-p1-marketing-followup-116
+    priority: medium
+    depends_on: ["115"]
+
+  - id: "117"
+    prompt: |
+      Issue #117: Test Coverage 9/10: Add Important Tests (P1-P2) - Generators, AI, Infrastructure
+
+      Add comprehensive tests for generators, AI assistant, and infrastructure modules.
+
+      ## Tasks
+      - Add tests for `lib/ads/` (4 files)
+      - Add tests for `lib/ai-assistant/` (3 files)
+      - Add tests for `lib/generators/` (15+ files)
+      - Add tests for `lib/pages/section-copy-generator.ts`
+      - Add tests for `lib/intake/processors.ts`
+      - Add tests for `lib/supabase/` (3 files)
+      - Add tests for `lib/cloudflare/` (2 files)
+      - Add tests for `lib/gamma/` (2 files)
+      - Add tests for `lib/vapi/` (2 files)
+      - Add tests for `lib/openai/assistants-client.ts`
+
+      ## Requirements
+      1. Mock OpenAI, Meta Ads, Cloudflare, Gamma, Vapi APIs
+      2. Test ad generation, AI actions, page generation
+      3. Test file processing (PDF, DOCX)
+      4. Achieve **70%+ line coverage**
+
+      ## Verification
+      ```bash
+      pnpm vitest run __tests__/unit/lib/ads/ --coverage
+      pnpm vitest run __tests__/unit/lib/ai-assistant/ --coverage
+      pnpm vitest run __tests__/unit/lib/generators/ --coverage
+      pnpm vitest run __tests__/unit/lib/pages/ --coverage
+      pnpm vitest run __tests__/unit/lib/intake/ --coverage
+      pnpm vitest run __tests__/unit/lib/supabase/ --coverage
+      pnpm vitest run __tests__/unit/lib/cloudflare/ --coverage
+      pnpm vitest run __tests__/unit/lib/gamma/ --coverage
+      pnpm vitest run __tests__/unit/lib/vapi/ --coverage
+      pnpm vitest run __tests__/unit/lib/openai/ --coverage
+      ```
+
+      ## Reference
+      - See `docs/TEST_COVERAGE_GAPS.md` for complete file list
+
+      Original issue: https://github.com/lawl3ss/growth-mastery/issues/117
+    branch: add/tests-p1-p2-infrastructure-117
+    priority: medium
+    depends_on: ["116"]

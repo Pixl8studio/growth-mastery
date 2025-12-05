@@ -1,0 +1,14 @@
+name: "Local Agent Test"
+base_branch: feature/readme-funny-comment-121
+max_parallel: 2
+
+tasks:
+  - id: "test-task-1"
+    prompt: "Create a test file at .swarm/test-output-1.txt with content 'Task 1 completed by agent'"
+    branch: "test/local-agent-1"
+    priority: high
+
+  - id: "test-task-2"
+    prompt: "Create a test file at .swarm/test-output-2.txt with content 'Task 2 completed by agent'"
+    branch: "test/local-agent-2"
+    priority: high

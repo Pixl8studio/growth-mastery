@@ -22,8 +22,9 @@ the source of truth, agents are stateless workers.
 - When local CPU is overwhelmed by single-agent work
 - CI/CD integration needing parallel task execution
 
-When NOT to use: Single task (use /autotask directly), tasks with heavy interdependencies
-that can't be parallelized, exploratory work without clear task boundaries.
+When NOT to use: Single task (use /autotask directly), tasks with heavy
+interdependencies that can't be parallelized, exploratory work without clear task
+boundaries.
 
 ## Core Pattern
 
@@ -42,7 +43,7 @@ tasks:
   - id: feature-c
     prompt: "Implement feature C"
     branch: feature/c
-    depends_on: [feature-a]  # Waits for feature-a PR
+    depends_on: [feature-a] # Waits for feature-a PR
 ```
 
 Orchestrator builds dependency graph, distributes ready tasks to available agents,
@@ -61,7 +62,7 @@ Tasks form a directed acyclic graph (DAG). Execution order:
 # Sequential: d waits for a AND b, e waits for d
 tasks:
   - id: a
-  - id: b  
+  - id: b
   - id: c
   - id: d
     depends_on: [a, b]

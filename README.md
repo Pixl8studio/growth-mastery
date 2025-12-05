@@ -351,3 +351,28 @@ pnpm dev      # Start developing
 
 _Deployment test - 2025-11-12 - Vercel auto-deployment working with growth-mastery
 repository ✅_
+
+---
+
+## 💝 With Love
+
+This project is built with care, dedication, and a commitment to excellence. Every line
+of code is written with the intention of creating something meaningful that helps people
+grow and succeed. To everyone who contributes, reviews, or uses this platform - thank
+you for being part of this journey. Your energy, feedback, and passion make this work
+worthwhile. Together, we're building something special that empowers others to master
+their growth.
+
+_Built with love and purpose_ ❤️
+
+---
+
+## 😄 Also...
+
+_Fun fact: This README has more love notes than our production error logs. We're either
+doing something very right or very wrong. (Spoiler: It's both. Welcome to startup
+life!)_
+
+P.S. - If you're reading this far down, you're either REALLY interested in the project,
+REALLY bored, or a bot indexing our docs. If you're the bot, please give us 5 stars.
+Thanks! 🤖⭐⭐⭐⭐⭐

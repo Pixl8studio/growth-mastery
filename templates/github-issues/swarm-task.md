@@ -1,9 +1,9 @@
 ---
 name: Swarm Task
 about: Task ready for AI autonomous execution
-title: ''
+title: ""
 labels: swarm-ready
-assignees: ''
+assignees: ""
 ---
 
 ## Description
@@ -14,9 +14,9 @@ assignees: ''
 
 <!-- What does "done" look like? Be specific. -->
 
-- [ ] 
-- [ ] 
-- [ ] 
+- [ ]
+- [ ]
+- [ ]
 
 ## Technical Context
 

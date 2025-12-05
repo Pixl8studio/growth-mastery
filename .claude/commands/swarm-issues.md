@@ -45,11 +45,11 @@ gh issue list --label "swarm-ready" --state open --json number,title,body,labels
 ```
 
 For each issue, extract:
+
 - Issue number → becomes task ID
 - Title → used in branch name
 - Body → becomes the task prompt
-- Labels → can indicate priority or dependencies
-</issue-discovery>
+- Labels → can indicate priority or dependencies </issue-discovery>
 
 <branch-naming>
 Generate branch names from issue titles:
@@ -63,14 +63,14 @@ Branch: fix/156-session-timeout
 ```
 
 Sanitize titles: lowercase, replace spaces with hyphens, remove special characters,
-prefix with issue number for uniqueness.
-</branch-naming>
+prefix with issue number for uniqueness. </branch-naming>
 
 <dependency-detection>
 Look for dependency markers in issue body:
 
 ```markdown
 ## Dependencies
+
 - Depends on #142
 - Blocked by #145
 ```
@@ -85,8 +85,7 @@ Map labels to priorities:
 - `priority:low` or `nice-to-have` → low
 - Default → medium
 
-Also respect label order if multiple priority labels exist.
-</priority-detection>
+Also respect label order if multiple priority labels exist. </priority-detection>
 
 <manifest-generation>
 Generate YAML manifest from discovered issues:
@@ -103,31 +102,31 @@ tasks:
   - id: "142"
     prompt: |
       Issue #142: Add OAuth2 token refresh
-      
+
       [Full issue body here]
-      
+
       Original issue: https://github.com/org/repo/issues/142
     branch: feature/142-oauth2-token-refresh
     priority: high
-    
+
   - id: "156"
     prompt: |
       Issue #156: Session timeout not working
-      
+
       [Full issue body here]
-      
+
       Original issue: https://github.com/org/repo/issues/156
     branch: fix/156-session-timeout
     depends_on: ["142"]
 ```
+
 </manifest-generation>
 
 <execution>
 If `--execute` flag provided, run `/swarm` with generated manifest.
 
 The issue becomes a **progress log** throughout execution. Every significant event is
-commented back to the issue so you have full visibility.
-</execution>
+commented back to the issue so you have full visibility. </execution>
 
 <issue-progress-tracking>
 The GitHub issue serves as a real-time progress tracker. Comments are added at each stage:
@@ -137,14 +136,14 @@ The GitHub issue serves as a real-time progress tracker. Comments are added at e
 ```markdown
 🤖 **Swarm Bot**: Task claimed
 
-Agent: `oracle-arm-2`
-Branch: `feature/142-oauth2-token-refresh`
-Started: 2024-01-15T10:30:00Z
+Agent: `oracle-arm-2` Branch: `feature/142-oauth2-token-refresh` Started:
+2024-01-15T10:30:00Z
 
 Working on this now...
 
 ---
-*Swarm ID: swarm-2024-01-15-abc123*
+
+_Swarm ID: swarm-2024-01-15-abc123_
 ```
 
 **2. Progress Update (periodically during execution):**
@@ -152,14 +151,13 @@ Working on this now...
 ```markdown
 🤖 **Swarm Bot**: Progress update
 
-Status: In Progress (45%)
-Current stage: Writing tests
+Status: In Progress (45%) Current stage: Writing tests
 
-Agent: `oracle-arm-2`
-Elapsed: 8 minutes
+Agent: `oracle-arm-2` Elapsed: 8 minutes
 
 ---
-*Updated: 2024-01-15T10:38:00Z*
+
+_Updated: 2024-01-15T10:38:00Z_
 ```
 
 **3. PR Created (on successful completion):**
@@ -167,23 +165,24 @@ Elapsed: 8 minutes
 ```markdown
 🤖 **Swarm Bot**: ✅ PR Ready for Review!
 
-**Pull Request:** #789
-**Branch:** `feature/142-oauth2-token-refresh`
-**Agent:** `oracle-arm-2`
-**Duration:** 12 minutes
+**Pull Request:** #789 **Branch:** `feature/142-oauth2-token-refresh` **Agent:**
+`oracle-arm-2` **Duration:** 12 minutes
 
 ### Summary
+
 - Implemented OAuth2 token refresh flow
 - Added 15 unit tests (coverage: 94%)
 - Updated documentation
 
 ### What was done
+
 - Created `src/auth/tokenRefresh.ts`
 - Modified `src/middleware/auth.ts`
 - Added tests in `tests/auth/tokenRefresh.test.ts`
 
 ---
-*Completed: 2024-01-15T10:42:00Z*
+
+_Completed: 2024-01-15T10:42:00Z_
 ```
 
 **4. On Failure (if task fails):**
@@ -191,14 +190,15 @@ Elapsed: 8 minutes
 ```markdown
 🤖 **Swarm Bot**: ❌ Task Failed
 
-**Agent:** `oracle-arm-2`
-**Duration:** 8 minutes
-**Stage:** Running tests
+**Agent:** `oracle-arm-2` **Duration:** 8 minutes **Stage:** Running tests
 
 ### Error
 ```
+
 Test suite failed: 3 tests failing
+
 - tokenRefresh.test.ts: timeout error
+
 ```
 
 ### Next Steps
@@ -216,29 +216,31 @@ Test suite failed: 3 tests failing
 🤖 **Swarm Bot**: ⏳ Waiting for dependencies
 
 This issue depends on:
+
 - [ ] #140 - Database schema changes (in progress)
 - [x] #141 - API types update (complete)
 
 Will automatically start when dependencies complete.
 
 ---
-*Queued: 2024-01-15T10:30:00Z*
+
+_Queued: 2024-01-15T10:30:00Z_
 ```
+
 </issue-progress-tracking>
 
 <label-management>
 Labels are automatically updated to reflect status:
 
-| Stage | Label Changes |
-|-------|---------------|
-| Task claimed | Remove `swarm-ready`, add `swarm:in-progress` |
-| PR created | Remove `swarm:in-progress`, add `swarm:pr-ready` |
-| PR merged | Remove `swarm:pr-ready`, add `swarm:completed` |
-| Task failed | Remove `swarm:in-progress`, add `swarm:failed` |
-| Waiting deps | Add `swarm:blocked` |
+| Stage        | Label Changes                                    |
+| ------------ | ------------------------------------------------ |
+| Task claimed | Remove `swarm-ready`, add `swarm:in-progress`    |
+| PR created   | Remove `swarm:in-progress`, add `swarm:pr-ready` |
+| PR merged    | Remove `swarm:pr-ready`, add `swarm:completed`   |
+| Task failed  | Remove `swarm:in-progress`, add `swarm:failed`   |
+| Waiting deps | Add `swarm:blocked`                              |
 
-This makes it easy to filter issues by status in GitHub.
-</label-management>
+This makes it easy to filter issues by status in GitHub. </label-management>
 
 <issue-update-commands>
 GitHub CLI commands used for updates:
@@ -256,6 +258,7 @@ gh pr create --body "Closes #142
 ## Summary
 ..."
 ```
+
 </issue-update-commands>
 
 <pr-issue-linking>
@@ -266,8 +269,7 @@ PRs are automatically linked to issues:
 3. Issue gets a comment with PR link
 4. GitHub's sidebar shows linked PRs
 
-When PR is merged, GitHub automatically closes the linked issue.
-</pr-issue-linking>
+When PR is merged, GitHub automatically closes the linked issue. </pr-issue-linking>
 
 ## Issue Format Best Practices
 
@@ -275,17 +277,21 @@ For best results, structure your issues like this:
 
 ```markdown
 ## Description
+
 Clear description of what needs to be done.
 
 ## Acceptance Criteria
+
 - [ ] Feature works as expected
 - [ ] Tests are included
 - [ ] Documentation updated
 
 ## Dependencies
+
 - Depends on #142 (optional)
 
 ## Technical Notes
+
 Any implementation hints or constraints (optional)
 ```
 
@@ -294,13 +300,13 @@ autonomous developer.
 
 ## Labels for Control
 
-| Label | Effect |
-|-------|--------|
-| `swarm-ready` | Issue will be picked up (default) |
-| `priority:high` | Task runs with high priority |
-| `priority:low` | Task runs with low priority |
-| `blocked` | Issue skipped until label removed |
-| `needs-clarification` | Issue skipped, needs human input |
+| Label                 | Effect                            |
+| --------------------- | --------------------------------- |
+| `swarm-ready`         | Issue will be picked up (default) |
+| `priority:high`       | Task runs with high priority      |
+| `priority:low`        | Task runs with low priority       |
+| `blocked`             | Issue skipped until label removed |
+| `needs-clarification` | Issue skipped, needs human input  |
 
 ## Example Workflow
 
@@ -324,19 +330,19 @@ GitHub Issues                    Swarm                         PRs
 
 ## Flags
 
-| Flag | Description |
-|------|-------------|
-| `--label <name>` | Label to filter issues (default: swarm-ready) |
-| `--execute` | Run swarm after generating manifest |
-| `--dry-run` | Show what would be processed, don't execute |
-| `--output <file>` | Save manifest to file instead of executing |
-| `--auto-close` | Close issues when PR is merged |
-| `--local` | Pass to swarm: run sequentially on local machine |
-| `--limit <n>` | Maximum issues to process |
-| `--repo <owner/repo>` | Target repo (default: current) |
-| `--verbose` | Post progress updates every 2 minutes |
-| `--quiet` | Only post start and completion comments |
-| `--no-labels` | Don't modify issue labels |
+| Flag                  | Description                                      |
+| --------------------- | ------------------------------------------------ |
+| `--label <name>`      | Label to filter issues (default: swarm-ready)    |
+| `--execute`           | Run swarm after generating manifest              |
+| `--dry-run`           | Show what would be processed, don't execute      |
+| `--output <file>`     | Save manifest to file instead of executing       |
+| `--auto-close`        | Close issues when PR is merged                   |
+| `--local`             | Pass to swarm: run sequentially on local machine |
+| `--limit <n>`         | Maximum issues to process                        |
+| `--repo <owner/repo>` | Target repo (default: current)                   |
+| `--verbose`           | Post progress updates every 2 minutes            |
+| `--quiet`             | Only post start and completion comments          |
+| `--no-labels`         | Don't modify issue labels                        |
 
 ## Example Issue Timeline
 
@@ -406,6 +412,7 @@ The issue becomes a complete audit trail of what happened!
 ## State Tracking
 
 Creates `.swarm/issues-state.json` to track:
+
 - Which issues have been processed
 - Which PRs were created for which issues
 - Timestamp of last run

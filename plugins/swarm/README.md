@@ -65,11 +65,11 @@ tasks:
   - id: feature-a
     prompt: "Implement user authentication with OAuth2"
     branch: feature/oauth
-    
+
   - id: feature-b
     prompt: "Add rate limiting to API endpoints"
     branch: feature/rate-limiting
-    
+
   - id: feature-c
     prompt: "Improve error handling in auth flow"
     branch: feature/auth-errors
@@ -84,17 +84,17 @@ EOF
 
 ```yaml
 name: "Descriptive name for this batch"
-repo: git@github.com:org/repo.git  # Optional, defaults to current
-base_branch: main                   # Branch to create features from
+repo: git@github.com:org/repo.git # Optional, defaults to current
+base_branch: main # Branch to create features from
 
 tasks:
-  - id: unique-task-id              # Required, used for dependencies
-    prompt: |                       # What to accomplish
+  - id: unique-task-id # Required, used for dependencies
+    prompt: | # What to accomplish
       Multi-line prompt describing
       the task in detail
-    branch: feature/branch-name     # Required, must be unique
-    priority: high                  # Optional: high, medium, low
-    depends_on: [other-task-id]     # Optional: wait for these first
+    branch: feature/branch-name # Required, must be unique
+    priority: high # Optional: high, medium, low
+    depends_on: [other-task-id] # Optional: wait for these first
 ```
 
 ## Execution Modes
@@ -139,12 +139,14 @@ CLAUDE_SWARM_2_NAME=oracle-prod-2
 ```
 
 **Benefits:**
+
 - Each project can have different agents
 - Easily switch between dev/prod swarms
 - No need to manage `~/.swarm/agents.yaml`
 - Works with existing `.env.local` patterns
 
 **Helper commands:**
+
 ```bash
 # List configured agents
 ~/.ai_coding_config/scripts/swarm-env-loader.sh --list
@@ -171,6 +173,7 @@ agents:
 ### Config Priority
 
 The swarm looks for agents in this order:
+
 1. `.env.local` in current directory
 2. `.env.local` in git root
 3. `~/.swarm/agents.yaml`
@@ -303,10 +306,12 @@ Full execution traces in `.swarm/state.json`:
 ### PR Attribution
 
 PRs include labels for filtering:
+
 - `swarm-task` - Identifies swarm-created PRs
 - `agent:oracle-arm-1` - Which agent created it
 
-See [docs/git-trailers.md](docs/git-trailers.md) and [docs/state-schema.md](docs/state-schema.md) for full details.
+See [docs/git-trailers.md](docs/git-trailers.md) and
+[docs/state-schema.md](docs/state-schema.md) for full details.
 
 ## GitHub Issues Workflow
 
@@ -325,15 +330,18 @@ Write issues as instructions for an autonomous developer:
 
 ```markdown
 ## Description
+
 Add rate limiting to all API endpoints to prevent abuse.
 
 ## Acceptance Criteria
+
 - [ ] 100 requests/minute per authenticated user
 - [ ] 20 requests/minute for anonymous users
 - [ ] Return 429 with Retry-After header
 - [ ] Tests cover rate limit behavior
 
 ## Technical Context
+
 Use Redis for tracking. Follow existing middleware pattern in src/middleware/auth.ts
 ```
 
@@ -353,12 +361,12 @@ Each issue gets a PR. The PR description includes "Closes #123" to auto-link.
 
 ### Labels for Control
 
-| Label | Effect |
-|-------|--------|
-| `swarm-ready` | Will be processed |
-| `priority:high` | Runs first |
-| `priority:low` | Runs last |
-| `blocked` | Skipped |
+| Label           | Effect            |
+| --------------- | ----------------- |
+| `swarm-ready`   | Will be processed |
+| `priority:high` | Runs first        |
+| `priority:low`  | Runs last         |
+| `blocked`       | Skipped           |
 
 ## Best Practices
 

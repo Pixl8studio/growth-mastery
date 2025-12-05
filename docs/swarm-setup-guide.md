@@ -5,6 +5,7 @@ Complete guide to setting up distributed Claude Code agents for parallel task ex
 ## Overview
 
 The swarm system consists of:
+
 1. **Orchestrator** - Runs on your machine, distributes tasks
 2. **Agents** - Claude Code instances on cloud VMs, execute tasks
 3. **Configuration** - `~/.swarm/agents.yaml` defines your agents
@@ -27,11 +28,13 @@ Your Machine                    Cloud VMs
 ### 1. Choose Your Cloud Provider
 
 **Oracle Cloud (Recommended)** - 4 ARM VMs free forever
+
 - Best free tier available
 - 24GB total RAM across 4 VMs
 - Plenty for running Claude Code
 
 **Other Options:**
+
 - Google Cloud: 1 e2-micro VM (always free)
 - AWS: 750 hours t2.micro/month (12 months)
 - GitHub Codespaces: 60 hours/month
@@ -57,6 +60,7 @@ Your Machine                    Cloud VMs
 Open port 3847 for swarm communication:
 
 **Oracle Cloud:**
+
 ```
 VCN → Security Lists → Add Ingress Rule
 - Source CIDR: 0.0.0.0/0 (or your IP for security)
@@ -65,6 +69,7 @@ VCN → Security Lists → Add Ingress Rule
 ```
 
 **Or on the VM:**
+
 ```bash
 sudo firewall-cmd --permanent --add-port=3847/tcp
 sudo firewall-cmd --reload
@@ -79,6 +84,7 @@ curl -fsSL https://raw.githubusercontent.com/TechNickAI/ai-coding-config/main/sc
 ```
 
 This installs:
+
 - Node.js via nvm
 - Claude Code CLI
 - ai-coding-config (for standards)
@@ -97,6 +103,7 @@ Follow the prompts to authenticate with your Anthropic account.
 Each agent needs to push to your repos. Choose one:
 
 **Option A: SSH Key (Recommended)**
+
 ```bash
 ssh-keygen -t ed25519 -C "swarm-agent-$(hostname)"
 cat ~/.ssh/id_ed25519.pub
@@ -104,6 +111,7 @@ cat ~/.ssh/id_ed25519.pub
 ```
 
 **Option B: GitHub Token**
+
 ```bash
 gh auth login
 # Follow prompts
@@ -117,6 +125,7 @@ sudo systemctl status swarm-agent
 ```
 
 Verify it's running:
+
 ```bash
 curl http://localhost:3847/status
 # Should return: {"status":"idle","currentTask":null}
@@ -136,10 +145,10 @@ Edit with your VM IPs:
 ```yaml
 agents:
   - name: oracle-arm-1
-    host: 129.153.42.100    # Your VM's public IP
-    
+    host: 129.153.42.100 # Your VM's public IP
+
   - name: oracle-arm-2
-    host: 129.153.42.101    # Your VM's public IP
+    host: 129.153.42.101 # Your VM's public IP
 ```
 
 ### 8. Test the Connection
@@ -167,38 +176,38 @@ curl http://129.153.42.100:3847/status
 
 ```yaml
 defaults:
-  port: 3847              # Default agent port
-  timeout: 60m            # Max task execution time
+  port: 3847 # Default agent port
+  timeout: 60m # Max task execution time
   health_check_interval: 30s
 
 agents:
-  - name: agent-1         # Unique identifier
-    host: 1.2.3.4         # IP address or hostname
-    port: 3847            # Optional, uses default if omitted
-    description: "..."    # Human-readable description
-    tags: [frontend]      # For task routing (optional)
-    timeout: 120m         # Override default (optional)
+  - name: agent-1 # Unique identifier
+    host: 1.2.3.4 # IP address or hostname
+    port: 3847 # Optional, uses default if omitted
+    description: "..." # Human-readable description
+    tags: [frontend] # For task routing (optional)
+    timeout: 120m # Override default (optional)
 
 preferences:
-  strategy: least-busy    # round-robin, least-busy, random
+  strategy: least-busy # round-robin, least-busy, random
 ```
 
 ### Agent Endpoints
 
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/status` | GET | Returns idle/busy status |
-| `/health` | GET | Health check |
-| `/progress` | GET | Current task progress |
-| `/execute` | POST | Submit a task |
-| `/cancel` | POST | Cancel current task |
+| Endpoint    | Method | Description              |
+| ----------- | ------ | ------------------------ |
+| `/status`   | GET    | Returns idle/busy status |
+| `/health`   | GET    | Health check             |
+| `/progress` | GET    | Current task progress    |
+| `/execute`  | POST   | Submit a task            |
+| `/cancel`   | POST   | Cancel current task      |
 
 ### Environment Variables (on agents)
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `SWARM_AGENT_PORT` | 3847 | Port to listen on |
-| `CLAUDE_CODE_HEADLESS` | true | Run Claude in headless mode |
+| Variable               | Default | Description                 |
+| ---------------------- | ------- | --------------------------- |
+| `SWARM_AGENT_PORT`     | 3847    | Port to listen on           |
+| `CLAUDE_CODE_HEADLESS` | true    | Run Claude in headless mode |
 
 ## Troubleshooting
 
@@ -301,13 +310,14 @@ agents:
   - name: prod-agent-1
     host: ...
     tags: [production]
-    
+
   - name: dev-agent-1
     host: ...
     tags: [development]
 ```
 
 Then in manifests:
+
 ```yaml
 tasks:
   - id: prod-fix
@@ -317,6 +327,7 @@ tasks:
 ### Team Shared Agents
 
 Point multiple team members at same agents:
+
 1. Set up agents with shared credentials
 2. Distribute `agents.yaml` to team
 3. Coordinate usage (or use `least-busy` strategy)

@@ -1,9 +1,9 @@
 ---
 name: Bug Fix (Swarm)
 about: Bug that can be fixed autonomously by AI
-title: '[BUG] '
+title: "[BUG] "
 labels: swarm-ready, bug
-assignees: ''
+assignees: ""
 ---
 
 ## Bug Description
@@ -12,9 +12,9 @@ assignees: ''
 
 ## Steps to Reproduce
 
-1. 
-2. 
-3. 
+1.
+2.
+3.
 
 ## Expected Behavior
 
@@ -26,8 +26,8 @@ assignees: ''
 
 ## Environment
 
-- Browser/OS: 
-- Version: 
+- Browser/OS:
+- Version:
 
 ## Technical Hints
 

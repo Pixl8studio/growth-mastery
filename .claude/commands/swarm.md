@@ -39,11 +39,11 @@ tasks:
     prompt: "Implement OAuth2 token refresh flow"
     branch: feature/oauth-refresh
     priority: high
-    
+
   - id: session-cleanup
     prompt: "Fix session memory leak from issue #234"
     branch: fix/session-leak-234
-    depends_on: [oauth-refresh]  # Sequential when needed
+    depends_on: [oauth-refresh] # Sequential when needed
 ```
 
 ## Execution Flow
@@ -72,8 +72,7 @@ agents:
     execute_endpoint: /execute
 ```
 
-If no agents configured, default to local sequential execution.
-</agent-discovery>
+If no agents configured, default to local sequential execution. </agent-discovery>
 
 <task-distribution>
 For each task ready to execute (no pending dependencies):
@@ -86,8 +85,7 @@ For each task ready to execute (no pending dependencies):
 
 Parallel execution: Multiple tasks without dependencies run simultaneously on different
 agents. Sequential execution: Tasks with `depends_on` wait for dependencies to complete
-successfully before starting.
-</task-distribution>
+successfully before starting. </task-distribution>
 
 <progress-monitoring>
 Track all active tasks. Display real-time status:
@@ -108,6 +106,7 @@ Task failure does not block unrelated tasks. Only tasks with direct dependency o
 failed task are blocked.
 
 On failure:
+
 - Log error context and stack trace
 - Mark task as failed in state
 - Notify blocked dependent tasks
@@ -115,18 +114,19 @@ On failure:
 - Report failure in final summary
 
 Recovery options: Retry failed task (`/swarm --retry task-id`), skip and continue
-(`/swarm --skip task-id`), or abort remaining (`/swarm --abort`).
-</failure-handling>
+(`/swarm --skip task-id`), or abort remaining (`/swarm --abort`). </failure-handling>
 
 <completion-reporting>
 On all tasks complete (success or failure), generate consolidated report:
 
 Summary:
+
 - Total tasks: N completed, M failed, K skipped
 - Execution time: actual vs estimated sequential time
 - Parallel speedup factor
 
 Per-task details:
+
 - PR URL and status
 - Execution time
 - Agent that processed it
@@ -158,6 +158,7 @@ Recommended free compute: Oracle Cloud Always Free tier provides 4 ARM VMs with 
 total RAM at no cost.
 
 Each agent needs:
+
 - Node.js and Claude Code CLI installed
 - Claude authentication configured
 - Agent listener running (receives tasks via HTTP)
@@ -166,11 +167,13 @@ Each agent needs:
 ## State Management
 
 Git is the source of truth. Agent state is ephemeral. If an agent restarts mid-task:
+
 - Work-in-progress exists as uncommitted changes in worktree
 - Orchestrator detects agent restart, reassigns task
 - New agent clones fresh, task restarts from beginning
 
 Manifest state tracked in `.swarm/state.json`:
+
 - Which tasks are complete (have PRs)
 - Which tasks are in progress (claimed by agent)
 - Which tasks are queued

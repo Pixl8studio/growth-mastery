@@ -27,17 +27,17 @@ max_parallel: 4
 
 # Required: List of tasks to execute
 tasks:
-  - id: unique-task-identifier        # Required: Unique within manifest
-    prompt: |                          # Required: What to accomplish
+  - id: unique-task-identifier # Required: Unique within manifest
+    prompt: | # Required: What to accomplish
       Detailed description of the task.
       Can be multi-line.
       Should be specific enough for /autotask.
-    branch: feature/branch-name        # Required: Must be unique
-    priority: high                     # Optional: high, medium, low
-    depends_on: [other-task-id]        # Optional: List of task IDs to wait for
-    agent_hint: backend                # Optional: Prefer agents tagged with this
-    timeout: 30m                       # Optional: Max execution time
-    
+    branch: feature/branch-name # Required: Must be unique
+    priority: high # Optional: high, medium, low
+    depends_on: [other-task-id] # Optional: List of task IDs to wait for
+    agent_hint: backend # Optional: Prefer agents tagged with this
+    timeout: 30m # Optional: Max execution time
+
   - id: another-task
     prompt: "Simple single-line prompt"
     branch: feature/another
@@ -47,26 +47,26 @@ tasks:
 
 ### Top-Level Fields
 
-| Field | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `name` | Yes | - | Human-readable batch name, appears in reports |
-| `repo` | No | Current repo | Git repository URL |
-| `base_branch` | Yes | - | Branch to create features from |
-| `default_priority` | No | `medium` | Default for tasks without priority |
-| `max_parallel` | No | Agent count | Limit concurrent tasks |
-| `tasks` | Yes | - | List of task definitions |
+| Field              | Required | Default      | Description                                   |
+| ------------------ | -------- | ------------ | --------------------------------------------- |
+| `name`             | Yes      | -            | Human-readable batch name, appears in reports |
+| `repo`             | No       | Current repo | Git repository URL                            |
+| `base_branch`      | Yes      | -            | Branch to create features from                |
+| `default_priority` | No       | `medium`     | Default for tasks without priority            |
+| `max_parallel`     | No       | Agent count  | Limit concurrent tasks                        |
+| `tasks`            | Yes      | -            | List of task definitions                      |
 
 ### Task Fields
 
-| Field | Required | Default | Description |
-|-------|----------|---------|-------------|
-| `id` | Yes | - | Unique identifier, used in depends_on |
-| `prompt` | Yes | - | Task description for /autotask |
-| `branch` | Yes | - | Git branch name, must be unique |
-| `priority` | No | `default_priority` | Execution priority when queuing |
-| `depends_on` | No | `[]` | Task IDs that must complete first |
-| `agent_hint` | No | - | Prefer agents with matching tag |
-| `timeout` | No | `60m` | Maximum execution time |
+| Field        | Required | Default            | Description                           |
+| ------------ | -------- | ------------------ | ------------------------------------- |
+| `id`         | Yes      | -                  | Unique identifier, used in depends_on |
+| `prompt`     | Yes      | -                  | Task description for /autotask        |
+| `branch`     | Yes      | -                  | Git branch name, must be unique       |
+| `priority`   | No       | `default_priority` | Execution priority when queuing       |
+| `depends_on` | No       | `[]`               | Task IDs that must complete first     |
+| `agent_hint` | No       | -                  | Prefer agents with matching tag       |
+| `timeout`    | No       | `60m`              | Maximum execution time                |
 
 ## Examples
 
@@ -82,11 +82,11 @@ tasks:
   - id: dark-mode
     prompt: "Add dark mode toggle to settings page"
     branch: feature/dark-mode
-    
+
   - id: notifications
     prompt: "Implement push notification preferences"
     branch: feature/notifications
-    
+
   - id: export
     prompt: "Add CSV export for user data"
     branch: feature/csv-export
@@ -105,12 +105,12 @@ tasks:
     prompt: "Define TypeScript types for new auth system"
     branch: feature/auth-types
     priority: high
-    
+
   - id: auth-api
     prompt: "Implement auth API endpoints using new types"
     branch: feature/auth-api
     priority: high
-    
+
   - id: auth-ui
     prompt: "Build auth UI components"
     branch: feature/auth-ui
@@ -131,21 +131,21 @@ tasks:
     prompt: "Add user preferences table with migrations"
     branch: feature/prefs-schema
     priority: high
-    
+
   - id: api-tests
     prompt: "Add integration tests for existing API"
     branch: feature/api-tests
-    
+
   - id: ui-cleanup
     prompt: "Refactor settings page components"
     branch: refactor/settings-ui
-    
+
   # This waits for schema
   - id: preferences-api
     prompt: "Implement preferences CRUD endpoints"
     branch: feature/prefs-api
     depends_on: [database-schema]
-    
+
   # This waits for both api and ui work
   - id: preferences-ui
     prompt: "Build preferences UI with new endpoints"
@@ -169,13 +169,13 @@ tasks:
       Investigate session refresh logic.
       Add regression test.
     branch: fix/session-refresh-234
-    
+
   - id: fix-256
     prompt: |
       Fix issue #256: Search returns stale results.
       Check cache invalidation.
     branch: fix/search-cache-256
-    
+
   - id: fix-267
     prompt: |
       Fix issue #267: Mobile menu doesn't close.
@@ -203,6 +203,7 @@ Task prompts are passed directly to /autotask. Write them as you would for auton
 execution:
 
 **Good prompt:**
+
 ```yaml
 prompt: |
   Implement rate limiting for API endpoints.
@@ -214,11 +215,13 @@ prompt: |
 ```
 
 **Too vague:**
+
 ```yaml
 prompt: "Add rate limiting"
 ```
 
 **Too prescriptive:**
+
 ```yaml
 prompt: |
   Step 1: Open src/middleware/rateLimit.ts

@@ -9,6 +9,14 @@
     },
     "Sentry": {
       "url": "https://mcp.sentry.dev/mcp/growth-mastery/growth-mastery"
+    },
+    "oracle-oci-api": {
+      "command": "uvx",
+      "args": ["oracle.oci-api-mcp-server@latest"],
+      "env": {
+        "OCI_CONFIG_PROFILE": "DEFAULT",
+        "FASTMCP_LOG_LEVEL": "ERROR"
+      }
     }
   }
 }

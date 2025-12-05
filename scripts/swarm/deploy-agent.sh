@@ -74,10 +74,19 @@ ssh "$SSH_HOST" bash <<'OUTER_EOF'
 ACTUAL_USER=$(who am i | awk '{print $1}')
 WORKSPACE_PATH="/home/${ACTUAL_USER}/swarm-workspace/'$REPO_NAME'"
 
+# Get node and tsx paths BEFORE sudo
+NODE_PATH=$(which node)
+TSX_PATH=$(which tsx)
+
+echo "  → Node path: $NODE_PATH"
+echo "  → TSX path: $TSX_PATH"
+
 sudo bash <<EOF
 set -e
 
 # Create systemd service file
+# Note: We need to invoke tsx via node because tsx's shebang (#!/usr/bin/env node)
+# won't work in systemd without node being in PATH
 cat > /etc/systemd/system/swarm-agent-'$AGENT_NAME'.service <<SERVICE
 [Unit]
 Description=Swarm Agent - '$AGENT_NAME'
@@ -91,7 +100,7 @@ Environment="SWARM_AGENT_NAME='$AGENT_NAME'"
 Environment="SWARM_AGENT_PORT='$AGENT_PORT'"
 Environment="SWARM_WORKSPACE=${WORKSPACE_PATH}"
 Environment="NODE_ENV=production"
-ExecStart=/home/opc/.nvm/versions/node/v20.19.6/bin/npx tsx ${WORKSPACE_PATH}/scripts/swarm/agent-listener.ts
+ExecStart=${NODE_PATH} ${TSX_PATH} ${WORKSPACE_PATH}/scripts/swarm/agent-listener.ts
 Restart=always
 RestartSec=10
 StandardOutput=journal

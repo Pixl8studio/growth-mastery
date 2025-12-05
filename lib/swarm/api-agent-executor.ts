@@ -395,6 +395,11 @@ function executeTool(
                     cwd,
                     encoding: "utf-8",
                     maxBuffer: 10 * 1024 * 1024, // 10MB
+                    env: {
+                        ...process.env,
+                        SWARM_ISSUE_NUMBER: (global as any).__SWARM_ISSUE_NUMBER || "",
+                        SWARM_AGENT_NAME: (global as any).__SWARM_AGENT_NAME || "",
+                    },
                 });
                 return result;
             }
@@ -444,19 +449,45 @@ export async function executeTask(
     const startTime = Date.now();
 
     try {
+        // Set global context for bash tool
+        (global as any).__SWARM_ISSUE_NUMBER = request.task_id;
+        (global as any).__SWARM_AGENT_NAME = agentName;
+
         // Step 1: Deploy ai-coding-config
         await deployAICodingConfig(workspacePath);
 
         // Step 2: Build system prompt with all context
         const systemPrompt = buildSystemPrompt(workspacePath, agentName);
 
-        // Step 3: Build user prompt (the task)
-        const userPrompt = `/autotask ${request.task_id}
+        // Step 3: Build user prompt following /autotask workflow
+        const userPrompt = `Execute this task following the /autotask workflow from start to completion.
+
+**Task ID**: ${request.task_id}
+**Branch**: ${request.branch}
+**Base Branch**: ${request.base_branch}
 
 ${request.prompt}
 
-Branch: ${request.branch}
-Base: ${request.base_branch}`;
+## Execution Instructions
+
+Follow the complete /autotask workflow as defined in .claude/commands/autotask.md:
+
+1. **Task Preparation**: Understand requirements, post GitHub issue update (Checkpoint 1)
+2. **Worktree Setup**: Use /setup-environment command to create isolated worktree
+3. **Implementation**: Follow project standards, implement the solution
+4. **Validation**: Run tests, linting, fix any issues
+5. **Create PR**: Commit changes, push branch, create pull request
+6. **Bot Feedback**: Address any bot feedback autonomously
+7. **Completion**: Post final status to GitHub issue
+
+**GitHub Issue Integration**: Use environment variable SWARM_ISSUE_NUMBER=${request.task_id}
+
+Post progress updates to issue #${request.task_id} at each checkpoint using:
+\`\`\`bash
+.claude/helpers/github-issue-update.sh ${request.task_id} "<stage>" "<status>" "<message>"
+\`\`\`
+
+Work autonomously and deliver a PR-ready solution.`;
 
         // Step 4: Execute via Claude API
         const client = new Anthropic({

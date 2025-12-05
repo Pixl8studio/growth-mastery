@@ -63,3 +63,4 @@ docs/reference-design/
 
 # Sentry Config File
 .env.sentry-build-plugin
+.swarm/agents.yaml

@@ -1,0 +1,31 @@
+# Swarm Agents Configuration
+# Auto-generated from .env.local
+# DO NOT EDIT - Run scripts/swarm/generate-agents-config.sh to regenerate
+
+# Agent endpoints (default ports and paths for Claude Code agents)
+defaults:
+  port: 3000
+  status_endpoint: /api/swarm/status
+  execute_endpoint: /api/swarm/execute
+  health_check_interval: 30s
+  timeout: 300s
+
+# Remote agents
+agents:
+  - name: swarm-agent-1
+    host: 170.9.226.213
+    port: 3847
+    status_endpoint: /status
+    execute_endpoint: /execute
+    enabled: true
+  - name: swarm-agent-2
+    host: 170.9.237.208
+    port: 3847
+    status_endpoint: /status
+    execute_endpoint: /execute
+    enabled: true
+
+# Metadata
+generated_at: 2025-12-05T06:09:14Z
+generated_from: .env.local
+agent_count: 2

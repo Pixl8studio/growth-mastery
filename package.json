@@ -45,7 +45,11 @@
     "swarm:dry-run": "tsx scripts/swarm/orchestrator.ts --dry-run",
     "swarm:verbose": "tsx scripts/swarm/orchestrator.ts --verbose",
     "swarm:config": "scripts/swarm/generate-agents-config.sh",
-    "swarm:health": "scripts/swarm/swarm-health.sh"
+    "swarm:health": "scripts/swarm/swarm-health.sh",
+    "swarm:deploy": "scripts/swarm/deploy-agents.sh",
+    "swarm:tunnel": "scripts/swarm/tunnel-agents.sh start",
+    "swarm:tunnel:stop": "scripts/swarm/tunnel-agents.sh stop",
+    "swarm:tunnel:status": "scripts/swarm/tunnel-agents.sh status"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",

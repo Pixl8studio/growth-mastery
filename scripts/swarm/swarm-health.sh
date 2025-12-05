@@ -6,7 +6,14 @@
 
 set -e
 
-AGENTS_FILE="${HOME}/.swarm/agents.yaml"
+# Try project-level first, then global
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+AGENTS_FILE="$PROJECT_ROOT/.swarm/agents.yaml"
+
+if [[ ! -f "$AGENTS_FILE" ]]; then
+    AGENTS_FILE="${HOME}/.swarm/agents.yaml"
+fi
 
 # Colors
 RED='\033[0;31m'

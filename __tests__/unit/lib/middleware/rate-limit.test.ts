@@ -38,9 +38,8 @@ vi.mock("@vercel/kv", () => ({
 }));
 
 // Import after mocks are set up
-const { checkRateLimit, getRateLimitIdentifier } = await import(
-    "@/lib/middleware/rate-limit"
-);
+const { checkRateLimit, getRateLimitIdentifier } =
+    await import("@/lib/middleware/rate-limit");
 
 describe("lib/middleware/rate-limit", () => {
     beforeEach(() => {

@@ -43,11 +43,10 @@ export interface OAuthConnection {
 /**
  * OAuth connection with decrypted tokens (used in application code)
  */
-export interface OAuthConnectionWithTokens
-    extends Omit<
-        OAuthConnection,
-        "access_token_encrypted" | "refresh_token_encrypted"
-    > {
+export interface OAuthConnectionWithTokens extends Omit<
+    OAuthConnection,
+    "access_token_encrypted" | "refresh_token_encrypted"
+> {
     access_token: string;
     refresh_token: string | null;
 }

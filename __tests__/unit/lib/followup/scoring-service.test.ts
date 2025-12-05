@@ -26,9 +26,8 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 // Import after mocks are defined
-const { calculateIntentScore, recalculateIntentScore } = await import(
-    "@/lib/followup/scoring-service"
-);
+const { calculateIntentScore, recalculateIntentScore } =
+    await import("@/lib/followup/scoring-service");
 
 describe("Scoring Service", () => {
     beforeEach(() => {

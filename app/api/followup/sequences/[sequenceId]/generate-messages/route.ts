@@ -92,9 +92,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
         }
 
         // Generate messages dynamically using new service
-        const { generateDynamicSequence } = await import(
-            "@/lib/followup/message-generation-service"
-        );
+        const { generateDynamicSequence } =
+            await import("@/lib/followup/message-generation-service");
 
         const generationContext = {
             count: sequence.total_messages || 5,

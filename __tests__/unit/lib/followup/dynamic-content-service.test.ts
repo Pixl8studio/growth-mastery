@@ -53,9 +53,8 @@ vi.mock("@/lib/followup/story-library-service", () => ({
 }));
 
 // Import after mocks are defined
-const { injectDynamicContent, buildObjectionAwareMessage } = await import(
-    "@/lib/followup/dynamic-content-service"
-);
+const { injectDynamicContent, buildObjectionAwareMessage } =
+    await import("@/lib/followup/dynamic-content-service");
 
 describe("Dynamic Content Service", () => {
     const mockProspect: FollowupProspect = {
@@ -137,9 +136,8 @@ describe("Dynamic Content Service", () => {
         });
 
         it("removes placeholders when no stories available", async () => {
-            const { selectStoriesForProspect } = await import(
-                "@/lib/followup/content-selector-service"
-            );
+            const { selectStoriesForProspect } =
+                await import("@/lib/followup/content-selector-service");
             vi.mocked(selectStoriesForProspect).mockResolvedValueOnce({
                 success: false,
                 error: "No stories found",

@@ -378,8 +378,8 @@ The orchestrator will handle PR creation after completion.
             // Execute /autotask with the issue number
             // /autotask handles: git worktrees, code changes, commits, push, PR creation
             // Pass agent name via environment variable for swarm context awareness
-            // Use bypassPermissions for autonomous operation on remote agents
-            const command = `claude --debug --permission-mode bypassPermissions /autotask ${request.task_id}`;
+            // Use dangerously-skip-permissions for autonomous operation on remote agents
+            const command = `claude --debug --dangerously-skip-permissions /autotask ${request.task_id}`;
 
             logger.info(`Running: ${command}`);
             logger.info(`Swarm Agent: ${AGENT_NAME}`);

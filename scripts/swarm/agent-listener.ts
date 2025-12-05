@@ -398,12 +398,13 @@ Execute this autonomously as ${AGENT_NAME}.`;
             fs.writeFileSync(tempFile, fullPrompt);
 
             logger.info(
-                `Running: claude --dangerously-skip-permissions --print /autotask < ${tempFile}`
+                `Running: cat ${tempFile} | claude --dangerously-skip-permissions`
             );
 
             // Execute Claude Code CLI with /autotask in non-interactive mode
+            // Use stdin (not --print) to pass the prompt
             const result = execSync(
-                `claude --dangerously-skip-permissions --print /autotask < ${tempFile}`,
+                `cat ${tempFile} | claude --dangerously-skip-permissions`,
                 {
                     encoding: "utf8",
                     cwd: WORKSPACE_DIR,

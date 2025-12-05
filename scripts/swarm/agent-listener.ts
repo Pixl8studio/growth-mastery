@@ -304,7 +304,7 @@ const executor = new TaskExecutor();
 function sendJSON(
     res: http.ServerResponse,
     statusCode: number,
-    data: Record<string, unknown>
+    data: AgentStatus | TaskResult | Record<string, unknown>
 ) {
     res.writeHead(statusCode, { "Content-Type": "application/json" });
     res.end(JSON.stringify(data, null, 2));

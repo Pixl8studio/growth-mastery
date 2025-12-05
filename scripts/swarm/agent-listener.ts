@@ -372,18 +372,36 @@ The orchestrator will handle PR creation after completion.
     }
 
     private async runClaudeCode(request: TaskRequest): Promise<boolean> {
-        logger.info(`Executing /autotask for GitHub issue #${request.task_id}`);
+        logger.info(`Executing task for GitHub issue #${request.task_id}`);
 
         try {
-            // Execute /autotask with the issue number
-            // /autotask handles: git worktrees, code changes, commits, push, PR creation
-            // Pass agent name via environment variable for swarm context awareness
-            // Use dangerously-skip-permissions for autonomous operation on remote agents
-            const command = `claude --debug --dangerously-skip-permissions /autotask ${request.task_id}`;
+            // Reference the task prompt file that was written earlier
+            const taskFile = path.join(
+                WORKSPACE_DIR,
+                ".swarm",
+                `task-${request.task_id}-prompt.md`
+            );
 
-            logger.info(`Running: ${command}`);
+            // Build a simple prompt that references the task file and provides clear instructions
+            const fullPrompt = `Read the task details from ${taskFile} and execute it autonomously from description to PR-ready state.
+
+Follow the /autotask workflow:
+1. Create git worktree for branch ${request.branch} from ${request.base_branch}
+2. Implement the changes described in the task file
+3. Run validation (tests, linting, type-checking) and fix any issues
+4. Create well-structured commits
+5. Push branch to origin
+6. Create a pull request that closes issue #${request.task_id}
+
+This is being executed by ${AGENT_NAME} as part of a swarm execution.`;
+
+            // Use --print mode for non-interactive execution
+            const command = `claude --debug --dangerously-skip-permissions --print`;
+
+            logger.info(`Running Claude Code in non-interactive mode`);
             logger.info(`Swarm Agent: ${AGENT_NAME}`);
             logger.info(`Branch: ${request.branch}`);
+            logger.info(`Task file: ${taskFile}`);
             logger.info(`HOME env: ${process.env.HOME}`);
             logger.info(`PATH: ${process.env.PATH}`);
             logger.info(`CWD: ${WORKSPACE_DIR}`);
@@ -440,12 +458,13 @@ The orchestrator will handle PR creation after completion.
 
             // Use 'script' command to provide a pseudo-TTY for Claude Code
             // This is required because Claude Code uses Ink which needs raw mode
-            const scriptCommand = `script -q -c "${command}" /dev/null`;
+            // Pass the prompt via stdin using echo
+            const scriptCommand = `echo ${JSON.stringify(fullPrompt)} | script -q -c "${command}" /dev/null`;
 
             const result = execSync(scriptCommand, {
                 encoding: "utf8",
                 cwd: WORKSPACE_DIR,
-                stdio: ["ignore", "pipe", "pipe"],
+                stdio: ["pipe", "pipe", "pipe"],
                 timeout: MAX_TASK_TIMEOUT,
                 env: {
                     ...envWithoutApiKey,
@@ -454,9 +473,10 @@ The orchestrator will handle PR creation after completion.
                     SWARM_ISSUE_NUMBER: request.task_id,
                     TERM: "xterm-256color", // Provide TERM for script command
                 },
+                shell: "/bin/bash",
             });
 
-            logger.info(`/autotask completed successfully`);
+            logger.info(`Task completed successfully`);
             logger.info(result.toString());
 
             return true;

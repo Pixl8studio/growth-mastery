@@ -26,6 +26,8 @@ const eslintConfig = [
             "resources/**", // Local resources
             "docs/reference-design/**", // Reference design from Lovable
             "OLD-APPDOCS-ONLY-REFERENCE/**", // Old reference docs that shouldn't be linted or compiled
+            ".gitworktrees/**", // Git worktrees - separate branches
+            ".swarm/**", // Swarm temporary files
         ],
     },
     ...compat.extends("next/core-web-vitals", "next/typescript"),

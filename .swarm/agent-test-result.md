@@ -22,8 +22,8 @@
 
 - [x] Execute tasks autonomously
 - [x] Access environment variables
-- [x] Make commits (pending)
-- [x] Create PRs (pending)
+- [x] Make commits
+- [x] Create PRs
 
 ## Notes
 

@@ -119,6 +119,124 @@ class Logger {
 const logger = new Logger();
 
 // ============================================================================
+// Environment Validator
+// ============================================================================
+
+interface EnvironmentStatus {
+    envFile: boolean;
+    nodeModules: boolean;
+    gitConfig: boolean;
+    claudeCommands: number;
+    cursorRules: number;
+    issues: string[];
+    warnings: string[];
+}
+
+class EnvironmentValidator {
+    validate(workspaceDir: string): EnvironmentStatus {
+        const status: EnvironmentStatus = {
+            envFile: false,
+            nodeModules: false,
+            gitConfig: false,
+            claudeCommands: 0,
+            cursorRules: 0,
+            issues: [],
+            warnings: [],
+        };
+
+        // Check .env.local
+        const envPath = path.join(workspaceDir, ".env.local");
+        status.envFile = fs.existsSync(envPath);
+        if (!status.envFile) {
+            status.warnings.push("No .env.local file found");
+        }
+
+        // Check node_modules
+        const nodeModulesPath = path.join(workspaceDir, "node_modules");
+        status.nodeModules = fs.existsSync(nodeModulesPath);
+        if (!status.nodeModules) {
+            status.issues.push(
+                "node_modules not found - dependencies may not be installed"
+            );
+        }
+
+        // Check git config
+        const gitConfigPath = path.join(workspaceDir, ".git", "config");
+        status.gitConfig = fs.existsSync(gitConfigPath);
+        if (!status.gitConfig) {
+            status.issues.push("Git not initialized");
+        }
+
+        // Count Claude commands
+        const claudeCommandsPath = path.join(workspaceDir, ".claude", "commands");
+        if (fs.existsSync(claudeCommandsPath)) {
+            status.claudeCommands = fs
+                .readdirSync(claudeCommandsPath)
+                .filter((f) => f.endsWith(".md")).length;
+        } else {
+            status.warnings.push(".claude/commands directory not found");
+        }
+
+        // Count Cursor rules
+        const cursorRulesPath = path.join(workspaceDir, ".cursor", "rules");
+        if (fs.existsSync(cursorRulesPath)) {
+            const countRules = (dir: string): number => {
+                let count = 0;
+                const files = fs.readdirSync(dir);
+                for (const file of files) {
+                    const fullPath = path.join(dir, file);
+                    const stat = fs.statSync(fullPath);
+                    if (stat.isDirectory()) {
+                        count += countRules(fullPath);
+                    } else if (file.endsWith(".mdc")) {
+                        count++;
+                    }
+                }
+                return count;
+            };
+            status.cursorRules = countRules(cursorRulesPath);
+        } else {
+            status.warnings.push(".cursor/rules directory not found");
+        }
+
+        return status;
+    }
+
+    formatReport(status: EnvironmentStatus): string {
+        const lines: string[] = [];
+
+        lines.push("**Environment Status:**");
+        lines.push(
+            `- ${status.envFile ? "✅" : "⚠️"} .env.local ${status.envFile ? "exists" : "missing"}`
+        );
+        lines.push(
+            `- ${status.nodeModules ? "✅" : "❌"} node_modules ${status.nodeModules ? "installed" : "missing"}`
+        );
+        lines.push(
+            `- ${status.gitConfig ? "✅" : "❌"} Git ${status.gitConfig ? "configured" : "not initialized"}`
+        );
+        lines.push(`- ✅ ${status.claudeCommands} Claude commands available`);
+        lines.push(`- ✅ ${status.cursorRules} Cursor rules loaded`);
+
+        if (status.issues.length > 0) {
+            lines.push("");
+            lines.push("**❌ Issues:**");
+            status.issues.forEach((issue) => lines.push(`- ${issue}`));
+        }
+
+        if (status.warnings.length > 0) {
+            lines.push("");
+            lines.push("**⚠️ Warnings:**");
+            status.warnings.forEach((warning) => lines.push(`- ${warning}`));
+        }
+
+        return lines.join("\n");
+    }
+}
+
+const envValidator = new EnvironmentValidator();
+
+// ============================================================================
 // Task Executor
 // ============================================================================
 
@@ -134,6 +252,16 @@ class TaskExecutor {
             // Step 1: Ensure we're in the workspace directory
             process.chdir(WORKSPACE_DIR);
             logger.info(`Working directory: ${WORKSPACE_DIR}`);
+
+            // Step 2: Validate environment and post to GitHub
+            const envStatus = envValidator.validate(WORKSPACE_DIR);
+            const envReport = envValidator.formatReport(envStatus);
+
+            logger.info("Environment validation:");
+            logger.info(envReport);
+
+            // Post environment status to GitHub issue
+            await this.postEnvironmentStatus(request.task_id, envReport);
 
             // Step 2: Checkout base branch and pull latest
             logger.info(`Checking out base branch: ${request.base_branch}`);
@@ -265,6 +393,52 @@ The orchestrator will handle PR creation after completion.
                 logger.error(`Output: ${(error as any).stdout}`);
                 logger.error(`Error: ${(error as any).stderr}`);
             }
+            return false;
+        }
+    }
+
+    private async postEnvironmentStatus(
+        issueNumber: string,
+        envReport: string
+    ): Promise<void> {
+        try {
+            // Check if gh CLI is available
+            if (!this.isGhAvailable()) {
+                logger.info("GitHub CLI not available, skipping environment report");
+                return;
+            }
+
+            const comment = `🤖 **Agent Environment Check** - ${AGENT_NAME}
+
+${envReport}
+
+---
+*Agent ready: ${new Date().toISOString()}*`;
+
+            const escapedComment = comment
+                .replace(/"/g, '\\"')
+                .replace(/\$/g, "\\$")
+                .replace(/`/g, "\\`");
+
+            execSync(`gh issue comment ${issueNumber} --body "${escapedComment}"`, {
+                stdio: "pipe",
+                cwd: WORKSPACE_DIR,
+            });
+
+            logger.info(`✓ Posted environment status to issue #${issueNumber}`);
+        } catch (error) {
+            logger.error(
+                `Failed to post environment status: ${error instanceof Error ? error.message : String(error)}`
+            );
+            // Don't fail the task if we can't post to GitHub
+        }
+    }
+
+    private isGhAvailable(): boolean {
+        try {
+            execSync("command -v gh", { stdio: "pipe" });
+            return true;
+        } catch {
             return false;
         }
     }

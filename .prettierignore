@@ -28,3 +28,6 @@ coverage
 resources
 docs/reference-design
 
+# Agent test artifacts
+.swarm
+

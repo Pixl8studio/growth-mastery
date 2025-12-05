@@ -198,18 +198,13 @@ The orchestrator will handle PR creation after completion.
 
             logger.info(`Task prompt saved to: ${taskFile}`);
 
-            // Step 5: Execute the task using Claude Code
-            // For now, we'll simulate this by creating a marker file
-            // In production, this would invoke Claude Code with the prompt
+            // Step 5: Execute /autotask - handles everything autonomously
+            // (creates worktree, makes changes, commits, pushes, creates PR)
             const success = await this.runClaudeCode(request);
 
             if (!success) {
-                throw new Error("Claude Code execution failed");
+                throw new Error("/autotask execution failed");
             }
-
-            // Step 6: Push the branch
-            logger.info("Pushing branch to remote");
-            this.execCommand(`git push -u origin ${request.branch}`);
 
             const duration = Date.now() - startTime;
             logger.success(
@@ -235,43 +230,41 @@ The orchestrator will handle PR creation after completion.
     }
 
     private async runClaudeCode(request: TaskRequest): Promise<boolean> {
-        logger.info("Executing task with Claude Code");
+        logger.info(`Executing /autotask for GitHub issue #${request.task_id}`);
 
-        // For the initial implementation, we'll create a marker that indicates
-        // the task is ready for execution. In production, this would:
-        // 1. Start a Claude Code session
-        // 2. Feed it the prompt from the file
-        // 3. Monitor execution
-        // 4. Wait for completion
-        // 5. Verify commits were made
-
-        // Placeholder: Create a marker file
-        const markerFile = path.join(
-            WORKSPACE_DIR,
-            ".swarm",
-            `task-${request.task_id}-completed.md`
-        );
-
-        fs.writeFileSync(
-            markerFile,
-            `Task ${request.task_id} was processed by ${AGENT_NAME}\nCompleted at: ${new Date().toISOString()}\n`
-        );
-
-        // Commit the changes
         try {
-            this.execCommand(`git add .`);
-            this.execCommand(
-                `git commit -m "feat: Complete task ${request.task_id}
+            // Execute /autotask with the issue number
+            // /autotask handles: git worktrees, code changes, commits, push, PR creation
+            // Pass agent name via environment variable for swarm context awareness
+            const command = `claude /autotask ${request.task_id}`;
 
-${request.prompt.split("\n").slice(0, 3).join("\n")}
+            logger.info(`Running: ${command}`);
+            logger.info(`Swarm Agent: ${AGENT_NAME}`);
+            logger.info(`Branch: ${request.branch}`);
 
-🤖 Executed by ${AGENT_NAME}
-Closes #${request.task_id}"`
-            );
+            const result = execSync(command, {
+                encoding: "utf8",
+                cwd: WORKSPACE_DIR,
+                stdio: ["pipe", "pipe", "pipe"],
+                timeout: MAX_TASK_TIMEOUT,
+                env: {
+                    ...process.env,
+                    SWARM_AGENT_NAME: AGENT_NAME,
+                    SWARM_BRANCH: request.branch,
+                    SWARM_ISSUE_NUMBER: request.task_id,
+                },
+            });
+
+            logger.info(`/autotask completed successfully`);
+            logger.info(result.toString());
 
             return true;
         } catch (error) {
-            logger.error(`Git commit failed: ${error}`);
+            logger.error(`/autotask failed: ${error}`);
+            if (error instanceof Error && "stdout" in error) {
+                logger.error(`Output: ${(error as any).stdout}`);
+                logger.error(`Error: ${(error as any).stderr}`);
+            }
             return false;
         }
     }
@@ -301,11 +294,7 @@ const executor = new TaskExecutor();
 // HTTP Server
 // ============================================================================
 
-function sendJSON(
-    res: http.ServerResponse,
-    statusCode: number,
-    data: Record<string, unknown>
-) {
+function sendJSON(res: http.ServerResponse, statusCode: number, data: any) {
     res.writeHead(statusCode, { "Content-Type": "application/json" });
     res.end(JSON.stringify(data, null, 2));
 }

@@ -21,19 +21,86 @@ Pull request ready for review, with all implementation, validation, and bot feed
 
 ```
 /autotask "task description"
+/autotask 123  # GitHub issue number
 ```
 
 ## Execution Flow
 
 Read @rules/git-worktree-task.mdc for comprehensive autonomous workflow guidance.
 
+<github-issue-integration>
+**IMPORTANT**: When executing within a swarm context or when a GitHub issue number is provided, maintain continuous communication with the GitHub issue throughout execution.
+
+Issue Number Detection:
+
+- If first argument is a number, treat it as GitHub issue number
+- If task description contains "Issue #XXX" or "Original issue: #XXX", extract issue
+  number
+- Environment variable SWARM_ISSUE_NUMBER is set by swarm agent-listener
+
+Helper Script: Use `.claude/helpers/github-issue-update.sh` for all GitHub updates:
+
+```bash
+.claude/helpers/github-issue-update.sh <issue-number> <stage> <status> <message>
+```
+
+The helper automatically includes agent name, branch, and timestamp. It fails gracefully
+if gh CLI is unavailable or issue doesn't exist.
+
+Progress Checkpoints:
+
+1. **Task Start** (after task preparation): Post comment with execution plan
+2. **Implementation Progress** (after worktree setup): Post what's being implemented
+3. **Validation Status** (after local validation): Post test/lint results
+4. **PR Created** (after PR creation): Post link to PR
+5. **Completion** (after bot feedback): Post final status
+
+Example Usage:
+
+```bash
+ISSUE_NUM="${SWARM_ISSUE_NUMBER:-129}"
+
+# Checkpoint 1: Task Start
+.claude/helpers/github-issue-update.sh "$ISSUE_NUM" "Task Start" "In Progress" \
+  "Setting up worktree and loading project standards. Expected completion: ~15-20 minutes."
+
+# Checkpoint 2: Implementation
+.claude/helpers/github-issue-update.sh "$ISSUE_NUM" "Implementation" "In Progress" \
+  "Environment ready. Implementing feature X following project patterns."
+
+# Checkpoint 3: Validation
+.claude/helpers/github-issue-update.sh "$ISSUE_NUM" "Validation" "Completed" \
+  "✓ All tests passing (24/24)
+✓ Linting clean
+✓ Code review addressed"
+
+# Checkpoint 4: PR Created
+.claude/helpers/github-issue-update.sh "$ISSUE_NUM" "PR Created" "Ready for Review" \
+  "Pull request created: https://github.com/org/repo/pull/456
+All checks passing, ready for human review."
+
+# Checkpoint 5: Completion
+.claude/helpers/github-issue-update.sh "$ISSUE_NUM" "Task Complete" "Completed" \
+  "✅ Task completed successfully
+📝 PR: #456
+🔍 All bot feedback addressed
+⏭️ Ready to merge after approval"
+```
+
+The helper gracefully handles errors and never blocks execution.
+</github-issue-integration>
+
 <task-preparation>
 Ensure task clarity before implementation. If the task description is unclear or ambiguous, use /create-prompt to ask clarifying questions and create a structured prompt. If the task is clear and unambiguous, proceed directly to implementation.
+
+**GitHub Update (Checkpoint 1)**: Post task start comment with execution plan.
 </task-preparation>
 
 <worktree-setup>
 Create isolated development environment using /setup-environment. The command auto-detects context (worktree vs new machine) and adapts validation appropriately.
-</worktree-setup>
+
+**GitHub Update (Checkpoint 2)**: Post implementation progress comment after environment
+is ready. </worktree-setup>
 
 <autonomous-execution>
 Implement the solution following project patterns and standards. Available agents:
@@ -80,13 +147,18 @@ Full validation: Comprehensive test suite, multiple agent reviews, security scan
 
 Principle: Validation intensity should match task risk. Git hooks handle formatting,
 linting, and tests. Add extra validation only when risk justifies it.
-</validation-and-review>
+
+**GitHub Update (Checkpoint 3)**: Post validation results - test pass/fail, linting
+status, code review findings. </validation-and-review>
 
 <create-pr>
 Deliver a well-documented pull request targeting the `development` branch with commits following .cursor/rules/git-commit-message.mdc.
 
 Use `gh pr create --base development` to ensure PRs target the correct base branch for
 this project.
+
+**GitHub Update (Checkpoint 4)**: Post PR link and summary immediately after PR
+creation.
 
 PR description must include:
 
@@ -122,7 +194,10 @@ Fix what's valuable (security issues, real bugs, good suggestions). Reject what'
 (use WONTFIX with brief explanation for context-missing or incorrect feedback). Trust
 your judgment on what matters.
 
-Iterate on bot feedback until critical issues are resolved. </bot-feedback-loop>
+Iterate on bot feedback until critical issues are resolved.
+
+**GitHub Update (Checkpoint 5)**: Post completion status after addressing bot feedback,
+include link to PR and next steps. </bot-feedback-loop>
 
 <completion>
 Provide a summary scaled to task complexity:

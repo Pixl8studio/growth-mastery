@@ -1076,10 +1076,104 @@ export class SwarmOrchestrator {
     }
 
     private async executeTasks(manifest: WorkManifest, state: SwarmState) {
-        this.logger.info(
-            `Executing ${manifest.tasks.length} tasks in local sequential mode`
+        const agentCount = this.agentPool.getHealthyAgentCount();
+        const useRemote = !this.options.local && agentCount > 0;
+
+        if (useRemote) {
+            this.logger.info(
+                `Executing ${manifest.tasks.length} tasks in PARALLEL mode across ${agentCount} agents`
+            );
+            await this.executeTasksParallel(manifest, state);
+        } else {
+            this.logger.info(
+                `Executing ${manifest.tasks.length} tasks in sequential mode (local)`
+            );
+            await this.executeTasksSequential(manifest, state);
+        }
+    }
+
+    private async executeTasksParallel(manifest: WorkManifest, state: SwarmState) {
+        // Create task queue with all pending tasks
+        const taskQueue: Task[] = manifest.tasks.filter(
+            (task) => state.tasks[task.id]?.status !== "completed"
         );
 
+        // Track active tasks: Map<task_id, Promise>
+        const activeTasks = new Map<string, Promise<void>>();
+
+        // Process queue until all tasks complete
+        while (taskQueue.length > 0 || activeTasks.size > 0) {
+            // Find tasks ready to execute (dependencies met)
+            const readyTasks = taskQueue.filter((task) => {
+                if (state.tasks[task.id]?.status === "completed") return false;
+
+                if (task.depends_on && task.depends_on.length > 0) {
+                    const unmetDeps = task.depends_on.filter(
+                        (depId) => state.tasks[depId]?.status !== "completed"
+                    );
+                    return unmetDeps.length === 0;
+                }
+
+                return true; // No dependencies
+            });
+
+            // Assign ready tasks to available agents
+            for (const task of readyTasks) {
+                if (activeTasks.has(task.id)) continue; // Already running
+
+                const agent = await this.agentPool.getAvailableAgent();
+                if (!agent) break; // No agents available, wait
+
+                // Remove from queue
+                const index = taskQueue.indexOf(task);
+                if (index > -1) taskQueue.splice(index, 1);
+
+                // Start task execution (don't await - run in parallel)
+                const taskPromise = this.executeTaskOnAgent(
+                    task,
+                    agent,
+                    state,
+                    manifest.base_branch
+                ).then(() => {
+                    // Task completed, remove from active
+                    activeTasks.delete(task.id);
+                    this.logger.info(
+                        `Progress: ${this.getCompletedCount(state)}/${manifest.tasks.length} tasks completed`
+                    );
+                });
+
+                activeTasks.set(task.id, taskPromise);
+            }
+
+            // Wait a bit before checking again
+            if (activeTasks.size > 0) {
+                await Promise.race(activeTasks.values());
+            } else if (taskQueue.length > 0) {
+                // Tasks in queue but none ready (blocked on dependencies)
+                await new Promise((resolve) => setTimeout(resolve, 2000));
+            }
+        }
+    }
+
+    private async executeTaskOnAgent(
+        task: Task,
+        agent: AgentConfig,
+        state: SwarmState,
+        baseBranch: string
+    ): Promise<void> {
+        const success = await this.executor.executeTask(
+            task,
+            state,
+            baseBranch,
+            true // useRemote
+        );
+
+        if (!success) {
+            this.logger.warning(`Task ${task.id} failed on ${agent.name}`);
+        }
+    }
+
+    private async executeTasksSequential(manifest: WorkManifest, state: SwarmState) {
         for (const task of manifest.tasks) {
             // Check if task already completed
             if (state.tasks[task.id]?.status === "completed") {
@@ -1117,7 +1211,7 @@ export class SwarmOrchestrator {
                 task,
                 state,
                 manifest.base_branch,
-                !this.options.local // useRemote
+                false // local execution
             );
 
             if (!success) {

@@ -21,6 +21,7 @@ export default defineConfig({
             "**/node_modules/**",
             "**/dist/**",
             "**/.gitworktrees/**",
+            ".gitworktrees/**",
             // Exclude E2E tests from vitest - they spawn browser processes
             // Run these separately with: pnpm test:e2e
             "**/__tests__/e2e/**",

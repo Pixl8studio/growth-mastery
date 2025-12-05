@@ -79,9 +79,13 @@ function findTestFiles() {
   for (const dir of testDirs) {
     if (!fs.existsSync(dir)) continue;
 
-    const files = execSync(`find ${dir} -type f \\( -name "*.test.ts" -o -name "*.test.tsx" -o -name "*.spec.ts" \\)`, {
-      encoding: "utf8",
-    })
+    // Exclude .gitworktrees and other non-main-repo directories
+    const files = execSync(
+      `find ${dir} -type f \\( -name "*.test.ts" -o -name "*.test.tsx" -o -name "*.spec.ts" \\) ! -path "*/.gitworktrees/*" ! -path "*/node_modules/*"`,
+      {
+        encoding: "utf8",
+      }
+    )
       .trim()
       .split("\n")
       .filter(Boolean);

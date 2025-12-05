@@ -1,1 +1,1 @@
-../.claude/commands/ai-coding-config.md
+../../.claude/commands/ai-coding-config.md

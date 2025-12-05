@@ -1,6 +1,6 @@
 ---
 description:
-  Execute complete development task autonomously from description to PR-ready state
+  "Execute complete development task autonomously from description to PR-ready state"
 ---
 
 # /autotask - Autonomous Task Execution
@@ -152,10 +152,7 @@ linting, and tests. Add extra validation only when risk justifies it.
 status, code review findings. </validation-and-review>
 
 <create-pr>
-Deliver a well-documented pull request targeting the `development` branch with commits following .cursor/rules/git-commit-message.mdc.
-
-Use `gh pr create --base development` to ensure PRs target the correct base branch for
-this project.
+Deliver a well-documented pull request with commits following .cursor/rules/git-commit-message.mdc.
 
 **GitHub Update (Checkpoint 4)**: Post PR link and summary immediately after PR
 creation.

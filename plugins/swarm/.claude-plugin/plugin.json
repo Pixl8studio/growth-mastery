@@ -1,0 +1,9 @@
+{
+  "name": "swarm",
+  "description": "Distributed task execution across multiple agents - parallel development, work manifests, remote agent orchestration",
+  "version": "1.0.0",
+  "author": {
+    "name": "TechNickAI",
+    "url": "https://github.com/TechNickAI"
+  }
+}

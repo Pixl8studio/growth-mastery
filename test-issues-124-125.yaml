@@ -1,0 +1,45 @@
+name: "Test Run - Issues #124 and #125"
+base_branch: development
+default_priority: medium
+max_parallel: 2
+
+tasks:
+  - id: "124"
+    branch: "feature/readme-comment-124"
+    priority: high
+    prompt: |
+      ## Task: Add Comment to README (#124)
+
+      Add an inspirational comment to the bottom of the README.md file in the root directory.
+
+      Requirements:
+      - Add the comment to the very end of the README.md file
+      - Make it inspirational and uplifting
+      - Keep it concise (2-3 sentences)
+      - Use proper markdown formatting
+      - Ensure there's proper spacing before the new comment
+
+      After making the changes:
+      1. Verify the README still renders correctly
+      2. Create a commit with a clear message
+      3. Push the changes to the branch
+
+  - id: "125"
+    branch: "feature/readme-comment-125"
+    priority: high
+    prompt: |
+      ## Task: Add Comment to README (#125)
+
+      Add a motivational comment to the bottom of the README.md file in the root directory.
+
+      Requirements:
+      - Add the comment to the very end of the README.md file
+      - Make it motivational and encouraging
+      - Keep it concise (2-3 sentences)
+      - Use proper markdown formatting
+      - Ensure there's proper spacing before the new comment
+
+      After making the changes:
+      1. Verify the README still renders correctly
+      2. Create a commit with a clear message
+      3. Push the changes to the branch

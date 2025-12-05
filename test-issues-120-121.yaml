@@ -1,0 +1,32 @@
+# Swarm Work Manifest - Test Run Issues #120-#121
+# Auto-generated from GitHub issues
+# Simple README update tasks for testing swarm execution
+
+name: "Test Run - Issues #120 and #121"
+base_branch: development
+
+tasks:
+  - id: "120"
+    prompt: |
+      Issue #120: Update and add a loving comment to the bottom of the readme.md file in the root directory.
+
+      Add a loving, heartfelt comment at the bottom of the README.md file.
+      Make it genuine and warm.
+
+      Original issue: https://github.com/lawl3ss/Growth-Mastery/issues/120
+    branch: feature/readme-loving-comment-120
+    priority: medium
+
+  - id: "121"
+    prompt: |
+      Issue #121: Update and add a funny comment to the bottom of the readme.md file in the root directory.
+
+      Add a funny, humorous comment at the bottom of the README.md file.
+      Make it lighthearted and entertaining.
+
+      This task depends on issue #120 being completed first.
+
+      Original issue: https://github.com/lawl3ss/Growth-Mastery/issues/121
+    branch: feature/readme-funny-comment-121
+    priority: medium
+    depends_on: ["120"]

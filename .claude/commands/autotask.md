@@ -83,7 +83,10 @@ linting, and tests. Add extra validation only when risk justifies it.
 </validation-and-review>
 
 <create-pr>
-Deliver a well-documented pull request with commits following .cursor/rules/git-commit-message.mdc.
+Deliver a well-documented pull request targeting the `development` branch with commits following .cursor/rules/git-commit-message.mdc.
+
+Use `gh pr create --base development` to ensure PRs target the correct base branch for
+this project.
 
 PR description must include:
 

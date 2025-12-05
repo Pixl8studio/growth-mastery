@@ -1,0 +1,37 @@
+# Test Swarm - Single Issue #109
+# Testing swarm orchestrator with first issue only
+
+name: "Test Run - Issue #109"
+base_branch: development
+
+tasks:
+  - id: "109"
+    prompt: |
+      Issue #109: Test Coverage 1/10: Fix Component Tests - UI & Core
+
+      Fix failing tests in core UI and component modules to establish a stable test foundation.
+
+      ## Tasks
+      - Fix 21 tests in `__tests__/unit/components/ui/`
+      - Fix 25 tests in `__tests__/unit/components/funnel/`
+      - Fix 26 tests in `__tests__/unit/components/marketing/`
+
+      ## Common Issues to Fix
+      1. Mock `cn` function from `@/lib/utils` - ensure mock returns className argument
+      2. Stub `scrollIntoView` on `Element.prototype` (jsdom limitation)
+      3. Handle `hasPointerCapture`/`setPointerCapture` for Radix UI components
+      4. Fix async state updates with proper `waitFor()` usage
+
+      ## Verification
+      ```bash
+      pnpm vitest run __tests__/unit/components/ui/
+      pnpm vitest run __tests__/unit/components/funnel/
+      pnpm vitest run __tests__/unit/components/marketing/
+      ```
+
+      ## Reference
+      - See `.swarm/test-standards.md` for common fix patterns
+
+      Original issue: https://github.com/lawl3ss/growth-mastery/issues/109
+    branch: fix/tests-components-core-109
+    priority: high

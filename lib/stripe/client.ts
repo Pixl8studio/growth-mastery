@@ -20,7 +20,7 @@ export function getStripeClient(): Stripe {
             );
         }
         stripeInstance = new Stripe(env.STRIPE_SECRET_KEY, {
-            apiVersion: "2025-10-29.clover",
+            apiVersion: "2025-09-30.clover",
             typescript: true,
         });
     }

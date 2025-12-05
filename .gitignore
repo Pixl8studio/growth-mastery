@@ -45,6 +45,12 @@ next-env.d.ts
 *~
 .DS_Store
 
+# Git worktrees (separate branch checkouts)
+.gitworktrees/
+
+# Swarm temporary files
+.swarm/
+
 # Debug
 .pnpm-debug.log
 
@@ -63,3 +69,4 @@ docs/reference-design/
 
 # Sentry Config File
 .env.sentry-build-plugin
+.swarm/agents.yaml

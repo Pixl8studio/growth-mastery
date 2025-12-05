@@ -28,6 +28,8 @@
     "supabase/functions",
     "docs/reference-design",
     "OLD-APPDOCS-ONLY-REFERENCE",
-    "resources"
+    "resources",
+    ".gitworktrees/**/*",
+    ".swarm/**/*"
   ]
 }

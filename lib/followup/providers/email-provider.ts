@@ -240,14 +240,79 @@ export class SendGridEmailProvider implements EmailProvider {
  * Get configured email provider.
  *
  * Returns appropriate provider based on agent configuration and environment.
- * Priority: Gmail (if connected) > SendGrid (if API key set) > Console (dev mode)
+ * Priority: Mailgun (if domain configured) > Gmail (if connected) > SendGrid (if API key set) > Console (dev mode)
  */
-export async function getEmailProvider(agentConfigId?: string): Promise<EmailProvider> {
+export async function getEmailProvider(
+    agentConfigId?: string,
+    funnelProjectId?: string
+): Promise<EmailProvider> {
+    const { createClient } = await import("@/lib/supabase/server");
+    const supabase = await createClient();
+
+    // First, check for Mailgun domain (highest priority)
+    const mailgunApiKey = process.env.MAILGUN_API_KEY;
+    if (mailgunApiKey) {
+        try {
+            // Get user ID from agent config or auth
+            let userId: string | null = null;
+
+            if (agentConfigId) {
+                const { data: config } = await supabase
+                    .from("followup_agent_configs")
+                    .select("user_id")
+                    .eq("id", agentConfigId)
+                    .single();
+                userId = config?.user_id || null;
+            }
+
+            if (!userId) {
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
+                userId = user?.id || null;
+            }
+
+            if (userId) {
+                // Check for funnel-specific domain first, then account-wide
+                const { data: domains } = await supabase
+                    .from("email_domains")
+                    .select("*")
+                    .eq("user_id", userId)
+                    .eq("verification_status", "verified")
+                    .eq("is_active", true)
+                    .or(
+                        funnelProjectId
+                            ? `funnel_project_id.eq.${funnelProjectId},funnel_project_id.is.null`
+                            : "funnel_project_id.is.null"
+                    )
+                    .order("funnel_project_id", { ascending: false }) // Funnel-specific first
+                    .limit(1);
+
+                if (domains && domains.length > 0) {
+                    const domain = domains[0];
+                    logger.info(
+                        { domain: domain.full_domain, funnelProjectId },
+                        "📧 Using Mailgun email provider"
+                    );
+                    const { MailgunEmailProvider } = await import("./mailgun-provider");
+                    const region = (process.env.MAILGUN_REGION || "us") as "us" | "eu";
+                    return new MailgunEmailProvider(
+                        mailgunApiKey,
+                        domain.full_domain,
+                        region
+                    );
+                }
+            }
+        } catch (error) {
+            logger.error(
+                { error },
+                "❌ Failed to check for Mailgun domain, falling back"
+            );
+        }
+    }
+
     // If agent config provided, check for Gmail connection
     if (agentConfigId) {
-        const { createClient } = await import("@/lib/supabase/server");
-        const supabase = await createClient();
-
         const { data: config } = await supabase
             .from("followup_agent_configs")
             .select("email_provider_type, gmail_user_email")

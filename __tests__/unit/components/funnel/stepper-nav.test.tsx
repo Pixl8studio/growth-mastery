@@ -1,0 +1,91 @@
+/**
+ * StepperNav Component Tests
+ * Tests sidebar navigation with steps and progress
+ */
+
+import { describe, it, expect, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { StepperNav } from "@/components/funnel/stepper-nav";
+
+// Mock dependencies
+vi.mock("next/navigation", () => ({
+    usePathname: () => "/funnel-builder/test/step/1",
+}));
+
+vi.mock("@/app/funnel-builder/master-steps-config", () => ({
+    MASTER_STEPS: [
+        { id: 1, name: "Business Context", subSteps: [1] },
+        { id: 2, name: "Define Offer", subSteps: [2] },
+    ],
+    getMasterStepForSubStep: vi.fn(() => ({ id: 1, name: "Business Context" })),
+    calculateMasterStepCompletion: vi.fn(() => ({
+        isCompleted: false,
+        completedSubSteps: 0,
+        totalSubSteps: 1,
+    })),
+}));
+
+describe("StepperNav", () => {
+    const defaultProps = {
+        projectId: "test-project-123",
+        currentStep: 1,
+    };
+
+    it("should render overall progress", () => {
+        render(<StepperNav {...defaultProps} />);
+
+        expect(screen.getByText("Overall Progress")).toBeInTheDocument();
+    });
+
+    it("should display completion percentage", () => {
+        render(<StepperNav {...defaultProps} completedSteps={[1, 2]} />);
+
+        expect(screen.getByText(/14%/)).toBeInTheDocument(); // 2/14 steps
+    });
+
+    it("should render step navigation", () => {
+        render(<StepperNav {...defaultProps} />);
+
+        expect(screen.getByText("Context")).toBeInTheDocument();
+        expect(screen.getByText("Define Offer")).toBeInTheDocument();
+    });
+
+    it("should highlight current step", () => {
+        render(<StepperNav {...defaultProps} currentStep={1} />);
+
+        const contextStep = screen.getByText("Context");
+        const link = contextStep.closest("a");
+        expect(link).toHaveClass("bg-primary/10");
+    });
+
+    it("should show completed steps", () => {
+        render(<StepperNav {...defaultProps} completedSteps={[1]} />);
+
+        const completedIcon = document.querySelector(".text-primary");
+        expect(completedIcon).toBeInTheDocument();
+    });
+
+    it("should render with custom className", () => {
+        const { container } = render(
+            <StepperNav {...defaultProps} className="custom-class" />
+        );
+
+        expect(container.firstChild).toHaveClass("custom-class");
+    });
+
+    it("should display step descriptions", () => {
+        render(<StepperNav {...defaultProps} />);
+
+        expect(screen.getByText("Business profile setup")).toBeInTheDocument();
+    });
+
+    it("should render correct link hrefs", () => {
+        render(<StepperNav {...defaultProps} />);
+
+        const contextLink = screen.getByText("Context").closest("a");
+        expect(contextLink).toHaveAttribute(
+            "href",
+            "/funnel-builder/test-project-123/step/1"
+        );
+    });
+});

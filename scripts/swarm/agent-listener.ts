@@ -304,7 +304,7 @@ const executor = new TaskExecutor();
 function sendJSON(
     res: http.ServerResponse,
     statusCode: number,
-    data: AgentStatus | TaskResult | Record<string, unknown>
+    data: Record<string, unknown>
 ) {
     res.writeHead(statusCode, { "Content-Type": "application/json" });
     res.end(JSON.stringify(data, null, 2));
@@ -339,7 +339,11 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
 
     // Status endpoint
     if (url === "/status" && method === "GET") {
-        sendJSON(res, 200, agentState.getStatus());
+        sendJSON(
+            res,
+            200,
+            agentState.getStatus() as unknown as Record<string, unknown>
+        );
         return;
     }
 
@@ -391,7 +395,7 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
                 agentState.completeTask(result.success);
 
                 // Send response
-                sendJSON(res, 200, result);
+                sendJSON(res, 200, result as unknown as Record<string, unknown>);
             } catch (error) {
                 agentState.completeTask(false);
 

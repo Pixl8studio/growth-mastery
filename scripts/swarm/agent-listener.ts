@@ -393,13 +393,17 @@ Follow all /autotask checkpoints including:
 
 Execute this autonomously as ${AGENT_NAME}.`;
 
+            // Write prompt to temp file to avoid shell escaping issues
+            const tempFile = `/tmp/prompt-${request.task_id}.txt`;
+            fs.writeFileSync(tempFile, fullPrompt);
+
             logger.info(
-                `Running: echo <prompt> | claude --dangerously-skip-permissions --print /autotask`
+                `Running: claude --dangerously-skip-permissions --print /autotask < ${tempFile}`
             );
 
             // Execute Claude Code CLI with /autotask in non-interactive mode
             const result = execSync(
-                `echo ${JSON.stringify(fullPrompt)} | claude --dangerously-skip-permissions --print /autotask`,
+                `claude --dangerously-skip-permissions --print /autotask < ${tempFile}`,
                 {
                     encoding: "utf8",
                     cwd: WORKSPACE_DIR,
@@ -411,16 +415,70 @@ Execute this autonomously as ${AGENT_NAME}.`;
             logger.info("Claude Code execution completed");
             logger.info(`Output length: ${result.length} characters`);
 
+            // Log first 2000 chars of output for debugging
+            logger.info(`Output preview: ${result.substring(0, 2000)}`);
+
+            // Clean up temp file
+            try {
+                fs.unlinkSync(tempFile);
+            } catch (e) {
+                // Ignore cleanup errors
+            }
+
+            // Validate artifacts were created
+            const artifactsValid = await this.validateArtifacts(request.branch);
+            if (!artifactsValid) {
+                logger.error("Artifact validation failed - no branch or commits found");
+                return false;
+            }
+
             return true;
         } catch (error) {
             const err = error as Error & { stdout?: string; stderr?: string };
             logger.error(`Claude Code execution failed: ${err.message}`);
             if (err.stdout) {
-                logger.error(`stdout: ${err.stdout.substring(0, 1000)}`);
+                logger.error(`stdout: ${err.stdout.substring(0, 2000)}`);
             }
             if (err.stderr) {
-                logger.error(`stderr: ${err.stderr.substring(0, 1000)}`);
+                logger.error(`stderr: ${err.stderr.substring(0, 2000)}`);
             }
+            return false;
+        }
+    }
+
+    private async validateArtifacts(branch: string): Promise<boolean> {
+        try {
+            // Check if branch exists
+            const branchCheck = execSync(
+                `git rev-parse --verify ${branch} 2>/dev/null || echo "not-found"`,
+                {
+                    encoding: "utf8",
+                    cwd: WORKSPACE_DIR,
+                }
+            ).trim();
+
+            if (branchCheck === "not-found") {
+                logger.error(`Branch ${branch} does not exist`);
+                return false;
+            }
+
+            // Check if branch has commits
+            const commitCount = execSync(`git rev-list --count ${branch}`, {
+                encoding: "utf8",
+                cwd: WORKSPACE_DIR,
+            }).trim();
+
+            if (parseInt(commitCount) === 0) {
+                logger.error(`Branch ${branch} has no commits`);
+                return false;
+            }
+
+            logger.info(
+                `Artifacts validated: branch ${branch} exists with ${commitCount} commits`
+            );
+            return true;
+        } catch (error) {
+            logger.error(`Artifact validation error: ${error}`);
             return false;
         }
     }

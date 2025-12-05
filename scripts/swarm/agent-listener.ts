@@ -378,22 +378,81 @@ The orchestrator will handle PR creation after completion.
             // Execute /autotask with the issue number
             // /autotask handles: git worktrees, code changes, commits, push, PR creation
             // Pass agent name via environment variable for swarm context awareness
-            const command = `claude /autotask ${request.task_id}`;
+            // Use bypassPermissions for autonomous operation on remote agents
+            const command = `claude --debug --permission-mode bypassPermissions /autotask ${request.task_id}`;
 
             logger.info(`Running: ${command}`);
             logger.info(`Swarm Agent: ${AGENT_NAME}`);
             logger.info(`Branch: ${request.branch}`);
+            logger.info(`HOME env: ${process.env.HOME}`);
+            logger.info(`PATH: ${process.env.PATH}`);
+            logger.info(`CWD: ${WORKSPACE_DIR}`);
 
-            const result = execSync(command, {
+            // Log credentials file info
+            try {
+                const credPath = `${process.env.HOME}/.claude/.credentials.json`;
+                if (fs.existsSync(credPath)) {
+                    const creds = JSON.parse(fs.readFileSync(credPath, "utf8"));
+                    logger.info(`Credentials file exists: ${credPath}`);
+                    logger.info(
+                        `Has OAuth token: ${!!creds.claudeAiOauth?.accessToken}`
+                    );
+                    logger.info(
+                        `Token starts with: ${creds.claudeAiOauth?.accessToken?.substring(0, 20)}...`
+                    );
+                } else {
+                    logger.error(`Credentials file NOT found: ${credPath}`);
+                }
+            } catch (e) {
+                const error = e as Error;
+                logger.error(`Failed to read credentials: ${error.message}`);
+            }
+
+            // Test authentication by asking Claude who it's authenticated as
+            try {
+                logger.info(`Testing authentication with simple query...`);
+                const { ANTHROPIC_API_KEY: _apiKey, ...testEnv } = process.env;
+                const authTest = execSync(
+                    'claude --print "What email am I authenticated with? Just return the email address, nothing else."',
+                    {
+                        encoding: "utf8",
+                        cwd: WORKSPACE_DIR,
+                        timeout: 30000,
+                        env: testEnv,
+                    }
+                );
+                logger.info(`Auth test response: ${authTest.trim()}`);
+            } catch (authError) {
+                const error = authError as Error & { stdout?: string; stderr?: string };
+                logger.error(`Auth test failed: ${error.message}`);
+                if (error.stdout) {
+                    logger.error(`Auth test output: ${error.stdout}`);
+                }
+                if (error.stderr) {
+                    logger.error(`Auth test error: ${error.stderr}`);
+                }
+            }
+
+            // Remove ANTHROPIC_API_KEY from environment - Claude Code uses OAuth, not API keys
+            // Having the API key in the environment causes "Credit balance is too low" error
+            const { ANTHROPIC_API_KEY: _unusedApiKey, ...envWithoutApiKey } =
+                process.env;
+
+            // Use 'script' command to provide a pseudo-TTY for Claude Code
+            // This is required because Claude Code uses Ink which needs raw mode
+            const scriptCommand = `script -q -c "${command}" /dev/null`;
+
+            const result = execSync(scriptCommand, {
                 encoding: "utf8",
                 cwd: WORKSPACE_DIR,
-                stdio: ["pipe", "pipe", "pipe"],
+                stdio: ["ignore", "pipe", "pipe"],
                 timeout: MAX_TASK_TIMEOUT,
                 env: {
-                    ...process.env,
+                    ...envWithoutApiKey,
                     SWARM_AGENT_NAME: AGENT_NAME,
                     SWARM_BRANCH: request.branch,
                     SWARM_ISSUE_NUMBER: request.task_id,
+                    TERM: "xterm-256color", // Provide TERM for script command
                 },
             });
 
@@ -402,10 +461,13 @@ The orchestrator will handle PR creation after completion.
 
             return true;
         } catch (error) {
-            logger.error(`/autotask failed: ${error}`);
-            if (error instanceof Error && "stdout" in error) {
-                logger.error(`Output: ${(error as any).stdout}`);
-                logger.error(`Error: ${(error as any).stderr}`);
+            const err = error as Error & { stdout?: string; stderr?: string };
+            logger.error(`/autotask failed: ${err}`);
+            if (err.stdout) {
+                logger.error(`Output: ${err.stdout}`);
+            }
+            if (err.stderr) {
+                logger.error(`Error: ${err.stderr}`);
             }
             return false;
         }

@@ -63,6 +63,33 @@ interface OrchestratorOptions {
     dryRun: boolean;
 }
 
+interface AgentConfig {
+    name: string;
+    host: string;
+    port: number;
+    status_endpoint: string;
+    execute_endpoint: string;
+    enabled: boolean;
+}
+
+interface AgentsConfig {
+    agents: AgentConfig[];
+}
+
+interface AgentStatus {
+    status: "idle" | "busy" | "offline";
+    current_task?: string;
+    load?: number;
+}
+
+interface AgentTaskRequest {
+    task_id: string;
+    prompt: string;
+    branch: string;
+    base_branch: string;
+    repo?: string;
+}
+
 // ============================================================================
 // Logger with verbosity control
 // ============================================================================
@@ -102,6 +129,164 @@ class Logger {
 
     step(step: string) {
         console.log(`\n   → ${step}`);
+    }
+}
+
+// ============================================================================
+// Agent Pool - Remote Agent Discovery and Management
+// ============================================================================
+
+class AgentPool {
+    private agents: AgentConfig[] = [];
+    private agentStatus: Map<string, AgentStatus> = new Map();
+
+    constructor(private logger: Logger) {}
+
+    /**
+     * Load agent configuration from .swarm/agents.yaml
+     */
+    async loadAgents(): Promise<void> {
+        const agentsPath = path.join(process.cwd(), ".swarm/agents.yaml");
+
+        if (!fs.existsSync(agentsPath)) {
+            this.logger.verbose("No agents.yaml found, will run in local mode");
+            return;
+        }
+
+        try {
+            const content = fs.readFileSync(agentsPath, "utf-8");
+            const config: AgentsConfig = yaml.parse(content);
+
+            this.agents = config.agents.filter((a) => a.enabled);
+            this.logger.verbose(
+                `Loaded ${this.agents.length} agents from configuration`
+            );
+
+            // Check health of all agents
+            await this.checkAllAgents();
+        } catch (error) {
+            this.logger.warning(
+                `Failed to load agents: ${error instanceof Error ? error.message : String(error)}`
+            );
+        }
+    }
+
+    /**
+     * Check health of all configured agents
+     */
+    private async checkAllAgents(): Promise<void> {
+        const checks = this.agents.map((agent) => this.checkAgent(agent));
+        await Promise.all(checks);
+    }
+
+    /**
+     * Check if a specific agent is healthy
+     */
+    private async checkAgent(agent: AgentConfig): Promise<void> {
+        try {
+            const url = `http://${agent.host}:${agent.port}/health`;
+            const response = await fetch(url, {
+                method: "GET",
+                signal: AbortSignal.timeout(5000),
+            });
+
+            if (response.ok) {
+                this.agentStatus.set(agent.name, { status: "idle" });
+                this.logger.verbose(`✓ Agent ${agent.name} is healthy`);
+            } else {
+                this.agentStatus.set(agent.name, { status: "offline" });
+                this.logger.verbose(
+                    `✗ Agent ${agent.name} is offline (HTTP ${response.status})`
+                );
+            }
+        } catch (error) {
+            this.agentStatus.set(agent.name, { status: "offline" });
+            this.logger.verbose(`✗ Agent ${agent.name} is offline`);
+        }
+    }
+
+    /**
+     * Get an available agent for task execution
+     */
+    async getAvailableAgent(): Promise<AgentConfig | null> {
+        // Refresh agent statuses
+        await this.checkAllAgents();
+
+        // Find first idle agent
+        for (const agent of this.agents) {
+            const status = this.agentStatus.get(agent.name);
+            if (status?.status === "idle") {
+                return agent;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Execute a task on a remote agent
+     */
+    async executeOnAgent(
+        agent: AgentConfig,
+        taskRequest: AgentTaskRequest
+    ): Promise<{ success: boolean; error?: string }> {
+        try {
+            // Mark agent as busy
+            this.agentStatus.set(agent.name, {
+                status: "busy",
+                current_task: taskRequest.task_id,
+            });
+
+            const url = `http://${agent.host}:${agent.port}${agent.execute_endpoint}`;
+
+            this.logger.verbose(`Sending task ${taskRequest.task_id} to ${agent.name}`);
+
+            const response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(taskRequest),
+                signal: AbortSignal.timeout(600000), // 10 minute timeout
+            });
+
+            if (!response.ok) {
+                throw new Error(`Agent returned HTTP ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            // Mark agent as idle again
+            this.agentStatus.set(agent.name, { status: "idle" });
+
+            return { success: result.success !== false, error: result.error };
+        } catch (error) {
+            // Mark agent as offline if communication failed
+            this.agentStatus.set(agent.name, { status: "offline" });
+
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : String(error),
+            };
+        }
+    }
+
+    /**
+     * Get count of healthy agents
+     */
+    getHealthyAgentCount(): number {
+        let count = 0;
+        for (const status of this.agentStatus.values()) {
+            if (status.status === "idle" || status.status === "busy") {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    /**
+     * Check if any agents are available
+     */
+    hasAgents(): boolean {
+        return this.agents.length > 0 && this.getHealthyAgentCount() > 0;
     }
 }
 
@@ -490,13 +675,15 @@ class TaskExecutor {
     constructor(
         private logger: Logger,
         private issueTracker: GitHubIssueTracker,
-        private stateManager: StateManager
+        private stateManager: StateManager,
+        private agentPool: AgentPool
     ) {}
 
     async executeTask(
         task: Task,
         state: SwarmState,
-        baseBranch: string
+        baseBranch: string,
+        useRemote: boolean = true
     ): Promise<boolean> {
         const startTime = Date.now();
 
@@ -504,6 +691,75 @@ class TaskExecutor {
         this.logger.verbose(`Branch: ${task.branch}`);
         this.logger.verbose(`Base: ${baseBranch}`);
         this.logger.verbose(`Priority: ${task.priority || "medium"}`);
+
+        // Try remote execution first if enabled
+        if (useRemote && this.agentPool.hasAgents()) {
+            const agent = await this.agentPool.getAvailableAgent();
+
+            if (agent) {
+                this.logger.verbose(`Executing on remote agent: ${agent.name}`);
+
+                // Update state and GitHub issue
+                this.stateManager.updateTaskState(state, task.id, {
+                    status: "in_progress",
+                    started_at: new Date().toISOString(),
+                });
+
+                await this.issueTracker.postTaskClaimed(
+                    task.id,
+                    task.branch,
+                    agent.name
+                );
+
+                // Execute on remote agent
+                const result = await this.agentPool.executeOnAgent(agent, {
+                    task_id: task.id,
+                    prompt: task.prompt,
+                    branch: task.branch,
+                    base_branch: baseBranch,
+                });
+
+                const duration = Math.round((Date.now() - startTime) / 60000);
+
+                if (result.success) {
+                    this.logger.success(`Task ${task.id} completed on ${agent.name}`);
+
+                    this.stateManager.updateTaskState(state, task.id, {
+                        status: "completed",
+                        completed_at: new Date().toISOString(),
+                        duration_minutes: duration,
+                    });
+
+                    return true;
+                } else {
+                    this.logger.error(
+                        `Task ${task.id} failed on ${agent.name}: ${result.error}`
+                    );
+
+                    this.stateManager.updateTaskState(state, task.id, {
+                        status: "failed",
+                        error: result.error,
+                        duration_minutes: duration,
+                    });
+
+                    await this.issueTracker.postTaskFailed(
+                        task.id,
+                        result.error || "Unknown error",
+                        `${duration} minutes`,
+                        "Remote execution"
+                    );
+
+                    return false;
+                }
+            } else {
+                this.logger.warning(
+                    `No available remote agents, falling back to local execution`
+                );
+            }
+        }
+
+        // Fall back to local execution
+        this.logger.verbose(`Executing locally`);
 
         // Update state and GitHub issue
         this.stateManager.updateTaskState(state, task.id, {
@@ -517,7 +773,16 @@ class TaskExecutor {
             // Step 1: Create and checkout branch
             this.logger.step(`Creating branch: ${task.branch}`);
             this.execCommand(`git checkout ${baseBranch}`);
-            this.execCommand(`git pull origin ${baseBranch}`);
+
+            // Try to pull, but don't fail if there are uncommitted changes
+            try {
+                this.execCommand(`git pull origin ${baseBranch}`);
+            } catch (pullError) {
+                this.logger.warning(
+                    `Could not pull from ${baseBranch}: ${pullError instanceof Error ? pullError.message : String(pullError)}`
+                );
+                this.logger.warning(`Continuing with local ${baseBranch}...`);
+            }
 
             // Check if branch already exists
             try {
@@ -730,6 +995,7 @@ export class SwarmOrchestrator {
     private parser: ManifestParser;
     private stateManager: StateManager;
     private issueTracker: GitHubIssueTracker;
+    private agentPool: AgentPool;
     private executor: TaskExecutor;
 
     constructor(private options: OrchestratorOptions) {
@@ -737,21 +1003,42 @@ export class SwarmOrchestrator {
         this.parser = new ManifestParser(this.logger);
         this.stateManager = new StateManager(this.logger);
         this.issueTracker = new GitHubIssueTracker(this.logger);
+        this.agentPool = new AgentPool(this.logger);
         this.executor = new TaskExecutor(
             this.logger,
             this.issueTracker,
-            this.stateManager
+            this.stateManager,
+            this.agentPool
         );
     }
 
     async run() {
         this.logger.info("🚀 Swarm Orchestrator Starting");
-        this.logger.info(
-            `Mode: ${this.options.local ? "Local Sequential" : "Distributed"}`
-        );
-        this.logger.info(`Verbose: ${this.options.verbose ? "ON" : "OFF"}`);
 
         try {
+            // Load remote agents first (unless explicitly local-only)
+            if (!this.options.local) {
+                await this.agentPool.loadAgents();
+
+                const agentCount = this.agentPool.getHealthyAgentCount();
+                if (agentCount > 0) {
+                    this.logger.info(
+                        `Mode: Distributed (${agentCount} agents available)`
+                    );
+                } else {
+                    this.logger.warning(
+                        "No healthy agents found, falling back to local mode"
+                    );
+                    this.options.local = true;
+                }
+            }
+
+            if (this.options.local) {
+                this.logger.info(`Mode: Local Sequential`);
+            }
+
+            this.logger.info(`Verbose: ${this.options.verbose ? "ON" : "OFF"}`);
+
             // Parse manifest
             const manifest = this.parser.parse(this.options.manifestPath);
 
@@ -829,7 +1116,8 @@ export class SwarmOrchestrator {
             const success = await this.executor.executeTask(
                 task,
                 state,
-                manifest.base_branch
+                manifest.base_branch,
+                !this.options.local // useRemote
             );
 
             if (!success) {
@@ -938,15 +1226,16 @@ Usage:
   swarm <manifest.yaml> [options]
 
 Options:
-  --local         Run tasks sequentially on local machine (default: true)
+  --local         Run tasks sequentially on local machine (default: use remote agents)
   --verbose       Enable verbose logging
   --resume        Resume from previous state
   --dry-run       Show execution plan without running tasks
   --help          Show this help message
 
 Examples:
-  swarm work.yaml
-  swarm sprint-47.yaml --local --verbose
+  swarm work.yaml                    # Use remote agents (distributed)
+  swarm work.yaml --local            # Force local execution
+  swarm sprint-47.yaml --verbose     # Distributed with verbose logging
   swarm work.yaml --dry-run
   swarm work.yaml --resume
 `);
@@ -969,7 +1258,7 @@ async function main() {
 
     const options: OrchestratorOptions = {
         manifestPath: path.resolve(manifestPath),
-        local: args.includes("--local") || !args.includes("--distributed"),
+        local: args.includes("--local"), // Default to distributed mode
         verbose: args.includes("--verbose"),
         resume: args.includes("--resume"),
         dryRun: args.includes("--dry-run"),

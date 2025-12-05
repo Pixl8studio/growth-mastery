@@ -4,8 +4,8 @@
  * Swarm Agent Listener
  *
  * This service runs on remote VMs and accepts task execution requests
- * from the swarm orchestrator. It executes tasks using Claude API directly
- * with full ai-coding-config environment deployment.
+ * from the swarm orchestrator. It executes tasks using Claude Code and
+ * returns the results.
  */
 
 import * as http from "http";
@@ -13,7 +13,6 @@ import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
 import { config } from "dotenv";
-import { executeTask as executeTaskViaAPI } from "../../lib/swarm/api-agent-executor";
 
 // ============================================================================
 // Environment Setup
@@ -341,16 +340,12 @@ The orchestrator will handle PR creation after completion.
 
             logger.info(`Task prompt saved to: ${taskFile}`);
 
-            // Step 5: Execute task via Claude API with full ai-coding-config deployment
-            logger.info("Executing task via Claude API...");
-            const apiResult = await executeTaskViaAPI(
-                request,
-                WORKSPACE_DIR,
-                AGENT_NAME
-            );
+            // Step 5: Execute /autotask - handles everything autonomously
+            // (creates worktree, makes changes, commits, pushes, creates PR)
+            const success = await this.runClaudeCode(request);
 
-            if (!apiResult.success) {
-                throw new Error(apiResult.error || "Task execution failed");
+            if (!success) {
+                throw new Error("/autotask execution failed");
             }
 
             const duration = Date.now() - startTime;
@@ -373,6 +368,128 @@ The orchestrator will handle PR creation after completion.
                 error: errorMsg,
                 duration_ms: duration,
             };
+        }
+    }
+
+    private async runClaudeCode(request: TaskRequest): Promise<boolean> {
+        logger.info(`Executing task for GitHub issue #${request.task_id}`);
+
+        try {
+            // Reference the task prompt file that was written earlier
+            const taskFile = path.join(
+                WORKSPACE_DIR,
+                ".swarm",
+                `task-${request.task_id}-prompt.md`
+            );
+
+            // Build a simple prompt that references the task file and provides clear instructions
+            const fullPrompt = `Read the task details from ${taskFile} and execute it autonomously from description to PR-ready state.
+
+Follow the /autotask workflow:
+1. Create git worktree for branch ${request.branch} from ${request.base_branch}
+2. Implement the changes described in the task file
+3. Run validation (tests, linting, type-checking) and fix any issues
+4. Create well-structured commits
+5. Push branch to origin
+6. Create a pull request that closes issue #${request.task_id}
+
+This is being executed by ${AGENT_NAME} as part of a swarm execution.`;
+
+            // Use --print mode for non-interactive execution
+            const command = `claude --debug --dangerously-skip-permissions --print`;
+
+            logger.info(`Running Claude Code in non-interactive mode`);
+            logger.info(`Swarm Agent: ${AGENT_NAME}`);
+            logger.info(`Branch: ${request.branch}`);
+            logger.info(`Task file: ${taskFile}`);
+            logger.info(`HOME env: ${process.env.HOME}`);
+            logger.info(`PATH: ${process.env.PATH}`);
+            logger.info(`CWD: ${WORKSPACE_DIR}`);
+
+            // Log credentials file info
+            try {
+                const credPath = `${process.env.HOME}/.claude/.credentials.json`;
+                if (fs.existsSync(credPath)) {
+                    const creds = JSON.parse(fs.readFileSync(credPath, "utf8"));
+                    logger.info(`Credentials file exists: ${credPath}`);
+                    logger.info(
+                        `Has OAuth token: ${!!creds.claudeAiOauth?.accessToken}`
+                    );
+                    logger.info(
+                        `Token starts with: ${creds.claudeAiOauth?.accessToken?.substring(0, 20)}...`
+                    );
+                } else {
+                    logger.error(`Credentials file NOT found: ${credPath}`);
+                }
+            } catch (e) {
+                const error = e as Error;
+                logger.error(`Failed to read credentials: ${error.message}`);
+            }
+
+            // Test authentication by asking Claude who it's authenticated as
+            try {
+                logger.info(`Testing authentication with simple query...`);
+                const { ANTHROPIC_API_KEY: _apiKey, ...testEnv } = process.env;
+                const authTest = execSync(
+                    'claude --print "What email am I authenticated with? Just return the email address, nothing else."',
+                    {
+                        encoding: "utf8",
+                        cwd: WORKSPACE_DIR,
+                        timeout: 30000,
+                        env: testEnv,
+                    }
+                );
+                logger.info(`Auth test response: ${authTest.trim()}`);
+            } catch (authError) {
+                const error = authError as Error & { stdout?: string; stderr?: string };
+                logger.error(`Auth test failed: ${error.message}`);
+                if (error.stdout) {
+                    logger.error(`Auth test output: ${error.stdout}`);
+                }
+                if (error.stderr) {
+                    logger.error(`Auth test error: ${error.stderr}`);
+                }
+            }
+
+            // Remove ANTHROPIC_API_KEY from environment - Claude Code uses OAuth, not API keys
+            // Having the API key in the environment causes "Credit balance is too low" error
+            const { ANTHROPIC_API_KEY: _unusedApiKey, ...envWithoutApiKey } =
+                process.env;
+
+            // Use 'script' command to provide a pseudo-TTY for Claude Code
+            // This is required because Claude Code uses Ink which needs raw mode
+            // Pass the prompt via stdin using echo
+            const scriptCommand = `echo ${JSON.stringify(fullPrompt)} | script -q -c "${command}" /dev/null`;
+
+            const result = execSync(scriptCommand, {
+                encoding: "utf8",
+                cwd: WORKSPACE_DIR,
+                stdio: ["pipe", "pipe", "pipe"],
+                timeout: MAX_TASK_TIMEOUT,
+                env: {
+                    ...envWithoutApiKey,
+                    SWARM_AGENT_NAME: AGENT_NAME,
+                    SWARM_BRANCH: request.branch,
+                    SWARM_ISSUE_NUMBER: request.task_id,
+                    TERM: "xterm-256color", // Provide TERM for script command
+                },
+                shell: "/bin/bash",
+            });
+
+            logger.info(`Task completed successfully`);
+            logger.info(result.toString());
+
+            return true;
+        } catch (error) {
+            const err = error as Error & { stdout?: string; stderr?: string };
+            logger.error(`/autotask failed: ${err}`);
+            if (err.stdout) {
+                logger.error(`Output: ${err.stdout}`);
+            }
+            if (err.stderr) {
+                logger.error(`Error: ${err.stderr}`);
+            }
+            return false;
         }
     }
 

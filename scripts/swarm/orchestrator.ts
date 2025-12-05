@@ -270,6 +270,78 @@ class AgentPool {
     }
 
     /**
+     * Execute task on agent with periodic progress callbacks
+     */
+    async executeOnAgentWithProgress(
+        agent: AgentConfig,
+        taskRequest: AgentTaskRequest,
+        onProgress: (elapsedMinutes: number) => Promise<void>
+    ): Promise<{ success: boolean; error?: string }> {
+        const startTime = Date.now();
+        let progressInterval: NodeJS.Timeout | null = null;
+
+        try {
+            // Mark agent as busy
+            this.agentStatus.set(agent.name, {
+                status: "busy",
+                current_task: taskRequest.task_id,
+            });
+
+            const url = `http://${agent.host}:${agent.port}${agent.execute_endpoint}`;
+
+            this.logger.verbose(`Sending task ${taskRequest.task_id} to ${agent.name}`);
+
+            // Set up progress monitoring (update every 2 minutes)
+            progressInterval = setInterval(async () => {
+                const elapsedMinutes = Math.round((Date.now() - startTime) / 60000);
+                if (elapsedMinutes > 0 && elapsedMinutes % 2 === 0) {
+                    try {
+                        await onProgress(elapsedMinutes);
+                    } catch (err) {
+                        this.logger.error(`Progress callback error: ${err}`);
+                    }
+                }
+            }, 120000); // Check every 2 minutes
+
+            const response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(taskRequest),
+                signal: AbortSignal.timeout(600000), // 10 minute timeout
+            });
+
+            // Clear progress monitoring
+            if (progressInterval) {
+                clearInterval(progressInterval);
+            }
+
+            if (!response.ok) {
+                throw new Error(`Agent returned HTTP ${response.status}`);
+            }
+
+            const result = await response.json();
+
+            // Mark agent as idle again
+            this.agentStatus.set(agent.name, { status: "idle" });
+
+            return { success: result.success !== false, error: result.error };
+        } catch (error) {
+            // Clear progress monitoring
+            if (progressInterval) {
+                clearInterval(progressInterval);
+            }
+
+            // Mark agent as offline if communication failed
+            this.agentStatus.set(agent.name, { status: "offline" });
+
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : String(error),
+            };
+        }
+    }
+
+    /**
      * Get count of healthy agents
      */
     getHealthyAgentCount(): number {
@@ -351,6 +423,12 @@ class GitHubIssueTracker {
         branch: string,
         agent: string = "local"
     ) {
+        // Debug logging
+        this.logger.info(`postTaskClaimed called with:`);
+        this.logger.info(`  issueNumber: ${issueNumber}`);
+        this.logger.info(`  branch: ${branch}`);
+        this.logger.info(`  agent: ${agent}`);
+
         const comment = `🤖 **Swarm Bot**: Task claimed
 
 **Agent:** \`${agent}\`
@@ -362,10 +440,55 @@ Working on this now...
 ---
 *Swarm ID: swarm-${Date.now()}*`;
 
+        this.logger.info(`Generated comment:\n${comment}`);
+
         await this.updateIssue(issueNumber, comment, {
             remove: ["swarm-ready"],
             add: ["swarm:in-progress"],
         });
+    }
+
+    async postTaskStarted(issueNumber: string, agent: string, branch: string) {
+        const comment = `🤖 **Autonomous Task Update** - Task Started
+
+**Status:** Starting execution
+**Agent:** ${agent}
+**Branch:** \`${branch}\`
+
+Setting up environment and loading project standards...
+
+---
+*Updated: ${new Date().toISOString()}*`;
+
+        await this.updateIssue(issueNumber, comment);
+    }
+
+    async postTaskProgress(issueNumber: string, stage: string, progress: string) {
+        const comment = `🤖 **Autonomous Task Update** - Progress
+
+**Status:** In Progress
+**Stage:** ${stage}
+**Progress:** ${progress}
+
+---
+*Updated: ${new Date().toISOString()}*`;
+
+        await this.updateIssue(issueNumber, comment);
+    }
+
+    async postTaskCompleted(issueNumber: string, agent: string, duration: string) {
+        const comment = `🤖 **Autonomous Task Update** - Execution Complete
+
+**Status:** ✅ Completed
+**Agent:** ${agent}
+**Duration:** ${duration}
+
+Task execution finished. Creating pull request...
+
+---
+*Updated: ${new Date().toISOString()}*`;
+
+        await this.updateIssue(issueNumber, comment);
     }
 
     async postProgressUpdate(
@@ -471,7 +594,7 @@ Will automatically start when dependencies complete.
     }
 
     private escapeComment(comment: string): string {
-        return comment.replace(/"/g, '\\"').replace(/\$/g, "\\$");
+        return comment.replace(/"/g, '\\"').replace(/\$/g, "\\$").replace(/`/g, "\\`"); // Escape backticks to prevent command substitution
     }
 }
 
@@ -711,13 +834,32 @@ class TaskExecutor {
                     agent.name
                 );
 
-                // Execute on remote agent
-                const result = await this.agentPool.executeOnAgent(agent, {
-                    task_id: task.id,
-                    prompt: task.prompt,
-                    branch: task.branch,
-                    base_branch: baseBranch,
-                });
+                // Post initial progress update
+                await this.issueTracker.postTaskStarted(
+                    task.id,
+                    agent.name,
+                    task.branch
+                );
+
+                // Execute on remote agent with progress monitoring
+                const result = await this.agentPool.executeOnAgentWithProgress(
+                    agent,
+                    {
+                        task_id: task.id,
+                        prompt: task.prompt,
+                        branch: task.branch,
+                        base_branch: baseBranch,
+                    },
+                    async (elapsedMinutes: number) => {
+                        // Post progress update every 2 minutes
+                        const progress = `${elapsedMinutes} min elapsed`;
+                        await this.issueTracker.postTaskProgress(
+                            task.id,
+                            "Executing /autotask",
+                            progress
+                        );
+                    }
+                );
 
                 const duration = Math.round((Date.now() - startTime) / 60000);
 
@@ -729,6 +871,13 @@ class TaskExecutor {
                         completed_at: new Date().toISOString(),
                         duration_minutes: duration,
                     });
+
+                    // Post completion update
+                    await this.issueTracker.postTaskCompleted(
+                        task.id,
+                        agent.name,
+                        `${duration} minute${duration !== 1 ? "s" : ""}`
+                    );
 
                     return true;
                 } else {

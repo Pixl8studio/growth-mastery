@@ -40,7 +40,10 @@
     "prepare": "husky",
     "claude": "claude",
     "claude:review": "claude review",
-    "claude:chat": "claude chat"
+    "claude:chat": "claude chat",
+    "swarm": "tsx scripts/swarm/orchestrator.ts",
+    "swarm:dry-run": "tsx scripts/swarm/orchestrator.ts --dry-run",
+    "swarm:verbose": "tsx scripts/swarm/orchestrator.ts --verbose"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
@@ -82,6 +85,7 @@
     "stripe": "^19.1.0",
     "tailwind-merge": "^3.3.1",
     "typescript": "^5.9.3",
+    "yaml": "^2.8.2",
     "zod": "^4.1.12",
     "zustand": "^5.0.8"
   },

@@ -1,0 +1,78 @@
+# Swarm Agent Configuration
+# ===========================
+# Copy this to ~/.swarm/agents.yaml and customize for your setup
+#
+# Agents are Claude Code instances running on remote VMs.
+# Each agent runs the agent-listener.js server installed by setup-remote-agent.sh
+
+# Default settings applied to all agents unless overridden
+defaults:
+  port: 3847
+  timeout: 60m
+  health_check_interval: 30s
+
+# Your available agents
+agents:
+  # Oracle Cloud Free Tier - ARM VMs (recommended!)
+  # 4 VMs × 1 OCPU × 6GB RAM = 24GB total, $0/month forever
+  - name: oracle-arm-1
+    host: 129.153.xxx.xxx      # Replace with your VM's public IP
+    description: "Oracle ARM instance 1"
+    tags: [general, frontend, backend]
+    
+  - name: oracle-arm-2
+    host: 129.153.xxx.xxx      # Replace with your VM's public IP
+    description: "Oracle ARM instance 2"
+    tags: [general, backend]
+    
+  - name: oracle-arm-3
+    host: 129.153.xxx.xxx      # Replace with your VM's public IP
+    description: "Oracle ARM instance 3"
+    tags: [general, testing]
+    
+  - name: oracle-arm-4
+    host: 129.153.xxx.xxx      # Replace with your VM's public IP
+    description: "Oracle ARM instance 4"
+    tags: [general, devops]
+
+  # --- Alternative: Other cloud providers ---
+  
+  # Google Cloud (1 free e2-micro)
+  # - name: gcp-micro-1
+  #   host: 35.xxx.xxx.xxx
+  #   description: "GCP e2-micro instance"
+  #   tags: [general]
+  
+  # AWS (t2.micro free tier - 12 months)
+  # - name: aws-micro-1
+  #   host: ec2-xx-xxx-xxx-xxx.compute-1.amazonaws.com
+  #   description: "AWS t2.micro instance"
+  #   tags: [general]
+  
+  # GitHub Codespaces (60 hours/month free)
+  # - name: codespace-1
+  #   host: xxx.github.dev
+  #   port: 3847
+  #   description: "GitHub Codespace"
+  #   tags: [general]
+
+  # --- Specialized agents (optional) ---
+  
+  # High-memory agent for large codebases
+  # - name: heavy-lifter
+  #   host: xxx.xxx.xxx.xxx
+  #   description: "16GB RAM instance for big tasks"
+  #   tags: [heavy, monorepo]
+  #   timeout: 120m
+
+# Agent selection preferences (optional)
+preferences:
+  # Prefer agents with matching tags for task types
+  tag_matching:
+    frontend: [frontend, general]
+    backend: [backend, general]
+    testing: [testing, general]
+    devops: [devops, general]
+  
+  # Load balancing strategy: round-robin, least-busy, random
+  strategy: least-busy

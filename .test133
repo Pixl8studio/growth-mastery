@@ -1,0 +1,30 @@
+# Distributed Systems: A Comedy of Errors
+
+There are only two hard problems in distributed systems:
+2. Exactly-once delivery
+1. Guaranteed order of messages
+2. Exactly-once delivery
+
+---
+
+A distributed system is one where a computer you didn't even know
+existed can cause your application to fail.
+                                        — Leslie Lamport
+
+---
+
+Q: How many distributed systems engineers does it take to change a lightbulb?
+A: Two, but they'll never agree on which one actually changed it.
+
+---
+
+CAP Theorem Walk Into a Bar:
+Consistency, Availability, and Partition Tolerance walk into a bar.
+The bartender says, "Sorry, I can only serve two of you at a time."
+
+---
+
+Remember: In a distributed system, everything happens exactly once...
+except when it happens zero times, or more than once.
+
+🎭 This file was created by swarm-agent-1 during distributed task execution.

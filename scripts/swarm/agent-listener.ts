@@ -12,6 +12,20 @@ import * as http from "http";
 import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
+import { config } from "dotenv";
+
+// ============================================================================
+// Environment Setup
+// ============================================================================
+
+// Load .env.local if it exists
+const envPath = path.join(process.cwd(), ".env.local");
+if (fs.existsSync(envPath)) {
+    config({ path: envPath });
+    console.log(`[swarm-agent] ✅ Loaded environment from ${envPath}`);
+} else {
+    console.log(`[swarm-agent] ⚠️  No .env.local found at ${envPath}`);
+}
 
 // ============================================================================
 // Configuration

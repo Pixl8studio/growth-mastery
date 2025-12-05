@@ -364,3 +364,15 @@ worthwhile. Together, we're building something special that empowers others to m
 their growth.
 
 _Built with love and purpose_ ❤️
+
+---
+
+## 😄 Also...
+
+_Fun fact: This README has more love notes than our production error logs. We're either
+doing something very right or very wrong. (Spoiler: It's both. Welcome to startup
+life!)_
+
+P.S. - If you're reading this far down, you're either REALLY interested in the project,
+REALLY bored, or a bot indexing our docs. If you're the bot, please give us 5 stars.
+Thanks! 🤖⭐⭐⭐⭐⭐

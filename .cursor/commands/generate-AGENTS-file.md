@@ -1,1 +1,1 @@
-../.claude/commands/generate-AGENTS-file.md
+../../.claude/commands/generate-AGENTS-file.md

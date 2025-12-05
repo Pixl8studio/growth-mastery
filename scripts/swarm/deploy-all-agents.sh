@@ -20,7 +20,7 @@ fi
 echo "═══════════════════════════════════════════════════════════"
 echo "Deploying Agent 1"
 echo "═══════════════════════════════════════════════════════════"
-./scripts/swarm/deploy-agent.sh swarm-agent-1 ubuntu@132.145.99.215 3847
+./scripts/swarm/deploy-agent.sh swarm-agent-1 opc@170.9.226.213 3847
 
 echo ""
 echo "Waiting 5 seconds before deploying next agent..."
@@ -31,7 +31,7 @@ echo ""
 echo "═══════════════════════════════════════════════════════════"
 echo "Deploying Agent 2"
 echo "═══════════════════════════════════════════════════════════"
-./scripts/swarm/deploy-agent.sh swarm-agent-2 ubuntu@129.159.161.94 3847
+./scripts/swarm/deploy-agent.sh swarm-agent-2 opc@170.9.237.208 3847
 
 echo ""
 echo "═══════════════════════════════════════════════════════════"

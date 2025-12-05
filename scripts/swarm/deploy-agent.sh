@@ -16,7 +16,6 @@ echo ""
 
 # Get the repo name from git remote
 REPO_NAME=$(basename -s .git $(git config --get remote.origin.url))
-WORKSPACE_PATH="$HOME/swarm-workspace/$REPO_NAME"
 
 echo "📦 Step 1: Copying agent listener script to remote VM"
 scp scripts/swarm/agent-listener.ts "$SSH_HOST:~/agent-listener.ts"
@@ -26,9 +25,11 @@ echo "📦 Step 2: Setting up workspace on remote VM"
 ssh "$SSH_HOST" bash <<EOF
 set -e
 
-echo "  → Creating workspace directory"
-mkdir -p "$WORKSPACE_PATH"
-cd "$WORKSPACE_PATH"
+WORKSPACE_PATH="\$HOME/swarm-workspace/$REPO_NAME"
+
+echo "  → Creating workspace directory: \$WORKSPACE_PATH"
+mkdir -p "\$WORKSPACE_PATH"
+cd "\$WORKSPACE_PATH"
 
 # Check if repo exists
 if [ ! -d ".git" ]; then
@@ -37,6 +38,12 @@ if [ ! -d ".git" ]; then
 else
     echo "  → Repository already cloned, pulling latest"
     git fetch --all
+fi
+
+# Install tsx globally if needed
+if ! command -v tsx &> /dev/null; then
+    echo "  → Installing tsx globally"
+    npm install -g tsx
 fi
 
 # Install dependencies if needed
@@ -53,32 +60,38 @@ fi
 
 # Move agent listener to workspace
 echo "  → Moving agent listener script"
-mv ~/agent-listener.ts "$WORKSPACE_PATH/scripts/swarm/agent-listener.ts"
-chmod +x "$WORKSPACE_PATH/scripts/swarm/agent-listener.ts"
+mkdir -p "\$WORKSPACE_PATH/scripts/swarm"
+mv ~/agent-listener.ts "\$WORKSPACE_PATH/scripts/swarm/agent-listener.ts"
+chmod +x "\$WORKSPACE_PATH/scripts/swarm/agent-listener.ts"
 
-echo "  ✅ Workspace ready: $WORKSPACE_PATH"
+echo "  ✅ Workspace ready: \$WORKSPACE_PATH"
 EOF
 
 echo ""
 echo "📦 Step 3: Creating systemd service"
-ssh "$SSH_HOST" sudo bash <<EOF
+ssh "$SSH_HOST" bash <<'OUTER_EOF'
+# Get the actual user (not root)
+ACTUAL_USER=$(who am i | awk '{print $1}')
+WORKSPACE_PATH="/home/${ACTUAL_USER}/swarm-workspace/'$REPO_NAME'"
+
+sudo bash <<EOF
 set -e
 
 # Create systemd service file
-cat > /etc/systemd/system/swarm-agent-$AGENT_NAME.service <<SERVICE
+cat > /etc/systemd/system/swarm-agent-'$AGENT_NAME'.service <<SERVICE
 [Unit]
-Description=Swarm Agent - $AGENT_NAME
+Description=Swarm Agent - '$AGENT_NAME'
 After=network.target
 
 [Service]
 Type=simple
-User=$USER
-WorkingDirectory=$WORKSPACE_PATH
-Environment="SWARM_AGENT_NAME=$AGENT_NAME"
-Environment="SWARM_AGENT_PORT=$AGENT_PORT"
-Environment="SWARM_WORKSPACE=$WORKSPACE_PATH"
+User=${ACTUAL_USER}
+WorkingDirectory=${WORKSPACE_PATH}
+Environment="SWARM_AGENT_NAME='$AGENT_NAME'"
+Environment="SWARM_AGENT_PORT='$AGENT_PORT'"
+Environment="SWARM_WORKSPACE=${WORKSPACE_PATH}"
 Environment="NODE_ENV=production"
-ExecStart=/usr/local/bin/tsx $WORKSPACE_PATH/scripts/swarm/agent-listener.ts
+ExecStart=/home/opc/.nvm/versions/node/v20.19.6/bin/npx tsx ${WORKSPACE_PATH}/scripts/swarm/agent-listener.ts
 Restart=always
 RestartSec=10
 StandardOutput=journal
@@ -92,13 +105,14 @@ echo "  → Reloading systemd"
 systemctl daemon-reload
 
 echo "  → Enabling service"
-systemctl enable swarm-agent-$AGENT_NAME
+systemctl enable swarm-agent-'$AGENT_NAME'
 
 echo "  → Starting service"
-systemctl start swarm-agent-$AGENT_NAME
+systemctl start swarm-agent-'$AGENT_NAME'
 
 echo "  ✅ Service started"
 EOF
+OUTER_EOF
 
 echo ""
 echo "📊 Step 4: Checking agent status"

@@ -13,7 +13,6 @@ import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
 import { config } from "dotenv";
-import { executeTask as executeTaskViaAPI } from "../../lib/swarm/api-agent-executor";
 
 // ============================================================================
 // Environment Setup
@@ -341,16 +340,11 @@ The orchestrator will handle PR creation after completion.
 
             logger.info(`Task prompt saved to: ${taskFile}`);
 
-            // Step 5: Execute task via Claude API with full ai-coding-config deployment
-            logger.info("Executing task via Claude API...");
-            const apiResult = await executeTaskViaAPI(
-                request,
-                WORKSPACE_DIR,
-                AGENT_NAME
-            );
+            // Step 5: Execute task via Claude Code CLI with /autotask
+            const success = await this.runClaudeCode(request);
 
-            if (!apiResult.success) {
-                throw new Error(apiResult.error || "Task execution failed");
+            if (!success) {
+                throw new Error("/autotask execution failed");
             }
 
             const duration = Date.now() - startTime;
@@ -373,6 +367,61 @@ The orchestrator will handle PR creation after completion.
                 error: errorMsg,
                 duration_ms: duration,
             };
+        }
+    }
+
+    private async runClaudeCode(request: TaskRequest): Promise<boolean> {
+        logger.info(`Executing task via Claude Code CLI with /autotask`);
+
+        try {
+            // Build the prompt for /autotask
+            const fullPrompt = `Execute GitHub issue #${request.task_id} following the complete /autotask workflow.
+
+**Task**: ${request.prompt}
+
+**Branch**: ${request.branch}
+**Base Branch**: ${request.base_branch}
+
+Follow all /autotask checkpoints including:
+1. Task preparation and GitHub issue update (Checkpoint 1)
+2. Environment setup with /setup-environment
+3. Implementation following project standards
+4. Validation (tests, linting, type-checking)
+5. Create well-structured commits
+6. Push branch to origin
+7. Post completion status to issue #${request.task_id}
+
+Execute this autonomously as ${AGENT_NAME}.`;
+
+            logger.info(
+                `Running: echo <prompt> | claude --dangerously-skip-permissions --print /autotask`
+            );
+
+            // Execute Claude Code CLI with /autotask in non-interactive mode
+            const result = execSync(
+                `echo ${JSON.stringify(fullPrompt)} | claude --dangerously-skip-permissions --print /autotask`,
+                {
+                    encoding: "utf8",
+                    cwd: WORKSPACE_DIR,
+                    timeout: 30 * 60 * 1000, // 30 minute timeout
+                    maxBuffer: 50 * 1024 * 1024, // 50MB buffer
+                }
+            );
+
+            logger.info("Claude Code execution completed");
+            logger.info(`Output length: ${result.length} characters`);
+
+            return true;
+        } catch (error) {
+            const err = error as Error & { stdout?: string; stderr?: string };
+            logger.error(`Claude Code execution failed: ${err.message}`);
+            if (err.stdout) {
+                logger.error(`stdout: ${err.stdout.substring(0, 1000)}`);
+            }
+            if (err.stderr) {
+                logger.error(`stderr: ${err.stderr.substring(0, 1000)}`);
+            }
+            return false;
         }
     }
 

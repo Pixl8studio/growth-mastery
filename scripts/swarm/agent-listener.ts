@@ -291,10 +291,7 @@ The orchestrator will handle PR creation after completion.
     private checkForNewCommits(branch: string): boolean {
         try {
             // Get the commit count on current branch vs base
-            const result = this.execCommand(
-                `git rev-list --count ${branch}`,
-                true
-            );
+            const result = this.execCommand(`git rev-list --count ${branch}`, true);
             const commitCount = parseInt(result.trim());
             return commitCount > 0;
         } catch (error) {
@@ -366,7 +363,11 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
 
     // Status endpoint
     if (url === "/status" && method === "GET") {
-        sendJSON(res, 200, agentState.getStatus());
+        sendJSON(
+            res,
+            200,
+            agentState.getStatus() as unknown as Record<string, unknown>
+        );
         return;
     }
 
@@ -418,7 +419,7 @@ async function handleRequest(req: http.IncomingMessage, res: http.ServerResponse
                 agentState.completeTask(result.success);
 
                 // Send response
-                sendJSON(res, 200, result);
+                sendJSON(res, 200, result as unknown as Record<string, unknown>);
             } catch (error) {
                 agentState.completeTask(false);
 

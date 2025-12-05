@@ -8,6 +8,23 @@ export default defineConfig({
         globals: true,
         environment: "jsdom",
         setupFiles: ["./__tests__/setup.ts"],
+        // Prevent cascading process spawning
+        maxWorkers: 4,
+        minWorkers: 1,
+        maxConcurrency: 4,
+        fileParallelism: true,
+        // Timeout protection
+        testTimeout: 10000,
+        hookTimeout: 10000,
+        teardownTimeout: 5000,
+        exclude: [
+            "**/node_modules/**",
+            "**/dist/**",
+            "**/.gitworktrees/**",
+            // Exclude E2E tests from vitest - they spawn browser processes
+            // Run these separately with: pnpm test:e2e
+            "**/__tests__/e2e/**",
+        ],
         coverage: {
             provider: "v8",
             reporter: ["text", "json", "html"],
@@ -17,6 +34,7 @@ export default defineConfig({
                 "*.config.{js,ts}",
                 ".next/",
                 "coverage/",
+                ".gitworktrees/",
             ],
         },
     },

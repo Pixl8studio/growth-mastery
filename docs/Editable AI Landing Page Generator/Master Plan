@@ -1,0 +1,322 @@
+# Editable AI Landing Page Generator - Master Plan
+
+## Development Handoff Document v1.0
+**Project:** AI-Powered Landing Page Editor for GrowthMastery.ai  
+**Date:** December 2024  
+**Status:** Ready for Development
+
+---
+
+# Executive Summary
+
+We're building a standalone, AI-powered landing page editor that automatically generates high-converting Registration, Watch, and Enrollment pages from user-provided business context, then allows real-time refinement through a conversational chat interface. 
+
+The system must be completely independent from any existing editors, produce premium-quality portable HTML output, and integrate seamlessly with the GrowthMastery.ai funnel builder.
+
+**Core Value Proposition:** Users describe what they want in plain English; the AI figures out the implementation and updates the page in real-time.
+
+---
+
+# Part 1: System Architecture
+
+## Independence Requirement (Non-Negotiable)
+
+This editor must exist as a completely standalone system. It needs new routes and URLs separate from existing editors, new database tables for all editor data, new API endpoints for all operations, and new component directories with no imports from existing editor code. We also need a dedicated preview environment for testing before production rollout.
+
+The existing editors remain unchanged until explicit approval for migration.
+
+## High-Level Flow
+
+The funnel builder collects business context in Steps 1-4 (business info, offer definition, brand design, and audience profile). When a user reaches the page generation step, this context flows into the new AI Landing Page Editor. The editor presents a split-screen interface with an AI chat panel on the left and a live page preview on the right. The Claude AI engine uses this context along with our page frameworks to generate and edit pages. Everything persists to a Supabase database.
+
+## Security Boundaries
+
+User isolation is mandatory. Users can only access and edit pages within their own funnels. Edits apply only to the generated HTML content of their specific pages. No user action can modify the GrowthMastery codebase, templates, or system files. The framework documents remain read-only system resources. All inputs must be sanitized and validated, with rate limiting on AI requests and audit logging of all edits.
+
+---
+
+# Part 2: Editor Interface Specification
+
+## Layout Architecture
+
+The editor uses a split-pane design. The left panel takes approximately 35% of the width and contains the AI conversation interface. The right panel takes approximately 65% of the width and displays a live preview of the page being edited.
+
+### Header and Toolbar
+
+The header includes the project/page title on the left (which users can edit), along with a status indicator showing "Previewing last saved version." The center contains toolbar buttons for history/version control, device preview toggle (desktop/mobile), preview mode, and undo. The right side has an expand/fullscreen toggle, refresh button, share button, and a prominent green Publish button as the primary action.
+
+### AI Conversation Panel (Left Side)
+
+The message thread displays the conversation between the user and AI. User messages appear with distinct styling (gray/light background). AI responses include a thinking indicator showing how long the AI processed (for example, "Thought for 4s" with a lightbulb icon), followed by a natural language explanation of what was changed, then an expandable edit summary card showing the count of edits made with details available on expansion, and finally feedback controls (thumbs up/down, copy, more options).
+
+Below the conversation, contextual quick action chips appear as AI-generated suggestions for next steps, such as "Add urgency element," "Improve subheadline," or "Add social proof." These allow one-click application.
+
+The chat input area at the bottom includes an attach files/images button on the left, a text input field with placeholder text "Ask GrowthMastery.ai...", and voice input and send buttons on the right.
+
+### Live Preview Panel (Right Side)
+
+This panel renders the actual landing page in real-time. Changes appear immediately after the AI processes them. It provides a WYSIWYG representation of the final output with the ability to toggle between desktop and mobile preview views.
+
+---
+
+# Part 3: Page Generation System
+
+## Generation Trigger Points
+
+Pages are generated from specific funnel builder steps. Enrollment Pages generate at Step 8, Watch Pages at Step 9, and Registration Pages at Step 10.
+
+## Context Collection
+
+The AI receives comprehensive context from earlier funnel builder steps. Step 1 provides business foundation including business name, type, industry, target audience, and primary offer. Step 2 provides offer definition including product name, price point, pricing model, transformation promise, key benefits, delivery format, and timeline. Step 3 provides brand design including colors (primary, secondary, accent, background), typography preferences, visual style, and optional logo. Step 4 provides audience profile including ideal customer avatar, pain points, desires, objections, and founder story.
+
+## Framework-Based Generation
+
+Each page type uses a dedicated framework document as its structural guide.
+
+### Registration Pages
+
+The Universal Registration Page Prompt Configuration Framework defines nine sections: Hero Section with headline and transformation promise, Registration Form for lead capture, Learning Modules as a value preview with four module cards, Qualification Section with three qualifier cards, Business Types showing 15-20 industry applicability items, Transformation Section with an orbital visualization, Instructor Section for authority and bio, Final CTA as an emotional close, and Mobile Sticky CTA for persistent conversion.
+
+The design uses gradient hero backgrounds, card-based module layouts, emerald and gold color accents, animated orbital elements, and a form-focused conversion flow.
+
+### Watch Pages
+
+The Universal Watch Page Prompt Configuration Framework defines seven sections: Header/Navigation with logo and CTA, Video Hero with headline and subheadline, Video Player as the primary content delivery, CTA Strip as a conversion opportunity below the video, Presenter Bio for authority building, Secondary CTA as a reinforced conversion opportunity, and a minimal Footer.
+
+The design emphasizes video as the focal point, uses dark and neutral backgrounds around video content for a cinema effect, minimizes distractions, places CTAs strategically, and maintains a clean focused layout.
+
+### Enrollment Pages
+
+The Universal Enrollment Page Framework defines thirteen sections: Hero with transformation promise, Video Demo for demonstration, How It Works showing three steps, then five Feature Deep-Dive sections covering the Marketing Engine, Offer Optimizer, Presentation Builder, Follow-Up Engine, and Organic Marketing Engine. Following these are Dashboard/Results for metrics visualization, Founder Letter for trust and mission, Pricing with Good/Better/Best tiers, FAQ for objection handling, and Final CTA for urgency and action.
+
+The design alternates between light and dark sections, feature sections alternate content placement left and right, the pricing table highlights the recommended tier, floating orb animations add visual interest, and comprehensive objection handling is embedded throughout.
+
+## Output Format Requirements
+
+Generated pages must be complete, standalone HTML documents that are self-contained with all CSS embedded (no external stylesheets required). They should use CDN links only for fonts (Google Fonts - Inter, Poppins) and icons (Lucide Icons), with minimal JavaScript only for interactions.
+
+Pages must be responsive with a mobile-first approach, including mobile sticky CTAs and touch-friendly interactions. Most importantly, they must be portable - working when copied to any HTML file, uploaded to static hosting, embedded in WordPress or other CMS platforms, integrated into existing websites, or used with custom backend systems. The HTML should be clean, readable, and semantic.
+
+---
+
+# Part 4: AI System Design
+
+## How Edit Requests Work
+
+When a user sends an edit request, the system assembles a payload containing the page ID, page type (registration, watch, or enrollment), the current full HTML of the page, the user's message, the conversation history, and the user's business context from Steps 1-4.
+
+The AI processes this and returns a natural language explanation of what changes were made, a list of specific edits with descriptions, the updated HTML, suggested next actions the user might want to take, and the thinking time (displayed for transparency).
+
+## Context Assembly
+
+Every AI request includes the current page state (full HTML), the page type, user context from Steps 1-4, conversation history for continuity, the relevant framework document for structural guidance, and system instructions covering edit rules and safety guardrails.
+
+## Edit Types Supported
+
+The system supports text content edits including headlines, subheadlines, body copy, button text, form labels, testimonials, FAQ content, instructor bios, and section titles.
+
+Visual styling edits include colors, typography, spacing, button styles, card styling, background treatments, and animation adjustments.
+
+Structural changes include adding new sections, removing sections, reordering sections, and duplicating sections with variations.
+
+Interactive element edits include form field configuration, button links, video embeds, sticky CTA behavior, and mobile-specific elements.
+
+## AI Safety Guardrails
+
+The AI must refuse to add malicious code or scripts, include external resources from untrusted sources, remove essential elements that would break functionality, make changes that violate accessibility standards, or generate content that violates platform policies.
+
+The AI should preserve the conversion architecture from our frameworks unless explicitly asked to change it, maintain proper section ordering, keep design system consistency, warn users if requested changes might hurt conversion, and suggest framework-aligned alternatives when appropriate.
+
+## Model Requirements
+
+We recommend using Claude (Sonnet or Opus). The model needs a long context window to handle full HTML plus conversation plus framework documents, reliable structured output format, strong HTML/CSS understanding for accurate edits, consistency across multiple conversation turns, and fast response times (under 10 seconds typical).
+
+---
+
+# Part 5: Data Architecture
+
+## What Needs to Be Stored
+
+### Pages
+
+Each page record needs a unique identifier, user ID (for ownership), funnel ID (for association), page type (registration, watch, or enrollment), title, the full HTML content, status (draft or published), version number, and timestamps for creation, updates, and publishing.
+
+### Conversations
+
+Conversation records need a unique identifier, the associated page ID, an array of messages with role (user or assistant) and content, and timestamps.
+
+### Version History
+
+Version records need a unique identifier, the associated page ID, version number, the HTML content at that version, a description of what changed, and a timestamp.
+
+### User Context Cache
+
+For performance, we cache the user's compiled context from Steps 1-4 with the user ID, funnel ID, the context data, and timestamps.
+
+## Data Flow
+
+When a user opens the editor, we load the page HTML, conversation history, and user context, then render the preview and display the chat. When the user sends an edit request, we assemble the AI context payload, make the Claude API call with the framework, parse the response, apply the edits, update the preview, save to the database, and add to the conversation history.
+
+## Auto-Save Strategy
+
+Save after each successful AI edit. Use debounced saves (wait 2 seconds after the last change). Create version snapshots every 10 edits or on manual save. Conversations persist across sessions. There should be no unsaved changes warning because everything auto-saves.
+
+---
+
+# Part 6: Integration Points
+
+## Funnel Builder Connection
+
+For reading, the system pulls Steps 1-4 context when generating pages and reads existing page data when opening the editor. For writing, it updates page status from draft to published, updates the funnel's page references, and stores page URLs and slugs.
+
+## Backend Infrastructure
+
+Use existing systems for URL/slug generation and management, page routing and serving, user authentication and authorization, asset storage for images and files, and analytics tracking.
+
+## Form Integration
+
+Registration pages connect to form submission handling, lead capture to the user's CRM or database, email automation triggers, and thank you page redirects.
+
+## Video Platform Integration
+
+Watch pages integrate with CloudFlare video hosting and track watch percentage per viewer through every video.
+
+## Payment Systems
+
+Enrollment pages connect to Stripe checkout links, payment button integrations, and booking/calendar links like Calendly.
+
+---
+
+# Part 7: HTML Export System
+
+## Export Options
+
+Users should be able to copy the full HTML with one click, download as an HTML file, view the code in a formatted display with syntax highlighting, copy just the CSS if needed, and copy individual sections.
+
+## Export Location
+
+The primary location is in the editor toolbar via a Code/Export icon. A secondary location is in the publish dropdown menu.
+
+## Portability Verification
+
+Exported HTML must work when pasted into any HTML file, uploaded to static hosting (Netlify, Vercel, S3), embedded in WordPress or other CMS platforms, integrated into existing websites, and used with custom backend systems.
+
+---
+
+# Part 8: Development Phases
+
+## Phase 1: Foundation (Weeks 1-3)
+
+Build the database schema, scaffold the basic API endpoints, create the editor shell UI with the split-pane layout, implement static preview panel rendering, and integrate user authentication.
+
+The exit criteria: the editor loads with placeholder content, database connections work, and users can only access their own funnel data.
+
+## Phase 2: Page Generation (Weeks 4-6)
+
+Integrate Claude AI, implement Registration page generation from context, implement Watch page generation from context, implement Enrollment page generation from context, and integrate the framework documents as system prompts.
+
+The exit criteria: users click Generate and receive a complete styled page, generated pages follow framework structure, and brand colors and content reflect user context.
+
+## Phase 3: Conversational Editing (Weeks 7-9)
+
+Make the chat interface functional, enable AI processing of edit requests, implement real-time preview updates, display edit summaries, and implement conversation persistence.
+
+The exit criteria: users type an edit request and the page updates in under 10 seconds, edits are accurate and preserve page structure, and conversations persist across sessions.
+
+## Phase 4: Polish and Features (Weeks 10-12)
+
+Add quick action chips, implement version history and undo, build HTML export functionality, add mobile preview toggle, handle errors and edge cases, and optimize performance.
+
+The exit criteria: all features work smoothly, response times meet targets, and export produces portable HTML.
+
+## Phase 5: Integration and Testing (Weeks 13-14)
+
+Complete funnel builder integration, implement form submission handling, add video embed integration, add payment link integration, conduct comprehensive testing, and create a preview link for stakeholder review.
+
+The exit criteria: the end-to-end flow works, all integrations are functional, and the system is ready for stakeholder preview.
+
+---
+
+# Part 9: Success Criteria
+
+## Functional Requirements
+
+Users can generate all three page types. Generated pages accurately reflect Steps 1-4 context. Pages follow the framework structures and conversion principles. Users can edit pages through natural language. Changes appear in real-time in the preview. Pages persist across sessions. Conversation history persists across sessions. HTML can be exported and used independently. User isolation is enforced.
+
+## Performance Targets
+
+Page generation should complete in under 30 seconds. Edit requests should respond in under 10 seconds. Edit accuracy should exceed 95%. Preview updates should happen in under 1 second. Page load time should be under 3 seconds.
+
+## Quality Standards
+
+Generated pages should be premium quality, not generic templates. Design should be consistent with brand specifications. All pages must be mobile-friendly. Pages should meet WCAG 2.1 AA accessibility compliance. HTML must be portable and work in any environment.
+
+## Security Requirements
+
+User isolation must be absolute with no cross-account access possible. System files and codebase must be protected from modification. All inputs must be sanitized. Rate limiting must be applied to AI requests. All edits must be logged for auditing.
+
+---
+
+# Part 10: Reference Documents
+
+Your development team should reference these documents for detailed specifications:
+
+## Framework Documents (Read-Only System Resources)
+
+**Universal Registration Page Prompt Configuration Framework** contains the 9-section architecture, copy formulas for each section, design system principles including HSL colors, typography, and spacing, component patterns for cards, buttons, and badges, and the data collection schema.
+
+**Universal Watch Page Prompt Configuration Framework** contains the 7-section video-centric architecture, video player integration patterns, presenter bio structure, CTA placement strategy, and minimal distraction design principles.
+
+**Universal Enrollment Page Framework** contains the 13-section conversion architecture, AIDA psychological flow, feature section copy formulas, pricing tier structure using Good/Better/Best, and objection handling patterns.
+
+## UX Specification Documents
+
+**Conversational AI Editor User Experience.md** covers the vision and user flow, chat interface behavior, edit summary display, quick action chips, and risk mitigations.
+
+**Editor Technical Specification Document.md** covers component breakdown, header/toolbar specification, input modes (text, voice, image), interaction flow diagram, and feature implementation details.
+
+## Reference Implementations
+
+**ExampleRegistrationPage.HTML** is a complete reference implementation with all 9 sections fully styled, CSS embedded with no external dependencies, Lucide icons via CDN, animations and hover effects, and mobile-responsive design.
+
+**Example Enrollment Page.html** is a complete reference implementation with all 13 sections fully styled, Tailwind CSS via CDN, pricing table with 3 tiers, dashboard metrics visualization, and founder letter section.
+
+**Example Watch Page.html** is a complete reference implementation with a video player placeholder, presenter bio section, minimal distraction design, and dark video section background.
+
+---
+
+# Part 11: Key Reminders
+
+## Non-Negotiables
+
+**Independence is mandatory.** Do not modify any existing editor code. Build everything new.
+
+**Preview before production.** Provide a preview link for stakeholder approval before any integration with live systems.
+
+**Context is everything.** Generation quality depends on how well Steps 1-4 context is aggregated and used.
+
+**Frameworks are sacred.** The conversion architecture in each framework is proven. Preserve it while customizing content.
+
+**HTML portability is required.** Every page must work perfectly when copied out of the system.
+
+**User isolation is absolute.** Users cannot see, access, or modify anything outside their funnel.
+
+**Simplicity wins.** The interface should feel magical, not complicated. Hide complexity, expose capability.
+
+## Technical Priorities
+
+AI response quality is more important than speed. It's better to wait 10 seconds for accurate edits than 2 seconds for broken changes.
+
+Graceful degradation is essential. If the AI fails, show a clear error and allow retry.
+
+Data integrity is critical. Auto-save everything and maintain version history.
+
+Clean code output matters. Generated HTML should be readable and maintainable.
+
+---
+
+**End of Master Plan**
+
+*Document Version: 1.0*  
+*Last Updated: December 2024*  
+*Ready for Development Team Handoff*

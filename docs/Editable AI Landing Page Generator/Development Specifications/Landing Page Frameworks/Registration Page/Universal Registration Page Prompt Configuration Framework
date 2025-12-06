@@ -1,0 +1,646 @@
+# Universal Free Training Registration Page Framework
+
+## Overview
+
+A high-converting landing page framework for promoting free training/webinar registrations across any business type, designed to build trust, demonstrate value, and drive sign-ups.
+
+---
+
+## Page Architecture (Section Order)
+
+1. **Hero Section** → Capture attention, state transformation promise
+2. **Registration Form** → Primary conversion point (early placement)
+3. **Learning Modules** → What they'll learn (value preview)
+4. **Qualification Section** → "Is this for me?" self-selection
+5. **Business Types** → Industry applicability (expand addressable market)
+6. **Transformation Section** → Visual system overview (what they get)
+7. **Instructor Section** → Authority & credibility building
+8. **Final CTA** → Emotional close + secondary conversion
+9. **Mobile Sticky CTA** → Persistent conversion opportunity
+
+---
+
+## Section-by-Section Copy Framework
+
+### 1. HERO SECTION
+
+**Purpose:** Capture attention, state the transformation promise, create immediate desire
+
+**Structure:**
+
+```
+[HEADLINE]
+{Desirable Outcome} + {Timeframe} 
+Format: "[Action Verb] a [Desirable Adjective] [Thing They Want] in a [Compressed Timeframe]"
+
+[SUBHEADLINE]
+"A Free Training on How to [Primary Benefit] Using [Method/Tool] in [Timeframe] - Without [Pain Point 1], [Pain Point 2], or [Pain Point 3]."
+
+[CTA BUTTON]
+Action-oriented: "Watch the Training" / "Get Instant Access" / "Start Learning"
+
+[AVAILABILITY STATEMENT]
+"Full Training Recording Available Now" (for on-demand)
+"Live Training • [Date] • [Time] [Timezone]" (for live events)
+```
+
+**Universal Variables:**
+- `{{OUTCOME}}` - The result they want (e.g., "Profitable Webinar", "6-Figure Launch", "Automated System")
+- `{{TIMEFRAME}}` - Speed promise (e.g., "in a Day", "in 48 Hours", "This Week")
+- `{{METHOD}}` - How they'll achieve it (e.g., "Using AI", "With Templates", "Step-by-Step")
+- `{{PAIN_POINTS}}` - 3 obstacles eliminated (e.g., "Overwhelm", "Tech Headaches", "Months of Prep")
+
+---
+
+### 2. REGISTRATION FORM SECTION
+
+**Purpose:** Capture lead information with minimal friction
+
+**Structure:**
+
+```
+[BADGE]
+"Free Training Available" / "Limited Time Offer" / "No Cost, High Value"
+
+[FORM HEADLINE]
+"Get Instant Access" / "Reserve Your Spot" / "Join Free"
+
+[FORM SUBHEADLINE]
+"[Action] and start [immediate benefit] today"
+
+[FORM FIELDS]
+- First Name (required)
+- Email (required)  
+- Phone (optional)
+- SMS Consent checkbox (optional)
+
+[SUBMIT BUTTON]
+"Watch Now" / "Get Access" / "Join the Training"
+
+[TRUST STATEMENT]
+"By registering, you'll receive email updates about the training.
+No spam. Unsubscribe anytime."
+```
+
+---
+
+### 3. LEARNING MODULES SECTION
+
+**Purpose:** Preview the value, create anticipation, demonstrate depth
+
+**Structure:**
+
+```
+[SECTION HEADLINE]
+"What You'll Discover in This [Training Type]"
+
+[SECTION SUBHEADLINE]
+"[Duration] and walk away with everything you need to [outcome]"
+
+[MODULE CARDS] (3-4 modules)
+Each module:
+- Icon (visual identifier)
+- Title: "[Topic] That's Working NOW" / "Build Your [Thing] (Live Walkthrough)"
+- 3 Bullet Takeaways starting with action verbs:
+  • "Learn [specific skill]"
+  • "Discover [hidden insight]"
+  • "Get [tangible asset/tool]"
+
+[CLOSING STATEMENT]
+"By the end of this training, you'll know exactly how to [outcome] - even if [objection 1], [objection 2], or [objection 3]"
+```
+
+**Module Formula:**
+- **Module 1:** Framework/Strategy Overview (WHY this works)
+- **Module 2:** Implementation Walkthrough (HOW to do it)
+- **Module 3:** Traffic/Growth Strategy (HOW to scale it)
+- **Module 4:** Action Plan/Roadmap (WHAT to do next)
+
+---
+
+### 4. QUALIFICATION SECTION
+
+**Purpose:** Self-selection, address "is this for me?" objection
+
+**Structure:**
+
+```
+[HEADLINE]
+"This Is Perfect for You If You Have…"
+
+[QUALIFICATION CARDS] (3 cards)
+Each card:
+- Checkmark Icon
+- Title: "[Characteristic/Situation]"
+- Description: "You've [past experience] and you're ready to [future action]. This training will [specific benefit]."
+
+[CTA BUTTON]
+"SAVE YOUR SEAT NOW" / "GET ACCESS NOW"
+```
+
+**Universal Qualifications:**
+1. **Experience Qualifier:** "A [Proven Thing] / [Existing Foundation]"
+   → Validates they have something to build on
+2. **Desire Qualifier:** "A Desire to [Use Method] (Without [Fear])"
+   → Addresses methodology concerns
+3. **Motivation Qualifier:** "A Hunger to [Growth Goal]"
+   → Confirms they're action-oriented
+
+---
+
+### 5. "IS THIS FOR ME?" SECTION (Universal Applicability)
+
+**Purpose:** Overcome the "Is this right for me?" objection by showing the breadth of people/situations this applies to
+
+#### Section Naming:
+- **B2B:** "Is This Right for My Business?"
+- **B2C:** "Is This Right for Me?" / "Who Is This For?"
+- **Universal:** "This Works If You're..."
+
+#### Structure
+
+```
+[HEADLINE]
+"Is This Right for {{ME/MY BUSINESS}}?"
+OR
+"This Is For You If..."
+OR
+"Who {{This Training/Product}} Is Perfect For"
+
+[SUBHEADLINE]
+"Yes. {{Method/Product}} works for {{broad category}} - whether you're {{situation 1}}, {{situation 2}}, or {{situation 3}}. Here's who thrives with this {{system/approach}}."
+
+[APPLICABILITY GRID] (15-20 items)
+Each item:
+- Icon (visual identifier)
+- Label (persona, situation, or business type)
+
+[CLOSING STATEMENT]
+"If you {{have characteristic/desire outcome}}, this {{training/product}} will show you exactly how to {{achieve result}}."
+```
+
+#### Universal Framework Variables
+
+**For B2B (Business-to-Business):**
+
+```yaml
+grid_type: "business_types"
+headline: "Is This Right for My Business?"
+subheadline_template: "Yes. {{method}} works across nearly every industry - whether you sell expertise, services, software, or physical products."
+items:
+  - Coaches
+  - Consultants
+  - Course Creators
+  - Agencies
+  - SaaS Founders
+  - Service Providers
+  # ... industry-specific additions
+closing: "If you have a business and want to {{outcome}}, this training is for you."
+```
+
+**For B2C (Business-to-Consumer):**
+
+```yaml
+grid_type: "customer_personas"
+headline: "Is This Right for Me?"
+subheadline_template: "Yes. {{method}} works for people in all walks of life - whether you're {{situation 1}}, {{situation 2}}, or {{situation 3}}."
+items:
+  # By Life Stage:
+  - College Students
+  - Young Professionals
+  - New Parents
+  - Empty Nesters
+  - Retirees
+  
+  # By Situation:
+  - Career Changers
+  - Side Hustlers
+  - Stay-at-Home Parents
+  - Remote Workers
+  - First-Time Buyers
+  
+  # By Goal:
+  - Beginners Starting Fresh
+  - Experienced Seeking Growth
+  - Busy Professionals
+  - Budget-Conscious Planners
+  
+  # By Challenge:
+  - Overwhelmed by Options
+  - Tried Everything Before
+  - Short on Time
+  - Limited Budget
+closing: "If you {{have desire/face challenge}}, this {{product}} will help you {{achieve outcome}}."
+```
+
+**For Hybrid/Universal:**
+
+```yaml
+grid_type: "use_cases" | "situations"
+headline: "Who This Is Perfect For"
+subheadline_template: "This works whether you're {{persona A}}, {{persona B}}, or {{persona C}}. Here's who gets the best results."
+items:
+  # Mix of WHO + WHAT SITUATION
+  - "Complete Beginners"
+  - "Experienced {{Domain}} Seekers"
+  - "People Who've Tried & Failed Before"
+  - "Those Short on Time"
+  - "Those on a Budget"
+  - "Perfectionists Who Overthink"
+  - "Action-Takers Ready to Start"
+  # ... context-specific additions
+```
+
+#### Copy Formula Templates
+
+**Headline Options:**
+- **B2B:** "Is This Right for My Business?"
+- **B2C:** "Is This Right for Me?"
+- **Neutral:** "Who This Is Perfect For"
+- **Broad:** "This Works For..."
+- **Challenge-based:** "If You've Ever Felt {{Pain}}, This Is For You"
+
+**Subheadline Formula:**
+```
+"Yes. {{Method/Product}} works for {{broad inclusive category}} - whether you're {{situation/persona 1}}, {{situation/persona 2}}, or {{situation/persona 3}}. Here's who thrives with this {{system/approach/product}}."
+```
+
+**Grid Item Categories (choose relevant mix):**
+
+| Category | B2B Examples | B2C Examples |
+|----------|--------------|--------------|
+| By Role/Identity | Coaches, Founders, Marketers | Parents, Students, Professionals |
+| By Experience Level | Startups, Established Brands | Beginners, Intermediate, Advanced |
+| By Situation | Scaling, Pivoting, Launching | Career Change, Life Transition |
+| By Challenge | Time-Strapped, Budget-Limited | Overwhelmed, Skeptical, Stuck |
+| By Industry/Interest | SaaS, E-commerce, Services | Fitness, Finance, Relationships |
+| By Goal | Growth-Focused, Efficiency-Seekers | Weight Loss, Wealth Building |
+
+**Closing Statement Formula:**
+```
+"If you {{qualifier - have/want/are}}, this {{product type}} will show you exactly how to {{specific outcome}}."
+```
+
+**Examples:**
+- **B2B:** "If you have expertise to share and want to scale your impact, this training will show you exactly how to build a system that works while you sleep."
+- **B2C:** "If you've been wanting to {{outcome}} but haven't known where to start, this {{product}} gives you the exact roadmap."
+
+#### Visual Design
+
+```jsx
+// Grid layout - responsive
+<div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+  {items.map((item) => (
+    <div className="flex flex-col items-center justify-center p-3 md:p-6 
+                    bg-card rounded-lg border border-border/50 
+                    hover:shadow-soft hover:border-primary/20 
+                    transition-all duration-300 group">
+      <div className="w-8 h-8 md:w-12 md:h-12 rounded-full bg-primary/10 
+                      flex items-center justify-center mb-2 md:mb-3 
+                      group-hover:bg-primary/20 group-hover:scale-110">
+        <Icon className="h-4 w-4 md:h-6 md:w-6 text-primary" />
+      </div>
+      <p className="text-[10px] md:text-sm font-medium text-center">
+        {item.label}
+      </p>
+    </div>
+  ))}
+</div>
+```
+
+#### Data Collection (Updated)
+
+```yaml
+Applicability Section:
+  section_type: "b2b" | "b2c" | "hybrid"
+  headline: string
+  subheadline: string
+  grid_items: array[15-20]
+    - icon: string (lucide icon name)
+    - label: string (persona, situation, or business type)
+  closing_statement: string
+```
+
+---
+
+### 6. TRANSFORMATION SECTION
+
+**Purpose:** Visual representation of the complete system/outcome
+
+**Structure:**
+
+```
+[HEADLINE]
+"A Faster, Smarter Way To [Verb]."
+
+[SUBHEADLINE]
+"Build a complete, [adjective]-ready [deliverable] in the time it used to take just to [old painful process]."
+
+[VISUAL ELEMENT]
+Orbital/radial diagram showing interconnected components:
+- Center: Core concept/AI/Method icon with glow effect
+- Orbiting elements: 5 key deliverables/components
+  Format: Icon + Short Label (2-3 words max)
+```
+
+**Universal Orbital Components:**
+- **Strategy:** "Offer Design" / "Strategy Blueprint" / "Business Model"
+- **Content:** "Slides" / "Scripts" / "Content Templates"
+- **Technical:** "Funnel Pages" / "Website" / "Tech Setup"
+- **Communication:** "Email Sequences" / "Follow-up System" / "Automation"
+- **Growth:** "Traffic Strategy" / "Lead Generation" / "Scale Plan"
+
+---
+
+### 7. INSTRUCTOR SECTION
+
+**Purpose:** Build authority, create personal connection, establish trust
+
+**Structure:**
+
+```
+[LAYOUT]: Two-column (Photo | Content)
+
+[PHOTO SIDE]
+- Professional headshot (circular, bordered)
+- Name
+- Title/Role
+- Company/Brand
+
+[CONTENT SIDE]
+[HEADLINE]: "Meet Your Guide" / "Your Instructor" / "Who's Teaching"
+
+[ORIGIN STORY] (3 paragraphs):
+Paragraph 1: "[Year], I [pivotal decision] to [purpose-driven action]."
+Paragraph 2: "After [credibility metric], I realized [insight about the problem]."
+Paragraph 3: "[Brand/Solution] was born to solve that, so that [target audience] can [ultimate benefit]."
+
+[QUOTE]
+"[Philosophy statement about the methodology or transformation]"
+```
+
+**Story Arc Formula:**
+1. **The Leap:** When they took a risk for purpose
+2. **The Results:** Credibility through outcomes
+3. **The Insight:** What they discovered
+4. **The Mission:** Why they created this
+
+---
+
+### 8. FINAL CTA SECTION
+
+**Purpose:** Emotional close, mission-driven appeal, final conversion push
+
+**Structure:**
+
+```
+[BADGE]
+"The Future is Here" / "[Aspirational Statement]"
+
+[HEADLINE]
+"You Were Born To [Higher Purpose]. Not [Painful Current Reality]."
+
+[SUBHEADLINE]
+"Let [method] handle the heavy lifting so you can [benefit 1], [benefit 2], and [ultimate goal]."
+
+[CTA BUTTON]
+"Join the Training" / "Get Started Now"
+
+[CLOSING TAGLINE]
+"[Verb] your [asset]. [Verb] your [deliverable]. [Verb] your [mission]."
+```
+
+---
+
+### 9. MOBILE STICKY CTA
+
+**Purpose:** Persistent conversion opportunity on mobile
+
+**Structure:**
+
+```
+[TRIGGER]: Appears after 300px scroll
+[PLACEMENT]: Fixed bottom of viewport
+[VISIBILITY]: Mobile only (hidden on desktop)
+
+[BUTTON]
+Full-width, high-contrast
+"Save My Spot" / "Get Access" + Up Arrow icon
+```
+
+---
+
+## Design System Principles
+
+### Color Architecture (HSL)
+
+```css
+/* Primary Brand Color */
+--primary: [H] [S%] [L%];           /* Main action color */
+--primary-foreground: [contrasting]; /* Text on primary */
+
+/* Accent/Highlight */
+--accent: [complementary hue];       /* Secondary emphasis */
+--accent-glow: [lighter variant];    /* Glow effects */
+
+/* Semantic Colors */
+--emerald: [success/money green];    /* Prosperity, growth */
+--gold: [premium indicator];         /* Value, premium */
+
+/* Neutrals */
+--background: [dark or light base];
+--foreground: [contrasting text];
+--muted: [subdued backgrounds];
+--muted-foreground: [secondary text];
+--card: [elevated surfaces];
+--border: [subtle divisions];
+```
+
+### Typography Scale
+
+```css
+/* Headlines */
+H1: text-5xl md:text-7xl lg:text-8xl font-black
+H2: text-4xl md:text-5xl lg:text-6xl font-black
+H3: text-2xl md:text-3xl font-bold
+
+/* Body */
+Large: text-xl md:text-2xl leading-relaxed
+Regular: text-lg leading-relaxed
+Small: text-sm
+
+/* Special */
+Badge: text-sm font-semibold
+Button: text-lg font-bold
+```
+
+### Spacing System
+
+```css
+/* Section Padding */
+py-24 px-4                    /* Standard section */
+py-32 px-4                    /* Emphasis section */
+
+/* Container */
+container mx-auto max-w-6xl   /* Wide content */
+container mx-auto max-w-4xl   /* Focused content */
+container mx-auto max-w-2xl   /* Form content */
+
+/* Element Gaps */
+space-y-8                     /* Section internal */
+gap-8                         /* Grid items */
+mb-16                         /* Section headings */
+```
+
+### Visual Effects
+
+```css
+/* Gradients */
+gradient-hero: Radial dark-to-darker background
+gradient-primary: Linear brand color for buttons/accents
+gradient-glow: Subtle ambient lighting
+
+/* Shadows */
+shadow-soft: Subtle elevation
+shadow-float: Medium card lift
+shadow-glow: Brand-colored glow
+shadow-emerald: Success-colored glow
+
+/* Animations */
+animate-fade-in: Entry animation
+animate-float: Subtle floating motion
+animate-pulse-slow: Breathing glow
+animate-bounce: Attention-getting
+hover:scale-105: Interactive scaling
+```
+
+### Component Patterns
+
+**Cards:**
+```jsx
+<Card className="p-8 hover:shadow-emerald transition-all duration-300 
+                hover:-translate-y-2 border-border/50">
+```
+
+**Buttons (Primary CTA):**
+```jsx
+<Button className="gradient-primary text-white hover:shadow-glow 
+                   transition-all duration-300 text-lg px-8 py-6 
+                   rounded-full hover:scale-105">
+```
+
+**Badges:**
+```jsx
+<div className="inline-flex items-center gap-2 px-4 py-2 rounded-full 
+                bg-primary/10 text-primary text-sm font-semibold">
+```
+
+**Icon Containers:**
+```jsx
+<div className="w-16 h-16 gradient-primary rounded-xl flex items-center 
+                justify-center shadow-soft">
+```
+
+---
+
+## Copy Writing Principles
+
+### Headlines
+- **Outcome + Timeframe:** Always lead with the transformation and speed
+- **Gradient Text:** Apply to the most desirable part of the headline
+- **Non-Breaking Spaces:** Use `&nbsp;` to prevent awkward line breaks
+
+### Body Copy
+- **Conversational Tone:** Write like talking to a friend
+- **Short Paragraphs:** 1-3 sentences maximum
+- **Leading Relaxed:** Use `leading-relaxed` for readability
+- **Muted for Secondary:** Use `text-muted-foreground` for supporting text
+
+### CTAs
+- **Action Verbs:** Start with verbs (Watch, Get, Join, Save, Start)
+- **Benefit-Focused:** Imply the result (Get Access vs. Submit)
+- **Urgency Words:** Use sparingly and authentically
+
+### Social Proof
+- **Specific Numbers:** "100+ founders" not "many people"
+- **Role Relevance:** Match testimonial roles to target audience
+- **Outcome-Focused:** Testimonials should mention specific results
+
+---
+
+## Conversion Optimization Patterns
+
+### Above the Fold
+- Hero captures 100vh minimum height
+- Clear value proposition visible immediately
+- Primary CTA accessible without scrolling
+
+### Form Placement
+- Registration form appears early (section 2)
+- Repeated CTA buttons throughout page
+- Mobile sticky CTA ensures constant access
+
+### Trust Building Sequence
+```
+1. Promise (Hero) → 2. Value Preview (Modules) → 
+3. Self-Selection (Qualification) → 4. Social Proof (Testimonials) → 
+5. Authority (Instructor) → 6. Final Push (CTA)
+```
+
+### Objection Handling
+| Objection | Section |
+|-----------|---------|
+| "Not for my industry" | Business Types Section |
+| "Is this for me?" | Qualification Section |
+| "Who is teaching this?" | Instructor Section |
+| "What will I learn?" | Learning Modules Section |
+| "What's the system?" | Transformation Section |
+
+---
+
+## Data Collection Requirements
+
+To generate a page using this framework, collect:
+
+```yaml
+Business Information:
+  - business_name: string
+  - business_type: string (coach, consultant, SaaS, etc.)
+  - target_audience: string
+  - primary_offer: string (what they sell)
+  - price_point: string (low/mid/high ticket)
+
+Training Details:
+  - training_title: string
+  - training_type: "live" | "on-demand"
+  - training_duration: string (e.g., "90 minutes")
+  - delivery_date: string (if live)
+  
+Value Proposition:
+  - primary_outcome: string (the transformation)
+  - timeframe_promise: string (how fast)
+  - method: string (AI, templates, system, etc.)
+  - pain_points: array[3] (what it eliminates)
+
+Content:
+  - modules: array[4] (title + 3 takeaways each)
+  - qualifications: array[3] (who it's for)
+  - business_types: array[15-20] (applicable industries)
+  - system_components: array[5] (what they get)
+
+Instructor:
+  - name: string
+  - title: string
+  - company: string
+  - headshot_url: string
+  - origin_year: string
+  - credibility_metric: string (e.g., "$10M+ generated")
+  - mission_statement: string
+  - quote: string
+
+Brand:
+  - primary_color: HSL
+  - accent_color: HSL
+  - logo_url: string (optional)
+```
+

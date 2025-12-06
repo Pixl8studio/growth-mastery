@@ -370,6 +370,9 @@ class VisualEditor {
     handleBlockClick(e) {
         if (!this.isEditMode) return;
 
+        // Guard against null/undefined e.target (can happen when element is removed from DOM)
+        if (!e.target) return;
+
         // Skip if this is an icon element (for icon picker)
         if (e.target.classList.contains('feature-icon') ||
             e.target.classList.contains('screen-icon') ||

@@ -297,21 +297,47 @@ export default function Step3BrandDesignPage({
 
             const data = await response.json();
 
-            // Update colors from scraped data
-            if (data.colors) {
+            // Check if colors were actually extracted (confidence > 0)
+            const hasValidColors =
+                data.colors && data.confidence && data.confidence.colors > 0;
+
+            if (hasValidColors) {
+                // Update colors from scraped data
                 setPrimaryColor(data.colors.primary || primaryColor);
                 setSecondaryColor(data.colors.secondary || secondaryColor);
                 setAccentColor(data.colors.accent || accentColor);
                 setBackgroundColor(data.colors.background || backgroundColor);
                 setTextColor(data.colors.text || textColor);
+
+                toast({
+                    title: "🎨 Colors extracted",
+                    description: `Brand colors extracted with ${data.confidence.colors}% confidence!`,
+                });
+
+                logger.info(
+                    {
+                        url: scrapedUrl,
+                        confidence: data.confidence.colors,
+                    },
+                    "Colors scraped from URL"
+                );
+            } else {
+                // No colors found - show warning instead of success
+                toast({
+                    title: "⚠️ No colors found",
+                    description:
+                        "Could not extract brand colors from the website. The site may use external stylesheets or have minimal inline styles.",
+                    variant: "destructive",
+                });
+
+                logger.warn(
+                    {
+                        url: scrapedUrl,
+                        confidence: data.confidence?.colors || 0,
+                    },
+                    "No colors found during scraping"
+                );
             }
-
-            toast({
-                title: "🎨 Colors extracted",
-                description: "Brand colors have been extracted from the website!",
-            });
-
-            logger.info({ url: scrapedUrl }, "Colors scraped from URL");
         } catch (error) {
             logger.error({ error, url: scrapedUrl }, "Failed to scrape colors");
             toast({

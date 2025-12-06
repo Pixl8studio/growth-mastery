@@ -1,0 +1,453 @@
+# AI Landing Page Editor - Integration Plan
+
+## Executive Summary
+
+This document outlines the integration plan for building a new, standalone AI-powered landing page editor within GrowthMastery.ai. This editor will automatically generate fully-designed registration, watch, and enrollment pages based on user-provided business context from the funnel builder, then allow users to refine those pages through a conversational AI interface.
+
+**Critical Requirement:** This is built as a completely independent editor from any existing editors. No existing editor functionality should be modified or replaced until the new system is fully tested and approved via a preview link.
+
+---
+
+## Part 1: Core Architecture Principles
+
+### 1.1 Complete Independence
+
+The new editor must exist as a standalone system that does not touch, modify, or depend on any existing editor code. This means:
+
+- New routes and URLs for accessing the editor
+- New database tables for storing editor data
+- New API endpoints for all editor operations
+- New component directories that don't import from existing editor components
+- A dedicated preview environment where stakeholders can test everything before any production changes
+
+The existing editors remain fully functional and unchanged. This new system runs in parallel until explicitly approved for rollout.
+
+### 1.2 Unified Backend for Page Management
+
+While the editor itself is independent, the underlying page infrastructure should use the same backend systems that currently handle:
+
+- Page slugs and URL generation
+- Page storage and retrieval
+- Link management and routing
+- Funnel-to-page relationships
+
+This ensures consistency in how pages are accessed, shared, and published across the platform, regardless of which editor created them.
+
+### 1.3 User Isolation and Security
+
+Growth Mastery users must only be able to edit landing pages within their own funnels. The system must enforce strict boundaries:
+
+- Users can only access pages belonging to their authenticated account
+- Edits apply only to the generated HTML content of their specific pages
+- No user action can modify the GrowthMastery.ai codebase, templates, or system files
+- All edits are sandboxed to the user's page content only
+- The frameworks themselves remain read-only system resources
+
+---
+
+## Part 2: Page Generation Flow
+
+### 2.1 Trigger Points
+
+Page generation occurs when a user reaches the appropriate step in the funnel builder and chooses to generate a:
+
+- **Registration Page** - Landing page for webinar/training sign-ups
+- **Watch Page** - Video delivery page for training content
+- **Enrollment Page** - Sales page for program enrollment
+
+### 2.2 Context Collection from Funnel Builder (Steps 1-7)
+
+Before generating any page, the system must pull comprehensive context from what the user has already defined in their funnel builder process. This context includes:
+
+**Step 1 - Business Foundation from Context Step:**
+- Business name and type
+- Industry/niche
+- Target audience description
+- Primary offer or service
+
+**Step 2 - Offer Definition from Define Offer Step:**
+- Product/program name
+- Price point and pricing model
+- Core transformation promise
+- Key benefits and outcomes
+- Delivery format and timeline
+
+**Step 3 - Design Specifications from Brand Design Step:**
+- Brand colors (primary, secondary, accent)
+- Typography preferences
+- Visual style direction
+- Logo and brand assets
+- Overall aesthetic preferences
+
+**Step 4 - Audience Profile from Presentation Structure Step:**
+- Ideal customer avatar
+- Pain points and challenges
+- Desires and aspirations
+- Objections and concerns
+- Founder story
+
+### 2.3 Framework-Based Generation
+
+When a page is generated, the AI uses the appropriate framework document as its structural guide:
+
+**For Registration Pages:**
+The system follows the Universal Registration Page Framework which defines nine sections: Hero, Registration Form, Learning Modules, Qualification, Business Types, Transformation, Instructor, Final CTA, and Mobile Sticky CTA. Each section has specific copy formulas, design patterns, and conversion optimization principles that the AI applies while incorporating the user's unique business context. Registration Pages are fully editable via the on-screen AI page editor interface.
+
+**For Watch Pages:**
+The system follows the Universal Watch Page Framework which prioritizes video content with seven sections: Header, Video Hero, Video Player, CTA Strip, Presenter Bio, Secondary CTA, and Footer. The framework emphasizes minimal distraction design with light backgrounds around video content and strategic CTA placement.  Watch pages are fully editable via the on-screen AI page editor interface.
+
+**For Enrollment Pages:**
+The system follows the Universal Enrollment Page Framework which includes thirteen sections designed around the AIDA (Attention, Interest, Desire, Action) psychology: Hero, Video Demo, How It Works, five Feature Deep-Dives addressing specific objections, Dashboard/Results visualization, Founder Letter, Pricing with Good/Better/Best tiers, FAQ, and Final CTA.  Enrollment pages are fully editable via the on-screen AI page editor interface.
+
+### 2.4 Output Format
+
+Generated pages must be:
+
+- Complete, standalone HTML documents
+- Self-contained with all CSS embedded (no external stylesheets required)
+- Using CDN links for fonts and icons (Google Fonts, Lucide Icons)
+- Fully responsive with mobile-first design
+- Ready for extraction and implementation in any development environment
+- Following the design system principles from each framework (HSL colors, typography scale, spacing system, animations)
+
+---
+
+## Part 3: Editor Interface
+
+### 3.1 Layout Structure
+
+The editor presents a split-screen interface:
+
+**Left Panel (approximately 35% width):**
+The AI conversation interface where users interact with the assistant to refine their page. This includes the message thread, input area, thinking indicators, edit summaries, and suggested action chips.
+
+**Right Panel (approximately 65% width):**
+A live preview of the generated landing page that updates in real-time as edits are applied. Users see exactly what their visitors will see.
+
+### 3.2 Initial State
+
+When a user generates a page:
+
+1. The appropriate framework guides the AI to create a fully-formed page
+2. All copy is customized based on the user's Steps 1-4 context
+3. Design styling matches the user's brand specifications from Step 3
+4. The page loads immediately in the preview panel
+5. The chat panel shows a welcome message upon new page creation explaining what was created and suggesting first edits
+
+The user never sees a blank page or generic template. They always start with a premium-quality, business-specific page that's already conversion-optimized.
+
+### 3.3 Conversational Editing
+
+Users edit their pages by describing what they want in natural language:
+
+- "Make the headline more urgent"
+- "Add a testimonial section after the pricing"
+- "Change the primary color to a deeper blue"
+- "Rewrite the instructor bio to emphasize my coaching background"
+- "Add a countdown timer for the early bird deadline"
+
+The AI interprets these requests, applies changes to the HTML, and shows the user exactly what changed through edit summary cards. The preview updates immediately.
+
+### 3.4 Edit Types Supported
+
+**Text Content:**
+Headlines, subheadlines, body copy, button text, form labels, testimonial content, FAQ questions and answers, instructor bios, section titles.
+
+**Visual Styling:**
+Colors, fonts, spacing, button styles, card styling, background treatments, section ordering.
+
+**Structural Changes:**
+Adding new sections, removing sections, reordering sections, duplicating sections with variations.
+
+**Interactive Elements:**
+Forms, buttons, video embeds, sticky CTAs, mobile-specific elements.
+
+### 3.5 Simplicity Principles
+
+While the editor is powerful, the interface remains simple:
+
+- One input field for requests
+- One preview showing results
+- Clear summaries of what changed
+- Suggested next steps to guide users
+- No complex menus, toolbars, or configuration panels
+- No code editing required (though code export is available)
+
+Users who want to see the HTML can expand the code view, but it's never required for editing.
+
+---
+
+## Part 4: AI System Design
+
+### 4.1 Context Awareness
+
+Every AI request includes:
+
+- The current full HTML of the page
+- The page type (registration, watch, or enrollment)
+- The user's business context from Steps 1-4
+- The conversation history for continuity
+- The relevant framework document for structural guidance
+
+This comprehensive context allows the AI to make intelligent edits that maintain consistency with the user's brand and the page's conversion architecture.
+
+### 4.2 Structured Responses
+
+The AI returns structured data for each interaction:
+
+- **Explanation Text:** Natural language description of what was done and why
+- **Edit Instructions:** Specific changes to apply to the HTML (element selectors, new content, style changes)
+- **Suggested Actions:** Contextual next steps the user might want to take
+- **Thinking Time:** How long the AI took to process (displayed for transparency)
+
+### 4.3 Framework Compliance
+
+When making edits, the AI should:
+
+- Preserve the proven conversion architecture of each framework
+- Maintain proper section ordering unless explicitly asked to change it
+- Keep design system consistency (spacing, typography, color usage)
+- Warn users if a requested change might hurt conversion
+- Suggest framework-aligned alternatives when appropriate
+
+### 4.4 Safety Guardrails
+
+The AI must refuse to:
+
+- Add malicious code or scripts
+- Include external resources from untrusted sources
+- Remove essential page elements that would break functionality
+- Make changes that violate accessibility standards
+- Generate content that violates platform policies
+
+---
+
+## Part 5: Data Architecture
+
+### 5.1 Page Storage
+
+Each generated page requires storage of:
+
+- The complete HTML content
+- Metadata (page type, creation date, last modified)
+- Association with the user's funnel
+- Version history for undo/redo functionality
+- Published vs draft status
+
+### 5.2 Conversation Sessions
+
+Conversation data to persist:
+
+- Message history (user messages and AI responses)
+- Edit summaries for each interaction
+- Session timestamps
+- Association with the specific page being edited
+
+This allows users to leave and return, continuing where they left off.
+
+### 5.3 User Context Cache
+
+For performance, cache the user's funnel builder context:
+
+- Steps 1-4 data compiled into a prompt-ready format
+- Brand assets and URLs
+- Instructor photos and bio content
+- Any uploaded materials
+
+This prevents repeated database queries during editing sessions.
+
+---
+
+## Part 6: HTML Export Capability
+
+### 6.1 Design Philosophy
+
+A core requirement is that generated pages must be easily extractable for use in other development environments. This means:
+
+- No proprietary components or frameworks required
+- Standard HTML, CSS, and minimal JavaScript
+- All styles embedded or using widely-available CDN resources
+- Clean, readable code structure
+- Semantic HTML markup
+
+### 6.2 Export Options
+
+Users should be able to:
+
+- Copy the full HTML with one click
+- Download as an HTML file
+- View the code in a formatted display
+- Copy just the CSS if needed
+- Copy individual sections
+
+### 6.3 Portability Standards
+
+Exported HTML should work when:
+
+- Pasted into any HTML file
+- Uploaded to static hosting
+- Embedded in WordPress or other CMS platforms
+- Integrated into existing websites
+- Used with custom backend systems
+
+---
+
+## Part 7: Integration Points
+
+### 7.1 Funnel Builder Connection
+
+The editor connects to the funnel builder through:
+
+- Reading Steps 1-7 context when generating pages
+- Writing page status back to the funnel (generated, published)
+- Updating the funnel's page references when pages are renamed or deleted
+- Maintaining funnel-to-page associations
+
+### 7.2 Backend Infrastructure
+
+Use existing systems for:
+
+- URL/slug generation and management
+- Page routing and serving
+- User authentication and authorization
+- Asset storage (images, files)
+- Analytics tracking
+
+### 7.3 Form Integration
+
+Registration pages need form functionality:
+
+- Form submission handling
+- Lead capture to the user's CRM/database
+- Email automation triggers
+- Thank you page redirects
+
+### 7.4 Video Platforms
+
+Watch pages integrate with Growth Mastery video hosting through CloudFlare to track watch percentage of every viewer through every video.
+
+### 7.5 Payment Systems
+
+Enrollment pages connect to:
+
+- Stripe checkout links
+- Payment button integrations
+- Booking/calendar links for consultation CTAs
+
+## Part 9: Success Criteria
+
+### 9.1 Functional Requirements
+
+- Users can generate all three page types - registration page on step 10 of the funnel builder, watch page on step 9 of the funnel builder, and enrollment page on step 8 of the funnel builder process
+- Generated pages reflect user's Steps 1-4 context accurately
+- Generated pages follow framework structures and conversion principles
+- Users can edit pages through natural language
+- Changes appear in real-time in the preview
+- Pages are stored and persist across sessions
+- Conversation history persists across sessions
+- HTML can be exported and used independently
+- Users can only access their own pages
+
+### 9.2 Quality Standards
+
+- Generated pages are premium quality (not generic templates)
+- Design consistency with brand specifications from Step 3
+- Mobile-responsive output
+- Accessibility compliance
+- Clean, portable HTML output
+- Page load performance acceptable
+
+### 9.3 User Experience
+
+- Time from "Generate" click to seeing full page: under 30 seconds
+- Time from edit request to seeing change: under 10 seconds
+- 95%+ of AI-suggested edits apply correctly
+- Users can accomplish common tasks without help documentation
+- Error messages are clear and actionable
+
+### 9.4 Security Requirements
+
+- User isolation is absolute (no cross-account access)
+- No ability to modify system files or codebase
+- All inputs sanitized and validated
+- Rate limiting on AI requests
+- Audit logging of all edits
+
+---
+
+## Part 10: Technical Considerations
+
+### 10.1 AI Model Selection
+
+The system should use a Claude model that can:
+
+- Handle long context (full HTML + conversation + framework)
+- Follow structured output formats reliably
+- Understand HTML/CSS for accurate edits
+- Maintain consistency across multiple turns
+
+### 10.2 Performance Optimization
+
+To maintain responsive editing:
+
+- Stream AI responses when possible
+- Cache user context and framework documents
+- Optimize database queries for page retrieval
+- Use efficient DOM diffing for preview updates
+- Consider background pre-generation for common edits
+
+### 10.3 Error Handling
+
+Graceful handling for:
+
+- AI request timeouts
+- Malformed AI responses
+- Database connection issues
+- Invalid user inputs
+- Network interruptions during editing
+
+### 10.4 Scalability
+
+Design for:
+
+- Multiple concurrent users editing different pages
+- Large pages with extensive content
+- Long conversation histories
+- High-volume page generation periods
+
+---
+
+## Appendix A: Reference Documents
+
+The following specification documents provide detailed guidance for implementation:
+
+1. **Conversational AI Editor User Experience.md** - Detailed UX specification for the chat interface, edit summaries, and preview panel
+
+2. **Editor Technical Specification Document.md** - Component breakdown and technical requirements
+
+3. **Universal Registration Page Prompt Configuration Framework** - Complete framework for registration page generation including section architecture, copy formulas, and design system
+
+4. **Universal Watch Page Prompt Configuration Framework** - Complete framework for watch page generation with video-centric design principles
+
+5. **Universal Enrollment Page Framework.md** - Complete framework for sales page generation with 13-section conversion architecture
+
+6. **Example Registration Page HTML** - Reference implementation showing the expected HTML output quality and structure
+
+---
+
+## Appendix B: Key Reminders
+
+1. **Independence is non-negotiable.** Do not modify any existing editor code. Build everything new.
+
+2. **Preview before production.** Provide a preview link for approval before any integration with live systems.
+
+3. **Context is everything.** The quality of generated pages depends entirely on how well we aggregate and use the Steps 1-7 context.
+
+4. **Frameworks are sacred.** The conversion architecture in each framework is proven. Preserve it while customizing content.
+
+5. **HTML portability is required.** Every page must work perfectly when copied out of the system.
+
+6. **Users own only their pages.** Security isolation must be airtight. Users cannot see, access, or modify anything outside their funnel.
+
+7. **Simplicity wins.** The interface should feel magical, not complicated. Hide complexity, expose capability.
+

@@ -1,0 +1,1011 @@
+# Universal Watch Page Configuration Framework
+## A Comprehensive System for AI-Generated High-Converting Webinar Replay/Watch Pages
+
+---
+
+# 1. PAGE ARCHITECTURE
+
+## Section Sequence (Top to Bottom)
+
+| Order | Section | Component | Strategic Purpose | Psychological Logic |
+|-------|---------|-----------|-------------------|---------------------|
+| 1 | **Header/Navigation** | `WatchHeader.tsx` | Brand recognition, navigation context | Establishes trust and professional credibility |
+| 2 | **Video Hero** | `VideoHero.tsx` | Capture attention, deliver core content | Immediate value delivery - "I'm in the right place" |
+| 3 | **Video Player** | `VideoPlayer.tsx` | Primary content delivery mechanism | The core value exchange - education + transformation preview |
+| 4 | **CTA Strip** | `CTAStrip.tsx` | Conversion opportunity post-video | Strike while engaged - highest intent moment |
+| 5 | **Presenter Bio** | `PresenterBio.tsx` | Build authority and trust | "Who is teaching me?" - credibility establishment |
+| 6 | **Secondary CTA** | `SecondaryCTA.tsx` | Reinforced conversion opportunity | Multiple touchpoints increase conversion probability |
+| 7 | **Footer** | `Footer.tsx` | Legal, contact, brand consistency | Professional closure and support access |
+
+---
+
+## Conversion Flow Psychology
+
+```
+ATTENTION → ENGAGEMENT → EDUCATION → CONVICTION → ACTION
+    │            │            │            │          │
+    ▼            ▼            ▼            ▼          ▼
+  Headline    Video      Content      Presenter    CTA
+  + Promise   Player     Delivery     Authority    Buttons
+```
+
+### Key Psychological Principles:
+
+1. **Immediate Engagement** (Video Hero) - Video as focal point captures and holds attention
+2. **Value-First** (Content) - Education before ask builds reciprocity
+3. **Authority Building** (Presenter) - Credibility reduces skepticism
+4. **Strategic Placement** (CTAs) - Multiple conversion points at high-intent moments
+5. **Minimal Distraction** - Clean design keeps focus on video and action
+6. **Urgency Elements** - Limited replay access creates action pressure
+
+---
+
+# 2. SECTION-BY-SECTION COPY FRAMEWORK
+
+---
+
+## 2.1 HEADER/NAVIGATION SECTION
+
+### Structure
+```
+[LOGO] (Left-aligned)
+[NAVIGATION] (Right-aligned, minimal)
+  - "About" (optional)
+  - CTA Button (primary action)
+```
+
+### Logo Placement
+- Left-aligned for brand recognition
+- Subtle, doesn't compete with video
+
+### CTA Button (Header)
+```
+[ACTION_VERB] [OFFER_NAME]
+```
+**Examples:**
+- "Enroll Now"
+- "Get Access"
+- "Join the Program"
+
+---
+
+## 2.2 VIDEO HERO SECTION
+
+### Purpose
+The central focus of the entire page. The video hero contains the headline, subheadline, and the video player itself.
+
+### Headline Formula
+```
+[TOPIC/TRANSFORMATION] **[BOLD_KEYWORD]**
+```
+
+**Format:** Title case with strategic bold emphasis on key transformation word.
+
+**Variables:**
+- `{TOPIC}`: The subject matter (e.g., "Growth Automation", "Sales System", "Marketing")
+- `{BOLD_KEYWORD}`: The aspirational word to emphasize (e.g., "Masterclass", "Blueprint", "System")
+
+**Examples:**
+- "Growth Automation **Masterclass**"
+- "6-Figure Funnel **Blueprint**"
+- "Automated Sales **System**"
+
+### Subheadline Formula
+```
+**Discover the [NUMBER]-step [SYSTEM/METHOD] to [TRANSFORMATION_1] With a [DESIRABLE_OUTCOME] that [BENEFIT] while you [EFFORTLESS_STATE].**
+```
+
+**Variables:**
+- `{NUMBER}`: Specific step count (3, 5, 7 - odd numbers convert better)
+- `{SYSTEM/METHOD}`: What they're learning (System, Framework, Method, Process)
+- `{TRANSFORMATION_1}`: Primary transformation (Scale Your Genius, Grow Your Business)
+- `{DESIRABLE_OUTCOME}`: The tangible deliverable (6-figure funnel, automated system)
+- `{BENEFIT}`: What it does (sells, converts, generates leads)
+- `{EFFORTLESS_STATE}`: Passive benefit (while you sleep, without you)
+
+**Examples:**
+- "Discover the 3-step System to Scale Your Genius With a 6-figure Automated Masterclass Funnel that sells while you sleep."
+- "Learn the 5-step Framework to Build Your Empire With an Automated Sales System that converts 24/7."
+
+### CTA Button Formula (Below Video)
+```
+[ACTION_VERB] In [OFFER_NAME]
+```
+**Examples:**
+- "Enroll In Genius Launch System"
+- "Join The Accelerator"
+- "Get Instant Access"
+
+---
+
+## 2.3 VIDEO PLAYER SECTION
+
+### Video Container Pattern
+```
+[VIDEO_WRAPPER]
+  - Responsive aspect ratio (16:9 standard)
+  - Dark/neutral background to reduce eye strain
+  - Prominent play button (if paused state)
+  - Progress bar with scrubbing capability
+  - Volume controls
+  - Fullscreen option
+  
+[BELOW_VIDEO_STRIP]
+  - Trust indicators (optional)
+  - Replay duration indicator
+  - "Watch now before it expires" (urgency, if applicable)
+```
+
+### Video Platform Support
+```yaml
+supported_platforms:
+  - wistia
+  - vimeo
+  - youtube
+  - custom_hosted
+  
+embed_options:
+  autoplay: false  # Respect user choice
+  controls: true
+  fullscreen: true
+  playback_speed: true  # Allow 1.5x, 2x for experienced viewers
+```
+
+### Video Behavioral Triggers
+```yaml
+engagement_triggers:
+  - pause_at_pitch: false  # Optional - pause before CTA section
+  - show_cta_overlay: true  # Show CTA at specific timestamps
+  - cta_timestamps:
+    - timestamp: "end"  # Show CTA at end
+    - timestamp: "75%"  # Show teaser CTA at 75%
+  - exit_intent_popup: true  # Capture before leaving
+```
+
+---
+
+## 2.4 CTA STRIP SECTION
+
+### Purpose
+Immediate conversion opportunity positioned directly after or alongside the video.
+
+### Structure
+```
+[CTA_BUTTON]
+Primary action button - high contrast, prominent
+
+[SUPPORTING_TEXT] (optional)
+"Limited spots available" or urgency statement
+```
+
+### CTA Button Formulas
+**Primary:**
+```
+[ACTION_VERB] [OFFER_NAME]
+```
+- "Enroll In Genius Launch System"
+- "Join The Program"
+- "Get Started Today"
+
+**With Urgency:**
+```
+[ACTION_VERB] Now - [URGENCY_STATEMENT]
+```
+- "Enroll Now - Doors Close Friday"
+- "Get Access - Limited Time Pricing"
+
+### Visual Hierarchy
+- Button: High contrast (gradient or solid primary color)
+- Full-width or centered prominent placement
+- Clear hover/active states
+- Arrow icon for directional cue
+
+---
+
+## 2.5 PRESENTER/INSTRUCTOR BIO SECTION
+
+### Purpose
+Build authority, establish trust, create human connection.
+
+### Structure
+```
+[LAYOUT]: Two-column (Photo | Content) or Single column (Photo above Content)
+
+[PHOTO]
+- Professional headshot
+- Circular or rounded rectangle frame
+- High quality, approachable expression
+
+[NAME]
+Bold, prominent
+
+[TITLE/ROLE]
+Founder & CEO of [Company]
+
+[BIO_CONTENT]
+3-4 paragraphs following the Authority Story Arc
+```
+
+### Bio Copy Formula
+
+**Paragraph 1 - The Origin Story:**
+```
+After [PIVOTAL_MOMENT] when [LIFE_CHANGING_EVENT] in [YEAR], [NAME] and [TEAM_REFERENCE] have since [CREDIBILITY_METRIC].
+```
+
+**Example:**
+"After his life changed when he made his first digital program sale during a sound healing back in 2017, Joe and his team have since helped clients sell $10M+ online."
+
+**Paragraph 2 - Credibility Stack:**
+```
+With a background in [BACKGROUND/EXPERTISE] followed by [YEARS] years of [DOMAIN], [NAME] has [ACHIEVEMENT_1] ranging from [RANGE_LOW] to [RANGE_HIGH].
+```
+
+**Example:**
+"With a background in Electrical Engineering followed by 10 years of entrepreneurship, Joe has helped launch companies ranging from startup to $20M/year."
+
+**Paragraph 3 - Mission Statement:**
+```
+As [TITLE] of [COMPANY], [NAME] leads [COMMUNITY_TYPE] who are [TRANSFORMATION_ACTIVITY] as part of [HIS/HER] mission to [ASPIRATIONAL_MISSION].
+```
+
+**Example:**
+"As Founder & CEO of Growth Mastery, Joe leads a community of entrepreneurs who are launching & scaling automated digital program businesses across all industries as part of his mission to liberate human genius."
+
+### Authority Indicators to Include:
+- Years of experience
+- Revenue/results generated for clients
+- Number of clients/students served
+- Notable achievements or background
+- Mission/purpose alignment
+
+---
+
+## 2.6 SECONDARY CTA SECTION
+
+### Purpose
+Reinforced conversion opportunity for those who scroll past the video section.
+
+### Structure
+```
+[HEADLINE] (optional)
+"Ready to [TRANSFORMATION]?"
+
+[CTA_BUTTON]
+Same as primary CTA or variation
+
+[SUPPORTING_ELEMENTS]
+- Trust badges
+- Guarantee statement
+- Contact option
+```
+
+### CTA Variations
+```
+Primary Style: "Enroll In [OFFER_NAME]"
+Action Style: "Start Your [OUTCOME] Journey"
+Urgency Style: "Claim Your Spot Now"
+```
+
+---
+
+## 2.7 FOOTER SECTION
+
+### Structure
+```
+[LOGO] (Centered or left-aligned)
+
+[NAVIGATION_LINKS]
+- Contact
+- Privacy Policy
+- Terms of Service
+
+[COPYRIGHT]
+© [YEAR] [COMPANY_NAME]. All rights reserved.
+```
+
+### Keep Minimal
+Watch pages should have minimal footer distractions. The goal is enrollment, not exploration.
+
+---
+
+# 3. DESIGN SYSTEM PRINCIPLES
+
+---
+
+## 3.1 Color Architecture (HSL)
+
+### Watch Page Specific Considerations
+Watch pages typically use darker/neutral backgrounds around the video area to:
+- Reduce eye strain during video viewing
+- Create cinema-like focus on content
+- Make the video player the hero element
+
+### Primary Palette
+| Token | HSL Value | Usage |
+|-------|-----------|-------|
+| `--primary` | `103 89% 29%` | CTAs, accent elements, links |
+| `--primary-foreground` | `48 38% 97%` | Text on primary buttons |
+| `--secondary` | `152 88% 15%` | Video area background, dark sections |
+| `--accent` | `45 93% 58%` | Highlights, urgency indicators |
+
+### Video Section Palette
+| Token | HSL Value | Usage |
+|-------|-----------|-------|
+| `--video-bg` | `0 0% 8%` | Video player background (near black) |
+| `--video-controls` | `0 0% 100%` | Video control icons |
+| `--video-progress` | `103 89% 29%` | Progress bar fill (primary) |
+| `--video-buffer` | `0 0% 30%` | Buffer indicator |
+
+### Neutral Palette
+| Token | HSL Value | Usage |
+|-------|-----------|-------|
+| `--background` | `48 38% 97%` | Page background (light) |
+| `--background-dark` | `0 0% 12%` | Video section background |
+| `--foreground` | `0 0% 12%` | Primary text on light |
+| `--foreground-light` | `0 0% 95%` | Primary text on dark |
+| `--muted` | `0 0% 45%` | Secondary text |
+
+---
+
+## 3.2 Gradients
+
+```css
+--gradient-cta: linear-gradient(135deg, hsl(103 89% 29%) 0%, hsl(120 55% 55%) 100%);
+--gradient-dark: linear-gradient(180deg, hsl(0 0% 8%) 0%, hsl(0 0% 15%) 100%);
+--gradient-hero: linear-gradient(180deg, hsl(48 38% 97%) 0%, hsl(145 40% 95%) 100%);
+```
+
+---
+
+## 3.3 Typography Scale
+
+### Watch Page Specific
+Watch pages prioritize readability and minimal distraction.
+
+```css
+/* Headlines */
+H1 (Video Title): text-4xl md:text-5xl lg:text-6xl font-display font-bold
+H2 (Subheadline): text-xl md:text-2xl font-normal leading-relaxed
+
+/* Body */
+Large: text-lg md:text-xl leading-relaxed
+Regular: text-base leading-relaxed
+
+/* Presenter */
+Name: text-2xl md:text-3xl font-display font-bold
+Title: text-lg text-muted-foreground
+Bio: text-base md:text-lg leading-relaxed
+
+/* CTA */
+Button Text: text-lg md:text-xl font-semibold
+```
+
+### Font Families
+```css
+--font-sans: "Inter", system-ui, sans-serif;
+--font-display: "Poppins", "Inter", sans-serif;
+```
+
+---
+
+## 3.4 Spacing System
+
+### Section Padding
+```css
+py-8 md:py-12    /* Compact sections (header, CTA strip) */
+py-16 md:py-24   /* Standard sections (presenter bio) */
+py-4 md:py-8     /* Video wrapper padding */
+```
+
+### Container
+```css
+container mx-auto px-4 md:px-6
+max-w-4xl   /* Video section content */
+max-w-3xl   /* Presenter bio content */
+max-w-6xl   /* Full-width video player */
+```
+
+### Video Player
+```css
+/* Aspect ratio container */
+aspect-video  /* 16:9 ratio */
+w-full
+max-w-5xl mx-auto
+rounded-lg overflow-hidden
+```
+
+---
+
+## 3.5 Shadows
+
+```css
+--shadow-video: 0 20px 60px hsl(0 0% 0% / 0.4);
+--shadow-cta: 0 4px 20px hsl(103 89% 29% / 0.3);
+--shadow-card: 0 4px 20px hsl(0 0% 0% / 0.1);
+```
+
+---
+
+## 3.6 Border Radius
+
+```css
+--radius: 0.75rem;
+rounded-lg    /* Video player, cards */
+rounded-xl    /* CTA buttons */
+rounded-full  /* Presenter photo, badges */
+```
+
+---
+
+## 3.7 Animations
+
+### Watch Page Specific Animations
+```css
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulse-cta {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 20px hsl(103 89% 29% / 0.3); }
+  50% { box-shadow: 0 0 40px hsl(103 89% 29% / 0.5); }
+}
+```
+
+### Animation Classes
+```css
+.animate-fade-in { animation: fade-in 0.6s ease-out; }
+.animate-pulse-cta { animation: pulse-cta 2s ease-in-out infinite; }
+.animate-glow { animation: glow 3s ease-in-out infinite; }
+```
+
+---
+
+## 3.8 Component Patterns
+
+### Video Container Pattern
+```html
+<div class="relative bg-black rounded-lg overflow-hidden shadow-video">
+  <div class="aspect-video">
+    <!-- Video embed here -->
+  </div>
+</div>
+```
+
+### CTA Button Pattern
+```html
+<a href="#enroll" class="inline-flex items-center gap-2 px-8 py-4 
+                         rounded-xl gradient-cta text-white 
+                         font-semibold text-lg shadow-cta 
+                         hover:scale-105 transition-all">
+  Enroll In [Offer Name]
+  <svg class="w-5 h-5"><!-- Arrow icon --></svg>
+</a>
+```
+
+### Presenter Card Pattern
+```html
+<div class="flex flex-col md:flex-row gap-8 items-start">
+  <img src="..." class="w-32 h-32 rounded-full object-cover shadow-card" />
+  <div class="space-y-4">
+    <h3 class="text-2xl font-display font-bold">[Name]</h3>
+    <p class="text-muted-foreground">[Title]</p>
+    <div class="prose prose-lg">[Bio paragraphs]</div>
+  </div>
+</div>
+```
+
+---
+
+## 3.9 Background Patterns
+
+### Video Section Background
+```html
+<section class="bg-gradient-to-b from-gray-900 to-gray-950 py-8">
+  <!-- Dark, cinematic feel for video focus -->
+</section>
+```
+
+### Content Section Background
+```html
+<section class="bg-background py-16">
+  <!-- Light, clean background for readability -->
+</section>
+```
+
+---
+
+# 4. COPYWRITING PRINCIPLES
+
+---
+
+## 4.1 Headline Rules
+
+### Watch Page Headlines
+- **Concise:** 2-4 words maximum for main headline
+- **Bold Emphasis:** Use `**bold**` or gradient text on key transformation word
+- **Topic + Format:** "[Topic] **[Format]**" (e.g., "Growth Automation **Masterclass**")
+
+### Subheadline Rules
+- **Promise Structure:** Always include transformation promise
+- **Specificity:** Include numbers (3-step, 6-figure, etc.)
+- **Outcome + Benefit:** What they get AND what it does for them
+- **Effortless Frame:** End with passive benefit ("while you sleep", "automatically")
+
+---
+
+## 4.2 Body Copy Voice
+
+### Tone for Watch Pages
+- **Direct:** Get to the value quickly
+- **Confident:** The content speaks for itself
+- **Aspirational:** Focus on transformation potential
+- **Minimal:** Less copy, more video
+
+### Bio Copy Voice
+- **Third Person:** "Joe has helped..." not "I have helped..."
+- **Achievement-Focused:** Lead with results, not effort
+- **Relatable:** Include human elements (origin story)
+- **Mission-Aligned:** Connect personal journey to bigger purpose
+
+---
+
+## 4.3 CTA Optimization
+
+### Primary CTA Formula
+```
+[ENROLLMENT_VERB] [IN/THE] [OFFER_NAME]
+```
+- "Enroll In Genius Launch System"
+- "Join The Accelerator Program"
+- "Get The Complete System"
+
+### CTA Button Best Practices
+- Action-oriented verbs (Enroll, Join, Get, Start)
+- Include offer name for clarity
+- High contrast colors
+- Arrow icon for directional cue
+- Hover animations for engagement
+
+---
+
+## 4.4 Urgency Elements (Use Sparingly)
+
+### Authentic Urgency Patterns
+```
+- "Replay available for [TIMEFRAME]"
+- "Special pricing ends [DATE]"
+- "Limited enrollment period"
+```
+
+### Avoid
+- Fake scarcity
+- Countdown timers on evergreen content
+- Pressure tactics that erode trust
+
+---
+
+# 5. CONVERSION OPTIMIZATION PATTERNS
+
+---
+
+## 5.1 Video-First Layout
+
+### Above the Fold Must Include:
+1. **Headline** - Clear topic identification
+2. **Subheadline** - Value proposition
+3. **Video Player** - At least top portion visible
+4. **CTA** - Visible without scrolling (sticky or positioned)
+
+### Video Placement Priority
+```
+              ┌─────────────────────────────────┐
+              │         HEADLINE                │
+              │       Subheadline               │
+              ├─────────────────────────────────┤
+              │                                 │
+              │      [VIDEO PLAYER]             │
+              │                                 │
+              ├─────────────────────────────────┤
+              │      [CTA BUTTON]               │
+              └─────────────────────────────────┘
+```
+
+---
+
+## 5.2 CTA Placement Strategy
+
+### Multiple Conversion Points
+| Location | Purpose | Priority |
+|----------|---------|----------|
+| Header | Immediate access for return visitors | Secondary |
+| Below Video | Highest intent - just watched content | Primary |
+| After Bio | Authority convinced, ready to act | Secondary |
+| Floating/Sticky | Always accessible | Optional |
+
+---
+
+## 5.3 Trust Building Sequence
+
+```
+1. Brand Recognition (Logo/Header) → 
+2. Value Delivery (Video Content) → 
+3. Authority (Presenter Bio) → 
+4. Action (CTA)
+```
+
+---
+
+## 5.4 Minimal Distraction Design
+
+### Remove/Minimize:
+- Complex navigation
+- Sidebars
+- Related content links
+- Social share buttons (in main flow)
+- Comment sections (if not moderated)
+
+### Keep Focus On:
+- Video player
+- CTA buttons
+- Essential trust elements
+
+---
+
+# 6. DATA COLLECTION REQUIREMENTS
+
+---
+
+## Complete Variable Schema (YAML)
+
+```yaml
+# =============================================
+# WATCH PAGE DATA SCHEMA
+# All variables needed to generate a complete
+# high-converting webinar watch/replay page
+# =============================================
+
+business:
+  name: "GrowthMastery.ai"
+  logo_url: "/assets/logo.png"
+  contact_email: "joe@growthmastery.ai"
+  
+brand:
+  # Colors (HSL format)
+  colors:
+    primary: "103 89% 29%"
+    primary_foreground: "48 38% 97%"
+    secondary: "152 88% 15%"
+    accent: "45 93% 58%"
+    background: "48 38% 97%"
+    foreground: "0 0% 12%"
+  
+  # Typography
+  fonts:
+    display: "Poppins"
+    body: "Inter"
+
+video_content:
+  # Video Details
+  headline: "Growth Automation"
+  headline_bold: "Masterclass"  # Word to emphasize
+  
+  subheadline: "Discover the 3-step System to Scale Your Genius With a 6-figure Automated Masterclass Funnel that sells while you sleep."
+  
+  # Video Embed
+  video_platform: "wistia"  # wistia, vimeo, youtube, custom
+  video_id: "abc123xyz"
+  video_thumbnail: "/assets/video-thumb.jpg"  # Optional custom thumbnail
+  video_duration: "45:00"  # For display purposes
+  
+  # Replay Settings (if applicable)
+  is_replay: true
+  replay_expires: "2025-12-31"  # null if evergreen
+  replay_message: "Watch the full replay before it expires"
+
+cta:
+  # Primary CTA
+  primary_text: "Enroll In Genius Launch System"
+  primary_url: "https://example.com/enroll"
+  
+  # Secondary CTA (optional)
+  secondary_text: "Schedule a Call"
+  secondary_url: "https://calendly.com/..."
+  
+  # Urgency (optional)
+  urgency_message: null  # "Limited spots available" or null
+  urgency_deadline: null  # Date or null
+
+presenter:
+  name: "Joe McVeen"
+  title: "Founder & CEO"
+  company: "Growth Mastery"
+  photo_url: "/assets/joe-headshot.jpg"
+  
+  bio:
+    paragraph_1: "After his life changed when he made his first digital program sale during a sound healing back in 2017, Joe and his team have since helped clients sell $10M+ online."
+    paragraph_2: "With a background in Electrical Engineering followed by 10 years of entrepreneurship, Joe has helped launch companies ranging from startup to $20M/year."
+    paragraph_3: "As Founder & CEO of Growth Mastery, Joe leads a community of entrepreneurs who are launching & scaling automated digital program businesses across all industries as part of his mission to liberate human genius."
+  
+  # Authority Metrics
+  credentials:
+    - "$10M+ in client sales"
+    - "10 years entrepreneurship"
+    - "Engineering background"
+
+footer:
+  copyright_year: "2025"
+  links:
+    - label: "Contact"
+      url: "mailto:joe@growthmastery.ai"
+    - label: "Privacy Policy"
+      url: "/privacy"
+    - label: "Terms of Service"
+      url: "/terms"
+
+# Page Behavior
+settings:
+  show_header_cta: true
+  sticky_cta: false  # Show floating CTA on scroll
+  exit_intent_popup: false
+  video_autoplay: false
+```
+
+---
+
+## JSON Schema (Alternative Format)
+
+```json
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WatchPageData",
+  "type": "object",
+  "required": ["business", "brand", "video_content", "cta", "presenter"],
+  "properties": {
+    "business": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "logo_url": { "type": "string" },
+        "contact_email": { "type": "string", "format": "email" }
+      }
+    },
+    "brand": {
+      "type": "object",
+      "properties": {
+        "colors": {
+          "type": "object",
+          "properties": {
+            "primary": { "type": "string", "description": "HSL format" },
+            "secondary": { "type": "string" },
+            "accent": { "type": "string" },
+            "background": { "type": "string" },
+            "foreground": { "type": "string" }
+          }
+        },
+        "fonts": {
+          "type": "object",
+          "properties": {
+            "display": { "type": "string" },
+            "body": { "type": "string" }
+          }
+        }
+      }
+    },
+    "video_content": {
+      "type": "object",
+      "required": ["headline", "video_platform", "video_id"],
+      "properties": {
+        "headline": { "type": "string" },
+        "headline_bold": { "type": "string" },
+        "subheadline": { "type": "string" },
+        "video_platform": { 
+          "type": "string",
+          "enum": ["wistia", "vimeo", "youtube", "custom"]
+        },
+        "video_id": { "type": "string" },
+        "video_thumbnail": { "type": "string" },
+        "video_duration": { "type": "string" },
+        "is_replay": { "type": "boolean" },
+        "replay_expires": { "type": "string", "format": "date" },
+        "replay_message": { "type": "string" }
+      }
+    },
+    "cta": {
+      "type": "object",
+      "required": ["primary_text", "primary_url"],
+      "properties": {
+        "primary_text": { "type": "string" },
+        "primary_url": { "type": "string", "format": "uri" },
+        "secondary_text": { "type": "string" },
+        "secondary_url": { "type": "string", "format": "uri" },
+        "urgency_message": { "type": "string" },
+        "urgency_deadline": { "type": "string", "format": "date" }
+      }
+    },
+    "presenter": {
+      "type": "object",
+      "required": ["name", "title", "bio"],
+      "properties": {
+        "name": { "type": "string" },
+        "title": { "type": "string" },
+        "company": { "type": "string" },
+        "photo_url": { "type": "string" },
+        "bio": {
+          "type": "object",
+          "properties": {
+            "paragraph_1": { "type": "string" },
+            "paragraph_2": { "type": "string" },
+            "paragraph_3": { "type": "string" }
+          }
+        },
+        "credentials": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "footer": {
+      "type": "object",
+      "properties": {
+        "copyright_year": { "type": "string" },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string" },
+              "url": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "settings": {
+      "type": "object",
+      "properties": {
+        "show_header_cta": { "type": "boolean" },
+        "sticky_cta": { "type": "boolean" },
+        "exit_intent_popup": { "type": "boolean" },
+        "video_autoplay": { "type": "boolean" }
+      }
+    }
+  }
+}
+```
+
+---
+
+# 7. GENERATION CHECKLIST
+
+When generating a watch page, ensure:
+
+## Structure
+- [ ] 7 sections in correct order
+- [ ] Video player is the visual hero/focus
+- [ ] Responsive design (mobile-first)
+- [ ] CTA visible above the fold or immediately after video
+
+## Copy
+- [ ] Headline uses bold emphasis pattern
+- [ ] Subheadline includes numbers and transformation promise
+- [ ] Presenter bio follows 3-paragraph authority arc
+- [ ] CTAs use action verbs + offer name
+
+## Design
+- [ ] Video area has dark/neutral background
+- [ ] CTA buttons are high contrast
+- [ ] Minimal navigation/distractions
+- [ ] Clean, focused layout
+
+## Conversion
+- [ ] Primary CTA below video
+- [ ] Header CTA for return visitors
+- [ ] Secondary CTA after bio
+- [ ] No competing CTAs or confusing options
+
+## Technical
+- [ ] Video embed properly configured
+- [ ] CTA links functional
+- [ ] Responsive video player (aspect ratio maintained)
+- [ ] Fast loading (video loads efficiently)
+
+---
+
+# 8. EXAMPLE VARIATIONS
+
+## Masterclass/Webinar Replay Example
+```yaml
+video_content:
+  headline: "Growth Automation"
+  headline_bold: "Masterclass"
+  subheadline: "Discover the 3-step System to Scale Your Genius With a 6-figure Automated Masterclass Funnel that sells while you sleep."
+
+cta:
+  primary_text: "Enroll In Genius Launch System"
+  
+presenter:
+  name: "Joe McVeen"
+  title: "Founder & CEO"
+  company: "Growth Mastery"
+```
+
+## Free Training Example
+```yaml
+video_content:
+  headline: "Sales Funnel"
+  headline_bold: "Blueprint"
+  subheadline: "Learn the exact 5-step process to build a high-converting sales funnel that generates leads and sales on autopilot."
+
+cta:
+  primary_text: "Download The Blueprint"
+  
+presenter:
+  name: "Sarah Johnson"
+  title: "Funnel Strategist"
+  company: "FunnelPro Agency"
+```
+
+## Product Demo Example
+```yaml
+video_content:
+  headline: "Platform"
+  headline_bold: "Demo"
+  subheadline: "See how our AI-powered platform builds your entire marketing system in minutes, not months."
+
+cta:
+  primary_text: "Start Your Free Trial"
+  
+presenter:
+  name: "Mike Chen"
+  title: "Co-Founder"
+  company: "AutoMarketer.io"
+```
+
+## Course Preview Example
+```yaml
+video_content:
+  headline: "Module 1"
+  headline_bold: "Preview"
+  subheadline: "Get a taste of what's inside our flagship course and learn the foundation of successful online business."
+
+cta:
+  primary_text: "Enroll In Full Course"
+  urgency_message: "Early bird pricing ends Friday"
+```
+
+---
+
+# 9. WATCH PAGE VS OTHER PAGE TYPES
+
+## Key Differences from Registration Page
+| Aspect | Registration Page | Watch Page |
+|--------|-------------------|------------|
+| Primary Goal | Capture lead info | Deliver content + enroll |
+| Main Element | Form | Video player |
+| Copy Volume | Medium | Minimal |
+| Sections | 8-9 | 5-7 |
+| Background | Can be varied | Dark around video |
+
+## Key Differences from Enrollment Page
+| Aspect | Enrollment Page | Watch Page |
+|--------|-----------------|------------|
+| Primary Goal | Sell/Convert | Educate then Convert |
+| Main Element | Feature sections | Video player |
+| Copy Volume | High | Minimal |
+| Sections | 13+ | 5-7 |
+| Objection Handling | Extensive | Minimal (video does it) |
+
+---
+
+*Framework Version: 1.0*
+*Generated from: GrowthMastery.ai Watch Page Analysis*
+*Date: December 2024*
+

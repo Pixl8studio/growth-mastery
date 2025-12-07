@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
     // Disable typed routes (too strict for dynamic routes)
     typedRoutes: false,
 
+    // Exclude pino and related packages from Turbopack bundling (Next.js 16 compatibility)
+    serverExternalPackages: ["pino", "pino-pretty", "thread-stream"],
+
     // Optimize images
     images: {
         formats: ["image/avif", "image/webp"],

@@ -10,12 +10,22 @@ import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
 import { useIsMobile } from "@/lib/mobile-utils.client";
-import { Video, PlusCircle, Eye, Pencil, Trash2, X } from "lucide-react";
+import {
+    Video,
+    PlusCircle,
+    Eye,
+    Pencil,
+    Trash2,
+    X,
+    Sparkles,
+    Loader2,
+} from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { generateWatchPageHTML } from "@/lib/generators/watch-page-generator";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/components/ui/use-toast";
 
 interface DeckStructure {
     id: string;
@@ -46,6 +56,16 @@ interface WatchPage {
     created_at: string;
 }
 
+interface AIEditorPage {
+    id: string;
+    title: string;
+    page_type: string;
+    status: "draft" | "published";
+    version: number;
+    created_at: string;
+    updated_at: string;
+}
+
 export default function Step8WatchPage({
     params,
 }: {
@@ -53,18 +73,88 @@ export default function Step8WatchPage({
 }) {
     const router = useRouter();
     const isMobile = useIsMobile("lg");
+    const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
     const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
     const [pitchVideos, setPitchVideos] = useState<PitchVideo[]>([]);
     const [watchPages, setWatchPages] = useState<WatchPage[]>([]);
+    const [aiEditorPages, setAiEditorPages] = useState<AIEditorPage[]>([]);
     const [isCreating, setIsCreating] = useState(false);
+    const [isCreatingV2, setIsCreatingV2] = useState(false);
     const [showCreateForm, setShowCreateForm] = useState(false);
     const [formData, setFormData] = useState({
         headline: "",
         deckStructureId: "",
         videoId: "",
     });
+
+    // Handle Generate v2 (AI Editor) click
+    const handleGenerateV2 = async () => {
+        if (!projectId) return;
+
+        setIsCreatingV2(true);
+        try {
+            logger.info({ projectId, pageType: "watch" }, "Creating AI editor page");
+
+            const response = await fetch("/api/ai-editor/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    projectId,
+                    pageType: "watch",
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || data.details || "Failed to create page");
+            }
+
+            logger.info({ pageId: data.pageId }, "AI editor page created");
+
+            // Add the new page to the list immediately
+            const newPage: AIEditorPage = {
+                id: data.pageId,
+                title: data.title || "Watch Page",
+                page_type: "watch",
+                status: "draft",
+                version: 1,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            };
+            setAiEditorPages((prev) => [newPage, ...prev]);
+
+            toast({
+                title: "🎉 Page Created!",
+                description: (
+                    <div className="flex flex-col gap-2">
+                        <p>Your v2 page has been generated successfully.</p>
+                        <a
+                            href={`/ai-editor/${data.pageId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-cyan-600 hover:text-cyan-700 font-medium"
+                        >
+                            Open AI Editor →
+                        </a>
+                    </div>
+                ),
+            });
+        } catch (error: any) {
+            logger.error({ error }, "Failed to create AI editor page");
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description:
+                    error.message ||
+                    "Failed to create AI editor page. Please try again.",
+            });
+        } finally {
+            setIsCreatingV2(false);
+        }
+    };
 
     // Redirect mobile users to desktop-required page
     useEffect(() => {
@@ -162,6 +252,25 @@ export default function Step8WatchPage({
 
                 if (pagesError) throw pagesError;
                 setWatchPages(pagesData || []);
+
+                // Load AI Editor v2 pages
+                const { data: aiPagesData, error: aiPagesError } = await supabase
+                    .from("ai_editor_pages")
+                    .select(
+                        "id, title, page_type, status, version, created_at, updated_at"
+                    )
+                    .eq("funnel_project_id", projectId)
+                    .eq("page_type", "watch")
+                    .order("created_at", { ascending: false });
+
+                if (aiPagesError) {
+                    logger.warn(
+                        { error: aiPagesError },
+                        "Failed to load AI editor pages"
+                    );
+                } else {
+                    setAiEditorPages(aiPagesData || []);
+                }
             } catch (error) {
                 logger.error({ error }, "Failed to load data");
             }
@@ -369,11 +478,11 @@ export default function Step8WatchPage({
                 {/* Create New Page Button */}
                 {!showCreateForm ? (
                     <div className="rounded-lg border border-cyan-100 bg-gradient-to-br from-cyan-50 to-primary/5 p-8">
-                        <div className="text-center">
+                        <div className="flex flex-col items-center gap-4 text-center">
                             <button
                                 onClick={() => setShowCreateForm(true)}
                                 disabled={!canCreatePage}
-                                className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
+                                className={`flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
                                     canCreatePage
                                         ? "bg-cyan-600 text-white hover:bg-cyan-700"
                                         : "cursor-not-allowed bg-gray-300 text-muted-foreground"
@@ -384,6 +493,32 @@ export default function Step8WatchPage({
                                     ? "Create New Watch Page"
                                     : "Complete Prerequisites First"}
                             </button>
+
+                            {/* Generate v2 - AI Editor */}
+                            <button
+                                onClick={handleGenerateV2}
+                                disabled={!canCreatePage || isCreatingV2}
+                                className={`flex items-center gap-2 rounded-lg border-2 px-6 py-3 font-medium transition-colors ${
+                                    canCreatePage && !isCreatingV2
+                                        ? "border-cyan-400 bg-white text-cyan-600 hover:bg-cyan-50"
+                                        : "cursor-not-allowed border-gray-300 bg-gray-100 text-muted-foreground"
+                                }`}
+                            >
+                                {isCreatingV2 ? (
+                                    <>
+                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                        Generating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="h-5 w-5" />
+                                        Generate v2 (AI Chat Editor)
+                                    </>
+                                )}
+                            </button>
+                            <p className="text-sm text-muted-foreground">
+                                Try our new AI-powered conversational editor
+                            </p>
                         </div>
                     </div>
                 ) : (
@@ -615,6 +750,82 @@ export default function Step8WatchPage({
                         )}
                     </div>
                 </div>
+
+                {/* AI Editor v2 Pages List */}
+                {aiEditorPages.length > 0 && (
+                    <div className="rounded-lg border border-cyan-200 bg-gradient-to-br from-cyan-50 to-sky-50 shadow-soft">
+                        <div className="border-b border-cyan-200 p-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                    <Sparkles className="h-5 w-5 text-cyan-600" />
+                                    <h3 className="text-xl font-semibold text-foreground">
+                                        AI Editor Pages (v2)
+                                    </h3>
+                                </div>
+                                <span className="rounded-full bg-cyan-100 px-3 py-1 text-sm font-medium text-cyan-700">
+                                    {aiEditorPages.length} created
+                                </span>
+                            </div>
+                        </div>
+
+                        <div className="p-6">
+                            <div className="space-y-4">
+                                {aiEditorPages.map((page) => (
+                                    <div
+                                        key={page.id}
+                                        className="rounded-lg border border-cyan-200 bg-white p-6 shadow-sm transition-all hover:border-cyan-400 hover:shadow-md"
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <div className="mb-2 flex items-center gap-3">
+                                                    <h4 className="text-lg font-semibold text-foreground">
+                                                        {page.title}
+                                                    </h4>
+                                                    <span className="inline-flex items-center rounded-full bg-cyan-100 px-2 py-0.5 text-xs font-semibold text-cyan-700">
+                                                        v2
+                                                    </span>
+                                                    <span
+                                                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                                            page.status === "published"
+                                                                ? "bg-green-100 text-green-800"
+                                                                : "bg-yellow-100 text-yellow-800"
+                                                        }`}
+                                                    >
+                                                        {page.status === "published"
+                                                            ? "Published"
+                                                            : "Draft"}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                                    <span>
+                                                        Created{" "}
+                                                        {new Date(
+                                                            page.created_at
+                                                        ).toLocaleDateString()}
+                                                    </span>
+                                                    <span>Version {page.version}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <a
+                                                    href={`/ai-editor/${page.id}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-2 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan-700"
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                    Edit in AI Editor
+                                                </a>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
 
                 {/* Helper Info */}
                 <div className="rounded-lg border border-primary/10 bg-primary/5 p-6">

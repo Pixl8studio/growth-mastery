@@ -8,11 +8,9 @@ interface OfferData {
     description: string | null;
     price: number | string;
     currency: string;
-    features: {
-        features?: string[];
-        bonuses?: string[];
-        guarantee?: string;
-    };
+    features: string[];
+    bonuses: string[];
+    guarantee?: string | null;
     // 7 P's Framework
     promise?: string;
     person?: string;
@@ -40,9 +38,9 @@ export function OfferEditor({
     const [saving, setSaving] = useState(false);
     const [activeTab, setActiveTab] = useState<TabType>("core");
 
-    const features = offer.features.features || [];
-    const bonuses = offer.features.bonuses || [];
-    const guarantee = offer.features.guarantee || "";
+    const features = offer.features || [];
+    const bonuses = offer.bonuses || [];
+    const guarantee = offer.guarantee || "";
     const maxFeatures = offer.max_features || 6;
     const maxBonuses = offer.max_bonuses || 5;
 
@@ -54,10 +52,7 @@ export function OfferEditor({
         if (features.length >= maxFeatures) return;
         setOffer({
             ...offer,
-            features: {
-                ...offer.features,
-                features: [...features, "New feature"],
-            },
+            features: [...features, "New feature"],
         });
     };
 
@@ -66,10 +61,7 @@ export function OfferEditor({
         newFeatures[index] = value;
         setOffer({
             ...offer,
-            features: {
-                ...offer.features,
-                features: newFeatures,
-            },
+            features: newFeatures,
         });
     };
 
@@ -77,10 +69,7 @@ export function OfferEditor({
         const newFeatures = features.filter((_, i) => i !== index);
         setOffer({
             ...offer,
-            features: {
-                ...offer.features,
-                features: newFeatures,
-            },
+            features: newFeatures,
         });
     };
 
@@ -88,10 +77,7 @@ export function OfferEditor({
         if (bonuses.length >= maxBonuses) return;
         setOffer({
             ...offer,
-            features: {
-                ...offer.features,
-                bonuses: [...bonuses, "Bonus item"],
-            },
+            bonuses: [...bonuses, "Bonus item"],
         });
     };
 
@@ -100,10 +86,7 @@ export function OfferEditor({
         newBonuses[index] = value;
         setOffer({
             ...offer,
-            features: {
-                ...offer.features,
-                bonuses: newBonuses,
-            },
+            bonuses: newBonuses,
         });
     };
 
@@ -111,10 +94,7 @@ export function OfferEditor({
         const newBonuses = bonuses.filter((_, i) => i !== index);
         setOffer({
             ...offer,
-            features: {
-                ...offer.features,
-                bonuses: newBonuses,
-            },
+            bonuses: newBonuses,
         });
     };
 
@@ -131,6 +111,8 @@ export function OfferEditor({
                         ? parseFloat(offer.price)
                         : offer.price,
                 features: offer.features,
+                bonuses: offer.bonuses,
+                guarantee: offer.guarantee,
                 promise: offer.promise,
                 person: offer.person,
                 process: offer.process,
@@ -562,10 +544,7 @@ export function OfferEditor({
                                 onChange={(e) =>
                                     setOffer({
                                         ...offer,
-                                        features: {
-                                            ...offer.features,
-                                            guarantee: e.target.value,
-                                        },
+                                        guarantee: e.target.value,
                                     })
                                 }
                                 disabled={readOnly}

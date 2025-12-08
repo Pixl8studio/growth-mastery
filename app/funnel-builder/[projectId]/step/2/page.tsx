@@ -14,13 +14,12 @@ interface Offer {
     id: string;
     name: string;
     description: string | null;
+    tagline?: string | null;
     price: number;
     currency: string;
-    features: {
-        features?: string[];
-        bonuses?: string[];
-        guarantee?: string;
-    };
+    features: string[];
+    bonuses: string[];
+    guarantee?: string | null;
     // 7 P's Framework
     promise?: string;
     person?: string;
@@ -201,11 +200,12 @@ export default function Step2Page({
                     funnel_project_id: projectId,
                     user_id: project?.user_id,
                     name: alternative.name,
+                    description: alternative.tagline || alternative.keyDifference || null,
                     tagline: alternative.tagline,
                     price: alternative.price,
-                    currency: alternative.currency,
-                    features: alternative.features,
-                    bonuses: alternative.bonuses,
+                    currency: alternative.currency || "USD",
+                    features: alternative.features || [],
+                    bonuses: alternative.bonuses || [],
                     guarantee: alternative.guarantee,
                     promise: alternative.promise,
                     person: alternative.person,
@@ -649,14 +649,14 @@ export default function Step2Page({
                                                     <span>{offer.currency}</span>
                                                     <span>
                                                         📦{" "}
-                                                        {offer.features.features
-                                                            ?.length || 0}{" "}
+                                                        {offer.features?.length ||
+                                                            0}{" "}
                                                         features
                                                     </span>
                                                     <span>
                                                         🎁{" "}
-                                                        {offer.features.bonuses
-                                                            ?.length || 0}{" "}
+                                                        {offer.bonuses?.length ||
+                                                            0}{" "}
                                                         bonuses
                                                     </span>
                                                 </div>

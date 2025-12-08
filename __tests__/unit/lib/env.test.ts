@@ -4,7 +4,6 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { z } from "zod";
 
 describe("lib/env", () => {
     beforeEach(() => {

@@ -459,7 +459,7 @@ export default function Step6Page({
                                 }
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
                                     selectedDeckId && deckStructures.length > 0
-                                        ? "bg-brand-500 text-white hover:bg-brand-600"
+                                        ? "bg-primary text-white hover:bg-primary/90"
                                         : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                 }`}
                             >

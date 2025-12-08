@@ -1,6 +1,6 @@
 /**
  * E2E Tests for Video Upload Flow
- * Tests Step 7: Upload Presentation Video
+ * Tests Step 8: Upload Presentation Video
  */
 
 import { test, expect } from "@playwright/test";
@@ -10,17 +10,17 @@ test.describe("Video Upload Flow", () => {
         // Note: In actual implementation, you'll need to:
         // 1. Login with test credentials
         // 2. Create or use an existing test project
-        // 3. Navigate to step 7
+        // 3. Navigate to step 8
         // For now, this is a template showing what needs to be tested
         // await page.goto('/login');
         // await page.fill('input[type="email"]', 'test@example.com');
         // await page.fill('input[type="password"]', 'testpassword');
         // await page.click('button[type="submit"]');
-        // await page.goto('/funnel-builder/test-project-id/step/7');
+        // await page.goto('/funnel-builder/test-project-id/step/8');
     });
 
     test("displays recording instructions", async ({ page }) => {
-        await page.goto("/funnel-builder/test-project-id/step/7");
+        await page.goto("/funnel-builder/test-project-id/step/8");
 
         await expect(page.getByText("How to Record Your Presentation")).toBeVisible();
         await expect(page.getByText("Open a Zoom meeting alone")).toBeVisible();
@@ -33,7 +33,7 @@ test.describe("Video Upload Flow", () => {
     });
 
     test("shows file requirements", async ({ page }) => {
-        await page.goto("/funnel-builder/test-project-id/step/7");
+        await page.goto("/funnel-builder/test-project-id/step/8");
 
         await expect(page.getByText("Accepted formats:")).toBeVisible();
         await expect(page.getByText("MP4, MOV, AVI, WebM")).toBeVisible();
@@ -45,7 +45,7 @@ test.describe("Video Upload Flow", () => {
     });
 
     test("rejects files over 1GB", async ({ page }) => {
-        await page.goto("/funnel-builder/test-project-id/step/7");
+        await page.goto("/funnel-builder/test-project-id/step/8");
 
         // Mock a large file (browsers can't actually create 1GB+ files in tests)
         await page.evaluate(() => {
@@ -69,7 +69,7 @@ test.describe("Video Upload Flow", () => {
     });
 
     test("uploads video successfully with progress tracking", async ({ page }) => {
-        await page.goto("/funnel-builder/test-project-id/step/7");
+        await page.goto("/funnel-builder/test-project-id/step/8");
 
         // Mock Cloudflare API responses
         await page.route("**/api/cloudflare/upload-url", (route) => {
@@ -127,7 +127,7 @@ test.describe("Video Upload Flow", () => {
     });
 
     test("retries failed uploads automatically", async ({ page }) => {
-        await page.goto("/funnel-builder/test-project-id/step/7");
+        await page.goto("/funnel-builder/test-project-id/step/8");
 
         let attempts = 0;
 
@@ -184,7 +184,7 @@ test.describe("Video Upload Flow", () => {
     });
 
     test("shows manual retry button after max auto-retries", async ({ page }) => {
-        await page.goto("/funnel-builder/test-project-id/step/7");
+        await page.goto("/funnel-builder/test-project-id/step/8");
 
         // Always fail to trigger max retries
         await page.route("**/api/cloudflare/upload-url", (route) => {
@@ -209,7 +209,7 @@ test.describe("Video Upload Flow", () => {
     });
 
     test("manual retry button re-attempts upload", async ({ page }) => {
-        await page.goto("/funnel-builder/test-project-id/step/7");
+        await page.goto("/funnel-builder/test-project-id/step/8");
 
         let attemptCount = 0;
 
@@ -271,7 +271,7 @@ test.describe("Video Upload Flow", () => {
     });
 
     test("displays uploaded videos in list", async ({ page }) => {
-        await page.goto("/funnel-builder/test-project-id/step/7");
+        await page.goto("/funnel-builder/test-project-id/step/8");
 
         // Mock existing videos
         await page.route("**/api/supabase/pitch_videos**", (route) => {

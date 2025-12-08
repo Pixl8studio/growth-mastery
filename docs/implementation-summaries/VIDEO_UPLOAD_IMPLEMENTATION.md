@@ -25,7 +25,7 @@ Video Errors & Improve User Guidance.
 
 **Modified Files:**
 
-- `app/funnel-builder/[projectId]/step/7/page.tsx`
+- `app/funnel-builder/[projectId]/step/8/page.tsx`
 
 **Changes:**
 
@@ -84,7 +84,7 @@ Video Errors & Improve User Guidance.
 
 **Modified Files:**
 
-- `app/funnel-builder/[projectId]/step/7/page.tsx`
+- `app/funnel-builder/[projectId]/step/8/page.tsx`
 
 **Changes:**
 
@@ -267,7 +267,7 @@ metadata extraction (duration, thumbnail) ✅ Created comprehensive E2E test sui
 3. `app/api/cloudflare/video/[videoId]/route.ts` - **New file** for video status
 4. `components/funnel/video-uploader.tsx` - Complete rewrite with progress, retry,
    validation
-5. `app/funnel-builder/[projectId]/step/7/page.tsx` - Added instructions, metadata
+5. `app/funnel-builder/[projectId]/step/8/page.tsx` - Added instructions, metadata
    polling
 6. `__tests__/e2e/video-upload.test.ts` - **New file** with comprehensive tests
 

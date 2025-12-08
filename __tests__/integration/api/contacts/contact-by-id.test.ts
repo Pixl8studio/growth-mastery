@@ -39,8 +39,16 @@ describe("GET /api/contacts/[contactId]", () => {
 
     it("should return contact detail with events", async () => {
         const mockEvents = [
-            { id: "event-1", event_type: "registration", created_at: new Date().toISOString() },
-            { id: "event-2", event_type: "video_view", created_at: new Date().toISOString() },
+            {
+                id: "event-1",
+                event_type: "registration",
+                created_at: new Date().toISOString(),
+            },
+            {
+                id: "event-2",
+                event_type: "video_view",
+                created_at: new Date().toISOString(),
+            },
         ];
 
         const mockSupabase = {
@@ -86,7 +94,11 @@ describe("GET /api/contacts/[contactId]", () => {
         const response = await GET(request, {
             params: Promise.resolve({ contactId: "contact-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            contact: { id: string; email: string; name?: string };
+            events: Array<{ id: string; event_type: string; created_at: string }>;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -98,12 +110,10 @@ describe("GET /api/contacts/[contactId]", () => {
     it("should return 401 for unauthenticated users", async () => {
         const mockSupabase = {
             auth: {
-                getUser: vi
-                    .fn()
-                    .mockResolvedValue({
-                        data: { user: null },
-                        error: { message: "Unauthorized" },
-                    }),
+                getUser: vi.fn().mockResolvedValue({
+                    data: { user: null },
+                    error: { message: "Unauthorized" },
+                }),
             },
         };
 
@@ -116,7 +126,7 @@ describe("GET /api/contacts/[contactId]", () => {
         const response = await GET(request, {
             params: Promise.resolve({ contactId: "contact-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Unauthorized");
@@ -148,7 +158,7 @@ describe("GET /api/contacts/[contactId]", () => {
         const response = await GET(request, {
             params: Promise.resolve({ contactId: "nonexistent" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(404);
         expect(data.error).toBe("Contact not found");
@@ -185,7 +195,7 @@ describe("GET /api/contacts/[contactId]", () => {
         const response = await GET(request, {
             params: Promise.resolve({ contactId: "contact-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(404);
         expect(data.error).toBe("Contact not found");
@@ -214,7 +224,7 @@ describe("GET /api/contacts/[contactId]", () => {
         const response = await GET(request, {
             params: Promise.resolve({ contactId: "contact-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Failed to fetch contact");
@@ -265,7 +275,10 @@ describe("PATCH /api/contacts/[contactId]", () => {
         const response = await PATCH(request, {
             params: Promise.resolve({ contactId: "contact-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            contact: { id: string; email: string; name?: string; notes?: string };
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -275,12 +288,10 @@ describe("PATCH /api/contacts/[contactId]", () => {
     it("should return 401 for unauthenticated users", async () => {
         const mockSupabase = {
             auth: {
-                getUser: vi
-                    .fn()
-                    .mockResolvedValue({
-                        data: { user: null },
-                        error: { message: "Unauthorized" },
-                    }),
+                getUser: vi.fn().mockResolvedValue({
+                    data: { user: null },
+                    error: { message: "Unauthorized" },
+                }),
             },
         };
 
@@ -294,7 +305,7 @@ describe("PATCH /api/contacts/[contactId]", () => {
         const response = await PATCH(request, {
             params: Promise.resolve({ contactId: "contact-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Unauthorized");
@@ -328,7 +339,10 @@ describe("PATCH /api/contacts/[contactId]", () => {
         const response = await PATCH(request, {
             params: Promise.resolve({ contactId: "contact-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            contact: { id: string; email: string; notes?: string };
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -362,7 +376,10 @@ describe("PATCH /api/contacts/[contactId]", () => {
         const response = await PATCH(request, {
             params: Promise.resolve({ contactId: "contact-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            contact: { id: string; email: string; tags?: string[] };
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -396,7 +413,7 @@ describe("PATCH /api/contacts/[contactId]", () => {
         const response = await PATCH(request, {
             params: Promise.resolve({ contactId: "contact-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Failed to update contact");

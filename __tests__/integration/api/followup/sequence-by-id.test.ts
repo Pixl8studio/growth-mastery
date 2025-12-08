@@ -70,7 +70,10 @@ describe("GET /api/followup/sequences/[sequenceId]", () => {
         const context = { params: Promise.resolve({ sequenceId: "seq-123" }) };
 
         const response = await GET(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            sequence: { id: string };
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -93,7 +96,7 @@ describe("GET /api/followup/sequences/[sequenceId]", () => {
         const context = { params: Promise.resolve({ sequenceId: "seq-123" }) };
 
         const response = await GET(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Authentication required");
@@ -118,7 +121,7 @@ describe("GET /api/followup/sequences/[sequenceId]", () => {
         const context = { params: Promise.resolve({ sequenceId: "seq-999" }) };
 
         const response = await GET(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(404);
         expect(data.error).toContain("not found");
@@ -151,7 +154,7 @@ describe("GET /api/followup/sequences/[sequenceId]", () => {
         const context = { params: Promise.resolve({ sequenceId: "seq-123" }) };
 
         const response = await GET(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Access denied to this sequence");
@@ -192,7 +195,10 @@ describe("PUT /api/followup/sequences/[sequenceId]", () => {
         const context = { params: Promise.resolve({ sequenceId: "seq-123" }) };
 
         const response = await PUT(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            sequence: { name: string };
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -218,7 +224,7 @@ describe("PUT /api/followup/sequences/[sequenceId]", () => {
         const context = { params: Promise.resolve({ sequenceId: "seq-123" }) };
 
         const response = await PUT(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Authentication required");
@@ -255,7 +261,7 @@ describe("DELETE /api/followup/sequences/[sequenceId]", () => {
         const context = { params: Promise.resolve({ sequenceId: "seq-123" }) };
 
         const response = await DELETE(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -277,7 +283,7 @@ describe("DELETE /api/followup/sequences/[sequenceId]", () => {
         const context = { params: Promise.resolve({ sequenceId: "seq-123" }) };
 
         const response = await DELETE(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Authentication required");
@@ -303,7 +309,7 @@ describe("DELETE /api/followup/sequences/[sequenceId]", () => {
         const context = { params: Promise.resolve({ sequenceId: "seq-999" }) };
 
         const response = await DELETE(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(404);
         expect(data.error).toContain("not found");

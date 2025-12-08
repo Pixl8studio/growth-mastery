@@ -67,7 +67,10 @@ describe("POST /api/followup/trigger", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            deliveries_created: number;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -92,7 +95,7 @@ describe("POST /api/followup/trigger", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
     });
@@ -114,7 +117,7 @@ describe("POST /api/followup/trigger", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("prospect_id is required");
@@ -137,7 +140,7 @@ describe("POST /api/followup/trigger", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("sequence_id is required");

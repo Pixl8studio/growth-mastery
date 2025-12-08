@@ -66,7 +66,7 @@ describe("POST /api/followup/webhooks/sms", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -120,7 +120,7 @@ describe("POST /api/followup/webhooks/sms", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -179,7 +179,7 @@ describe("POST /api/followup/webhooks/sms", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -204,7 +204,7 @@ describe("POST /api/followup/webhooks/sms", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Invalid signature");
@@ -227,7 +227,7 @@ describe("POST /api/followup/webhooks/sms", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("Invalid event format");
@@ -275,7 +275,7 @@ describe("POST /api/followup/webhooks/sms", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);

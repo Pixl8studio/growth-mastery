@@ -4,6 +4,7 @@
  * POST /api/ai-editor/pages - Create a new AI editor page
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -62,6 +63,15 @@ export async function GET(request: Request) {
         return NextResponse.json({ pages });
     } catch (error) {
         logger.error({ error }, "Failed to list AI editor pages");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "list_pages",
+                endpoint: "GET /api/ai-editor/pages",
+            },
+        });
+
         return NextResponse.json({ error: "Failed to list pages" }, { status: 500 });
     }
 }
@@ -146,6 +156,19 @@ export async function POST(request: Request) {
                 sectionsGenerated = result.sectionsGenerated;
             } catch (error) {
                 logger.error({ error }, "Failed to generate initial page content");
+
+                Sentry.captureException(error, {
+                    tags: {
+                        component: "api",
+                        action: "generate_initial_content",
+                        endpoint: "POST /api/ai-editor/pages",
+                    },
+                    extra: {
+                        projectId,
+                        pageType,
+                    },
+                });
+
                 // Continue with empty HTML - user can regenerate later
             }
         }
@@ -214,6 +237,15 @@ export async function POST(request: Request) {
         });
     } catch (error) {
         logger.error({ error }, "Failed to create AI editor page");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "create_page",
+                endpoint: "POST /api/ai-editor/pages",
+            },
+        });
+
         return NextResponse.json({ error: "Failed to create page" }, { status: 500 });
     }
 }

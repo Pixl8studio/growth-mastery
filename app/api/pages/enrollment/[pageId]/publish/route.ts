@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserWithProfileForAPI } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import * as Sentry from "@sentry/nextjs";
 
 export async function POST(
     request: NextRequest,
@@ -52,6 +53,16 @@ export async function POST(
         }
 
         logger.error({ error }, "Error in enrollment page publish route");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "toggle_enrollment_page_publish",
+                endpoint: "POST /api/pages/enrollment/[pageId]/publish",
+            },
+            extra: {
+                errorMessage,
+            },
+        });
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

@@ -3,6 +3,7 @@
  * Retrieves video processing status and metadata
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { getVideo } from "@/lib/cloudflare/client";
 import { logger } from "@/lib/logger";
@@ -28,7 +29,20 @@ export async function GET(
             status: video.status.state,
         });
     } catch (error) {
+        const { videoId } = await params;
         requestLogger.error({ error }, "Failed to get video status");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "get-video-status",
+                endpoint: "GET /api/cloudflare/video/[videoId]",
+            },
+            extra: {
+                videoId,
+            },
+        });
+
         return NextResponse.json(
             {
                 error:

@@ -4,6 +4,7 @@
  * Handles conversational edits to landing pages using Claude Sonnet 4
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -139,6 +140,20 @@ export async function POST(request: Request) {
                 },
                 "processEditRequest failed"
             );
+
+            Sentry.captureException(processingError, {
+                tags: {
+                    component: "api",
+                    action: "process_edit_request",
+                    endpoint: "POST /api/ai-editor/chat",
+                },
+                extra: {
+                    pageId,
+                    pageType: page.page_type,
+                    messageLength: message.length,
+                },
+            });
+
             throw processingError;
         }
 
@@ -238,6 +253,17 @@ export async function POST(request: Request) {
             },
             "AI chat request failed"
         );
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "ai_chat_request",
+                endpoint: "POST /api/ai-editor/chat",
+            },
+            extra: {
+                errorType: error?.constructor?.name,
+            },
+        });
 
         return NextResponse.json(
             {

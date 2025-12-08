@@ -5,6 +5,7 @@
  * Generates brand voice guidelines based on business context and product knowledge
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -51,6 +52,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true, brandVoice });
     } catch (error) {
         logger.error({ error }, "Failed to generate brand voice guidelines");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "generate_brand_voice",
+                endpoint: "POST /api/followup/generate-brand-voice",
+            },
+        });
 
         if (error instanceof AuthenticationError || error instanceof ValidationError) {
             return NextResponse.json(

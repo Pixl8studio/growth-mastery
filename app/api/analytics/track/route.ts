@@ -13,6 +13,7 @@ import {
 } from "@/lib/webhook-service";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import * as Sentry from "@sentry/nextjs";
 
 // Validation schemas
 const trackAnalyticsSchema = z.object({
@@ -127,6 +128,19 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         requestLogger.error({ error }, "Failed to track analytics");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "track_analytics_event",
+                endpoint: "POST /api/analytics/track",
+            },
+            extra: {
+                eventType,
+                pageType,
+                funnelProjectId,
+                hasContactId: !!contactId,
+            },
+        });
         return NextResponse.json({ error: "Failed to track event" }, { status: 500 });
     }
 }
@@ -262,5 +276,16 @@ async function updateContactEngagement(
         requestLogger.info({ contactId }, "Contact engagement updated");
     } catch (error) {
         requestLogger.error({ error }, "Failed to update contact engagement");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "update_contact_engagement",
+                endpoint: "POST /api/analytics/track",
+            },
+            extra: {
+                contactId,
+                eventType,
+            },
+        });
     }
 }

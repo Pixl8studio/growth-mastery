@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import type { PageMedia } from "@/types/pages";
+import * as Sentry from "@sentry/nextjs";
 
 export async function GET(request: NextRequest) {
     const requestLogger = logger.child({ handler: "page-media-list" });
@@ -105,6 +106,16 @@ export async function GET(request: NextRequest) {
         });
     } catch (error) {
         requestLogger.error({ error }, "Failed to fetch page media");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "fetch_page_media",
+                endpoint: "GET /api/pages/media",
+            },
+            extra: {
+                errorMessage: error instanceof Error ? error.message : "Unknown error",
+            },
+        });
 
         return NextResponse.json(
             {

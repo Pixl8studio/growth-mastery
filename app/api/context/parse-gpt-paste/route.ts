@@ -12,6 +12,7 @@ import { AuthenticationError, ValidationError } from "@/lib/errors";
 import { parseGptPasteResponse } from "@/lib/business-profile/ai-section-generator";
 import { getProfileByProject } from "@/lib/business-profile/service";
 import type { SectionId, BusinessProfile } from "@/types/business-profile";
+import * as Sentry from "@sentry/nextjs";
 
 export async function POST(request: NextRequest) {
     try {
@@ -130,6 +131,20 @@ export async function POST(request: NextRequest) {
         if (error instanceof ValidationError) {
             return NextResponse.json({ error: error.message }, { status: 400 });
         }
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "parse_gpt_paste",
+                endpoint: "POST /api/context/parse-gpt-paste",
+            },
+            extra: {
+                projectId,
+                sectionId,
+                contentLength: pastedContent?.length,
+                hasExistingData: !!existingData,
+            },
+        });
 
         return NextResponse.json(
             {

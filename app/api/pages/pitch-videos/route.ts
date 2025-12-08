@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { getThumbnailUrl } from "@/lib/cloudflare/client";
 import type { PitchVideo } from "@/types/pages";
+import * as Sentry from "@sentry/nextjs";
 
 export async function GET(request: NextRequest) {
     const requestLogger = logger.child({ handler: "pitch-videos-list" });
@@ -101,6 +102,16 @@ export async function GET(request: NextRequest) {
         });
     } catch (error) {
         requestLogger.error({ error }, "Failed to fetch pitch videos");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "fetch_pitch_videos",
+                endpoint: "GET /api/pages/pitch-videos",
+            },
+            extra: {
+                errorMessage: error instanceof Error ? error.message : "Unknown error",
+            },
+        });
 
         return NextResponse.json(
             {

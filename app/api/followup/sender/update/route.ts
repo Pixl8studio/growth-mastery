@@ -5,6 +5,7 @@
  * Updates sender name, email, and SMS sender ID.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -75,6 +76,14 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "❌ Error in POST /api/followup/sender/update");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "update_sender_info",
+                endpoint: "POST /api/followup/sender/update",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });

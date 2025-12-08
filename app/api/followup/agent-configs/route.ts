@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { AuthenticationError, ValidationError } from "@/lib/errors";
@@ -103,6 +104,14 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         logger.error({ error }, "❌ Error in POST /api/followup/agent-configs");
 
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "create_agent_config",
+                endpoint: "POST /api/followup/agent-configs",
+            },
+        });
+
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });
         }
@@ -171,6 +180,14 @@ export async function GET(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "❌ Error in GET /api/followup/agent-configs");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "list_agent_configs",
+                endpoint: "GET /api/followup/agent-configs",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });

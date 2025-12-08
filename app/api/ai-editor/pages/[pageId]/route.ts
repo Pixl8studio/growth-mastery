@@ -5,6 +5,7 @@
  * DELETE /api/ai-editor/pages/[pageId] - Delete a page
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -58,6 +59,15 @@ export async function GET(request: Request, { params }: RouteParams) {
         return NextResponse.json({ page });
     } catch (error) {
         logger.error({ error }, "Failed to get AI editor page");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "get_page",
+                endpoint: "GET /api/ai-editor/pages/[pageId]",
+            },
+        });
+
         return NextResponse.json({ error: "Failed to get page" }, { status: 500 });
     }
 }
@@ -147,6 +157,15 @@ export async function PUT(request: Request, { params }: RouteParams) {
         return NextResponse.json({ page: updatedPage });
     } catch (error) {
         logger.error({ error }, "Failed to update AI editor page");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "update_page",
+                endpoint: "PUT /api/ai-editor/pages/[pageId]",
+            },
+        });
+
         return NextResponse.json({ error: "Failed to update page" }, { status: 500 });
     }
 }
@@ -204,6 +223,15 @@ export async function DELETE(request: Request, { params }: RouteParams) {
         return NextResponse.json({ success: true });
     } catch (error) {
         logger.error({ error }, "Failed to delete AI editor page");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "delete_page",
+                endpoint: "DELETE /api/ai-editor/pages/[pageId]",
+            },
+        });
+
         return NextResponse.json({ error: "Failed to delete page" }, { status: 500 });
     }
 }

@@ -18,6 +18,7 @@ import {
     getProfileByProject,
 } from "@/lib/business-profile/service";
 import type { SectionId, SectionData } from "@/types/business-profile";
+import * as Sentry from "@sentry/nextjs";
 
 /**
  * GET - Get or create business profile for a project
@@ -83,6 +84,17 @@ export async function GET(request: NextRequest) {
         if (error instanceof ValidationError) {
             return NextResponse.json({ error: error.message }, { status: 400 });
         }
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "get_business_profile",
+                endpoint: "GET /api/context/business-profile",
+            },
+            extra: {
+                projectId: new URL(request.url).searchParams.get("projectId"),
+            },
+        });
 
         return NextResponse.json(
             { error: "Failed to get business profile" },
@@ -182,6 +194,18 @@ export async function PATCH(request: NextRequest) {
         if (error instanceof ValidationError) {
             return NextResponse.json({ error: error.message }, { status: 400 });
         }
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "update_business_profile",
+                endpoint: "PATCH /api/context/business-profile",
+            },
+            extra: {
+                projectId: request.body ? "provided" : "missing",
+                sectionId: request.body ? "provided" : "missing",
+            },
+        });
 
         return NextResponse.json(
             { error: "Failed to update business profile" },

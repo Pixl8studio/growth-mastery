@@ -3,6 +3,7 @@
  * Generates secure upload URLs for video uploads
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -52,6 +53,19 @@ export async function POST(request: NextRequest) {
             },
             "Failed to generate upload URL"
         );
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "generate-upload-url",
+                endpoint: "POST /api/cloudflare/upload-url",
+            },
+            extra: {
+                hasAccountId: !!process.env.CLOUDFLARE_ACCOUNT_ID,
+                hasApiToken: !!process.env.CLOUDFLARE_STREAM_API_TOKEN,
+            },
+        });
+
         return NextResponse.json(
             {
                 error:

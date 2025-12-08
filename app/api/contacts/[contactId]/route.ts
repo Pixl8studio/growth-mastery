@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
+import * as Sentry from "@sentry/nextjs";
 
 interface RouteParams {
     params: Promise<{
@@ -59,6 +60,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
         });
     } catch (error) {
         requestLogger.error({ error }, "Failed to fetch contact detail");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "fetch_contact_detail",
+                endpoint: "GET /api/contacts/[contactId]",
+            },
+            extra: {
+                contactId,
+            },
+        });
         return NextResponse.json({ error: "Failed to fetch contact" }, { status: 500 });
     }
 }
@@ -106,6 +117,18 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         });
     } catch (error) {
         requestLogger.error({ error }, "Failed to update contact");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "update_contact",
+                endpoint: "PATCH /api/contacts/[contactId]",
+            },
+            extra: {
+                contactId,
+                hasNotes: notes !== undefined,
+                hasTags: tags !== undefined,
+            },
+        });
         return NextResponse.json(
             { error: "Failed to update contact" },
             { status: 500 }

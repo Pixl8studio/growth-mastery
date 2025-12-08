@@ -5,6 +5,7 @@
  * Handles delivery status, failures, and opt-outs.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -51,6 +52,14 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "❌ Error in SMS webhook handler");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "process_sms_webhook",
+                endpoint: "POST /api/followup/webhooks/sms",
+            },
+        });
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

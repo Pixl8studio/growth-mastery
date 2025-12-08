@@ -5,6 +5,7 @@
  * Provides deliverability, engagement, conversion, and segmentation analytics.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 
@@ -78,6 +79,18 @@ export async function getDeliverabilityMetrics(
             { error, funnelProjectId },
             "❌ Failed to fetch deliverability data"
         );
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "analytics",
+                operation: "get_deliverability_metrics",
+            },
+            extra: {
+                funnelProjectId,
+                dateRange,
+            },
+        });
+
         return { success: false, error: error.message };
     }
 
@@ -135,6 +148,18 @@ export async function getEngagementMetrics(
 
     if (error) {
         logger.error({ error, funnelProjectId }, "❌ Failed to fetch engagement data");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "analytics",
+                operation: "get_engagement_metrics",
+            },
+            extra: {
+                funnelProjectId,
+                dateRange,
+            },
+        });
+
         return { success: false, error: error.message };
     }
 
@@ -184,6 +209,18 @@ export async function getConversionMetrics(
 
     if (error) {
         logger.error({ error, funnelProjectId }, "❌ Failed to fetch conversion data");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "analytics",
+                operation: "get_conversion_metrics",
+            },
+            extra: {
+                funnelProjectId,
+                dateRange,
+            },
+        });
+
         return { success: false, error: error.message };
     }
 
@@ -225,6 +262,17 @@ export async function getSegmentMetrics(
 
     if (error) {
         logger.error({ error, funnelProjectId }, "❌ Failed to fetch segment data");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "analytics",
+                operation: "get_segment_metrics",
+            },
+            extra: {
+                funnelProjectId,
+            },
+        });
+
         return { success: false, error: error.message };
     }
 

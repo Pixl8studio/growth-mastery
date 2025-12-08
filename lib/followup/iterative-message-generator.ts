@@ -5,6 +5,7 @@
  * messages as context for better coherence and robustness.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { generateWithAI } from "@/lib/ai/client";
@@ -108,6 +109,19 @@ export async function generateSingleMessage(
             { error, sequenceId, messageOrder },
             "❌ Failed to generate message"
         );
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "message-generator",
+                operation: "generate_single_message",
+            },
+            extra: {
+                sequenceId,
+                messageOrder,
+                previousMessageCount: previousMessages.length,
+            },
+        });
+
         return {
             success: false,
             error: error instanceof Error ? error.message : "Unknown error",

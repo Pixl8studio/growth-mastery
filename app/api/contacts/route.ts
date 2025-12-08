@@ -9,6 +9,7 @@ import { logger } from "@/lib/logger";
 import { PAGINATION, APP_CONFIG } from "@/lib/config";
 import { sendWebhook, buildRegistrationPayload } from "@/lib/webhook-service";
 import { z } from "zod";
+import * as Sentry from "@sentry/nextjs";
 
 // Validation schemas
 const createContactSchema = z.object({
@@ -119,6 +120,20 @@ export async function GET(request: NextRequest) {
         });
     } catch (error) {
         requestLogger.error({ error }, "Failed to fetch contacts");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "fetch_contacts",
+                endpoint: "GET /api/contacts",
+            },
+            extra: {
+                page,
+                pageSize,
+                funnelProjectId,
+                stage,
+                search: search ? "provided" : "none",
+            },
+        });
         return NextResponse.json(
             { error: "Failed to fetch contacts" },
             { status: 500 }
@@ -266,6 +281,17 @@ export async function POST(request: NextRequest) {
                         { error: webhookError, contactId: contact.id },
                         "Failed to send webhook"
                     );
+                    Sentry.captureException(webhookError, {
+                        tags: {
+                            component: "api",
+                            action: "send_webhook",
+                            endpoint: "POST /api/contacts",
+                        },
+                        extra: {
+                            contactId: contact.id,
+                            funnelProjectId,
+                        },
+                    });
                 }
             })();
         }
@@ -276,6 +302,18 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         requestLogger.error({ error }, "Failed to create contact");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "create_contact",
+                endpoint: "POST /api/contacts",
+            },
+            extra: {
+                funnelProjectId,
+                hasRegistrationPageId: !!registrationPageId,
+                hasUtmData: !!utmData,
+            },
+        });
         return NextResponse.json(
             { error: "Failed to create contact" },
             { status: 500 }

@@ -5,6 +5,7 @@
  * Supports video watching, offer clicks, email opens, and link clicks.
  * Public endpoint - no authentication required for tracking.
  */
+import * as Sentry from "@sentry/nextjs";
 
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
@@ -130,6 +131,14 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "❌ Error in POST /api/followup/track");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "track_engagement",
+                endpoint: "POST /api/followup/track",
+            },
+        });
 
         if (error instanceof ValidationError) {
             return NextResponse.json({ error: error.message }, { status: 400 });

@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserWithProfile } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import * as Sentry from "@sentry/nextjs";
 
 export async function PATCH(
     request: NextRequest,
@@ -64,6 +65,16 @@ export async function PATCH(
         return NextResponse.json({ success: true, page });
     } catch (error) {
         logger.error({ error }, "Error in enrollment page update route");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "update_enrollment_page",
+                endpoint: "PATCH /api/pages/enrollment/[pageId]",
+            },
+            extra: {
+                method: "PATCH",
+            },
+        });
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
@@ -114,6 +125,16 @@ export async function PUT(
         return NextResponse.json({ success: true, page });
     } catch (error) {
         logger.error({ error }, "Error updating enrollment page HTML content");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "update_enrollment_page_html",
+                endpoint: "PUT /api/pages/enrollment/[pageId]",
+            },
+            extra: {
+                method: "PUT",
+            },
+        });
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

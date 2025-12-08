@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { AuthenticationError, ValidationError } from "@/lib/errors";
@@ -39,6 +40,19 @@ export async function POST(request: NextRequest) {
                 const errorMessage = error.issues
                     .map((e: z.ZodIssue) => `${e.path.join(".")}: ${e.message}`)
                     .join(", ");
+
+                Sentry.captureException(error, {
+                    tags: {
+                        component: "api",
+                        action: "validate_optimize_request",
+                        endpoint: "POST /api/ads/optimize",
+                    },
+                    extra: {
+                        validationErrors: error.issues,
+                        requestBody: body,
+                    },
+                });
+
                 throw new ValidationError(errorMessage);
             }
             throw error;
@@ -86,6 +100,17 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "Error in POST /api/ads/optimize");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "optimize_campaigns",
+                endpoint: "POST /api/ads/optimize",
+            },
+            extra: {
+                errorType: error instanceof Error ? error.constructor.name : typeof error,
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });
@@ -139,6 +164,17 @@ export async function GET(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "Error in GET /api/ads/optimize");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "get_optimizations",
+                endpoint: "GET /api/ads/optimize",
+            },
+            extra: {
+                errorType: error instanceof Error ? error.constructor.name : typeof error,
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });

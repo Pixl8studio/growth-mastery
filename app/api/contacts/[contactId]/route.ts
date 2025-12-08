@@ -125,8 +125,6 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
             },
             extra: {
                 contactId,
-                hasNotes: notes !== undefined,
-                hasTags: tags !== undefined,
             },
         });
         return NextResponse.json(

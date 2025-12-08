@@ -138,12 +138,7 @@ export async function POST(request: NextRequest) {
                 action: "parse_gpt_paste",
                 endpoint: "POST /api/context/parse-gpt-paste",
             },
-            extra: {
-                projectId,
-                sectionId,
-                contentLength: pastedContent?.length,
-                hasExistingData: !!existingData,
-            },
+            extra: {},
         });
 
         return NextResponse.json(

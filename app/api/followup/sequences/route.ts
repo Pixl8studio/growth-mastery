@@ -100,11 +100,7 @@ export async function POST(request: NextRequest) {
                 action: "create_sequence",
                 endpoint: "POST /api/followup/sequences",
             },
-            extra: {
-                agentConfigId: body?.agent_config_id,
-                sequenceName: body?.name,
-                triggerEvent: body?.trigger_event,
-            },
+            extra: {},
         });
 
         if (error instanceof AuthenticationError) {

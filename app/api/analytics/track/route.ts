@@ -134,12 +134,7 @@ export async function POST(request: NextRequest) {
                 action: "track_analytics_event",
                 endpoint: "POST /api/analytics/track",
             },
-            extra: {
-                eventType,
-                pageType,
-                funnelProjectId,
-                hasContactId: !!contactId,
-            },
+            extra: {},
         });
         return NextResponse.json({ error: "Failed to track event" }, { status: 500 });
     }

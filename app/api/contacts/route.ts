@@ -126,13 +126,7 @@ export async function GET(request: NextRequest) {
                 action: "fetch_contacts",
                 endpoint: "GET /api/contacts",
             },
-            extra: {
-                page,
-                pageSize,
-                funnelProjectId,
-                stage,
-                search: search ? "provided" : "none",
-            },
+            extra: {},
         });
         return NextResponse.json(
             { error: "Failed to fetch contacts" },
@@ -308,11 +302,7 @@ export async function POST(request: NextRequest) {
                 action: "create_contact",
                 endpoint: "POST /api/contacts",
             },
-            extra: {
-                funnelProjectId,
-                hasRegistrationPageId: !!registrationPageId,
-                hasUtmData: !!utmData,
-            },
+            extra: {},
         });
         return NextResponse.json(
             { error: "Failed to create contact" },

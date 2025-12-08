@@ -101,10 +101,7 @@ export async function GET(request: NextRequest) {
                 action: "fetch_funnel_analytics",
                 endpoint: "GET /api/analytics/funnel",
             },
-            extra: {
-                projectId,
-                timeRange,
-            },
+            extra: {},
         });
         return NextResponse.json(
             { error: "Failed to fetch analytics" },

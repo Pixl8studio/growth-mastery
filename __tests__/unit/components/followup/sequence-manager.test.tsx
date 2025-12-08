@@ -46,7 +46,7 @@ describe("SequenceManager", () => {
     it("should show generation buttons when no sequence exists", () => {
         render(<SequenceManager {...mockProps} />);
 
-        expect(screen.getByText("Generate AI-Powered Sequence")).toBeInTheDocument();
+        expect(screen.getByText(/Generate AI-Powered Sequence/)).toBeInTheDocument();
         expect(screen.getByText("Use Default Templates")).toBeInTheDocument();
     });
 
@@ -62,7 +62,7 @@ describe("SequenceManager", () => {
     it("should disable buttons when no offer is provided", () => {
         render(<SequenceManager funnelProjectId="funnel-123" />);
 
-        const aiButton = screen.getByText("Generate AI-Powered Sequence");
+        const aiButton = screen.getByText(/Generate AI-Powered Sequence/);
         const defaultButton = screen.getByText("Use Default Templates");
 
         expect(aiButton).toBeDisabled();
@@ -90,7 +90,7 @@ describe("SequenceManager", () => {
 
         render(<SequenceManager {...mockProps} />);
 
-        const aiButton = screen.getByText("Generate AI-Powered Sequence");
+        const aiButton = screen.getByText(/Generate AI-Powered Sequence/);
         fireEvent.click(aiButton);
 
         await waitFor(() => {
@@ -133,19 +133,26 @@ describe("SequenceManager", () => {
 
     it("should show loading state during generation", async () => {
         (global.fetch as any).mockImplementation(
-            () => new Promise((resolve) => setTimeout(() => resolve({
-                ok: true,
-                json: async () => ({
-                    sequence_id: "seq-123",
-                    message_count: 5,
-                    generation_method: "ai",
-                }),
-            }), 100))
+            () =>
+                new Promise((resolve) =>
+                    setTimeout(
+                        () =>
+                            resolve({
+                                ok: true,
+                                json: async () => ({
+                                    sequence_id: "seq-123",
+                                    message_count: 5,
+                                    generation_method: "ai",
+                                }),
+                            }),
+                        100
+                    )
+                )
         );
 
         render(<SequenceManager {...mockProps} />);
 
-        const aiButton = screen.getByText("Generate AI-Powered Sequence");
+        const aiButton = screen.getByText(/Generate AI-Powered Sequence/);
         fireEvent.click(aiButton);
 
         expect(screen.getByText("Generating AI Templates...")).toBeInTheDocument();
@@ -164,11 +171,13 @@ describe("SequenceManager", () => {
 
         render(<SequenceManager {...mockProps} />);
 
-        const aiButton = screen.getByText("Generate AI-Powered Sequence");
+        const aiButton = screen.getByText(/Generate AI-Powered Sequence/);
         fireEvent.click(aiButton);
 
         await waitFor(() => {
-            expect(screen.getByText("Sequence Generated Successfully")).toBeInTheDocument();
+            expect(
+                screen.getByText(/Sequence Generated Successfully/)
+            ).toBeInTheDocument();
         });
     });
 
@@ -185,7 +194,7 @@ describe("SequenceManager", () => {
 
         render(<SequenceManager {...mockProps} />);
 
-        const aiButton = screen.getByText("Generate AI-Powered Sequence");
+        const aiButton = screen.getByText(/Generate AI-Powered Sequence/);
         fireEvent.click(aiButton);
 
         await waitFor(() => {
@@ -227,7 +236,7 @@ describe("SequenceManager", () => {
 
         render(<SequenceManager {...mockProps} />);
 
-        const aiButton = screen.getByText("Generate AI-Powered Sequence");
+        const aiButton = screen.getByText(/Generate AI-Powered Sequence/);
         fireEvent.click(aiButton);
 
         await waitFor(() => {
@@ -240,7 +249,7 @@ describe("SequenceManager", () => {
 
         render(<SequenceManager {...mockProps} />);
 
-        const aiButton = screen.getByText("Generate AI-Powered Sequence");
+        const aiButton = screen.getByText(/Generate AI-Powered Sequence/);
         fireEvent.click(aiButton);
 
         await waitFor(() => {
@@ -253,11 +262,13 @@ describe("SequenceManager", () => {
 
         render(<SequenceManager {...mockProps} />);
 
-        const aiButton = screen.getByText("Generate AI-Powered Sequence");
+        const aiButton = screen.getByText(/Generate AI-Powered Sequence/);
         fireEvent.click(aiButton);
 
         await waitFor(() => {
-            expect(screen.getByText("Try Default Templates Instead")).toBeInTheDocument();
+            expect(
+                screen.getByText("Try Default Templates Instead")
+            ).toBeInTheDocument();
         });
     });
 
@@ -274,7 +285,7 @@ describe("SequenceManager", () => {
 
         render(<SequenceManager {...mockProps} />);
 
-        const aiButton = screen.getByText("Generate AI-Powered Sequence");
+        const aiButton = screen.getByText(/Generate AI-Powered Sequence/);
         fireEvent.click(aiButton);
 
         await waitFor(() => {
@@ -296,7 +307,7 @@ describe("SequenceManager", () => {
 
         render(<SequenceManager {...mockProps} />);
 
-        const aiButton = screen.getByText("Generate AI-Powered Sequence");
+        const aiButton = screen.getByText(/Generate AI-Powered Sequence/);
         fireEvent.click(aiButton);
 
         await waitFor(() => {
@@ -317,7 +328,7 @@ describe("SequenceManager", () => {
 
         render(<SequenceManager {...mockProps} />);
 
-        const aiButton = screen.getByText("Generate AI-Powered Sequence");
+        const aiButton = screen.getByText(/Generate AI-Powered Sequence/);
         fireEvent.click(aiButton);
 
         await waitFor(() => {
@@ -338,7 +349,7 @@ describe("SequenceManager", () => {
 
         render(<SequenceManager {...mockProps} />);
 
-        const aiButton = screen.getByText("Generate AI-Powered Sequence");
+        const aiButton = screen.getByText(/Generate AI-Powered Sequence/);
         fireEvent.click(aiButton);
 
         await waitFor(() => {

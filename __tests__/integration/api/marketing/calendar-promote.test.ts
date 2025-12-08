@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "@/app/api/marketing/calendar/[entryId]/promote/route";
 import { NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 vi.mock("@/lib/marketing/publisher-service", () => ({
     promoteToProduction: vi.fn(() => Promise.resolve({ success: true })),
@@ -51,27 +52,24 @@ describe("POST /api/marketing/calendar/[entryId]/promote", () => {
     });
 
     it("returns 400 when entry is not in sandbox", async () => {
-        vi.mocked(await import("@/lib/supabase/server")).createClient = vi.fn(
-            () =>
-                ({
-                    auth: {
-                        getUser: vi.fn(() => ({
-                            data: { user: { id: "user-123" } },
+        vi.mocked(createClient).mockReturnValue({
+            auth: {
+                getUser: vi.fn(() => ({
+                    data: { user: { id: "user-123" } },
+                    error: null,
+                })),
+            },
+            from: vi.fn(() => ({
+                select: vi.fn(() => ({
+                    eq: vi.fn(() => ({
+                        single: vi.fn(() => ({
+                            data: { user_id: "user-123", space: "production" },
                             error: null,
                         })),
-                    },
-                    from: vi.fn(() => ({
-                        select: vi.fn(() => ({
-                            eq: vi.fn(() => ({
-                                single: vi.fn(() => ({
-                                    data: { user_id: "user-123", space: "production" },
-                                    error: null,
-                                })),
-                            })),
-                        })),
                     })),
-                }) as any
-        );
+                })),
+            })),
+        } as any);
 
         const request = new NextRequest(
             "http://localhost/api/marketing/calendar/entry-123/promote",

@@ -37,7 +37,7 @@ interface TalkTrack {
     created_at: string;
 }
 
-export default function Step7Page({
+export default function Step8Page({
     params,
 }: {
     params: Promise<{ projectId: string }>;
@@ -141,16 +141,14 @@ export default function Step7Page({
                         "Loaded Gamma decks"
                     );
 
-                    const transformed = (deckStructuresData || []).map(
-                        (deck: any) => ({
-                            id: deck.id,
-                            title: deck.metadata?.title || "Untitled Deck",
-                            slide_count: Array.isArray(deck.slides)
-                                ? deck.slides.length
-                                : deck.total_slides || 55,
-                            gamma_deck_url: gammaDecksMap.get(deck.id),
-                        })
-                    );
+                    const transformed = (deckStructuresData || []).map((deck: any) => ({
+                        id: deck.id,
+                        title: deck.metadata?.title || "Untitled Deck",
+                        slide_count: Array.isArray(deck.slides)
+                            ? deck.slides.length
+                            : deck.total_slides || 55,
+                        gamma_deck_url: gammaDecksMap.get(deck.id),
+                    }));
 
                     logger.info(
                         {

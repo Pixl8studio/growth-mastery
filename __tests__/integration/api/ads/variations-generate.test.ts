@@ -307,7 +307,7 @@ describe("POST /api/ads/variations/generate", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Access denied to funnel project");

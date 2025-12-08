@@ -180,6 +180,7 @@ describe("POST /api/ai-assistant/context", () => {
             context: {
                 user: { id: string };
                 currentProject: null | { id: string };
+                offers: unknown[];
             };
         }>(response);
 

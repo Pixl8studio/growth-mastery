@@ -36,7 +36,8 @@ describe("POST /api/intake/paste", () => {
             id: "intake-123",
             funnel_project_id: "project-123",
             user_id: "user-123",
-            raw_content: "This is a long enough pasted content for testing purposes to pass validation.",
+            raw_content:
+                "This is a long enough pasted content for testing purposes to pass validation.",
         };
 
         const mockSupabase = {
@@ -57,12 +58,17 @@ describe("POST /api/intake/paste", () => {
             body: {
                 projectId: "project-123",
                 userId: "user-123",
-                content: "This is a long enough pasted content for testing purposes to pass validation.",
+                content:
+                    "This is a long enough pasted content for testing purposes to pass validation.",
             },
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            intakeId: string;
+            method: string;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -79,7 +85,7 @@ describe("POST /api/intake/paste", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("Missing required fields");
@@ -96,7 +102,7 @@ describe("POST /api/intake/paste", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("Content too short");
@@ -126,13 +132,14 @@ describe("POST /api/intake/paste", () => {
             body: {
                 projectId: "project-123",
                 userId: "user-123",
-                content: "This is a long enough pasted content for testing purposes to pass validation.",
+                content:
+                    "This is a long enough pasted content for testing purposes to pass validation.",
                 sessionName: "Custom Session Name",
             },
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -157,12 +164,13 @@ describe("POST /api/intake/paste", () => {
             body: {
                 projectId: "project-123",
                 userId: "user-123",
-                content: "This is a long enough pasted content for testing purposes to pass validation.",
+                content:
+                    "This is a long enough pasted content for testing purposes to pass validation.",
             },
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Failed to save content. Please try again.");

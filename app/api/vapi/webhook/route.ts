@@ -3,6 +3,7 @@
  * Receives webhook events from VAPI (call status updates, transcripts)
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { verifyWebhookSignature } from "@/lib/vapi/client";
@@ -29,7 +30,7 @@ const log = isDev
 
 export async function POST(request: NextRequest) {
     try {
-        console.log("📡 VAPI Webhook handler called");
+        log.info("VAPI Webhook handler called");
         const rawBody = await request.text();
         const data = JSON.parse(rawBody);
 
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
  */
 async function handleCallStarted(event: VapiWebhookEvent) {
     try {
-        console.log("📞 Processing call started event:", event.call.id);
+        log.info("Processing call started event", { callId: event.call.id });
 
         const supabase = await createClient();
 
@@ -124,7 +125,7 @@ async function handleCallStarted(event: VapiWebhookEvent) {
         const userId = event.call.metadata?.userId as string | undefined;
 
         if (!funnelProjectId || !userId) {
-            console.warn("⚠️ Missing funnel project ID or user ID in metadata");
+            log.warn("Missing funnel project ID or user ID in metadata");
             return;
         }
 
@@ -141,9 +142,12 @@ async function handleCallStarted(event: VapiWebhookEvent) {
             throw error;
         }
 
-        console.log("✅ Call started event processed:", event.call.id);
+        log.info("Call started event processed", { callId: event.call.id });
     } catch (error) {
-        console.error("❌ Failed to handle call started event:", error);
+        log.error("Failed to handle call started event", error);
+        Sentry.captureException(error, {
+            tags: { component: "vapi_webhook", action: "call_started" },
+        });
     }
 }
 
@@ -152,7 +156,7 @@ async function handleCallStarted(event: VapiWebhookEvent) {
  */
 async function handleCallEnded(event: VapiWebhookEvent) {
     try {
-        console.log("🔴 Processing call ended event:", event.call.id);
+        log.info("Processing call ended event", { callId: event.call.id });
 
         // Process the completed call
         const summary = await processCompletedCallSimple(event.call.id);
@@ -166,7 +170,7 @@ async function handleCallEnded(event: VapiWebhookEvent) {
         const userId = event.call.metadata?.userId as string | undefined;
 
         if (!funnelProjectId || !userId) {
-            console.warn("⚠️ Missing funnel project ID or user ID in metadata");
+            log.warn("Missing funnel project ID or user ID in metadata");
             return;
         }
 
@@ -226,12 +230,7 @@ async function handleCallEnded(event: VapiWebhookEvent) {
             if (error) throw error;
         }
 
-        console.log(
-            "✅ Call ended event processed:",
-            event.call.id,
-            "duration:",
-            duration
-        );
+        log.info("Call ended event processed", { callId: event.call.id, duration });
 
         // Populate Business Profile from the call transcript
         try {
@@ -246,14 +245,17 @@ async function handleCallEnded(event: VapiWebhookEvent) {
                     },
                     "voice"
                 );
-                console.log("✅ Business profile populated from voice call");
+                log.info("Business profile populated from voice call");
             }
         } catch (profileError) {
-            console.error("⚠️ Failed to populate business profile:", profileError);
+            log.warn("Failed to populate business profile", profileError);
             // Don't throw - this is non-critical
         }
     } catch (error) {
-        console.error("❌ Failed to handle call ended event:", error);
+        log.error("Failed to handle call ended event", error);
+        Sentry.captureException(error, {
+            tags: { component: "vapi_webhook", action: "call_ended" },
+        });
     }
 }
 
@@ -262,15 +264,18 @@ async function handleCallEnded(event: VapiWebhookEvent) {
  */
 async function handleTranscript(event: VapiWebhookEvent) {
     try {
-        console.log("📝 Processing transcript event:", event.call.id);
+        log.info("Processing transcript event", { callId: event.call.id });
 
         // TODO: Handle real-time transcript updates
         // This could update the database with partial transcripts
         // or provide real-time feedback during the call
 
-        console.log("✅ Transcript event processed");
+        log.info("Transcript event processed");
     } catch (error) {
-        console.error("❌ Failed to handle transcript event:", error);
+        log.error("Failed to handle transcript event", error);
+        Sentry.captureException(error, {
+            tags: { component: "vapi_webhook", action: "transcript" },
+        });
     }
 }
 
@@ -382,7 +387,7 @@ async function handleClientTranscriptRequest(
             .single();
 
         if (existing) {
-            console.log("ℹ️ Transcript already exists for call:", targetCallId);
+            log.info("Transcript already exists for call", { callId: targetCallId });
             // Update existing record
             const { error } = await supabase
                 .from("vapi_transcripts")
@@ -457,10 +462,10 @@ async function handleClientTranscriptRequest(
 }
 
 /**
- * Simplified version of processCompletedCall that doesn't use the logger
+ * Simplified version of processCompletedCall
  */
 async function processCompletedCallSimple(callId: string) {
-    console.log("📞 Fetching call from VAPI:", callId);
+    log.info("Fetching call from VAPI", { callId });
 
     const apiKey = env.VAPI_API_KEY;
     if (!apiKey) {
@@ -480,7 +485,7 @@ async function processCompletedCallSimple(callId: string) {
     }
 
     const call = await response.json();
-    console.log("✅ Fetched call successfully:", { callId, status: call.status });
+    log.info("Fetched call successfully", { callId, status: call.status });
 
     // Extract transcript from various possible locations
     const transcript = call.artifact?.transcript || call.transcript || "";

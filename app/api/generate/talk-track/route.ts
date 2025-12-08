@@ -4,9 +4,11 @@
  * Returns immediately with job ID for status polling
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { ValidationError } from "@/lib/errors";
+import { logger } from "@/lib/logger";
 import { z } from "zod";
 
 const generateTalkTrackSchema = z.object({
@@ -64,7 +66,10 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (jobError || !job) {
-            console.error("Failed to create job:", jobError);
+            logger.error({ error: jobError, action: "create_talk_track_job" }, "Failed to create job");
+            Sentry.captureException(jobError, {
+                tags: { component: "api", action: "create_talk_track_job" },
+            });
             throw new Error("Failed to create job");
         }
 
@@ -80,7 +85,10 @@ export async function POST(request: NextRequest) {
             },
             body: JSON.stringify({ jobId: job.id }),
         }).catch((error) => {
-            console.error("Failed to invoke Edge Function:", error);
+            logger.error({ error, action: "invoke_edge_function" }, "Failed to invoke Edge Function");
+            Sentry.captureException(error, {
+                tags: { component: "api", action: "invoke_edge_function" },
+            });
         });
 
         // Return job ID immediately
@@ -89,7 +97,10 @@ export async function POST(request: NextRequest) {
             jobId: job.id,
         });
     } catch (error) {
-        console.error("Failed to create talk track job:", error);
+        logger.error({ error, action: "talk_track_job" }, "Failed to create talk track job");
+        Sentry.captureException(error, {
+            tags: { component: "api", action: "talk_track_job" },
+        });
 
         if (error instanceof ValidationError) {
             return NextResponse.json(

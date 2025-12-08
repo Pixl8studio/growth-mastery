@@ -21,205 +21,339 @@ vi.mock("@/lib/client-logger", () => ({
 }));
 
 describe("MessageTemplateEditor", () => {
-    const mockTemplate = {
-        id: "template-1",
+    const mockMessage = {
+        id: "msg-1",
         sequence_id: "seq-1",
+        name: "Welcome Email",
+        message_order: 1,
         channel: "email" as const,
-        subject: "Test Subject",
-        body: "Test message body with {{first_name}}",
-        sequence_position: 1,
-        delay_hours: 24,
+        send_delay_hours: 24,
+        subject_line: "Test Subject",
+        body_content: "Test message body with {first_name}",
+        primary_cta: {
+            text: "Take Action",
+            url: "https://example.com",
+            tracking_enabled: true,
+        },
+        ab_test_variant: null,
     };
 
-    const mockOnSave = vi.fn().mockResolvedValue(undefined);
-    const mockOnDelete = vi.fn().mockResolvedValue(undefined);
+    const mockSequence = {
+        id: "seq-1",
+        name: "Test Sequence",
+        sequence_type: "engagement",
+    };
+
+    const mockOnCreateMessage = vi.fn().mockResolvedValue(undefined);
+    const mockOnUpdateMessage = vi.fn().mockResolvedValue(undefined);
+    const mockOnDeleteMessage = vi.fn().mockResolvedValue(undefined);
 
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
     it("should render without crashing", () => {
-        render(<MessageTemplateEditor template={mockTemplate} onSave={mockOnSave} />);
+        render(
+            <MessageTemplateEditor
+                sequenceId="seq-1"
+                messages={[mockMessage]}
+                onCreateMessage={mockOnCreateMessage}
+                onUpdateMessage={mockOnUpdateMessage}
+                onDeleteMessage={mockOnDeleteMessage}
+            />
+        );
+        expect(screen.getByText("Message Templates")).toBeInTheDocument();
+    });
+
+    it("should display message in list", () => {
+        render(
+            <MessageTemplateEditor
+                sequenceId="seq-1"
+                messages={[mockMessage]}
+                onCreateMessage={mockOnCreateMessage}
+                onUpdateMessage={mockOnUpdateMessage}
+                onDeleteMessage={mockOnDeleteMessage}
+            />
+        );
+        expect(screen.getByText("Welcome Email")).toBeInTheDocument();
+        expect(screen.getByText("Test Subject")).toBeInTheDocument();
+    });
+
+    it("should show New Message button", () => {
+        render(
+            <MessageTemplateEditor
+                sequenceId="seq-1"
+                messages={[]}
+                onCreateMessage={mockOnCreateMessage}
+                onUpdateMessage={mockOnUpdateMessage}
+                onDeleteMessage={mockOnDeleteMessage}
+            />
+        );
+        expect(screen.getByText("New Message")).toBeInTheDocument();
+    });
+
+    it("should show create form when New Message is clicked", () => {
+        render(
+            <MessageTemplateEditor
+                sequenceId="seq-1"
+                messages={[]}
+                onCreateMessage={mockOnCreateMessage}
+                onUpdateMessage={mockOnUpdateMessage}
+                onDeleteMessage={mockOnDeleteMessage}
+            />
+        );
+
+        const newButton = screen.getByText("New Message");
+        fireEvent.click(newButton);
+
+        expect(screen.getByText("Create Message Template")).toBeInTheDocument();
+    });
+
+    it("should show edit form when Edit button is clicked", () => {
+        render(
+            <MessageTemplateEditor
+                sequenceId="seq-1"
+                messages={[mockMessage]}
+                onCreateMessage={mockOnCreateMessage}
+                onUpdateMessage={mockOnUpdateMessage}
+                onDeleteMessage={mockOnDeleteMessage}
+            />
+        );
+
+        const editButton = screen.getByText("Edit");
+        fireEvent.click(editButton);
+
         expect(screen.getByText("Edit Message Template")).toBeInTheDocument();
     });
 
-    it("should display subject input for email", () => {
-        render(<MessageTemplateEditor template={mockTemplate} onSave={mockOnSave} />);
-        const subjectInput = screen.getByLabelText("Subject Line");
-        expect(subjectInput).toHaveValue("Test Subject");
+    it("should populate form fields when editing", () => {
+        render(
+            <MessageTemplateEditor
+                sequenceId="seq-1"
+                messages={[mockMessage]}
+                onCreateMessage={mockOnCreateMessage}
+                onUpdateMessage={mockOnUpdateMessage}
+                onDeleteMessage={mockOnDeleteMessage}
+            />
+        );
+
+        const editButton = screen.getByText("Edit");
+        fireEvent.click(editButton);
+
+        const nameInput = screen.getByDisplayValue("Welcome Email");
+        expect(nameInput).toBeInTheDocument();
+
+        const subjectInput = screen.getByDisplayValue("Test Subject");
+        expect(subjectInput).toBeInTheDocument();
     });
 
-    it("should display message body textarea", () => {
-        render(<MessageTemplateEditor template={mockTemplate} onSave={mockOnSave} />);
-        const bodyTextarea = screen.getByLabelText("Message Body");
-        expect(bodyTextarea).toHaveValue("Test message body with {{first_name}}");
-    });
+    it("should call onUpdateMessage when saving edits", async () => {
+        render(
+            <MessageTemplateEditor
+                sequenceId="seq-1"
+                messages={[mockMessage]}
+                onCreateMessage={mockOnCreateMessage}
+                onUpdateMessage={mockOnUpdateMessage}
+                onDeleteMessage={mockOnDeleteMessage}
+            />
+        );
 
-    it("should display channel selector", () => {
-        render(<MessageTemplateEditor template={mockTemplate} onSave={mockOnSave} />);
-        expect(screen.getByLabelText("Channel")).toBeInTheDocument();
-    });
-
-    it("should display delay hours input", () => {
-        render(<MessageTemplateEditor template={mockTemplate} onSave={mockOnSave} />);
-        const delayInput = screen.getByLabelText("Delay (hours)");
-        expect(delayInput).toHaveValue(24);
-    });
-
-    it("should handle subject change", () => {
-        render(<MessageTemplateEditor template={mockTemplate} onSave={mockOnSave} />);
-        const subjectInput = screen.getByLabelText("Subject Line");
-        fireEvent.change(subjectInput, { target: { value: "New Subject" } });
-        expect(subjectInput).toHaveValue("New Subject");
-    });
-
-    it("should handle body change", () => {
-        render(<MessageTemplateEditor template={mockTemplate} onSave={mockOnSave} />);
-        const bodyTextarea = screen.getByLabelText("Message Body");
-        fireEvent.change(bodyTextarea, { target: { value: "New body text" } });
-        expect(bodyTextarea).toHaveValue("New body text");
-    });
-
-    it("should call onSave when save button is clicked", async () => {
-        render(<MessageTemplateEditor template={mockTemplate} onSave={mockOnSave} />);
+        const editButton = screen.getByText("Edit");
+        fireEvent.click(editButton);
 
         const saveButton = screen.getByText("Save Changes");
         fireEvent.click(saveButton);
 
         await waitFor(() => {
-            expect(mockOnSave).toHaveBeenCalled();
+            expect(mockOnUpdateMessage).toHaveBeenCalledWith(
+                "msg-1",
+                expect.any(Object)
+            );
         });
     });
 
-    it("should call onDelete when delete button is clicked", async () => {
+    it("should call onCreateMessage when creating new message", async () => {
         render(
             <MessageTemplateEditor
-                template={mockTemplate}
-                onSave={mockOnSave}
-                onDelete={mockOnDelete}
+                sequenceId="seq-1"
+                messages={[]}
+                onCreateMessage={mockOnCreateMessage}
+                onUpdateMessage={mockOnUpdateMessage}
+                onDeleteMessage={mockOnDeleteMessage}
             />
         );
 
-        const deleteButton = screen.getByText("Delete");
-        fireEvent.click(deleteButton);
+        const newButton = screen.getByText("New Message");
+        fireEvent.click(newButton);
+
+        // Fill in required fields
+        const nameInput = screen.getByPlaceholderText("Welcome Email");
+        fireEvent.change(nameInput, { target: { value: "Test Message" } });
+
+        const bodyTextarea = screen.getByPlaceholderText(/Hey {first_name}/);
+        fireEvent.change(bodyTextarea, { target: { value: "Test body" } });
+
+        const createButton = screen.getByText("Create Message");
+        fireEvent.click(createButton);
 
         await waitFor(() => {
-            expect(mockOnDelete).toHaveBeenCalled();
+            expect(mockOnCreateMessage).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    name: "Test Message",
+                    body_content: "Test body",
+                })
+            );
         });
     });
 
     it("should hide subject field for SMS channel", () => {
-        const smsTemplate = {
-            ...mockTemplate,
+        const smsMessage = {
+            ...mockMessage,
             channel: "sms" as const,
+            subject_line: undefined,
         };
 
-        render(<MessageTemplateEditor template={smsTemplate} onSave={mockOnSave} />);
-        expect(screen.queryByLabelText("Subject Line")).not.toBeInTheDocument();
-    });
-
-    it("should display merge tags helper", () => {
-        render(<MessageTemplateEditor template={mockTemplate} onSave={mockOnSave} />);
-        expect(screen.getByText("Available merge tags:")).toBeInTheDocument();
-        expect(screen.getByText("{{first_name}}")).toBeInTheDocument();
-        expect(screen.getByText("{{email}}")).toBeInTheDocument();
-        expect(screen.getByText("{{watch_percentage}}")).toBeInTheDocument();
-    });
-
-    it("should insert merge tag when clicked", () => {
-        render(<MessageTemplateEditor template={mockTemplate} onSave={mockOnSave} />);
-
-        const bodyTextarea = screen.getByLabelText("Message Body");
-        fireEvent.change(bodyTextarea, { target: { value: "" } });
-
-        const firstNameTag = screen.getByText("{{first_name}}");
-        fireEvent.click(firstNameTag);
-
-        expect(bodyTextarea).toHaveValue("{{first_name}}");
-    });
-
-    it("should disable save button when saving", async () => {
-        const slowSave = vi.fn(
-            () => new Promise((resolve) => setTimeout(resolve, 100))
+        render(
+            <MessageTemplateEditor
+                sequenceId="seq-1"
+                messages={[smsMessage]}
+                onCreateMessage={mockOnCreateMessage}
+                onUpdateMessage={mockOnUpdateMessage}
+                onDeleteMessage={mockOnDeleteMessage}
+            />
         );
 
-        render(<MessageTemplateEditor template={mockTemplate} onSave={slowSave} />);
-
-        const saveButton = screen.getByText("Save Changes");
-        fireEvent.click(saveButton);
-
-        expect(screen.getByText("Saving...")).toBeInTheDocument();
-        expect(screen.getByText("Saving...")).toBeDisabled();
-    });
-
-    it("should validate required fields", async () => {
-        render(<MessageTemplateEditor template={mockTemplate} onSave={mockOnSave} />);
-
-        const bodyTextarea = screen.getByLabelText("Message Body");
-        fireEvent.change(bodyTextarea, { target: { value: "" } });
-
-        const saveButton = screen.getByText("Save Changes");
-        fireEvent.click(saveButton);
-
-        await waitFor(() => {
-            expect(mockOnSave).not.toHaveBeenCalled();
-        });
-    });
-
-    it("should update delay hours", () => {
-        render(<MessageTemplateEditor template={mockTemplate} onSave={mockOnSave} />);
-
-        const delayInput = screen.getByLabelText("Delay (hours)");
-        fireEvent.change(delayInput, { target: { value: "48" } });
-        expect(delayInput).toHaveValue(48);
-    });
-
-    it("should display sequence position", () => {
-        render(<MessageTemplateEditor template={mockTemplate} onSave={mockOnSave} />);
-        expect(screen.getByText("Position #1")).toBeInTheDocument();
-    });
-
-    it("should show character count for message body", () => {
-        render(<MessageTemplateEditor template={mockTemplate} onSave={mockOnSave} />);
-        // Body is "Test message body with {{first_name}}" - 37 characters
-        expect(screen.getByText(/37 characters/)).toBeInTheDocument();
-    });
-
-    it("should handle channel switch", () => {
-        render(<MessageTemplateEditor template={mockTemplate} onSave={mockOnSave} />);
-
-        const channelSelect = screen.getByLabelText("Channel");
-        fireEvent.change(channelSelect, { target: { value: "sms" } });
+        const editButton = screen.getByText("Edit");
+        fireEvent.click(editButton);
 
         expect(screen.queryByLabelText("Subject Line")).not.toBeInTheDocument();
     });
 
-    it("should display preview button", () => {
-        render(<MessageTemplateEditor template={mockTemplate} onSave={mockOnSave} />);
+    it("should display available tokens section", () => {
+        render(
+            <MessageTemplateEditor
+                sequenceId="seq-1"
+                messages={[]}
+                onCreateMessage={mockOnCreateMessage}
+                onUpdateMessage={mockOnUpdateMessage}
+                onDeleteMessage={mockOnDeleteMessage}
+            />
+        );
+
+        const newButton = screen.getByText("New Message");
+        fireEvent.click(newButton);
+
+        expect(screen.getByText("Available Tokens")).toBeInTheDocument();
+    });
+
+    it("should show preview button in form", () => {
+        render(
+            <MessageTemplateEditor
+                sequenceId="seq-1"
+                messages={[]}
+                onCreateMessage={mockOnCreateMessage}
+                onUpdateMessage={mockOnUpdateMessage}
+                onDeleteMessage={mockOnDeleteMessage}
+            />
+        );
+
+        const newButton = screen.getByText("New Message");
+        fireEvent.click(newButton);
+
         expect(screen.getByText("Preview")).toBeInTheDocument();
     });
 
-    it("should create new template when template is null", () => {
+    it("should display message order badge", () => {
         render(
             <MessageTemplateEditor
-                template={null}
-                onSave={mockOnSave}
                 sequenceId="seq-1"
+                messages={[mockMessage]}
+                onCreateMessage={mockOnCreateMessage}
+                onUpdateMessage={mockOnUpdateMessage}
+                onDeleteMessage={mockOnDeleteMessage}
             />
         );
-        expect(screen.getByText("Create Message Template")).toBeInTheDocument();
+
+        expect(screen.getByText("1")).toBeInTheDocument();
     });
 
-    it("should initialize with defaults for new template", () => {
+    it("should display channel badge for email", () => {
         render(
             <MessageTemplateEditor
-                template={null}
-                onSave={mockOnSave}
                 sequenceId="seq-1"
+                messages={[mockMessage]}
+                onCreateMessage={mockOnCreateMessage}
+                onUpdateMessage={mockOnUpdateMessage}
+                onDeleteMessage={mockOnDeleteMessage}
             />
         );
 
-        const channelSelect = screen.getByLabelText("Channel");
-        expect(channelSelect).toHaveValue("email");
+        expect(screen.getByText("email")).toBeInTheDocument();
+    });
+
+    it("should display delay badge", () => {
+        render(
+            <MessageTemplateEditor
+                sequenceId="seq-1"
+                messages={[mockMessage]}
+                onCreateMessage={mockOnCreateMessage}
+                onUpdateMessage={mockOnUpdateMessage}
+                onDeleteMessage={mockOnDeleteMessage}
+            />
+        );
+
+        expect(screen.getByText("+24h")).toBeInTheDocument();
+    });
+
+    it("should show empty state when no messages", () => {
+        render(
+            <MessageTemplateEditor
+                sequenceId="seq-1"
+                messages={[]}
+                onCreateMessage={mockOnCreateMessage}
+                onUpdateMessage={mockOnUpdateMessage}
+                onDeleteMessage={mockOnDeleteMessage}
+            />
+        );
+
+        expect(screen.getByText("No Messages Yet")).toBeInTheDocument();
+    });
+
+    it("should show filters when sequences provided", () => {
+        render(
+            <MessageTemplateEditor
+                sequenceId="seq-1"
+                messages={[mockMessage]}
+                sequences={[mockSequence]}
+                onCreateMessage={mockOnCreateMessage}
+                onUpdateMessage={mockOnUpdateMessage}
+                onDeleteMessage={mockOnDeleteMessage}
+            />
+        );
+
+        expect(screen.getByText("Sequence:")).toBeInTheDocument();
+        expect(screen.getByText("Channel:")).toBeInTheDocument();
+    });
+
+    it("should allow canceling edit", () => {
+        render(
+            <MessageTemplateEditor
+                sequenceId="seq-1"
+                messages={[mockMessage]}
+                onCreateMessage={mockOnCreateMessage}
+                onUpdateMessage={mockOnUpdateMessage}
+                onDeleteMessage={mockOnDeleteMessage}
+            />
+        );
+
+        const editButton = screen.getByText("Edit");
+        fireEvent.click(editButton);
+
+        expect(screen.getByText("Edit Message Template")).toBeInTheDocument();
+
+        const cancelButton = screen.getByText("Cancel");
+        fireEvent.click(cancelButton);
+
+        expect(screen.queryByText("Edit Message Template")).not.toBeInTheDocument();
     });
 });

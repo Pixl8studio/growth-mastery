@@ -237,7 +237,7 @@ export default function Step8Page({
                     video_url: videoData.url,
                     video_id: videoData.videoId,
                     video_provider: "cloudflare",
-                    video_duration: videoMetadata.duration,
+                    video_duration: Math.round(videoMetadata.duration),
                     thumbnail_url: videoMetadata.thumbnailUrl,
                     processing_status: "ready",
                 })

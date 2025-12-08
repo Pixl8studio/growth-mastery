@@ -136,22 +136,42 @@ export function useEditor({
                     span.setAttribute("page_type", pageType);
 
                     try {
-                        // Call the AI chat endpoint
-                        const response = await fetch("/api/ai-editor/chat", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                pageId,
-                                projectId,
-                                pageType,
-                                message: content,
-                                currentHtml: html,
-                                conversationHistory: messages.map((m) => ({
-                                    role: m.role,
-                                    content: m.content,
-                                })),
-                            }),
-                        });
+                        // Call the AI chat endpoint with AbortController for timeout handling
+                        const controller = new AbortController();
+                        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+
+                        let response: Response;
+                        try {
+                            response = await fetch("/api/ai-editor/chat", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    pageId,
+                                    projectId,
+                                    pageType,
+                                    message: content,
+                                    currentHtml: html,
+                                    conversationHistory: messages.map((m) => ({
+                                        role: m.role,
+                                        content: m.content,
+                                    })),
+                                }),
+                                signal: controller.signal,
+                            });
+                        } catch (fetchError) {
+                            // Handle network errors and aborts gracefully
+                            if (fetchError instanceof Error) {
+                                if (fetchError.name === 'AbortError') {
+                                    throw new ValidationError("Request timed out. Please try again with a simpler request.");
+                                }
+                                if (fetchError.message === 'Failed to fetch') {
+                                    throw new ValidationError("Network connection lost. Please check your internet connection and try again.");
+                                }
+                            }
+                            throw fetchError;
+                        } finally {
+                            clearTimeout(timeoutId);
+                        }
 
                         const thinkingTime = (Date.now() - startTime) / 1000;
                         span.setAttribute("thinking_time_seconds", thinkingTime);
@@ -160,9 +180,15 @@ export function useEditor({
                             const errorBody = await response
                                 .text()
                                 .catch(() => "Unknown error");
-                            throw new ValidationError(
-                                `AI response failed: ${response.status} - ${errorBody}`
-                            );
+                            // Provide user-friendly error messages based on status
+                            const userMessage = response.status === 500
+                                ? "The AI service encountered an error. Please try again."
+                                : response.status === 429
+                                    ? "Too many requests. Please wait a moment and try again."
+                                    : response.status === 401
+                                        ? "Your session has expired. Please refresh the page."
+                                        : `AI response failed: ${response.status}`;
+                            throw new ValidationError(userMessage);
                         }
 
                         const data = await response.json();
@@ -298,23 +324,33 @@ export function useEditor({
                 span.setAttribute("version", version);
 
                 try {
-                    const response = await fetch(`/api/ai-editor/pages/${pageId}`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            title,
-                            html_content: html,
-                            version,
-                        }),
-                    });
+                    let response: Response;
+                    try {
+                        response = await fetch(`/api/ai-editor/pages/${pageId}`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                title,
+                                html_content: html,
+                                version,
+                            }),
+                        });
+                    } catch (fetchError) {
+                        // Handle network errors gracefully
+                        if (fetchError instanceof Error && fetchError.message === 'Failed to fetch') {
+                            throw new ValidationError("Unable to save. Please check your internet connection.");
+                        }
+                        throw fetchError;
+                    }
 
                     if (!response.ok) {
-                        const errorBody = await response
-                            .text()
-                            .catch(() => "Unknown error");
-                        throw new ValidationError(
-                            `Save failed: ${response.status} - ${errorBody}`
-                        );
+                        // Provide user-friendly error messages based on status
+                        const userMessage = response.status === 401
+                            ? "Your session has expired. Please refresh the page and try again."
+                            : response.status === 409
+                                ? "This page was modified elsewhere. Please refresh and try again."
+                                : `Save failed. Please try again.`;
+                        throw new ValidationError(userMessage);
                     }
 
                     span.setStatus({ code: 1, message: "Success" });

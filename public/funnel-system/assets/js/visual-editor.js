@@ -2560,8 +2560,8 @@ class VisualEditor {
             }, 1500);
         }, 100);
 
-        // Auto-select new block
-        this.handleBlockClick({ currentTarget: newBlock, stopPropagation: () => {} });
+        // Auto-select new block - include target property for proper event handling
+        this.handleBlockClick({ target: newBlock, currentTarget: newBlock, stopPropagation: () => {}, preventDefault: () => {} });
     }
 
     /**

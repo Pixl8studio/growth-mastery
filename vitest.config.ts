@@ -17,6 +17,10 @@ export default defineConfig({
         testTimeout: 10000,
         hookTimeout: 10000,
         teardownTimeout: 5000,
+        include: [
+            "__tests__/unit/**/*.{test,spec}.{ts,tsx}",
+            "__tests__/integration/**/*.{test,spec}.{ts,tsx}",
+        ],
         exclude: [
             "**/node_modules/**",
             "**/dist/**",

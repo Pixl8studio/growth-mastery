@@ -16,9 +16,6 @@ vi.mock("@/lib/client-logger", () => ({
 
 // Mock Supabase client
 const mockFrom = vi.fn();
-const mockSelect = vi.fn();
-const mockEq = vi.fn();
-const mockOrder = vi.fn();
 
 vi.mock("@/lib/supabase/client", () => ({
     createClient: () => ({

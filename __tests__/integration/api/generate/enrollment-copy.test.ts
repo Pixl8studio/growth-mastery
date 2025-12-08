@@ -33,9 +33,9 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 describe("POST /api/generate/enrollment-copy", () => {
-    const mockUserId = "user-123";
-    const mockOfferId = "offer-123e4567-e89b-12d3-a456-426614174000";
-    const mockTranscriptId = "transcript-123e4567-e89b-12d3-a456-426614174000";
+    const mockUserId = "123e4567-e89b-12d3-a456-426614174002";
+    const mockOfferId = "223e4567-e89b-12d3-a456-426614174002";
+    const mockTranscriptId = "323e4567-e89b-12d3-a456-426614174002";
 
     const mockOffer = {
         id: mockOfferId,

@@ -87,24 +87,17 @@ export default function Step7Page({
             if (!projectId) return;
             try {
                 const supabase = createClient();
+
+                // Fetch videos and talk tracks via Supabase client
+                // Fetch deck structures and gamma decks via API routes to avoid CORS issues
                 const [
                     videosResult,
-                    deckStructuresResult,
-                    gammaDecksResult,
                     talkTracksResult,
+                    deckStructuresResponse,
+                    gammaDecksResponse,
                 ] = await Promise.all([
                     supabase
                         .from("pitch_videos")
-                        .select("*")
-                        .eq("funnel_project_id", projectId)
-                        .order("created_at", { ascending: false }),
-                    supabase
-                        .from("deck_structures")
-                        .select("*")
-                        .eq("funnel_project_id", projectId)
-                        .order("created_at", { ascending: false }),
-                    supabase
-                        .from("gamma_decks")
                         .select("*")
                         .eq("funnel_project_id", projectId)
                         .order("created_at", { ascending: false }),
@@ -113,23 +106,34 @@ export default function Step7Page({
                         .select("*")
                         .eq("funnel_project_id", projectId)
                         .order("created_at", { ascending: false }),
+                    fetch(`/api/funnel/${projectId}/deck-structures`),
+                    fetch(`/api/funnel/${projectId}/gamma-decks`),
                 ]);
 
                 if (videosResult.data) setVideos(videosResult.data);
+                if (talkTracksResult.data) setTalkTracks(talkTracksResult.data);
+
+                // Parse API responses for deck structures and gamma decks
+                const deckStructuresData = deckStructuresResponse.ok
+                    ? (await deckStructuresResponse.json()).deckStructures
+                    : [];
+                const gammaDecksData = gammaDecksResponse.ok
+                    ? (await gammaDecksResponse.json()).gammaDecks
+                    : [];
 
                 // Transform deck structures and merge with gamma deck URLs
-                if (deckStructuresResult.data) {
+                if (deckStructuresData) {
                     // Create map of gamma deck URLs by deck_structure_id
                     const gammaDecksMap = new Map(
-                        (gammaDecksResult.data || []).map((deck: any) => [
+                        (gammaDecksData || []).map((deck: any) => [
                             deck.deck_structure_id,
-                            deck.deck_url, // ← Fixed: was gamma_url, should be deck_url
+                            deck.deck_url,
                         ])
                     );
 
                     logger.info(
                         {
-                            totalGammaDecks: gammaDecksResult.data?.length || 0,
+                            totalGammaDecks: gammaDecksData?.length || 0,
                             gammaDecksWithUrls: Array.from(
                                 gammaDecksMap.values()
                             ).filter((url) => url).length,
@@ -137,7 +141,7 @@ export default function Step7Page({
                         "Loaded Gamma decks"
                     );
 
-                    const transformed = (deckStructuresResult.data || []).map(
+                    const transformed = (deckStructuresData || []).map(
                         (deck: any) => ({
                             id: deck.id,
                             title: deck.metadata?.title || "Untitled Deck",
@@ -165,8 +169,6 @@ export default function Step7Page({
                         setSelectedDeckId(transformed[0].id);
                     }
                 }
-
-                if (talkTracksResult.data) setTalkTracks(talkTracksResult.data);
             } catch (error) {
                 logger.error({ error }, "Failed to load data");
             }

@@ -93,11 +93,14 @@ export function PreviewIframe({ html, deviceMode, isProcessing }: PreviewIframeP
                 title="Page Preview"
                 sandbox="allow-scripts allow-same-origin"
                 className={cn(
-                    "h-full border-0 bg-white",
+                    "border-0 bg-white",
                     "transition-all duration-300"
                 )}
                 style={{
                     width: deviceMode === "desktop" ? "100%" : `${width}px`,
+                    height: "100%",
+                    minHeight: deviceMode === "desktop" ? "600px" : "auto",
+                    display: "block",
                 }}
             />
         </div>

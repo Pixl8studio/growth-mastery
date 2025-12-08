@@ -3420,3 +3420,112 @@ body.resizing .hero-content {
 [data-custom-theme="true"][data-theme-mode="dark"] .social-proof-card[data-minimal-mode="true"] .social-proof-number {
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
 }
+
+/* ===============================================
+   Preview Mode Fixes - Issue #50
+   Ensures proper rendering when in preview mode
+   =============================================== */
+
+/* Reset padding when not in edit mode (preview mode) */
+body[data-editor-mode="false"] {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+body[data-editor-mode="false"] .page-container {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+/* Hide editor UI elements in preview mode */
+body[data-editor-mode="false"] .editor-interface,
+body[data-editor-mode="false"] .block-handle,
+body[data-editor-mode="false"] .section-controls,
+body[data-editor-mode="false"] .element-controls,
+body[data-editor-mode="false"] .field-regenerate-btn,
+body[data-editor-mode="false"] .block-settings {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+/* Remove edit-mode styling in preview */
+.block[data-editor-mode="false"] {
+    border: none !important;
+    cursor: default !important;
+    outline: none !important;
+}
+
+.block[data-editor-mode="false"]:hover {
+    border: none !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Ensure blocks display correctly without edit overlays */
+.block[data-editor-mode="false"] [data-editable="true"] {
+    outline: none !important;
+    border: none !important;
+}
+
+/* Preview mode grid layout fixes */
+.block[data-editor-mode="false"] .features-grid,
+.block[data-editor-mode="false"] .testimonial-grid,
+.block[data-editor-mode="false"] .learn-grid,
+.block[data-editor-mode="false"] .pricing-options {
+    display: grid !important;
+}
+
+/* Ensure responsive cards in preview */
+@media (max-width: 768px) {
+    .block[data-editor-mode="false"] .features-grid,
+    .block[data-editor-mode="false"] .testimonial-grid,
+    .block[data-editor-mode="false"] .learn-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+/* Navigation link color selector styling */
+.theme-nav-link-color-selector {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 8px;
+    padding: 8px 0;
+}
+
+.theme-nav-link-color-selector .theme-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 8px;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.theme-nav-link-color-selector .theme-option:hover {
+    border-color: hsl(103 89% 29% / 0.3);
+    background: hsl(103 89% 29% / 0.05);
+}
+
+.theme-nav-link-color-selector .theme-option.selected {
+    border-color: hsl(103 89% 29%);
+    background: hsl(103 89% 29% / 0.1);
+}
+
+.theme-nav-link-color-selector .theme-preview {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+}
+
+.theme-nav-link-color-selector .theme-label {
+    font-size: 11px;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}

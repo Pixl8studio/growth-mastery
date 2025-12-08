@@ -784,6 +784,41 @@ class VisualEditor {
             },
         };
 
+        // Add grid/layout background controls for sections with grids
+        const hasGrid = element.querySelector('.features-grid, .testimonial-grid, .learn-grid, .pricing-options, .social-proof-strip, .grid, [class*="grid"]');
+        if (hasGrid) {
+            commonSettings.gridBackground = {
+                type: "section-background-select",
+                label: "📦 Grid Container Background",
+                options: [
+                    { value: "transparent", label: "Transparent", preview: "transparent" },
+                    { value: "#FFFFFF", label: "White", preview: "#FFFFFF" },
+                    { value: "#F8FAFC", label: "Light Gray", preview: "#F8FAFC" },
+                    { value: "#F3F4F6", label: "Cool Gray", preview: "#F3F4F6" },
+                    { value: "rgba(79, 70, 229, 0.05)", label: "Primary Tint", preview: "rgba(79, 70, 229, 0.1)" },
+                    { value: "rgba(16, 185, 129, 0.05)", label: "Success Tint", preview: "rgba(16, 185, 129, 0.1)" },
+                    { value: "custom", label: "🎨 Custom", preview: "linear-gradient(45deg, #ff6b6b, #4ecdc4)" },
+                ],
+                default: "transparent",
+            };
+            commonSettings.gridPadding = {
+                type: "range",
+                label: "📦 Grid Inner Padding",
+                min: 0,
+                max: 60,
+                unit: "px",
+                default: 0,
+            };
+            commonSettings.gridBorderRadius = {
+                type: "range",
+                label: "🔲 Grid Border Radius",
+                min: 0,
+                max: 30,
+                unit: "px",
+                default: 0,
+            };
+        }
+
         // Add card color options only if this section has cards
         if (hasCards) {
             commonSettings.blockColor = {
@@ -1117,6 +1152,84 @@ class VisualEditor {
                     type: "checkbox",
                     label: "👻 Hide Background",
                     default: false,
+                },
+            },
+            navigation: {
+                ...commonSettings,
+                navLinkColor: {
+                    type: "nav-link-color-select",
+                    label: "🔗 Link Color",
+                    options: [
+                        { value: "#1F2937", label: "Dark Gray", preview: "#1F2937" },
+                        { value: "#FFFFFF", label: "White", preview: "#FFFFFF" },
+                        { value: "#4f46e5", label: "Primary Blue", preview: "#4f46e5" },
+                        { value: "#10b981", label: "Emerald", preview: "#10b981" },
+                        { value: "custom", label: "🎨 Custom", preview: "linear-gradient(45deg, #ff6b6b, #4ecdc4)" },
+                    ],
+                    default: "#1F2937",
+                },
+                navLinkHoverColor: {
+                    type: "nav-link-color-select",
+                    label: "🔗 Link Hover Color",
+                    options: [
+                        { value: "#4f46e5", label: "Primary Blue", preview: "#4f46e5" },
+                        { value: "#10b981", label: "Emerald", preview: "#10b981" },
+                        { value: "#1F2937", label: "Dark Gray", preview: "#1F2937" },
+                        { value: "#FFFFFF", label: "White", preview: "#FFFFFF" },
+                        { value: "custom", label: "🎨 Custom", preview: "linear-gradient(45deg, #ff6b6b, #4ecdc4)" },
+                    ],
+                    default: "#4f46e5",
+                },
+                showLogo: {
+                    type: "checkbox",
+                    label: "🖼️ Show Logo",
+                    default: true,
+                },
+                stickyNav: {
+                    type: "checkbox",
+                    label: "📌 Sticky Navigation",
+                    default: false,
+                },
+                navHeight: {
+                    type: "range",
+                    label: "📏 Navigation Height",
+                    min: 48,
+                    max: 120,
+                    unit: "px",
+                    default: 64,
+                },
+                navPadding: {
+                    type: "range",
+                    label: "📦 Horizontal Padding",
+                    min: 8,
+                    max: 80,
+                    unit: "px",
+                    default: 24,
+                },
+            },
+            footer: {
+                ...commonSettings,
+                footerLinkColor: {
+                    type: "nav-link-color-select",
+                    label: "🔗 Link Color",
+                    options: [
+                        { value: "#6B7280", label: "Light Gray", preview: "#6B7280" },
+                        { value: "#FFFFFF", label: "White", preview: "#FFFFFF" },
+                        { value: "#1F2937", label: "Dark Gray", preview: "#1F2937" },
+                        { value: "custom", label: "🎨 Custom", preview: "linear-gradient(45deg, #ff6b6b, #4ecdc4)" },
+                    ],
+                    default: "#6B7280",
+                },
+                showSocialLinks: {
+                    type: "checkbox",
+                    label: "📱 Show Social Links",
+                    default: true,
+                },
+                textAlign: {
+                    type: "select",
+                    label: "📐 Text Alignment",
+                    options: ["left", "center", "right"],
+                    default: "center",
                 },
             },
         };
@@ -1759,6 +1872,20 @@ class VisualEditor {
                     break;
                 case "button-text-color-select":
                     html += `<div class="theme-button-text-color-selector">`;
+                    setting.options.forEach((option) => {
+                        const isSelected =
+                            currentValue === option.value ? "selected" : "";
+                        html += `
+              <div class="theme-option ${isSelected}" data-property="${key}" data-value="${option.value}" title="${option.label}">
+                <div class="theme-preview" style="background: ${option.preview}; border: 2px solid #e2e8f0;"></div>
+                <span class="theme-label">${option.label}</span>
+              </div>
+            `;
+                    });
+                    html += `</div>`;
+                    break;
+                case "nav-link-color-select":
+                    html += `<div class="theme-nav-link-color-selector">`;
                     setting.options.forEach((option) => {
                         const isSelected =
                             currentValue === option.value ? "selected" : "";
@@ -3492,14 +3619,30 @@ class VisualEditor {
             this.redoStack.push(currentState);
 
             const previousState = this.undoStack[this.undoStack.length - 1];
-            document.querySelector(".page-container").innerHTML = previousState;
+            const pageContainer = document.querySelector(".page-container");
+            if (!pageContainer) {
+                console.warn("⚠️ Undo failed: .page-container not found");
+                // Restore the stack state
+                this.undoStack.push(currentState);
+                this.redoStack.pop();
+                return;
+            }
+            pageContainer.innerHTML = previousState;
             this.initializeBlocks();
             this.updateToolbar();
+
+            // Reinitialize sparkle buttons and icon handlers after DOM restore
+            this.reinitializeAfterDOMRestore();
+
             console.log(
-                "Undo applied - Stack lengths:",
+                "✅ Undo applied - Stack lengths:",
                 this.undoStack.length,
                 this.redoStack.length
             );
+            this.showNotification("Undo successful", "success");
+        } else {
+            console.log("⚠️ Nothing to undo");
+            this.showNotification("Nothing to undo", "info");
         }
     }
 
@@ -3508,15 +3651,58 @@ class VisualEditor {
             const state = this.redoStack.pop();
             this.undoStack.push(state);
 
-            document.querySelector(".page-container").innerHTML = state;
+            const pageContainer = document.querySelector(".page-container");
+            if (!pageContainer) {
+                console.warn("⚠️ Redo failed: .page-container not found");
+                // Restore the stack state
+                this.redoStack.push(state);
+                this.undoStack.pop();
+                return;
+            }
+            pageContainer.innerHTML = state;
             this.initializeBlocks();
             this.updateToolbar();
+
+            // Reinitialize sparkle buttons and icon handlers after DOM restore
+            this.reinitializeAfterDOMRestore();
+
             console.log(
-                "Redo applied - Stack lengths:",
+                "✅ Redo applied - Stack lengths:",
                 this.undoStack.length,
                 this.redoStack.length
             );
+            this.showNotification("Redo successful", "success");
+        } else {
+            console.log("⚠️ Nothing to redo");
+            this.showNotification("Nothing to redo", "info");
         }
+    }
+
+    /**
+     * Reinitialize sparkle buttons and icon handlers after DOM restore (undo/redo)
+     */
+    reinitializeAfterDOMRestore() {
+        // Reinitialize icon picker click handlers
+        if (window.iconPicker && typeof window.iconPicker.initializeIconClickHandlers === 'function') {
+            setTimeout(() => {
+                window.iconPicker.initializeIconClickHandlers();
+                console.log("🎨 Icon picker handlers reinitialized after undo/redo");
+            }, 100);
+        }
+
+        // Trigger sparkle button reinitialization (handled by editor-page-wrapper.tsx script)
+        // The script monitors for missing sparkle buttons every 2 seconds, but we can trigger immediately
+        if (typeof window.addRegenerateIcons === 'function') {
+            setTimeout(() => {
+                window.addRegenerateIcons();
+                console.log("✨ Sparkle buttons reinitialized after undo/redo");
+            }, 200);
+        }
+
+        // Dispatch custom event for any other listeners that need to reinitialize
+        document.dispatchEvent(new CustomEvent('editorDOMRestored', {
+            detail: { source: 'undoRedo' }
+        }));
     }
 
     /**
@@ -4540,6 +4726,124 @@ class VisualEditor {
                 });
                 break;
 
+            // Grid/Layout background properties
+            case "gridBackground":
+                const grids = block.querySelectorAll('.features-grid, .testimonial-grid, .learn-grid, .pricing-options, .social-proof-strip, .grid, [class*="grid"]');
+                grids.forEach((grid) => {
+                    if (value === "custom") {
+                        grid.setAttribute("data-custom-grid-bg", "true");
+                    } else if (value === "transparent") {
+                        grid.style.setProperty("background", "transparent", "important");
+                        grid.removeAttribute("data-custom-grid-bg");
+                    } else {
+                        grid.style.setProperty("background", value, "important");
+                        grid.removeAttribute("data-custom-grid-bg");
+                    }
+                });
+                block.dataset.gridBackground = value;
+                console.log(`Applied gridBackground: ${value}`);
+                break;
+
+            case "gridPadding":
+                const gridContainers = block.querySelectorAll('.features-grid, .testimonial-grid, .learn-grid, .pricing-options, .social-proof-strip, .grid, [class*="grid"]');
+                gridContainers.forEach((grid) => {
+                    grid.style.setProperty("padding", value + "px", "important");
+                });
+                block.dataset.gridPadding = value;
+                console.log(`Applied gridPadding: ${value}px`);
+                break;
+
+            case "gridBorderRadius":
+                const gridElements = block.querySelectorAll('.features-grid, .testimonial-grid, .learn-grid, .pricing-options, .social-proof-strip, .grid, [class*="grid"]');
+                gridElements.forEach((grid) => {
+                    grid.style.setProperty("border-radius", value + "px", "important");
+                });
+                block.dataset.gridBorderRadius = value;
+                console.log(`Applied gridBorderRadius: ${value}px`);
+                break;
+
+            // Navigation block properties
+            case "navLinkColor":
+                const navLinks = block.querySelectorAll("a, .nav-link, .navbar-link");
+                navLinks.forEach((link) => {
+                    if (value !== "custom") {
+                        link.style.setProperty("color", value, "important");
+                    }
+                });
+                block.dataset.navLinkColor = value;
+                console.log(`Applied navLinkColor: ${value}`);
+                break;
+
+            case "navLinkHoverColor":
+                // Store hover color in CSS variable for hover state
+                block.style.setProperty("--nav-link-hover-color", value);
+                block.dataset.navLinkHoverColor = value;
+                // Inject hover styles
+                this.injectNavHoverStyles(block, value);
+                console.log(`Applied navLinkHoverColor: ${value}`);
+                break;
+
+            case "showLogo":
+                const logos = block.querySelectorAll(".logo, .nav-logo, .navbar-brand, img[alt*='logo'], img[alt*='Logo']");
+                logos.forEach((logo) => {
+                    logo.style.setProperty("display", value ? "block" : "none", "important");
+                });
+                block.dataset.showLogo = value;
+                console.log(`Applied showLogo: ${value}`);
+                break;
+
+            case "stickyNav":
+                if (value) {
+                    block.style.setProperty("position", "sticky", "important");
+                    block.style.setProperty("top", "0", "important");
+                    block.style.setProperty("z-index", "1000", "important");
+                } else {
+                    block.style.removeProperty("position");
+                    block.style.removeProperty("top");
+                    block.style.setProperty("z-index", "auto", "important");
+                }
+                block.dataset.stickyNav = value;
+                console.log(`Applied stickyNav: ${value}`);
+                break;
+
+            case "navHeight":
+                block.style.setProperty("min-height", value + "px", "important");
+                const navInner = block.querySelector(".nav-inner, .navbar-inner, .container");
+                if (navInner) {
+                    navInner.style.setProperty("min-height", value + "px", "important");
+                }
+                block.dataset.navHeight = value;
+                console.log(`Applied navHeight: ${value}px`);
+                break;
+
+            case "navPadding":
+                block.style.setProperty("padding-left", value + "px", "important");
+                block.style.setProperty("padding-right", value + "px", "important");
+                block.dataset.navPadding = value;
+                console.log(`Applied navPadding: ${value}px`);
+                break;
+
+            // Footer block properties
+            case "footerLinkColor":
+                const footerLinks = block.querySelectorAll("a, .footer-link");
+                footerLinks.forEach((link) => {
+                    if (value !== "custom") {
+                        link.style.setProperty("color", value, "important");
+                    }
+                });
+                block.dataset.footerLinkColor = value;
+                console.log(`Applied footerLinkColor: ${value}`);
+                break;
+
+            case "showSocialLinks":
+                const socialLinks = block.querySelectorAll(".social-links, .social-icons, [class*='social']");
+                socialLinks.forEach((links) => {
+                    links.style.setProperty("display", value ? "flex" : "none", "important");
+                });
+                block.dataset.showSocialLinks = value;
+                console.log(`Applied showSocialLinks: ${value}`);
+                break;
+
             default:
                 // Fallback to CSS custom property
                 block.style.setProperty(`--${property}`, value);
@@ -5007,6 +5311,43 @@ class VisualEditor {
         }
 
         console.log("Removed button redirect");
+    }
+
+    /**
+     * Inject hover styles for navigation links
+     * Creates a scoped style element for the block's hover effects
+     */
+    injectNavHoverStyles(block, hoverColor) {
+        // Generate a unique ID for this block if it doesn't have one
+        if (!block.id) {
+            block.id = "nav-block-" + Date.now();
+        }
+
+        // Remove any existing hover style for this block
+        const existingStyle = document.getElementById(`${block.id}-hover-style`);
+        if (existingStyle) {
+            existingStyle.remove();
+        }
+
+        // Skip if custom color (handled by color picker)
+        if (hoverColor === "custom") {
+            return;
+        }
+
+        // Create and inject hover style
+        const style = document.createElement("style");
+        style.id = `${block.id}-hover-style`;
+        style.textContent = `
+            #${block.id} a:hover,
+            #${block.id} .nav-link:hover,
+            #${block.id} .navbar-link:hover {
+                color: ${hoverColor} !important;
+                transition: color 0.2s ease;
+            }
+        `;
+        document.head.appendChild(style);
+
+        console.log(`Injected hover styles for ${block.id} with color ${hoverColor}`);
     }
 
     updateSettingsUI(property, value) {

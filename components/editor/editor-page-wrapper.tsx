@@ -765,6 +765,9 @@ export function EditorPageWrapper({
                         console.log('💡 To see sparkles: Hover over any editable text in edit mode');
                     }
 
+                    // Expose addRegenerateIcons to window for undo/redo reinitialization
+                    window.addRegenerateIcons = addRegenerateIcons;
+
                     // Store reference to buttons for edit mode change handling
                     window.aiRegenerationButtons = [];
 

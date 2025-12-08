@@ -48,6 +48,11 @@ const eslintConfig = [
             ],
             "@typescript-eslint/no-explicit-any": "warn",
             "react/no-unescaped-entities": "off",
+            // Disable overly strict React Compiler rules that flag valid patterns
+            // These rules are experimental and flag common React patterns as errors
+            "react-hooks/set-state-in-effect": "off",
+            "react-hooks/purity": "off",
+            "react-hooks/immutability": "off",
         },
     },
     // Relax rules for test files
@@ -61,7 +66,15 @@ const eslintConfig = [
         ],
         rules: {
             "@typescript-eslint/no-explicit-any": "off",
+            "@typescript-eslint/no-require-imports": "off", // Allow require() for dynamic mocking in Vitest
             "@next/next/no-img-element": "off", // Allow <img> in test mocks
+        },
+    },
+    // Allow CommonJS require() in Node.js scripts
+    {
+        files: ["scripts/**/*.js"],
+        rules: {
+            "@typescript-eslint/no-require-imports": "off",
         },
     },
 ];

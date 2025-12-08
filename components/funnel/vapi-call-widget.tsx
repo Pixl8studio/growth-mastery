@@ -46,6 +46,8 @@ export function VapiCallWidget({
     const callIdRef = useRef<string | null>(null);
     const callStartTimestampRef = useRef<string | null>(null);
     const vapiRef = useRef<any>(null);
+    // Track call active state in ref for reliable access in timeouts/closures
+    const isCallActiveRef = useRef<boolean>(false);
 
     // Get VAPI credentials
     const publicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY;
@@ -228,6 +230,7 @@ export function VapiCallWidget({
                     }
 
                     setIsCallActive(true);
+                    isCallActiveRef.current = true;
                     setIsConnecting(false);
                     setCallDuration(0);
                     startTimer();
@@ -250,6 +253,7 @@ export function VapiCallWidget({
                         "🔴 Call ended, saving transcript"
                     );
                     setIsCallActive(false);
+                    isCallActiveRef.current = false;
                     setIsConnecting(false);
                     stopTimer();
 
@@ -393,6 +397,7 @@ export function VapiCallWidget({
                                 "🎙️ Call is active (detected from transcript)"
                             );
                             setIsCallActive(true);
+                            isCallActiveRef.current = true;
                             setIsConnecting(false);
                             if (!intervalRef.current) {
                                 startTimer();
@@ -422,6 +427,7 @@ export function VapiCallWidget({
                         err instanceof Error ? err.message : "Call error occurred"
                     );
                     setIsCallActive(false);
+                    isCallActiveRef.current = false;
                     setIsConnecting(false);
                     stopTimer();
                 });
@@ -439,17 +445,64 @@ export function VapiCallWidget({
 
         return () => {
             stopTimer();
-            // Cleanup: Stop any active call when component unmounts
-            if (vapiRef.current) {
+            // Cleanup: Save transcript and stop any active call when component unmounts
+            if (vapiRef.current && isCallActiveRef.current) {
+                const capturedCallId = callIdRef.current;
+                const capturedTimestamp = callStartTimestampRef.current;
+
+                logger.info(
+                    { callId: capturedCallId, timestamp: capturedTimestamp },
+                    "🧹 Cleanup: Saving transcript before unmount"
+                );
+
+                // Save transcript data before stopping - fire and forget
+                // since we can't await in cleanup, but the fetch will continue
+                if (capturedCallId || capturedTimestamp) {
+                    fetch("/api/vapi/webhook", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            callId: capturedCallId,
+                            callStartTimestamp: capturedTimestamp,
+                            projectId,
+                            userId,
+                            isCleanupSave: true, // Flag to indicate this is a cleanup save
+                        }),
+                    }).catch((err) => {
+                        logger.error({ error: err }, "Failed to save transcript during cleanup");
+                    });
+                }
+
                 try {
                     vapiRef.current.stop();
                     logger.info({}, "🧹 Cleanup: Stopped active call on unmount");
                 } catch (err) {
                     logger.error({ error: err }, "Error stopping call during cleanup");
                 }
+
+                isCallActiveRef.current = false;
             }
         };
-    }, [publicKey, isConnecting, saveTranscript]);
+    }, [publicKey, isConnecting, saveTranscript, projectId, userId]);
+
+    // Warn users before navigating away during an active call
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (isCallActiveRef.current) {
+                // Standard way to show browser's native "unsaved changes" dialog
+                e.preventDefault();
+                // For older browsers
+                e.returnValue = "You have an active call. Are you sure you want to leave?";
+                return e.returnValue;
+            }
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener("beforeunload", handleBeforeUnload);
+        };
+    }, []);
 
     const startCall = async () => {
         if (!vapi || !assistantId) return;
@@ -527,10 +580,12 @@ export function VapiCallWidget({
 
             // The call-end event handler should fire automatically
             // But in case it doesn't (due to VAPI SDK issues), we'll set a fallback timeout
+            // Use ref instead of state to avoid closure issues
             setTimeout(() => {
-                if (isCallActive) {
+                if (isCallActiveRef.current) {
                     logger.warn({}, "⚠️ Call-end event didn't fire, forcing cleanup");
                     setIsCallActive(false);
+                    isCallActiveRef.current = false;
                     setIsConnecting(false);
                     stopTimer();
 
@@ -551,6 +606,7 @@ export function VapiCallWidget({
             logger.error({ error: err }, "Failed to end call");
             setError("Failed to end call properly");
             setIsCallActive(false);
+            isCallActiveRef.current = false;
             setIsConnecting(false);
             stopTimer();
         }

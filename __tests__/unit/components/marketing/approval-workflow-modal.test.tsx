@@ -21,6 +21,10 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
+
 // Mock child components
 vi.mock("@/components/marketing/compliance-validator", () => ({
     ComplianceValidator: ({ variantId }: any) => (
@@ -87,6 +91,40 @@ describe("ApprovalWorkflowModal", () => {
         });
     });
 
+    it("should filter variants by platform", async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+            json: async () => ({ success: true, variants: [] }),
+        });
+
+        render(<ApprovalWorkflowModal {...defaultProps} />);
+
+        const platformSelect = screen.getByRole("combobox", { name: /platform/i });
+        fireEvent.change(platformSelect, { target: { value: "instagram" } });
+
+        await waitFor(() => {
+            expect(global.fetch).toHaveBeenCalledWith(
+                expect.stringContaining("platform=instagram")
+            );
+        });
+    });
+
+    it("should filter variants by status", async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+            json: async () => ({ success: true, variants: [] }),
+        });
+
+        render(<ApprovalWorkflowModal {...defaultProps} />);
+
+        const statusSelect = screen.getByRole("combobox", { name: /status/i });
+        fireEvent.change(statusSelect, { target: { value: "approved" } });
+
+        await waitFor(() => {
+            expect(global.fetch).toHaveBeenCalledWith(
+                expect.stringContaining("approval_status=approved")
+            );
+        });
+    });
+
     it("should display empty state when no variants", async () => {
         (global.fetch as any).mockResolvedValueOnce({
             json: async () => ({ success: true, variants: [] }),
@@ -131,6 +169,41 @@ describe("ApprovalWorkflowModal", () => {
         });
     });
 
+    it("should require notes for rejection", async () => {
+        const mockVariant = {
+            id: "variant-1",
+            copy_text: "Test content",
+            platform: "instagram",
+            approval_status: "pending",
+        };
+
+        (global.fetch as any).mockResolvedValueOnce({
+            json: async () => ({ success: true, variants: [mockVariant] }),
+        });
+
+        const mockToast = vi.mocked(useToast)().toast;
+
+        render(<ApprovalWorkflowModal {...defaultProps} />);
+
+        await waitFor(() => {
+            const reviewButton = screen.getByText("Review");
+            fireEvent.click(reviewButton);
+        });
+
+        // Clicking reject without notes should show toast
+        await waitFor(() => {
+            const rejectButton = screen.getByText("Reject");
+            fireEvent.click(rejectButton);
+        });
+
+        expect(mockToast).toHaveBeenCalledWith(
+            expect.objectContaining({
+                title: "Notes Required",
+                variant: "destructive",
+            })
+        );
+    });
+
     it("should close modal when close button clicked", () => {
         render(<ApprovalWorkflowModal {...defaultProps} />);
 
@@ -138,5 +211,17 @@ describe("ApprovalWorkflowModal", () => {
         fireEvent.click(closeButton);
 
         expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it("should handle error loading variants", async () => {
+        (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
+
+        const mockLogger = vi.mocked(logger);
+
+        render(<ApprovalWorkflowModal {...defaultProps} />);
+
+        await waitFor(() => {
+            expect(mockLogger.error).toHaveBeenCalled();
+        });
     });
 });

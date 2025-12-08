@@ -72,12 +72,15 @@ describe("PATCH /api/pages/enrollment/[pageId]", () => {
     });
 
     it("should update vanity_slug successfully", async () => {
-        const request = new NextRequest("http://localhost:3000/api/pages/enrollment/test-page-id", {
-            method: "PATCH",
-            body: JSON.stringify({
-                vanity_slug: "new-slug",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/enrollment/test-page-id",
+            {
+                method: "PATCH",
+                body: JSON.stringify({
+                    vanity_slug: "new-slug",
+                }),
+            }
+        );
 
         const response = await PATCH(request, {
             params: Promise.resolve({ pageId: "test-page-id" }),
@@ -90,7 +93,9 @@ describe("PATCH /api/pages/enrollment/[pageId]", () => {
     });
 
     it("should return 400 when slug already exists", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             from: vi.fn(() => ({
                 select: vi.fn(() => ({
                     eq: vi.fn(() => ({
@@ -105,12 +110,15 @@ describe("PATCH /api/pages/enrollment/[pageId]", () => {
             })),
         } as any);
 
-        const request = new NextRequest("http://localhost:3000/api/pages/enrollment/test-page-id", {
-            method: "PATCH",
-            body: JSON.stringify({
-                vanity_slug: "existing-slug",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/enrollment/test-page-id",
+            {
+                method: "PATCH",
+                body: JSON.stringify({
+                    vanity_slug: "existing-slug",
+                }),
+            }
+        );
 
         const response = await PATCH(request, {
             params: Promise.resolve({ pageId: "test-page-id" }),
@@ -122,7 +130,9 @@ describe("PATCH /api/pages/enrollment/[pageId]", () => {
     });
 
     it("should handle database errors", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             from: vi.fn(() => ({
                 select: vi.fn(() => ({
                     eq: vi.fn(() => ({
@@ -149,12 +159,15 @@ describe("PATCH /api/pages/enrollment/[pageId]", () => {
             })),
         } as any);
 
-        const request = new NextRequest("http://localhost:3000/api/pages/enrollment/test-page-id", {
-            method: "PATCH",
-            body: JSON.stringify({
-                vanity_slug: "new-slug",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/enrollment/test-page-id",
+            {
+                method: "PATCH",
+                body: JSON.stringify({
+                    vanity_slug: "new-slug",
+                }),
+            }
+        );
 
         const response = await PATCH(request, {
             params: Promise.resolve({ pageId: "test-page-id" }),
@@ -172,12 +185,15 @@ describe("PUT /api/pages/enrollment/[pageId]", () => {
     });
 
     it("should update HTML content successfully", async () => {
-        const request = new NextRequest("http://localhost:3000/api/pages/enrollment/test-page-id", {
-            method: "PUT",
-            body: JSON.stringify({
-                html_content: "<div class='test'>Updated Content</div>",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/enrollment/test-page-id",
+            {
+                method: "PUT",
+                body: JSON.stringify({
+                    html_content: "<div class='test'>Updated Content</div>",
+                }),
+            }
+        );
 
         const response = await PUT(request, {
             params: Promise.resolve({ pageId: "test-page-id" }),
@@ -190,10 +206,13 @@ describe("PUT /api/pages/enrollment/[pageId]", () => {
     });
 
     it("should return 400 when html_content is missing", async () => {
-        const request = new NextRequest("http://localhost:3000/api/pages/enrollment/test-page-id", {
-            method: "PUT",
-            body: JSON.stringify({}),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/enrollment/test-page-id",
+            {
+                method: "PUT",
+                body: JSON.stringify({}),
+            }
+        );
 
         const response = await PUT(request, {
             params: Promise.resolve({ pageId: "test-page-id" }),
@@ -205,7 +224,9 @@ describe("PUT /api/pages/enrollment/[pageId]", () => {
     });
 
     it("should handle database update errors", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             from: vi.fn(() => ({
                 update: vi.fn(() => ({
                     eq: vi.fn(() => ({
@@ -222,12 +243,15 @@ describe("PUT /api/pages/enrollment/[pageId]", () => {
             })),
         } as any);
 
-        const request = new NextRequest("http://localhost:3000/api/pages/enrollment/test-page-id", {
-            method: "PUT",
-            body: JSON.stringify({
-                html_content: "<div>Test</div>",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/enrollment/test-page-id",
+            {
+                method: "PUT",
+                body: JSON.stringify({
+                    html_content: "<div>Test</div>",
+                }),
+            }
+        );
 
         const response = await PUT(request, {
             params: Promise.resolve({ pageId: "test-page-id" }),
@@ -239,16 +263,19 @@ describe("PUT /api/pages/enrollment/[pageId]", () => {
     });
 
     it("should handle authentication errors", async () => {
-        vi.mocked((await import("@/lib/auth")).getCurrentUserWithProfile).mockRejectedValueOnce(
-            new Error("Auth error")
-        );
+        vi.mocked(
+            (await import("@/lib/auth")).getCurrentUserWithProfile
+        ).mockRejectedValueOnce(new Error("Auth error"));
 
-        const request = new NextRequest("http://localhost:3000/api/pages/enrollment/test-page-id", {
-            method: "PUT",
-            body: JSON.stringify({
-                html_content: "<div>Test</div>",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/enrollment/test-page-id",
+            {
+                method: "PUT",
+                body: JSON.stringify({
+                    html_content: "<div>Test</div>",
+                }),
+            }
+        );
 
         const response = await PUT(request, {
             params: Promise.resolve({ pageId: "test-page-id" }),

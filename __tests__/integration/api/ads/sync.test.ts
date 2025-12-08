@@ -53,7 +53,11 @@ describe("GET /api/ads/sync", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            synced: number;
+            timestamp: string;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -70,7 +74,7 @@ describe("GET /api/ads/sync", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Unauthorized");
@@ -87,7 +91,7 @@ describe("GET /api/ads/sync", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Unauthorized");
@@ -104,7 +108,7 @@ describe("GET /api/ads/sync", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Service misconfigured");
@@ -126,7 +130,10 @@ describe("GET /api/ads/sync", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            synced: number;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -146,7 +153,7 @@ describe("GET /api/ads/sync", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Internal server error");
@@ -170,7 +177,7 @@ describe("GET /api/ads/sync", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ timestamp: string }>(response);
 
         const afterTime = new Date().toISOString();
 
@@ -214,7 +221,7 @@ describe("GET /api/ads/sync", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Unauthorized");
@@ -236,7 +243,10 @@ describe("GET /api/ads/sync", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            synced: number;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);

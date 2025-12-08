@@ -7,9 +7,7 @@ import { describe, it, expect } from "vitest";
 import {
     APP_CONFIG,
     FUNNEL_CONFIG,
-    PAGE_CONFIG,
     USERNAME_CONFIG,
-    VANITY_SLUG_CONFIG,
     STRIPE_CONFIG,
     WEBHOOK_CONFIG,
     ANALYTICS_CONFIG,

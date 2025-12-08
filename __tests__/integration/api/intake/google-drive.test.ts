@@ -1,9 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST, GET } from "@/app/api/intake/google-drive/route";
-import { createMockRequest, parseJsonResponse } from "@/__tests__/helpers/api-test-helpers";
+import {
+    createMockRequest,
+    parseJsonResponse,
+} from "@/__tests__/helpers/api-test-helpers";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
-vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() } }));
+vi.mock("@/lib/logger", () => ({
+    logger: { info: vi.fn(), error: vi.fn(), warn: vi.fn() },
+}));
 vi.mock("@/lib/intake/processors", () => ({
     extractTextFromFile: vi.fn(),
     validateIntakeContent: vi.fn(() => ({ valid: true })),
@@ -18,15 +23,24 @@ describe("POST /api/intake/google-drive", () => {
     beforeEach(() => vi.clearAllMocks());
 
     it("should process Google Drive files successfully", async () => {
-        vi.mocked(extractTextFromFile).mockResolvedValue("Extracted text from Google Drive file");
+        vi.mocked(extractTextFromFile).mockResolvedValue(
+            "Extracted text from Google Drive file"
+        );
 
         vi.mocked(global.fetch).mockImplementation((url: any) => {
             if (url.includes("alt=media")) {
-                return Promise.resolve({ ok: true, blob: async () => new Blob(["test"]) } as any);
+                return Promise.resolve({
+                    ok: true,
+                    blob: async () => new Blob(["test"]),
+                } as any);
             }
             return Promise.resolve({
                 ok: true,
-                json: async () => ({ name: "document.pdf", mimeType: "application/pdf", size: 1024 }),
+                json: async () => ({
+                    name: "document.pdf",
+                    mimeType: "application/pdf",
+                    size: 1024,
+                }),
             } as any);
         });
 
@@ -34,7 +48,9 @@ describe("POST /api/intake/google-drive", () => {
             from: vi.fn(() => ({
                 insert: vi.fn().mockReturnThis(),
                 select: vi.fn().mockReturnThis(),
-                single: vi.fn().mockResolvedValue({ data: { id: "intake-123" }, error: null }),
+                single: vi
+                    .fn()
+                    .mockResolvedValue({ data: { id: "intake-123" }, error: null }),
             })),
         };
 
@@ -51,7 +67,7 @@ describe("POST /api/intake/google-drive", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -64,7 +80,7 @@ describe("POST /api/intake/google-drive", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("Missing required fields");
@@ -79,10 +95,12 @@ describe("GET /api/intake/google-drive", () => {
     });
 
     it("should return auth URL", async () => {
-        const request = createMockRequest({ url: "http://localhost:3000/api/intake/google-drive?action=auth" });
+        const request = createMockRequest({
+            url: "http://localhost:3000/api/intake/google-drive?action=auth",
+        });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ authUrl: string }>(response);
 
         expect(response.status).toBe(200);
         expect(data.authUrl).toContain("accounts.google.com");
@@ -91,10 +109,12 @@ describe("GET /api/intake/google-drive", () => {
     it("should return 500 when not configured", async () => {
         delete process.env.GOOGLE_DRIVE_CLIENT_ID;
 
-        const request = createMockRequest({ url: "http://localhost:3000/api/intake/google-drive?action=auth" });
+        const request = createMockRequest({
+            url: "http://localhost:3000/api/intake/google-drive?action=auth",
+        });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Google Drive not configured");

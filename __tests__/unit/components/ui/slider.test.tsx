@@ -41,13 +41,21 @@ describe("Slider", () => {
 
     it("should handle value changes", () => {
         const onValueChange = vi.fn();
-        render(<Slider onValueChange={onValueChange} defaultValue={[50]} aria-label="Volume" />);
+        render(
+            <Slider
+                onValueChange={onValueChange}
+                defaultValue={[50]}
+                aria-label="Volume"
+            />
+        );
         const slider = screen.getByRole("slider");
         expect(slider).toBeInTheDocument();
     });
 
     it("should handle custom className", () => {
-        const { container } = render(<Slider className="custom-slider" aria-label="Volume" />);
+        const { container } = render(
+            <Slider className="custom-slider" aria-label="Volume" />
+        );
         const sliderRoot = container.firstChild as HTMLElement;
         expect(sliderRoot.className).toContain("custom-slider");
     });

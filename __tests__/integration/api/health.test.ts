@@ -16,7 +16,11 @@ describe("GET /api/health", () => {
 
     it("should return health status", async () => {
         const response = await GET();
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            status: string;
+            timestamp: string;
+            environment: string;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.status).toBe("healthy");
@@ -28,7 +32,7 @@ describe("GET /api/health", () => {
         process.env.npm_package_version = "1.0.0";
 
         const response = await GET();
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ version: string }>(response);
 
         expect(response.status).toBe(200);
         expect(data.version).toBe("1.0.0");
@@ -38,7 +42,7 @@ describe("GET /api/health", () => {
         delete process.env.npm_package_version;
 
         const response = await GET();
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ version: string }>(response);
 
         expect(response.status).toBe(200);
         expect(data.version).toBe("unknown");

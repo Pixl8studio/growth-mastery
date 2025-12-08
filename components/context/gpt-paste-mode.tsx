@@ -110,7 +110,7 @@ export function GptPasteMode({
             try {
                 if (initialProfile) {
                     // Initialize section data from profile with safety check
-                    if (isMounted && typeof initializeSectionData === 'function') {
+                    if (isMounted && typeof initializeSectionData === "function") {
                         initializeSectionData(initialProfile);
                         setIsLoading(false);
                     }
@@ -133,7 +133,7 @@ export function GptPasteMode({
 
                 if (isMounted && response.ok && result.profile) {
                     setProfile(result.profile);
-                    if (typeof initializeSectionData === 'function') {
+                    if (typeof initializeSectionData === "function") {
                         initializeSectionData(result.profile);
                     }
                 }

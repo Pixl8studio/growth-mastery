@@ -119,11 +119,9 @@ describe("Supabase Server Client", () => {
                 },
             ];
             cookieConfig.cookies.setAll(cookiesToSet);
-            expect(mockCookieStore.set).toHaveBeenCalledWith(
-                "session",
-                "token",
-                { httpOnly: true }
-            );
+            expect(mockCookieStore.set).toHaveBeenCalledWith("session", "token", {
+                httpOnly: true,
+            });
         });
 
         it("should handle setAll errors gracefully", async () => {

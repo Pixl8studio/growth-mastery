@@ -13,10 +13,10 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 describe("POST /api/generate/gamma-decks", () => {
-    const mockUserId = "user-123";
-    const mockProjectId = "project-123e4567-e89b-12d3-a456-426614174000";
-    const mockDeckStructureId = "deck-123e4567-e89b-12d3-a456-426614174000";
-    const mockGammaDeckId = "gamma-123e4567-e89b-12d3-a456-426614174000";
+    const mockUserId = "123e4567-e89b-12d3-a456-426614174000";
+    const mockProjectId = "223e4567-e89b-12d3-a456-426614174000";
+    const mockDeckStructureId = "323e4567-e89b-12d3-a456-426614174000";
+    const mockGammaDeckId = "423e4567-e89b-12d3-a456-426614174000";
     const mockGenerationId = "gen-abc123";
 
     const mockProject = {
@@ -136,26 +136,30 @@ describe("POST /api/generate/gamma-decks", () => {
                                 ),
                             })),
                         })),
-                        update: vi.fn(() => ({
-                            eq: vi.fn(() =>
-                                Promise.resolve({
-                                    data: {},
-                                    error: null,
-                                })
-                            ),
-                            select: vi.fn(() => ({
-                                single: vi.fn(() =>
-                                    Promise.resolve({
-                                        data: {
-                                            id: mockGammaDeckId,
-                                            status: "completed",
-                                            deck_url: "https://gamma.app/docs/abc123",
-                                        },
-                                        error: null,
-                                    })
-                                ),
-                            })),
-                        })),
+                        update: vi.fn(() => {
+                            // Create a thenable object that also has a select method
+                            // This handles both .update().eq() and .update().eq().select().single()
+                            const eqResult = {
+                                then: (resolve: any) =>
+                                    resolve({ data: {}, error: null }),
+                                select: vi.fn(() => ({
+                                    single: vi.fn(() =>
+                                        Promise.resolve({
+                                            data: {
+                                                id: mockGammaDeckId,
+                                                status: "completed",
+                                                deck_url:
+                                                    "https://gamma.app/docs/abc123",
+                                            },
+                                            error: null,
+                                        })
+                                    ),
+                                })),
+                            };
+                            return {
+                                eq: vi.fn(() => eqResult),
+                            };
+                        }),
                     };
                 }
                 return {};
@@ -169,7 +173,10 @@ describe("POST /api/generate/gamma-decks", () => {
             const urlString = url.toString();
 
             // Start generation call
-            if (urlString.includes("/v0.2/generations") && !urlString.includes("/gen-")) {
+            if (
+                urlString.includes("/v0.2/generations") &&
+                !urlString.includes("/gen-")
+            ) {
                 return Promise.resolve({
                     ok: true,
                     json: async () => ({ generationId: mockGenerationId }),
@@ -192,21 +199,18 @@ describe("POST /api/generate/gamma-decks", () => {
             return Promise.reject(new Error("Unexpected fetch call"));
         });
 
-        const request = new NextRequest(
-            "http://localhost/api/generate/gamma-decks",
-            {
-                method: "POST",
-                body: JSON.stringify({
-                    projectId: mockProjectId,
-                    deckStructureId: mockDeckStructureId,
-                    settings: {
-                        theme: "nebulae",
-                        style: "professional",
-                        length: "full",
-                    },
-                }),
-            }
-        );
+        const request = new NextRequest("http://localhost/api/generate/gamma-decks", {
+            method: "POST",
+            body: JSON.stringify({
+                projectId: mockProjectId,
+                deckStructureId: mockDeckStructureId,
+                settings: {
+                    theme: "nebulae",
+                    style: "professional",
+                    length: "full",
+                },
+            }),
+        });
 
         const response = await POST(request);
         const data = await response.json();
@@ -235,17 +239,14 @@ describe("POST /api/generate/gamma-decks", () => {
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
 
-        const request = new NextRequest(
-            "http://localhost/api/generate/gamma-decks",
-            {
-                method: "POST",
-                body: JSON.stringify({
-                    projectId: mockProjectId,
-                    deckStructureId: mockDeckStructureId,
-                    settings: { theme: "nebulae" },
-                }),
-            }
-        );
+        const request = new NextRequest("http://localhost/api/generate/gamma-decks", {
+            method: "POST",
+            body: JSON.stringify({
+                projectId: mockProjectId,
+                deckStructureId: mockDeckStructureId,
+                settings: { theme: "nebulae" },
+            }),
+        });
 
         const response = await POST(request);
         expect(response.status).toBe(401);
@@ -268,17 +269,14 @@ describe("POST /api/generate/gamma-decks", () => {
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
 
-        const request = new NextRequest(
-            "http://localhost/api/generate/gamma-decks",
-            {
-                method: "POST",
-                body: JSON.stringify({
-                    projectId: mockProjectId,
-                    // Missing deckStructureId
-                    settings: {},
-                }),
-            }
-        );
+        const request = new NextRequest("http://localhost/api/generate/gamma-decks", {
+            method: "POST",
+            body: JSON.stringify({
+                projectId: mockProjectId,
+                // Missing deckStructureId
+                settings: {},
+            }),
+        });
 
         const response = await POST(request);
         expect(response.status).toBe(400);
@@ -301,17 +299,14 @@ describe("POST /api/generate/gamma-decks", () => {
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
 
-        const request = new NextRequest(
-            "http://localhost/api/generate/gamma-decks",
-            {
-                method: "POST",
-                body: JSON.stringify({
-                    projectId: "invalid-uuid",
-                    deckStructureId: mockDeckStructureId,
-                    settings: {},
-                }),
-            }
-        );
+        const request = new NextRequest("http://localhost/api/generate/gamma-decks", {
+            method: "POST",
+            body: JSON.stringify({
+                projectId: "invalid-uuid",
+                deckStructureId: mockDeckStructureId,
+                settings: {},
+            }),
+        });
 
         const response = await POST(request);
         expect(response.status).toBe(400);
@@ -352,17 +347,14 @@ describe("POST /api/generate/gamma-decks", () => {
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
 
-        const request = new NextRequest(
-            "http://localhost/api/generate/gamma-decks",
-            {
-                method: "POST",
-                body: JSON.stringify({
-                    projectId: mockProjectId,
-                    deckStructureId: mockDeckStructureId,
-                    settings: {},
-                }),
-            }
-        );
+        const request = new NextRequest("http://localhost/api/generate/gamma-decks", {
+            method: "POST",
+            body: JSON.stringify({
+                projectId: mockProjectId,
+                deckStructureId: mockDeckStructureId,
+                settings: {},
+            }),
+        });
 
         const response = await POST(request);
         expect(response.status).toBe(400);
@@ -419,17 +411,14 @@ describe("POST /api/generate/gamma-decks", () => {
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
 
-        const request = new NextRequest(
-            "http://localhost/api/generate/gamma-decks",
-            {
-                method: "POST",
-                body: JSON.stringify({
-                    projectId: mockProjectId,
-                    deckStructureId: mockDeckStructureId,
-                    settings: {},
-                }),
-            }
-        );
+        const request = new NextRequest("http://localhost/api/generate/gamma-decks", {
+            method: "POST",
+            body: JSON.stringify({
+                projectId: mockProjectId,
+                deckStructureId: mockDeckStructureId,
+                settings: {},
+            }),
+        });
 
         const response = await POST(request);
         expect(response.status).toBe(400);
@@ -442,7 +431,7 @@ describe("POST /api/generate/gamma-decks", () => {
             auth: {
                 getUser: vi.fn(() =>
                     Promise.resolve({
-                        data: { user: { id: mockUserId } },
+                        data: { user: { id: mockUserId, email: "test@example.com" } },
                         error: null,
                     })
                 ),
@@ -504,6 +493,11 @@ describe("POST /api/generate/gamma-decks", () => {
                                     Promise.resolve({
                                         data: {
                                             id: mockGammaDeckId,
+                                            funnel_project_id: mockProjectId,
+                                            deck_structure_id: mockDeckStructureId,
+                                            user_id: mockUserId,
+                                            title: `${mockProject.name} - Gamma Presentation`,
+                                            status: "generating",
                                             created_at: new Date().toISOString(),
                                         },
                                         error: null,
@@ -531,17 +525,18 @@ describe("POST /api/generate/gamma-decks", () => {
             } as Response)
         );
 
-        const request = new NextRequest(
-            "http://localhost/api/generate/gamma-decks",
-            {
-                method: "POST",
-                body: JSON.stringify({
-                    projectId: mockProjectId,
-                    deckStructureId: mockDeckStructureId,
-                    settings: {},
-                }),
-            }
-        );
+        const request = new NextRequest("http://localhost/api/generate/gamma-decks", {
+            method: "POST",
+            body: JSON.stringify({
+                projectId: mockProjectId,
+                deckStructureId: mockDeckStructureId,
+                settings: {
+                    theme: "nebulae",
+                    style: "professional",
+                    length: "full",
+                },
+            }),
+        });
 
         const response = await POST(request);
         expect(response.status).toBe(500);
@@ -554,7 +549,7 @@ describe("POST /api/generate/gamma-decks", () => {
             auth: {
                 getUser: vi.fn(() =>
                     Promise.resolve({
-                        data: { user: { id: mockUserId } },
+                        data: { user: { id: mockUserId, email: "test@example.com" } },
                         error: null,
                     })
                 ),
@@ -628,17 +623,18 @@ describe("POST /api/generate/gamma-decks", () => {
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
 
-        const request = new NextRequest(
-            "http://localhost/api/generate/gamma-decks",
-            {
-                method: "POST",
-                body: JSON.stringify({
-                    projectId: mockProjectId,
-                    deckStructureId: mockDeckStructureId,
-                    settings: {},
-                }),
-            }
-        );
+        const request = new NextRequest("http://localhost/api/generate/gamma-decks", {
+            method: "POST",
+            body: JSON.stringify({
+                projectId: mockProjectId,
+                deckStructureId: mockDeckStructureId,
+                settings: {
+                    theme: "nebulae",
+                    style: "professional",
+                    length: "full",
+                },
+            }),
+        });
 
         const response = await POST(request);
         expect(response.status).toBe(500);
@@ -713,6 +709,11 @@ describe("POST /api/generate/gamma-decks", () => {
                                     Promise.resolve({
                                         data: {
                                             id: mockGammaDeckId,
+                                            funnel_project_id: mockProjectId,
+                                            deck_structure_id: mockDeckStructureId,
+                                            user_id: mockUserId,
+                                            title: `${mockProject.name} - Gamma Presentation`,
+                                            status: "generating",
                                             created_at: new Date().toISOString(),
                                         },
                                         error: null,
@@ -720,25 +721,28 @@ describe("POST /api/generate/gamma-decks", () => {
                                 ),
                             })),
                         })),
-                        update: vi.fn(() => ({
-                            eq: vi.fn(() =>
-                                Promise.resolve({
-                                    data: {},
-                                    error: null,
-                                })
-                            ),
-                            select: vi.fn(() => ({
-                                single: vi.fn(() =>
-                                    Promise.resolve({
-                                        data: {
-                                            id: mockGammaDeckId,
-                                            status: "completed",
-                                        },
-                                        error: null,
-                                    })
-                                ),
-                            })),
-                        })),
+                        update: vi.fn(() => {
+                            const eqResult = {
+                                then: (resolve: any) =>
+                                    resolve({ data: {}, error: null }),
+                                select: vi.fn(() => ({
+                                    single: vi.fn(() =>
+                                        Promise.resolve({
+                                            data: {
+                                                id: mockGammaDeckId,
+                                                status: "completed",
+                                                deck_url:
+                                                    "https://gamma.app/docs/abc123",
+                                            },
+                                            error: null,
+                                        })
+                                    ),
+                                })),
+                            };
+                            return {
+                                eq: vi.fn(() => eqResult),
+                            };
+                        }),
                     };
                 }
                 return {};
@@ -749,7 +753,10 @@ describe("POST /api/generate/gamma-decks", () => {
 
         global.fetch = vi.fn((url: string | URL | Request) => {
             const urlString = url.toString();
-            if (urlString.includes("/v0.2/generations") && !urlString.includes("/gen-")) {
+            if (
+                urlString.includes("/v0.2/generations") &&
+                !urlString.includes("/gen-")
+            ) {
                 return Promise.resolve({
                     ok: true,
                     json: async () => ({ generationId: mockGenerationId }),
@@ -768,17 +775,18 @@ describe("POST /api/generate/gamma-decks", () => {
             return Promise.reject(new Error("Unexpected fetch"));
         });
 
-        const request = new NextRequest(
-            "http://localhost/api/generate/gamma-decks",
-            {
-                method: "POST",
-                body: JSON.stringify({
-                    projectId: mockProjectId,
-                    deckStructureId: mockDeckStructureId,
-                    settings: {},
-                }),
-            }
-        );
+        const request = new NextRequest("http://localhost/api/generate/gamma-decks", {
+            method: "POST",
+            body: JSON.stringify({
+                projectId: mockProjectId,
+                deckStructureId: mockDeckStructureId,
+                settings: {
+                    theme: "nebulae",
+                    style: "professional",
+                    length: "full",
+                },
+            }),
+        });
 
         const response = await POST(request);
         const data = await response.json();

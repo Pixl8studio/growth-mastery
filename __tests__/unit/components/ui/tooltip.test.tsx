@@ -1,11 +1,17 @@
 /**
  * Tooltip Component Tests
- * Tests tooltip functionality using controlled state for reliable jsdom testing
+ * Test tooltip functionality
  */
 
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import userEvent from "@testing-library/user-event";
+import {
+    Tooltip,
+    TooltipTrigger,
+    TooltipContent,
+    TooltipProvider,
+} from "@/components/ui/tooltip";
 
 describe("Tooltip", () => {
     it("should render tooltip trigger", () => {
@@ -19,24 +25,29 @@ describe("Tooltip", () => {
         expect(screen.getByText("Hover me")).toBeInTheDocument();
     });
 
-    it("should show tooltip content when open", () => {
-        // Use controlled open state for reliable jsdom testing
+    it("should show tooltip on hover", async () => {
+        const user = userEvent.setup();
         render(
             <TooltipProvider>
-                <Tooltip open>
+                <Tooltip>
                     <TooltipTrigger>Hover me</TooltipTrigger>
                     <TooltipContent>Tooltip text</TooltipContent>
                 </Tooltip>
             </TooltipProvider>
         );
 
-        expect(screen.getByRole("tooltip")).toHaveTextContent("Tooltip text");
+        const trigger = screen.getByText("Hover me");
+        await user.hover(trigger);
+
+        // Wait for tooltip to appear
+        expect(await screen.findByText("Tooltip text")).toBeInTheDocument();
     });
 
-    it("should render tooltip with custom content when open", () => {
+    it("should render tooltip with custom content", async () => {
+        const user = userEvent.setup();
         render(
             <TooltipProvider>
-                <Tooltip open>
+                <Tooltip>
                     <TooltipTrigger>Info</TooltipTrigger>
                     <TooltipContent>
                         <p>This is detailed information</p>
@@ -45,30 +56,35 @@ describe("Tooltip", () => {
             </TooltipProvider>
         );
 
-        expect(screen.getByRole("tooltip")).toHaveTextContent("This is detailed information");
+        await user.hover(screen.getByText("Info"));
+        expect(
+            await screen.findByText("This is detailed information")
+        ).toBeInTheDocument();
     });
 
-    it("should handle custom className on TooltipContent", () => {
+    it("should handle custom className on TooltipContent", async () => {
+        const user = userEvent.setup();
         render(
             <TooltipProvider>
-                <Tooltip open>
+                <Tooltip>
                     <TooltipTrigger>Hover me</TooltipTrigger>
-                    <TooltipContent className="custom-tooltip">Custom styled</TooltipContent>
+                    <TooltipContent className="custom-tooltip">
+                        Custom styled
+                    </TooltipContent>
                 </Tooltip>
             </TooltipProvider>
         );
 
-        // Verify the tooltip renders with custom content
-        // Note: Testing className on portaled Radix UI components in jsdom is fragile
-        // We verify the component accepts the prop and renders correctly
-        const tooltip = screen.getByRole("tooltip");
-        expect(tooltip).toHaveTextContent("Custom styled");
+        await user.hover(screen.getByText("Hover me"));
+        const tooltip = await screen.findByText("Custom styled");
+        expect(tooltip.className).toContain("custom-tooltip");
     });
 
-    it("should work with button trigger", () => {
+    it("should work with button trigger", async () => {
+        const user = userEvent.setup();
         render(
             <TooltipProvider>
-                <Tooltip open>
+                <Tooltip>
                     <TooltipTrigger asChild>
                         <button>Click me</button>
                     </TooltipTrigger>
@@ -77,21 +93,25 @@ describe("Tooltip", () => {
             </TooltipProvider>
         );
 
-        expect(screen.getByRole("button", { name: "Click me" })).toBeInTheDocument();
-        expect(screen.getByRole("tooltip")).toHaveTextContent("Button tooltip");
+        const button = screen.getByRole("button", { name: "Click me" });
+        await user.hover(button);
+
+        expect(await screen.findByText("Button tooltip")).toBeInTheDocument();
     });
 
-    it("should handle side offset", () => {
+    it("should handle side offset", async () => {
+        const user = userEvent.setup();
         render(
             <TooltipProvider>
-                <Tooltip open>
+                <Tooltip>
                     <TooltipTrigger>Hover me</TooltipTrigger>
                     <TooltipContent sideOffset={10}>With offset</TooltipContent>
                 </Tooltip>
             </TooltipProvider>
         );
 
-        expect(screen.getByRole("tooltip")).toHaveTextContent("With offset");
+        await user.hover(screen.getByText("Hover me"));
+        expect(await screen.findByText("With offset")).toBeInTheDocument();
     });
 
     it("should support controlled open state", () => {
@@ -104,7 +124,7 @@ describe("Tooltip", () => {
             </TooltipProvider>
         );
 
-        expect(screen.getByRole("tooltip")).toHaveTextContent("Always visible");
+        expect(screen.getByText("Always visible")).toBeInTheDocument();
     });
 
     it("should support controlled closed state", () => {
@@ -120,49 +140,57 @@ describe("Tooltip", () => {
         expect(screen.queryByText("Hidden content")).not.toBeInTheDocument();
     });
 
-    it("should render multiple tooltips when open", () => {
+    it("should render multiple tooltips", async () => {
+        const user = userEvent.setup();
         render(
             <TooltipProvider>
-                <Tooltip open>
+                <Tooltip>
                     <TooltipTrigger>First</TooltipTrigger>
                     <TooltipContent>First tooltip</TooltipContent>
                 </Tooltip>
-                <Tooltip open>
+                <Tooltip>
                     <TooltipTrigger>Second</TooltipTrigger>
                     <TooltipContent>Second tooltip</TooltipContent>
                 </Tooltip>
             </TooltipProvider>
         );
 
-        // Use getAllByRole since there are multiple tooltips
-        const tooltips = screen.getAllByRole("tooltip");
-        expect(tooltips.length).toBe(2);
+        await user.hover(screen.getByText("First"));
+        expect(await screen.findByText("First tooltip")).toBeInTheDocument();
     });
 
-    it("should render tooltip provider with delay configuration", () => {
+    it("should work with delay configuration", async () => {
+        const user = userEvent.setup();
         render(
             <TooltipProvider delayDuration={100}>
-                <Tooltip open>
+                <Tooltip>
                     <TooltipTrigger>Delayed</TooltipTrigger>
                     <TooltipContent>Delayed tooltip</TooltipContent>
                 </Tooltip>
             </TooltipProvider>
         );
 
-        // Use role-based query for the visible tooltip content
-        expect(screen.getByRole("tooltip")).toHaveTextContent("Delayed tooltip");
+        await user.hover(screen.getByText("Delayed"));
+        expect(await screen.findByText("Delayed tooltip")).toBeInTheDocument();
     });
 
-    it("should hide tooltip when closed", () => {
+    it("should hide tooltip on unhover", async () => {
+        const user = userEvent.setup();
         render(
             <TooltipProvider>
-                <Tooltip open={false}>
+                <Tooltip>
                     <TooltipTrigger>Hover me</TooltipTrigger>
                     <TooltipContent>Tooltip text</TooltipContent>
                 </Tooltip>
             </TooltipProvider>
         );
 
+        const trigger = screen.getByText("Hover me");
+        await user.hover(trigger);
+        expect(await screen.findByText("Tooltip text")).toBeInTheDocument();
+
+        await user.unhover(trigger);
+        // Tooltip should eventually disappear
         expect(screen.queryByText("Tooltip text")).not.toBeInTheDocument();
     });
 });

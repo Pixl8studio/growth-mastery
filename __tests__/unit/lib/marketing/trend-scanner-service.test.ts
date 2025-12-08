@@ -27,7 +27,6 @@ import {
     cleanupExpiredTrends,
 } from "@/lib/marketing/trend-scanner-service";
 import { createClient } from "@/lib/supabase/server";
-import { logger } from "@/lib/logger";
 import { generateWithAI } from "@/lib/ai/client";
 
 describe("TrendScannerService", () => {

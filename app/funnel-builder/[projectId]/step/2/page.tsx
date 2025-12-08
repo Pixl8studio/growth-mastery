@@ -200,7 +200,8 @@ export default function Step2Page({
                     funnel_project_id: projectId,
                     user_id: project?.user_id,
                     name: alternative.name,
-                    description: alternative.tagline || alternative.keyDifference || null,
+                    description:
+                        alternative.tagline || alternative.keyDifference || null,
                     tagline: alternative.tagline,
                     price: alternative.price,
                     currency: alternative.currency || "USD",
@@ -648,15 +649,11 @@ export default function Step2Page({
                                                     </span>
                                                     <span>{offer.currency}</span>
                                                     <span>
-                                                        📦{" "}
-                                                        {offer.features?.length ||
-                                                            0}{" "}
+                                                        📦 {offer.features?.length || 0}{" "}
                                                         features
                                                     </span>
                                                     <span>
-                                                        🎁{" "}
-                                                        {offer.bonuses?.length ||
-                                                            0}{" "}
+                                                        🎁 {offer.bonuses?.length || 0}{" "}
                                                         bonuses
                                                     </span>
                                                 </div>

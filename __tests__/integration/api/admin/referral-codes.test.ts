@@ -5,7 +5,6 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
-import { logger } from "@/lib/logger";
 
 // Mock logger
 vi.mock("@/lib/logger", () => ({
@@ -26,7 +25,6 @@ const mockUpdate = vi.fn();
 const mockEq = vi.fn();
 const mockSingle = vi.fn();
 const mockFrom = vi.fn();
-const mockReturning = vi.fn();
 
 vi.mock("@/lib/supabase/server", () => ({
     createClient: vi.fn(() => ({

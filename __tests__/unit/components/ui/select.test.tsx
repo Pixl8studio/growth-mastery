@@ -1,6 +1,6 @@
 /**
  * Select Component Tests
- * Tests select dropdown functionality using controlled state for reliable jsdom testing
+ * Test select dropdown functionality
  */
 
 import { describe, it, expect, vi } from "vitest";
@@ -29,10 +29,10 @@ describe("Select", () => {
         expect(screen.getByText("Select option")).toBeInTheDocument();
     });
 
-    it("should display content when open", () => {
-        // Use controlled open state for reliable jsdom testing
+    it("should open select when trigger is clicked", async () => {
+        const user = userEvent.setup();
         render(
-            <Select open>
+            <Select>
                 <SelectTrigger>
                     <SelectValue placeholder="Select option" />
                 </SelectTrigger>
@@ -42,12 +42,14 @@ describe("Select", () => {
             </Select>
         );
 
+        await user.click(screen.getByRole("combobox"));
         expect(screen.getByText("Option 1")).toBeInTheDocument();
     });
 
-    it("should render multiple select items when open", () => {
+    it("should render multiple select items", async () => {
+        const user = userEvent.setup();
         render(
-            <Select open>
+            <Select>
                 <SelectTrigger>
                     <SelectValue placeholder="Select option" />
                 </SelectTrigger>
@@ -59,6 +61,7 @@ describe("Select", () => {
             </Select>
         );
 
+        await user.click(screen.getByRole("combobox"));
         expect(screen.getByText("Option 1")).toBeInTheDocument();
         expect(screen.getByText("Option 2")).toBeInTheDocument();
         expect(screen.getByText("Option 3")).toBeInTheDocument();
@@ -68,7 +71,7 @@ describe("Select", () => {
         const user = userEvent.setup();
         const onValueChange = vi.fn();
         render(
-            <Select open onValueChange={onValueChange}>
+            <Select onValueChange={onValueChange}>
                 <SelectTrigger>
                     <SelectValue placeholder="Select option" />
                 </SelectTrigger>
@@ -79,6 +82,7 @@ describe("Select", () => {
             </Select>
         );
 
+        await user.click(screen.getByRole("combobox"));
         await user.click(screen.getByText("Option 1"));
         expect(onValueChange).toHaveBeenCalledWith("option1");
     });
@@ -110,9 +114,10 @@ describe("Select", () => {
         expect(trigger).toHaveAttribute("disabled");
     });
 
-    it("should render select with groups when open", () => {
+    it("should render select with groups", async () => {
+        const user = userEvent.setup();
         render(
-            <Select open>
+            <Select>
                 <SelectTrigger>
                     <SelectValue placeholder="Select option" />
                 </SelectTrigger>
@@ -126,13 +131,15 @@ describe("Select", () => {
             </Select>
         );
 
+        await user.click(screen.getByRole("combobox"));
         expect(screen.getByText("Fruits")).toBeInTheDocument();
         expect(screen.getByText("Apple")).toBeInTheDocument();
     });
 
-    it("should render select with separator when open", () => {
+    it("should render select with separator", async () => {
+        const user = userEvent.setup();
         render(
-            <Select open>
+            <Select>
                 <SelectTrigger>
                     <SelectValue placeholder="Select option" />
                 </SelectTrigger>
@@ -144,8 +151,13 @@ describe("Select", () => {
             </Select>
         );
 
+        await user.click(screen.getByRole("combobox"));
+        // Verify both options are rendered correctly
         expect(screen.getByText("Option 1")).toBeInTheDocument();
         expect(screen.getByText("Option 2")).toBeInTheDocument();
+        // Separator is decorative (aria-hidden), verify it renders in the document
+        const separator = document.querySelector('[aria-hidden="true"].bg-gray-200');
+        expect(separator).toBeInTheDocument();
     });
 
     it("should handle custom className on trigger", () => {
@@ -160,9 +172,10 @@ describe("Select", () => {
         expect(trigger.className).toContain("custom-trigger");
     });
 
-    it("should handle custom className on content", () => {
+    it("should handle custom className on content", async () => {
+        const user = userEvent.setup();
         render(
-            <Select open>
+            <Select>
                 <SelectTrigger>
                     <SelectValue placeholder="Select option" />
                 </SelectTrigger>
@@ -172,6 +185,7 @@ describe("Select", () => {
             </Select>
         );
 
+        await user.click(screen.getByRole("combobox"));
         const content = screen.getByText("Option 1").closest('[role="listbox"]');
         expect(content?.className).toContain("custom-content");
     });
@@ -180,7 +194,7 @@ describe("Select", () => {
         const user = userEvent.setup();
         const onValueChange = vi.fn();
         render(
-            <Select open onValueChange={onValueChange}>
+            <Select onValueChange={onValueChange}>
                 <SelectTrigger>
                     <SelectValue placeholder="Select option" />
                 </SelectTrigger>
@@ -193,18 +207,8 @@ describe("Select", () => {
             </Select>
         );
 
+        await user.click(screen.getByRole("combobox"));
         await user.click(screen.getByText("Option 2 (disabled)"));
         expect(onValueChange).not.toHaveBeenCalled();
-    });
-
-    it("should have proper combobox role", () => {
-        render(
-            <Select>
-                <SelectTrigger>
-                    <SelectValue placeholder="Select option" />
-                </SelectTrigger>
-            </Select>
-        );
-        expect(screen.getByRole("combobox")).toBeInTheDocument();
     });
 });

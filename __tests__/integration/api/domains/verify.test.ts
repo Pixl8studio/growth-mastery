@@ -85,7 +85,10 @@ describe("POST /api/domains/[domainId]/verify", () => {
         const response = await POST(request, {
             params: Promise.resolve({ domainId: "domain-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            verified: boolean;
+            status: string;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.verified).toBe(true);
@@ -133,7 +136,10 @@ describe("POST /api/domains/[domainId]/verify", () => {
         const response = await POST(request, {
             params: Promise.resolve({ domainId: "domain-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            verified: boolean;
+            status: string;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.verified).toBe(false);
@@ -163,7 +169,7 @@ describe("POST /api/domains/[domainId]/verify", () => {
         const response = await POST(request, {
             params: Promise.resolve({ domainId: "nonexistent" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(404);
         expect(data.error).toBe("Domain not found");
@@ -180,7 +186,7 @@ describe("POST /api/domains/[domainId]/verify", () => {
         const response = await POST(request, {
             params: Promise.resolve({ domainId: "domain-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Domain service not configured");
@@ -214,7 +220,7 @@ describe("POST /api/domains/[domainId]/verify", () => {
         const response = await POST(request, {
             params: Promise.resolve({ domainId: "domain-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Failed to check verification status");
@@ -263,7 +269,10 @@ describe("POST /api/domains/[domainId]/verify", () => {
         const response = await POST(request, {
             params: Promise.resolve({ domainId: "domain-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            verified: boolean;
+            status: string;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.verified).toBe(true);
@@ -313,7 +322,7 @@ describe("POST /api/domains/[domainId]/verify", () => {
         const response = await POST(request, {
             params: Promise.resolve({ domainId: "domain-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Failed to update verification");
@@ -342,7 +351,7 @@ describe("POST /api/domains/[domainId]/verify", () => {
         const response = await POST(request, {
             params: Promise.resolve({ domainId: "domain-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(404);
         expect(data.error).toBe("Domain not found");
@@ -358,7 +367,7 @@ describe("POST /api/domains/[domainId]/verify", () => {
         const response = await POST(request, {
             params: Promise.resolve({ domainId: "domain-123" }),
         });
-        const data = await parseJsonResponse(response);
+        await parseJsonResponse<{ error?: string }>(response);
 
         expect(response.status).toBe(500);
     });

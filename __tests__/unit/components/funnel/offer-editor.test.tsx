@@ -43,6 +43,28 @@ describe("OfferEditor", () => {
         expect(screen.getByDisplayValue("997")).toBeInTheDocument();
     });
 
+    it("should display features", () => {
+        render(<OfferEditor {...defaultProps} />);
+
+        expect(screen.getByText("Feature 1")).toBeInTheDocument();
+        expect(screen.getByText("Feature 2")).toBeInTheDocument();
+    });
+
+    it("should display bonuses", () => {
+        render(<OfferEditor {...defaultProps} />);
+
+        expect(screen.getByText("Bonus 1")).toBeInTheDocument();
+    });
+
+    it("should allow adding features", () => {
+        render(<OfferEditor {...defaultProps} />);
+
+        const addButton = screen.getByRole("button", { name: /Add.*[Ff]eature/i });
+        fireEvent.click(addButton);
+
+        expect(screen.getByText("New feature")).toBeInTheDocument();
+    });
+
     it("should allow removing features", () => {
         render(<OfferEditor {...defaultProps} />);
 
@@ -75,5 +97,29 @@ describe("OfferEditor", () => {
         render(<OfferEditor {...defaultProps} readOnly={true} />);
 
         expect(screen.queryByRole("button", { name: /Save/i })).not.toBeInTheDocument();
+    });
+
+    it("should enforce max features limit", () => {
+        const offerWithMaxFeatures = {
+            ...mockOffer,
+            features: Array(6).fill("Feature"),
+        };
+
+        render(<OfferEditor initialOffer={offerWithMaxFeatures} onSave={mockOnSave} />);
+
+        const addButton = screen.getByRole("button", { name: /Add.*[Ff]eature/i });
+        expect(addButton).toBeDisabled();
+    });
+
+    it("should enforce max bonuses limit", () => {
+        const offerWithMaxBonuses = {
+            ...mockOffer,
+            bonuses: Array(5).fill("Bonus"),
+        };
+
+        render(<OfferEditor initialOffer={offerWithMaxBonuses} onSave={mockOnSave} />);
+
+        const addButton = screen.getByRole("button", { name: /Add.*[Bb]onus/i });
+        expect(addButton).toBeDisabled();
     });
 });

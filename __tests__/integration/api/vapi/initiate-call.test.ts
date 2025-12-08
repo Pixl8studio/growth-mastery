@@ -27,13 +27,16 @@ describe("POST /api/vapi/initiate-call", () => {
             callId: "call-123",
         });
 
-        const request = new NextRequest("http://localhost:3000/api/vapi/initiate-call", {
-            method: "POST",
-            body: JSON.stringify({
-                assistantId: "asst-123",
-                customerId: "+1234567890",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/vapi/initiate-call",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    assistantId: "asst-123",
+                    customerId: "+1234567890",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -46,10 +49,13 @@ describe("POST /api/vapi/initiate-call", () => {
         const { createCall } = await import("@/lib/vapi/client");
         (createCall as any).mockRejectedValue(new Error("Call failed"));
 
-        const request = new NextRequest("http://localhost:3000/api/vapi/initiate-call", {
-            method: "POST",
-            body: JSON.stringify({}),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/vapi/initiate-call",
+            {
+                method: "POST",
+                body: JSON.stringify({}),
+            }
+        );
 
         const response = await POST(request);
 

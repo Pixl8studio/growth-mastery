@@ -67,7 +67,9 @@ describe("Cloudflare Client", () => {
             });
 
             expect(global.fetch).toHaveBeenCalledWith(
-                expect.stringContaining("/accounts/test-account-id/stream/direct_upload"),
+                expect.stringContaining(
+                    "/accounts/test-account-id/stream/direct_upload"
+                ),
                 expect.objectContaining({
                     method: "POST",
                     headers: expect.objectContaining({
@@ -117,9 +119,7 @@ describe("Cloudflare Client", () => {
 
             (global.fetch as any).mockResolvedValue(mockResponse);
 
-            await expect(generateUploadUrl()).rejects.toThrow(
-                "Cloudflare API error"
-            );
+            await expect(generateUploadUrl()).rejects.toThrow("Cloudflare API error");
         });
 
         it("should handle API failures", async () => {

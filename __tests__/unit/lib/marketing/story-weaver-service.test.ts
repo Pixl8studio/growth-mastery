@@ -30,7 +30,6 @@ import {
     generateStoryVariants,
 } from "@/lib/marketing/story-weaver-service";
 import { generateWithAI, generateTextWithAI } from "@/lib/ai/client";
-import { logger } from "@/lib/logger";
 import { getVoiceGuidelines } from "@/lib/marketing/brand-voice-service";
 
 describe("StoryWeaverService", () => {

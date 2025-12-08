@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "@/app/api/intake/upload/route";
-import { createMockRequest, parseJsonResponse } from "@/__tests__/helpers/api-test-helpers";
+import {
+    createMockRequest,
+    parseJsonResponse,
+} from "@/__tests__/helpers/api-test-helpers";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), error: vi.fn() } }));
@@ -22,20 +25,27 @@ describe("POST /api/intake/upload", () => {
             storage: {
                 from: vi.fn(() => ({
                     upload: vi.fn().mockResolvedValue({ error: null }),
-                    getPublicUrl: vi.fn(() => ({ data: { publicUrl: "https://example.com/file.pdf" } })),
+                    getPublicUrl: vi.fn(() => ({
+                        data: { publicUrl: "https://example.com/file.pdf" },
+                    })),
                 })),
             },
             from: vi.fn(() => ({
                 insert: vi.fn().mockReturnThis(),
                 select: vi.fn().mockReturnThis(),
-                single: vi.fn().mockResolvedValue({ data: { id: "intake-123" }, error: null }),
+                single: vi
+                    .fn()
+                    .mockResolvedValue({ data: { id: "intake-123" }, error: null }),
             })),
         };
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
 
         const formData = new FormData();
-        formData.append("file", new File(["test"], "test.pdf", { type: "application/pdf" }));
+        formData.append(
+            "file",
+            new File(["test"], "test.pdf", { type: "application/pdf" })
+        );
         formData.append("projectId", "project-123");
         formData.append("userId", "user-123");
 
@@ -44,7 +54,7 @@ describe("POST /api/intake/upload", () => {
         } as any;
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -55,7 +65,7 @@ describe("POST /api/intake/upload", () => {
         const request = { formData: async () => formData } as any;
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("Missing required fields");
@@ -63,14 +73,17 @@ describe("POST /api/intake/upload", () => {
 
     it("should return 400 for unsupported file type", async () => {
         const formData = new FormData();
-        formData.append("file", new File(["test"], "test.exe", { type: "application/exe" }));
+        formData.append(
+            "file",
+            new File(["test"], "test.exe", { type: "application/exe" })
+        );
         formData.append("projectId", "project-123");
         formData.append("userId", "user-123");
 
         const request = { formData: async () => formData } as any;
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("Unsupported file type");
@@ -79,14 +92,17 @@ describe("POST /api/intake/upload", () => {
     it("should return 400 for file too large", async () => {
         const largeContent = "x".repeat(11 * 1024 * 1024);
         const formData = new FormData();
-        formData.append("file", new File([largeContent], "large.pdf", { type: "application/pdf" }));
+        formData.append(
+            "file",
+            new File([largeContent], "large.pdf", { type: "application/pdf" })
+        );
         formData.append("projectId", "project-123");
         formData.append("userId", "user-123");
 
         const request = { formData: async () => formData } as any;
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("File too large (max 10MB)");

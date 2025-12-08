@@ -21,6 +21,10 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
+
 // Mock child components
 vi.mock("@/components/marketing/variant-inline-editor", () => ({
     VariantInlineEditor: ({ isOpen, onClose }: any) =>
@@ -154,6 +158,12 @@ describe("PostVariantCardEnhanced", () => {
         expect(screen.getByText("2 Issues")).toBeInTheDocument();
     });
 
+    it("should display character count", () => {
+        render(<PostVariantCardEnhanced {...defaultProps} />);
+
+        expect(screen.getByText(/43 characters/)).toBeInTheDocument();
+    });
+
     it("should display hashtag count", () => {
         render(<PostVariantCardEnhanced {...defaultProps} />);
 
@@ -270,6 +280,42 @@ describe("PostVariantCardEnhanced", () => {
             expect.anything(),
             expect.objectContaining({ method: "DELETE" })
         );
+    });
+
+    it("should handle A/B test action", () => {
+        const mockToast = vi.mocked(useToast)().toast;
+
+        render(<PostVariantCardEnhanced {...defaultProps} />);
+
+        const moreButton = screen.getByRole("button", { name: "" });
+        fireEvent.click(moreButton);
+
+        const abTestButton = screen.getByText("A/B Test");
+        fireEvent.click(abTestButton);
+
+        expect(mockToast).toHaveBeenCalledWith(
+            expect.objectContaining({
+                title: "A/B Test",
+            })
+        );
+    });
+
+    it("should handle save error", async () => {
+        (global.fetch as any).mockRejectedValueOnce(new Error("Save failed"));
+
+        const mockLogger = vi.mocked(logger);
+
+        render(<PostVariantCardEnhanced {...defaultProps} />);
+
+        const moreButton = screen.getByRole("button", { name: "" });
+        fireEvent.click(moreButton);
+
+        const duplicateButton = screen.getByText("Duplicate");
+        fireEvent.click(duplicateButton);
+
+        await waitFor(() => {
+            expect(mockLogger.error).toHaveBeenCalled();
+        });
     });
 
     it("should display multiple media items with overflow indicator", () => {

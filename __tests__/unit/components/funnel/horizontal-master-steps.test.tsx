@@ -6,6 +6,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { HorizontalMasterSteps } from "@/components/funnel/horizontal-master-steps";
+import type { MasterStepCompletion } from "@/app/funnel-builder/completion-types";
 
 // Mock master steps config
 vi.mock("@/app/funnel-builder/master-steps-config", () => ({
@@ -17,7 +18,7 @@ vi.mock("@/app/funnel-builder/master-steps-config", () => ({
 }));
 
 describe("HorizontalMasterSteps", () => {
-    const mockMasterStepCompletions = [
+    const mockMasterStepCompletions: MasterStepCompletion[] = [
         {
             masterStepId: 1,
             isFullyComplete: true,

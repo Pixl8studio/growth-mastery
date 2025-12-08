@@ -135,7 +135,10 @@ describe("GET /api/ads/accounts", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            accounts: Array<{ meta_ad_account_id: string }>;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -161,7 +164,7 @@ describe("GET /api/ads/accounts", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Authentication required");
@@ -198,7 +201,7 @@ describe("GET /api/ads/accounts", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("Facebook not connected");
@@ -382,7 +385,7 @@ describe("GET /api/ads/accounts", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Internal server error");

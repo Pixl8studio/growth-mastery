@@ -107,7 +107,8 @@ describe("POST /api/pages/registration/[pageId]/rewrite-field", () => {
             {
                 method: "POST",
                 body: JSON.stringify({
-                    fieldContent: "This masterclass will teach you everything you need to know",
+                    fieldContent:
+                        "This masterclass will teach you everything you need to know",
                     fieldType: "body",
                 }),
             }
@@ -184,9 +185,9 @@ describe("POST /api/pages/registration/[pageId]/rewrite-field", () => {
     });
 
     it("should handle AI generation errors", async () => {
-        vi.mocked((await import("@/lib/ai/client")).generateTextWithAI).mockRejectedValueOnce(
-            new Error("AI service error")
-        );
+        vi.mocked(
+            (await import("@/lib/ai/client")).generateTextWithAI
+        ).mockRejectedValueOnce(new Error("AI service error"));
 
         const request = new NextRequest(
             "http://localhost:3000/api/pages/registration/test-page-id/rewrite-field",
@@ -253,9 +254,9 @@ describe("POST /api/pages/registration/[pageId]/rewrite-field", () => {
     });
 
     it("should handle authentication errors", async () => {
-        vi.mocked((await import("@/lib/auth")).getCurrentUserWithProfile).mockRejectedValueOnce(
-            new Error("Unauthorized")
-        );
+        vi.mocked(
+            (await import("@/lib/auth")).getCurrentUserWithProfile
+        ).mockRejectedValueOnce(new Error("Unauthorized"));
 
         const request = new NextRequest(
             "http://localhost:3000/api/pages/registration/test-page-id/rewrite-field",

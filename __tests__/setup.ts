@@ -72,6 +72,13 @@ global.ResizeObserver = ResizeObserverMock;
 // Mock scrollIntoView for components that need it
 Element.prototype.scrollIntoView = vi.fn();
 
+// Mock pointer capture methods not available in JSDOM (required for Radix UI Select)
+if (typeof Element !== "undefined") {
+    Element.prototype.hasPointerCapture = vi.fn().mockReturnValue(false);
+    Element.prototype.setPointerCapture = vi.fn();
+    Element.prototype.releasePointerCapture = vi.fn();
+}
+
 // CRITICAL: Block all real process spawning in tests to prevent system freezes
 beforeAll(() => {
     // Mock child_process to prevent real subprocess spawning

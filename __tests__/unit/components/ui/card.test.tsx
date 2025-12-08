@@ -111,7 +111,9 @@ describe("Card", () => {
         render(
             <Card>
                 <CardHeader>
-                    <CardDescription className="custom-desc">Description</CardDescription>
+                    <CardDescription className="custom-desc">
+                        Description
+                    </CardDescription>
                 </CardHeader>
             </Card>
         );

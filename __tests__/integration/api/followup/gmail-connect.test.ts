@@ -54,14 +54,11 @@ describe("GET /api/followup/gmail/connect", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ authUrl: string }>(response);
 
         expect(response.status).toBe(200);
         expect(data.authUrl).toBe(mockAuthUrl);
-        expect(generateGmailOAuthUrl).toHaveBeenCalledWith(
-            "config-123",
-            "user-123"
-        );
+        expect(generateGmailOAuthUrl).toHaveBeenCalledWith("config-123", "user-123");
     });
 
     it("should return 400 for missing agent_config_id", async () => {
@@ -80,7 +77,7 @@ describe("GET /api/followup/gmail/connect", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("agent_config_id is required");
@@ -103,7 +100,7 @@ describe("GET /api/followup/gmail/connect", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Authentication required");
@@ -138,7 +135,7 @@ describe("GET /api/followup/gmail/connect", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Access denied to agent config");
@@ -176,7 +173,9 @@ describe("GET /api/followup/gmail/connect", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string; setupRequired: boolean }>(
+            response
+        );
 
         expect(response.status).toBe(503);
         expect(data.error).toBe("Gmail OAuth not configured");
@@ -215,7 +214,7 @@ describe("GET /api/followup/gmail/connect", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Failed to initiate Gmail connection");

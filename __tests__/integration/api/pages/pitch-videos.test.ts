@@ -112,8 +112,12 @@ describe("GET /api/pages/pitch-videos", () => {
         const data = await response.json();
 
         expect(response.status).toBe(200);
-        expect(data.videos[0].thumbnail_url).toBe("https://cloudflare.com/thumbnails/cf-video-1");
-        expect(data.videos[1].thumbnail_url).toBe("https://cloudflare.com/thumbnails/cf-video-2");
+        expect(data.videos[0].thumbnail_url).toBe(
+            "https://cloudflare.com/thumbnails/cf-video-1"
+        );
+        expect(data.videos[1].thumbnail_url).toBe(
+            "https://cloudflare.com/thumbnails/cf-video-2"
+        );
     });
 
     it("should use default title for videos without title", async () => {
@@ -130,7 +134,9 @@ describe("GET /api/pages/pitch-videos", () => {
     });
 
     it("should return 401 when user is not authenticated", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             auth: {
                 getUser: vi.fn(async () => ({
                     data: { user: null },
@@ -161,7 +167,9 @@ describe("GET /api/pages/pitch-videos", () => {
     });
 
     it("should return 404 when project is not found", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             auth: {
                 getUser: vi.fn(async () => ({
                     data: { user: { id: "test-user-id" } },
@@ -194,7 +202,9 @@ describe("GET /api/pages/pitch-videos", () => {
     });
 
     it("should handle database errors when fetching videos", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             auth: {
                 getUser: vi.fn(async () => ({
                     data: { user: { id: "test-user-id" } },
@@ -208,7 +218,10 @@ describe("GET /api/pages/pitch-videos", () => {
                             eq: vi.fn(() => ({
                                 eq: vi.fn(() => ({
                                     single: vi.fn(async () => ({
-                                        data: { id: "test-project-id", user_id: "test-user-id" },
+                                        data: {
+                                            id: "test-project-id",
+                                            user_id: "test-user-id",
+                                        },
                                         error: null,
                                     })),
                                 })),
@@ -244,7 +257,9 @@ describe("GET /api/pages/pitch-videos", () => {
     });
 
     it("should return empty array when no videos exist", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             auth: {
                 getUser: vi.fn(async () => ({
                     data: { user: { id: "test-user-id" } },
@@ -258,7 +273,10 @@ describe("GET /api/pages/pitch-videos", () => {
                             eq: vi.fn(() => ({
                                 eq: vi.fn(() => ({
                                     single: vi.fn(async () => ({
-                                        data: { id: "test-project-id", user_id: "test-user-id" },
+                                        data: {
+                                            id: "test-project-id",
+                                            user_id: "test-user-id",
+                                        },
                                         error: null,
                                     })),
                                 })),

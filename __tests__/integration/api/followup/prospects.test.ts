@@ -47,7 +47,10 @@ describe("POST /api/followup/prospects", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            prospect: { email: string };
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -71,7 +74,7 @@ describe("POST /api/followup/prospects", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("Email is required");
@@ -94,7 +97,7 @@ describe("POST /api/followup/prospects", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("Funnel project ID is required");
@@ -124,7 +127,7 @@ describe("GET /api/followup/prospects", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ prospects: Array<unknown> }>(response);
 
         expect(response.status).toBe(200);
         expect(data.prospects).toHaveLength(2);
@@ -146,7 +149,7 @@ describe("GET /api/followup/prospects", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("funnel_project_id query parameter is required");

@@ -27,12 +27,9 @@ vi.mock("@/lib/logger", () => ({
 // Import after mocks are defined
 const {
     createAgentConfig,
-    getAgentConfig,
     getAgentConfigForOffer,
     getDefaultAgentConfig,
     listAgentConfigs,
-    updateAgentConfig,
-    deleteAgentConfig,
     activateAgentConfig,
     getAgentConfigForProspect,
 } = await import("@/lib/followup/agent-config-service");

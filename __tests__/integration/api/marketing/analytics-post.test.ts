@@ -93,7 +93,10 @@ describe("GET /api/marketing/analytics/post/[postId]", () => {
         });
         const context = createMockContext({ postId: "post-1" });
 
-        const response = await GET(request, context);
+        const response = await GET(
+            request,
+            context as { params: Promise<{ postId: string }> }
+        );
         const data = await response.json();
 
         expect(response.status).toBe(200);
@@ -114,7 +117,10 @@ describe("GET /api/marketing/analytics/post/[postId]", () => {
         });
         const context = createMockContext({ postId: "post-1" });
 
-        const response = await GET(request, context);
+        const response = await GET(
+            request,
+            context as { params: Promise<{ postId: string }> }
+        );
         const data = await response.json();
 
         expect(response.status).toBe(401);
@@ -136,7 +142,10 @@ describe("GET /api/marketing/analytics/post/[postId]", () => {
         });
         const context = createMockContext({ postId: "nonexistent" });
 
-        const response = await GET(request, context);
+        const response = await GET(
+            request,
+            context as { params: Promise<{ postId: string }> }
+        );
         const data = await response.json();
 
         expect(response.status).toBe(404);
@@ -164,7 +173,10 @@ describe("GET /api/marketing/analytics/post/[postId]", () => {
         });
         const context = createMockContext({ postId: "post-1" });
 
-        const response = await GET(request, context);
+        const response = await GET(
+            request,
+            context as { params: Promise<{ postId: string }> }
+        );
         const data = await response.json();
 
         expect(response.status).toBe(401);
@@ -217,7 +229,10 @@ describe("GET /api/marketing/analytics/post/[postId]", () => {
         });
         const context = createMockContext({ postId: "post-1" });
 
-        const response = await GET(request, context);
+        const response = await GET(
+            request,
+            context as { params: Promise<{ postId: string }> }
+        );
         const data = await response.json();
 
         expect(response.status).toBe(200);

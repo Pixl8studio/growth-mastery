@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { validateIntakeContent, extractTextFromPlainFile } from "@/lib/intake/processors";
+import {
+    validateIntakeContent,
+    extractTextFromPlainFile,
+} from "@/lib/intake/processors";
 
 vi.mock("@/lib/logger", () => ({
     logger: {
@@ -13,7 +16,8 @@ describe("Intake Processors", () => {
     describe("validateIntakeContent", () => {
         it("should validate valid content", () => {
             // Content must be >= 100 characters and not contain placeholder keywords
-            const content = "This is a long enough piece of content to pass validation checks. It has well over one hundred characters to meet the minimum length requirement for validation.";
+            const content =
+                "This is a long enough piece of content to pass validation checks. It has well over one hundred characters to meet the minimum length requirement for validation.";
             const result = validateIntakeContent(content);
 
             expect(result.valid).toBe(true);
@@ -35,7 +39,8 @@ describe("Intake Processors", () => {
         });
 
         it("should reject lorem ipsum as placeholder", () => {
-            const content = "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
+            const content =
+                "Lorem ipsum dolor sit amet consectetur adipiscing elit sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.";
             const result = validateIntakeContent(content);
 
             expect(result.valid).toBe(false);
@@ -44,7 +49,8 @@ describe("Intake Processors", () => {
 
         it("should reject content containing placeholder keyword", () => {
             // This content has the word "placeholder" which triggers the placeholder check
-            const content = "This is just placeholder text for testing purposes and should be rejected by the validator because it has placeholder in it.";
+            const content =
+                "This is just placeholder text for testing purposes and should be rejected by the validator because it has placeholder in it.";
             const result = validateIntakeContent(content);
 
             expect(result.valid).toBe(false);
@@ -94,7 +100,9 @@ describe("Intake Processors", () => {
                 text: vi.fn().mockRejectedValue(new Error("Read error")),
             } as unknown as File;
 
-            await expect(extractTextFromPlainFile(badFile)).rejects.toThrow("Failed to read file");
+            await expect(extractTextFromPlainFile(badFile)).rejects.toThrow(
+                "Failed to read file"
+            );
         });
     });
 });

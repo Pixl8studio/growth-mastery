@@ -15,7 +15,6 @@ vi.mock("@/lib/followup/engagement-service", () => ({
     trackOfferClick: vi.fn(),
 }));
 
-import { createClient } from "@/lib/supabase/server";
 import { trackEngagement } from "@/lib/followup/engagement-service";
 
 describe("POST /api/followup/track", () => {
@@ -35,7 +34,7 @@ describe("POST /api/followup/track", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -48,7 +47,7 @@ describe("POST /api/followup/track", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("prospect_id is required");
@@ -61,7 +60,7 @@ describe("POST /api/followup/track", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("event_type is required");

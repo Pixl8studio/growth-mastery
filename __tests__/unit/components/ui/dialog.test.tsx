@@ -115,7 +115,9 @@ describe("Dialog", () => {
         );
 
         await user.click(screen.getByText("Open Dialog"));
-        const dialogContent = screen.getByText("Dialog Title").closest('[role="dialog"]');
+        const dialogContent = screen
+            .getByText("Dialog Title")
+            .closest('[role="dialog"]');
         expect(dialogContent?.className).toContain("custom-dialog");
     });
 

@@ -37,9 +37,11 @@ export function OnboardingBanner({
 
     useEffect(() => {
         // Check localStorage for dismissed state
-        const isDismissed =
-            localStorage.getItem("followup-onboarding-dismissed") === "true";
-        setDismissed(isDismissed);
+        requestAnimationFrame(() => {
+            const isDismissed =
+                localStorage.getItem("followup-onboarding-dismissed") === "true";
+            setDismissed(isDismissed);
+        });
     }, []);
 
     const steps: OnboardingStep[] = [

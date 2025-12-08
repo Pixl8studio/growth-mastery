@@ -26,9 +26,12 @@ describe("POST /api/support/chat/thread", () => {
         const { createThread } = await import("@/lib/openai/assistants-client");
         (createThread as any).mockResolvedValue("thread-123");
 
-        const request = new NextRequest("http://localhost:3000/api/support/chat/thread", {
-            method: "POST",
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/support/chat/thread",
+            {
+                method: "POST",
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -41,9 +44,12 @@ describe("POST /api/support/chat/thread", () => {
         const { createThread } = await import("@/lib/openai/assistants-client");
         (createThread as any).mockRejectedValue(new Error("Failed to create thread"));
 
-        const request = new NextRequest("http://localhost:3000/api/support/chat/thread", {
-            method: "POST",
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/support/chat/thread",
+            {
+                method: "POST",
+            }
+        );
 
         const response = await POST(request);
 

@@ -5,8 +5,7 @@
 Core project rules that apply to all tasks:
 
 @.cursor/rules/heart-centered-ai-philosophy.mdc
-@.cursor/rules/trust-and-decision-making.mdc
-@.cursor/rules/git-interaction.mdc
+@.cursor/rules/trust-and-decision-making.mdc @.cursor/rules/git-interaction.mdc
 @.cursor/rules/frontend/typescript-coding-standards.mdc
 @.cursor/rules/personalities/luminous.mdc
 
@@ -36,12 +35,14 @@ multi-step wizard that generates registration, watch, and enrollment pages using
 ## Code Conventions
 
 DO:
+
 - Use pnpm not npm (lockfile compatibility)
 - Place tests in `__tests__/unit/` directory, not alongside source files
 - Use Supabase RLS policies for all table security
 - Follow emoji commit prefixes (see git log for examples)
 
 DON'T:
+
 - Never manually create/edit migration files - use `supabase db diff`
 - Never skip git hooks with `--no-verify`
 - Never use `npm` commands - always `pnpm`
@@ -49,13 +50,14 @@ DON'T:
 ## Git Workflow
 
 Commit format uses emoji prefixes:
+
 - `feat:` or `Add` for new features
 - `fix:` or `🐛` for bug fixes
 - `🔒` for security updates
 - `🔧` for configuration changes
 
-Pre-commit: lint-staged auto-fixes staged files
-Pre-push: full validation suite (lint, type-check, tests)
+Pre-commit: lint-staged auto-fixes staged files Pre-push: full validation suite (lint,
+type-check, tests)
 
 ## Important Notes
 

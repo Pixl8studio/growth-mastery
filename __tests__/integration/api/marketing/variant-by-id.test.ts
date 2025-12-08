@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET, PUT } from "@/app/api/marketing/variants/[variantId]/route";
 import { NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 vi.mock("@/lib/marketing/preflight-service", () => ({
     runPreflightValidation: vi.fn(() =>
@@ -88,27 +89,24 @@ describe("GET /api/marketing/variants/[variantId]", () => {
     });
 
     it("returns 404 when variant not found", async () => {
-        vi.mocked(await import("@/lib/supabase/server")).createClient = vi.fn(
-            () =>
-                ({
-                    auth: {
-                        getUser: vi.fn(() => ({
-                            data: { user: { id: "user-123" } },
-                            error: null,
-                        })),
-                    },
-                    from: vi.fn(() => ({
-                        select: vi.fn(() => ({
-                            eq: vi.fn(() => ({
-                                single: vi.fn(() => ({
-                                    data: null,
-                                    error: new Error("Not found"),
-                                })),
-                            })),
+        vi.mocked(createClient).mockReturnValue({
+            auth: {
+                getUser: vi.fn(() => ({
+                    data: { user: { id: "user-123" } },
+                    error: null,
+                })),
+            },
+            from: vi.fn(() => ({
+                select: vi.fn(() => ({
+                    eq: vi.fn(() => ({
+                        single: vi.fn(() => ({
+                            data: null,
+                            error: new Error("Not found"),
                         })),
                     })),
-                }) as any
-        );
+                })),
+            })),
+        } as any);
 
         const request = new NextRequest(
             "http://localhost/api/marketing/variants/variant-123"

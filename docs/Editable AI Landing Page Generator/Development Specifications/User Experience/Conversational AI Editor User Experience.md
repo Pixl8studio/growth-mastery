@@ -20,6 +20,7 @@ This is Lovable-style editing applied to our funnel pages.
 A split-screen editor with two panels:
 
 **Left Panel (35% width): AI Chat Interface**
+
 - Message thread showing the conversation history
 - Input area for typing requests
 - "Thinking" indicator when AI is processing
@@ -27,6 +28,7 @@ A split-screen editor with two panels:
 - Quick action chips for suggested next steps
 
 **Right Panel (65% width): Live Page Preview**
+
 - The actual page being edited, rendered in real-time
 - Changes appear immediately after AI processes them
 - Existing edit mode functionality still works (sparkle buttons, drag-drop blocks)
@@ -68,21 +70,25 @@ A split-screen editor with two panels:
 This feature builds on infrastructure we already have:
 
 ### Existing Visual Editor
+
 The `EditorPageWrapper` component already handles page editing with vanilla JS. We wrap
 this in a split-pane layout and add the chat panel alongside it. All existing edit
-functionality (sparkle regenerate buttons, block drag-drop, inline editing) continues
-to work.
+functionality (sparkle regenerate buttons, block drag-drop, inline editing) continues to
+work.
 
 ### Existing AI Infrastructure
+
 We already have `lib/ai/client.ts` for OpenAI calls, `lib/ai-assistant/` for action
 execution patterns, and page generation prompts in `lib/generators/`. We extend these
 rather than reinvent them.
 
 ### Existing Auto-Save
+
 The vanilla JS editor already calls `window.scheduleAutoSave()` when content changes.
 After AI applies edits, we trigger the same function so changes persist automatically.
 
 ### Existing State Management
+
 We use Zustand throughout the app. The conversation state (messages, processing status,
 pending edits) follows the same pattern as existing stores like `usePageContext`.
 
@@ -92,41 +98,36 @@ pending edits) follows the same pattern as existing stores like `usePageContext`
 
 ### New Directory: `components/ai-editor/`
 
-**ai-editor-layout.tsx**
-The split-pane container. Uses CSS flexbox to divide the screen. Left side gets the
-chat panel, right side wraps the existing EditorPageWrapper. Handles responsive
-behavior (collapse chat on mobile, maybe a drawer instead).
+**ai-editor-layout.tsx** The split-pane container. Uses CSS flexbox to divide the
+screen. Left side gets the chat panel, right side wraps the existing EditorPageWrapper.
+Handles responsive behavior (collapse chat on mobile, maybe a drawer instead).
 
-**chat-panel.tsx**
-The main left panel component. Contains the message thread, input area, and quick
-action chips. Manages the conversation state and API calls.
+**chat-panel.tsx** The main left panel component. Contains the message thread, input
+area, and quick action chips. Manages the conversation state and API calls.
 
-**message-thread.tsx**
-Renders the conversation history. User messages appear on the right (or with different
-styling), assistant messages on the left. Assistant messages can include thinking time
-("Thought for 8s") and expandable edit summaries.
+**message-thread.tsx** Renders the conversation history. User messages appear on the
+right (or with different styling), assistant messages on the left. Assistant messages
+can include thinking time ("Thought for 8s") and expandable edit summaries.
 
-**thinking-indicator.tsx**
-Shows when AI is processing. Displays a lightbulb icon and running timer ("Thinking
-for 4s...") with animated dots. Creates anticipation and transparency.
+**thinking-indicator.tsx** Shows when AI is processing. Displays a lightbulb icon and
+running timer ("Thinking for 4s...") with animated dots. Creates anticipation and
+transparency.
 
-**edit-summary-card.tsx**
-Collapsible card showing "2 edits made" with a "Show all" toggle. Expands to show each
-edit with its description. Optional "Preview" and "Code" buttons for power users who
-want to see the actual changes.
+**edit-summary-card.tsx** Collapsible card showing "2 edits made" with a "Show all"
+toggle. Expands to show each edit with its description. Optional "Preview" and "Code"
+buttons for power users who want to see the actual changes.
 
-**quick-action-chips.tsx**
-Horizontal row of suggestion buttons below the AI response. Clicking one sends that
-text as a new message. Chips are contextual - AI suggests relevant next steps based on
-what was just changed.
+**quick-action-chips.tsx** Horizontal row of suggestion buttons below the AI response.
+Clicking one sends that text as a new message. Chips are contextual - AI suggests
+relevant next steps based on what was just changed.
 
-**chat-input.tsx**
-Text input with send button. Could include attachment button (for uploading reference
-images), voice input button (using existing VAPI integration), and mode toggles.
+**chat-input.tsx** Text input with send button. Could include attachment button (for
+uploading reference images), voice input button (using existing VAPI integration), and
+mode toggles.
 
-**preview-panel.tsx**
-Thin wrapper around EditorPageWrapper. Sets up the bridge for AI edits to communicate
-with the vanilla JS editor. Handles any additional preview-specific UI.
+**preview-panel.tsx** Thin wrapper around EditorPageWrapper. Sets up the bridge for AI
+edits to communicate with the vanilla JS editor. Handles any additional preview-specific
+UI.
 
 ---
 
@@ -136,10 +137,10 @@ with the vanilla JS editor. Handles any additional preview-specific UI.
 
 Receives: user message, page ID, page type, current HTML content, project context
 
-Returns: AI response text, list of edits to apply, suggested next actions, thinking
-time
+Returns: AI response text, list of edits to apply, suggested next actions, thinking time
 
 The system prompt gives the AI context about:
+
 - What type of page this is (registration, watch, enrollment)
 - The offer being sold (from funnel project data)
 - Target audience and brand voice
@@ -155,6 +156,7 @@ explanation, but actionable edit instructions the frontend can apply.
 ### Conversation Store (Zustand)
 
 Stores:
+
 - Array of messages (user and assistant, with timestamps)
 - Whether AI is currently processing
 - How long current thinking has been going (for the timer)
@@ -162,6 +164,7 @@ Stores:
 - Session ID for persistence
 
 Actions:
+
 - Add a message to the thread
 - Set processing state
 - Update thinking time
@@ -174,19 +177,17 @@ Actions:
 
 When AI returns edits, the frontend applies them to the DOM:
 
-**Text Updates**
-Find the element by selector, replace its text content. Important: preserve any child
-elements like the sparkle regenerate buttons - only replace text nodes.
+**Text Updates** Find the element by selector, replace its text content. Important:
+preserve any child elements like the sparkle regenerate buttons - only replace text
+nodes.
 
-**Style Updates**
-Find the element, update its className to apply different Tailwind classes.
+**Style Updates** Find the element, update its className to apply different Tailwind
+classes.
 
-**Section Additions**
-Use the existing `window.visualEditor.insertGeneratedSection()` function that we
-already have for the section block generator.
+**Section Additions** Use the existing `window.visualEditor.insertGeneratedSection()`
+function that we already have for the section block generator.
 
-**Section Removals**
-Find the element and remove it from DOM.
+**Section Removals** Find the element and remove it from DOM.
 
 After any edit, flash a green outline briefly on the affected element so users see
 exactly what changed. Then trigger auto-save.
@@ -196,6 +197,7 @@ exactly what changed. Then trigger auto-save.
 ## Database Changes
 
 Add a table to store conversation sessions:
+
 - `ai_editor_sessions`
 - Links to page ID and user ID
 - Stores messages array as JSONB
@@ -211,10 +213,11 @@ This lets users resume conversations if they leave and come back.
 ### Week 1: Foundation
 
 Set up the component structure and basic UI. Create the split-pane layout, chat panel
-with message display, and input area. Wire up a simple API endpoint that echoes back
-the message (no AI yet). Get the visual flow working end-to-end.
+with message display, and input area. Wire up a simple API endpoint that echoes back the
+message (no AI yet). Get the visual flow working end-to-end.
 
 Deliverables:
+
 - Directory structure and component files created
 - Split-pane layout rendering correctly
 - Messages can be typed and displayed
@@ -227,6 +230,7 @@ context. Parse AI responses and apply edits to the DOM. Implement the thinking i
 with live timer.
 
 Deliverables:
+
 - API endpoint calling OpenAI with proper prompts
 - Edits successfully applied to page DOM
 - Thinking indicator showing real processing time
@@ -238,6 +242,7 @@ Add edit summary cards, quick action chips, and conversation persistence. Implem
 session storage in Supabase. Handle edge cases and error states.
 
 Deliverables:
+
 - Edit summaries show what changed
 - Quick action chips appear and work
 - Conversation persists across page refreshes
@@ -249,6 +254,7 @@ Add power-user features (code diff view, undo/redo). Write tests. Performance
 optimization. User feedback mechanism (thumbs up/down).
 
 Deliverables:
+
 - Tests passing (unit and E2E)
 - Performance acceptable (< 8s response time)
 - Feedback collection working
@@ -258,20 +264,16 @@ Deliverables:
 
 ## Success Criteria
 
-**User Adoption**
-At least 60% of users try the AI editor within first month of launch.
+**User Adoption** At least 60% of users try the AI editor within first month of launch.
 
-**Edit Success Rate**
-95% or more of AI-suggested edits apply correctly to the page.
+**Edit Success Rate** 95% or more of AI-suggested edits apply correctly to the page.
 
-**Response Time**
-Average time from send to response visible is under 8 seconds.
+**Response Time** Average time from send to response visible is under 8 seconds.
 
-**Engagement**
-Users average 3+ edits per session (they find it useful enough to keep using).
+**Engagement** Users average 3+ edits per session (they find it useful enough to keep
+using).
 
-**Satisfaction**
-70%+ positive feedback ratio (thumbs up vs thumbs down).
+**Satisfaction** 70%+ positive feedback ratio (thumbs up vs thumbs down).
 
 ---
 
@@ -290,31 +292,29 @@ The chat interface becomes a universal input method for the entire application.
 
 ## Key Design Decisions
 
-**Why split-pane instead of modal?**
-Users need to see the page while describing changes. A modal would hide the context.
-Split-pane lets them reference what's on screen in their requests.
+**Why split-pane instead of modal?** Users need to see the page while describing
+changes. A modal would hide the context. Split-pane lets them reference what's on screen
+in their requests.
 
-**Why preserve existing editor?**
-The vanilla JS editor works well for direct manipulation. Some users prefer clicking
-and typing directly. The AI chat is additive, not replacement.
+**Why preserve existing editor?** The vanilla JS editor works well for direct
+manipulation. Some users prefer clicking and typing directly. The AI chat is additive,
+not replacement.
 
-**Why structured edit responses?**
-Prose explanations are nice for users, but we need machine-readable instructions to
-actually apply changes. AI returns both.
+**Why structured edit responses?** Prose explanations are nice for users, but we need
+machine-readable instructions to actually apply changes. AI returns both.
 
-**Why Zustand for conversation state?**
-We already use Zustand throughout the app. Consistency matters more than finding the
-"best" state management solution.
+**Why Zustand for conversation state?** We already use Zustand throughout the app.
+Consistency matters more than finding the "best" state management solution.
 
-**Why session persistence?**
-Users might work on a page across multiple sittings. Losing context is frustrating.
-Storing the conversation lets them pick up where they left off.
+**Why session persistence?** Users might work on a page across multiple sittings. Losing
+context is frustrating. Storing the conversation lets them pick up where they left off.
 
 ---
 
 ## Dependencies
 
 Requires these to be working (which they already are):
+
 - OpenAI API key configured
 - Supabase database connection
 - EditorPageWrapper component
@@ -327,21 +327,17 @@ No new external dependencies needed.
 
 ## Risks & Mitigations
 
-**Risk: AI makes bad edits**
-Mitigation: Always show what changed, make it easy to undo, keep existing manual edit
-tools available.
+**Risk: AI makes bad edits** Mitigation: Always show what changed, make it easy to undo,
+keep existing manual edit tools available.
 
-**Risk: Slow response times**
-Mitigation: Show thinking indicator with timer so users know it's working. Optimize
-prompts to reduce token count. Consider streaming responses.
+**Risk: Slow response times** Mitigation: Show thinking indicator with timer so users
+know it's working. Optimize prompts to reduce token count. Consider streaming responses.
 
-**Risk: Users don't adopt it**
-Mitigation: Make it discoverable but not forced. Offer quick action suggestions to
-lower the barrier to trying it.
+**Risk: Users don't adopt it** Mitigation: Make it discoverable but not forced. Offer
+quick action suggestions to lower the barrier to trying it.
 
-**Risk: Complex edits fail**
-Mitigation: Start with simple edit types (text changes). Expand capabilities gradually
-as we learn what works.
+**Risk: Complex edits fail** Mitigation: Start with simple edit types (text changes).
+Expand capabilities gradually as we learn what works.
 
 ---
 
@@ -351,10 +347,9 @@ We're building a chat interface that lets users edit their landing pages by desc
 what they want. It sits alongside the existing visual editor, applies changes in
 real-time, and persists everything automatically.
 
-The core insight: editing should feel like talking to a helpful assistant, not
-operating a complex tool. Users describe the outcome, AI figures out the implementation.
+The core insight: editing should feel like talking to a helpful assistant, not operating
+a complex tool. Users describe the outcome, AI figures out the implementation.
 
 This specification gives the developer everything needed to build it: the user
-experience, the component structure, the data flow, and the implementation timeline.
-The codebase already has the building blocks - this is about connecting them in a new
-way.
+experience, the component structure, the data flow, and the implementation timeline. The
+codebase already has the building blocks - this is about connecting them in a new way.

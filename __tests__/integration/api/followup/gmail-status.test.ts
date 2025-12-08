@@ -25,14 +25,16 @@ describe("GET /api/followup/gmail/status", () => {
         vi.mocked(env).GOOGLE_CLIENT_SECRET = "test-client-secret";
 
         const response = await GET();
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            available: boolean;
+            configured: boolean;
+            message: string;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.available).toBe(true);
         expect(data.configured).toBe(true);
-        expect(data.message).toContain(
-            "Gmail OAuth is configured and ready to use"
-        );
+        expect(data.message).toContain("Gmail OAuth is configured and ready to use");
     });
 
     it("should return unconfigured status when OAuth credentials are missing", async () => {
@@ -41,7 +43,11 @@ describe("GET /api/followup/gmail/status", () => {
         vi.mocked(env).GOOGLE_CLIENT_SECRET = undefined;
 
         const response = await GET();
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            available: boolean;
+            configured: boolean;
+            message: string;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.available).toBe(false);
@@ -57,7 +63,10 @@ describe("GET /api/followup/gmail/status", () => {
         vi.mocked(env).GOOGLE_CLIENT_SECRET = undefined;
 
         const response = await GET();
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            available: boolean;
+            configured: boolean;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.available).toBe(false);
@@ -70,7 +79,10 @@ describe("GET /api/followup/gmail/status", () => {
         vi.mocked(env).GOOGLE_CLIENT_SECRET = "test-client-secret";
 
         const response = await GET();
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            available: boolean;
+            configured: boolean;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.available).toBe(false);
@@ -87,13 +99,15 @@ describe("GET /api/followup/gmail/status", () => {
         });
 
         const response = await GET();
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            available: boolean;
+            configured: boolean;
+            message: string;
+        }>(response);
 
         expect(response.status).toBe(500);
         expect(data.available).toBe(false);
         expect(data.configured).toBe(false);
-        expect(data.message).toContain(
-            "Unable to check Gmail OAuth configuration"
-        );
+        expect(data.message).toContain("Unable to check Gmail OAuth configuration");
     });
 });

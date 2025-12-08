@@ -31,7 +31,9 @@ export function useIsMobile(breakpoint: Breakpoint = "md"): boolean {
         );
 
         // Set initial value
-        setIsMobile(mediaQuery.matches);
+        requestAnimationFrame(() => {
+            setIsMobile(mediaQuery.matches);
+        });
 
         // Create listener
         const handleChange = (e: MediaQueryListEvent) => {
@@ -67,7 +69,9 @@ export function useIsTablet(): boolean {
         const tabletRegex = /iPad|Android(?!.*Mobile)|Tablet|PlayBook|Silk/i;
         const isTabletUA = tabletRegex.test(userAgent);
 
-        setIsTablet(mediaQuery.matches || isTabletUA);
+        requestAnimationFrame(() => {
+            setIsTablet(mediaQuery.matches || isTabletUA);
+        });
 
         const handleChange = (e: MediaQueryListEvent) => {
             setIsTablet(e.matches || isTabletUA);
@@ -95,7 +99,9 @@ export function useIsTouchDevice(): boolean {
             navigator.maxTouchPoints > 0 ||
             (navigator as any).msMaxTouchPoints > 0;
 
-        setIsTouch(hasTouchScreen);
+        requestAnimationFrame(() => {
+            setIsTouch(hasTouchScreen);
+        });
     }, []);
 
     return isTouch;
@@ -112,7 +118,9 @@ export function useBreakpoint(breakpoint: Breakpoint): boolean {
             `(min-width: ${BREAKPOINTS[breakpoint]}px)`
         );
 
-        setMatches(mediaQuery.matches);
+        requestAnimationFrame(() => {
+            setMatches(mediaQuery.matches);
+        });
 
         const handleChange = (e: MediaQueryListEvent) => {
             setMatches(e.matches);

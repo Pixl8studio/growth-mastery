@@ -80,14 +80,17 @@ describe("POST /api/pages/generate-section-copy", () => {
     });
 
     it("should generate section copy successfully", async () => {
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-section-copy", {
-            method: "POST",
-            body: JSON.stringify({
-                sectionType: "hero",
-                pageId: "test-page-id",
-                projectId: "test-project-id",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-section-copy",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    sectionType: "hero",
+                    pageId: "test-page-id",
+                    projectId: "test-project-id",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -98,15 +101,18 @@ describe("POST /api/pages/generate-section-copy", () => {
     });
 
     it("should handle custom prompts", async () => {
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-section-copy", {
-            method: "POST",
-            body: JSON.stringify({
-                sectionType: "hero",
-                pageId: "test-page-id",
-                projectId: "test-project-id",
-                customPrompt: "Focus on urgency and scarcity",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-section-copy",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    sectionType: "hero",
+                    pageId: "test-page-id",
+                    projectId: "test-project-id",
+                    customPrompt: "Focus on urgency and scarcity",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -116,7 +122,9 @@ describe("POST /api/pages/generate-section-copy", () => {
     });
 
     it("should return 401 when user is not authenticated", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             auth: {
                 getUser: vi.fn(async () => ({
                     data: { user: null },
@@ -125,14 +133,17 @@ describe("POST /api/pages/generate-section-copy", () => {
             },
         } as any);
 
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-section-copy", {
-            method: "POST",
-            body: JSON.stringify({
-                sectionType: "hero",
-                pageId: "test-page-id",
-                projectId: "test-project-id",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-section-copy",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    sectionType: "hero",
+                    pageId: "test-page-id",
+                    projectId: "test-project-id",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -142,13 +153,16 @@ describe("POST /api/pages/generate-section-copy", () => {
     });
 
     it("should return 400 when sectionType is missing", async () => {
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-section-copy", {
-            method: "POST",
-            body: JSON.stringify({
-                pageId: "test-page-id",
-                projectId: "test-project-id",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-section-copy",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    pageId: "test-page-id",
+                    projectId: "test-project-id",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -158,14 +172,17 @@ describe("POST /api/pages/generate-section-copy", () => {
     });
 
     it("should return 400 when sectionType is empty", async () => {
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-section-copy", {
-            method: "POST",
-            body: JSON.stringify({
-                sectionType: "   ",
-                pageId: "test-page-id",
-                projectId: "test-project-id",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-section-copy",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    sectionType: "   ",
+                    pageId: "test-page-id",
+                    projectId: "test-project-id",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -175,13 +192,16 @@ describe("POST /api/pages/generate-section-copy", () => {
     });
 
     it("should return 400 when pageId is missing", async () => {
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-section-copy", {
-            method: "POST",
-            body: JSON.stringify({
-                sectionType: "hero",
-                projectId: "test-project-id",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-section-copy",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    sectionType: "hero",
+                    projectId: "test-project-id",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -191,13 +211,16 @@ describe("POST /api/pages/generate-section-copy", () => {
     });
 
     it("should return 400 when projectId is missing", async () => {
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-section-copy", {
-            method: "POST",
-            body: JSON.stringify({
-                sectionType: "hero",
-                pageId: "test-page-id",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-section-copy",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    sectionType: "hero",
+                    pageId: "test-page-id",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -207,7 +230,9 @@ describe("POST /api/pages/generate-section-copy", () => {
     });
 
     it("should return 404 when project is not found", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             auth: {
                 getUser: vi.fn(async () => ({
                     data: { user: { id: "test-user-id" } },
@@ -228,14 +253,17 @@ describe("POST /api/pages/generate-section-copy", () => {
             })),
         } as any);
 
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-section-copy", {
-            method: "POST",
-            body: JSON.stringify({
-                sectionType: "hero",
-                pageId: "test-page-id",
-                projectId: "invalid-project-id",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-section-copy",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    sectionType: "hero",
+                    pageId: "test-page-id",
+                    projectId: "invalid-project-id",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -245,7 +273,9 @@ describe("POST /api/pages/generate-section-copy", () => {
     });
 
     it("should return 404 when page is not found", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             auth: {
                 getUser: vi.fn(async () => ({
                     data: { user: { id: "test-user-id" } },
@@ -259,7 +289,10 @@ describe("POST /api/pages/generate-section-copy", () => {
                             eq: vi.fn(() => ({
                                 eq: vi.fn(() => ({
                                     single: vi.fn(async () => ({
-                                        data: { id: "test-project-id", user_id: "test-user-id" },
+                                        data: {
+                                            id: "test-project-id",
+                                            user_id: "test-user-id",
+                                        },
                                         error: null,
                                     })),
                                 })),
@@ -283,14 +316,17 @@ describe("POST /api/pages/generate-section-copy", () => {
             }),
         } as any);
 
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-section-copy", {
-            method: "POST",
-            body: JSON.stringify({
-                sectionType: "hero",
-                pageId: "invalid-page-id",
-                projectId: "test-project-id",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-section-copy",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    sectionType: "hero",
+                    pageId: "invalid-page-id",
+                    projectId: "test-project-id",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -300,18 +336,21 @@ describe("POST /api/pages/generate-section-copy", () => {
     });
 
     it("should handle generation errors", async () => {
-        vi.mocked((await import("@/lib/pages/section-copy-generator")).generateSectionCopy).mockRejectedValueOnce(
-            new Error("Generation failed")
-        );
+        vi.mocked(
+            (await import("@/lib/pages/section-copy-generator")).generateSectionCopy
+        ).mockRejectedValueOnce(new Error("Generation failed"));
 
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-section-copy", {
-            method: "POST",
-            body: JSON.stringify({
-                sectionType: "hero",
-                pageId: "test-page-id",
-                projectId: "test-project-id",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-section-copy",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    sectionType: "hero",
+                    pageId: "test-page-id",
+                    projectId: "test-project-id",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();

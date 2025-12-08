@@ -49,6 +49,17 @@ export function EditorPageWrapper({
         element: HTMLElement;
     } | null>(null);
 
+    // Handler to open field regenerate modal - must be declared before useEffect
+    const handleOpenFieldRegenerate = (
+        fieldId: string,
+        fieldContext: string,
+        element: HTMLElement
+    ) => {
+        logger.info({ fieldId }, "Opening field regenerate modal");
+        setFieldToRegenerate({ fieldId, fieldContext, element });
+        setIsFieldRegenerateOpen(true);
+    };
+
     useEffect(() => {
         if (!isEditMode) return;
 
@@ -157,17 +168,6 @@ export function EditorPageWrapper({
         }
     };
 
-    // Handler to open field regenerate modal
-    const handleOpenFieldRegenerate = (
-        fieldId: string,
-        fieldContext: string,
-        element: HTMLElement
-    ) => {
-        logger.info({ fieldId }, "Opening field regenerate modal");
-        setFieldToRegenerate({ fieldId, fieldContext, element });
-        setIsFieldRegenerateOpen(true);
-    };
-
     // Handler for selected field option
     const handleFieldOptionSelected = (newContent: string) => {
         logger.info(
@@ -176,7 +176,8 @@ export function EditorPageWrapper({
         );
 
         if (fieldToRegenerate && newContent) {
-            const element = fieldToRegenerate.element;
+            // Extract element reference before modifying to satisfy immutability rules
+            const { element, fieldId } = fieldToRegenerate;
 
             // SIMPLE APPROACH: Update only text nodes, leave sparkle button untouched
             // Remove all text nodes but keep the sparkle button
@@ -199,7 +200,8 @@ export function EditorPageWrapper({
                 "Content updated - sparkle button preserved"
             );
 
-            // Flash success
+            // Flash success - we need to modify DOM element style
+
             element.style.background = "#dcfce7";
             setTimeout(() => {
                 element.style.background = "";
@@ -212,10 +214,7 @@ export function EditorPageWrapper({
                 }
             }, 500);
 
-            logger.info(
-                { fieldId: fieldToRegenerate.fieldId },
-                "Field update complete"
-            );
+            logger.info({ fieldId }, "Field update complete");
         }
     };
 

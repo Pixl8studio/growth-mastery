@@ -55,9 +55,7 @@ describe("POST /api/followup/webhooks/email", () => {
         };
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
-        vi.mocked(getEmailProvider).mockResolvedValue(
-            mockEmailProvider as any
-        );
+        vi.mocked(getEmailProvider).mockResolvedValue(mockEmailProvider as any);
 
         const request = createMockRequest({
             method: "POST",
@@ -72,7 +70,9 @@ describe("POST /api/followup/webhooks/email", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean; processed?: number }>(
+            response
+        );
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -111,9 +111,7 @@ describe("POST /api/followup/webhooks/email", () => {
         };
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
-        vi.mocked(getEmailProvider).mockResolvedValue(
-            mockEmailProvider as any
-        );
+        vi.mocked(getEmailProvider).mockResolvedValue(mockEmailProvider as any);
 
         const request = createMockRequest({
             method: "POST",
@@ -128,7 +126,9 @@ describe("POST /api/followup/webhooks/email", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean; processed?: number }>(
+            response
+        );
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -174,9 +174,7 @@ describe("POST /api/followup/webhooks/email", () => {
         };
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
-        vi.mocked(getEmailProvider).mockResolvedValue(
-            mockEmailProvider as any
-        );
+        vi.mocked(getEmailProvider).mockResolvedValue(mockEmailProvider as any);
 
         const request = createMockRequest({
             method: "POST",
@@ -190,7 +188,9 @@ describe("POST /api/followup/webhooks/email", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean; processed?: number }>(
+            response
+        );
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -202,9 +202,7 @@ describe("POST /api/followup/webhooks/email", () => {
             verifyWebhook: vi.fn().mockReturnValue(false),
         };
 
-        vi.mocked(getEmailProvider).mockResolvedValue(
-            mockEmailProvider as any
-        );
+        vi.mocked(getEmailProvider).mockResolvedValue(mockEmailProvider as any);
 
         const request = createMockRequest({
             method: "POST",
@@ -215,7 +213,7 @@ describe("POST /api/followup/webhooks/email", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Invalid signature");
@@ -232,9 +230,7 @@ describe("POST /api/followup/webhooks/email", () => {
         };
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
-        vi.mocked(getEmailProvider).mockResolvedValue(
-            mockEmailProvider as any
-        );
+        vi.mocked(getEmailProvider).mockResolvedValue(mockEmailProvider as any);
 
         const request = createMockRequest({
             method: "POST",
@@ -245,7 +241,9 @@ describe("POST /api/followup/webhooks/email", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean; processed?: number }>(
+            response
+        );
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -280,9 +278,7 @@ describe("POST /api/followup/webhooks/email", () => {
         };
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
-        vi.mocked(getEmailProvider).mockResolvedValue(
-            mockEmailProvider as any
-        );
+        vi.mocked(getEmailProvider).mockResolvedValue(mockEmailProvider as any);
 
         const request = createMockRequest({
             method: "POST",
@@ -293,7 +289,9 @@ describe("POST /api/followup/webhooks/email", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean; processed?: number }>(
+            response
+        );
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);

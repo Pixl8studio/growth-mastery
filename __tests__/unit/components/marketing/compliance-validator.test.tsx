@@ -21,6 +21,10 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
+
 describe("ComplianceValidator", () => {
     const mockOnValidationComplete = vi.fn();
     const defaultProps = {
@@ -213,6 +217,51 @@ describe("ComplianceValidator", () => {
                 expect.objectContaining({
                     method: "POST",
                     body: JSON.stringify(mockContent),
+                })
+            );
+        });
+    });
+
+    it("should handle validation error", async () => {
+        (global.fetch as any).mockRejectedValueOnce(new Error("Validation failed"));
+
+        const mockLogger = vi.mocked(logger);
+        const mockToast = vi.mocked(useToast)().toast;
+
+        render(<ComplianceValidator {...defaultProps} />);
+
+        const runButton = screen.getByText("Run Validation");
+        fireEvent.click(runButton);
+
+        await waitFor(() => {
+            expect(mockLogger.error).toHaveBeenCalled();
+            expect(mockToast).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    title: "Validation Error",
+                    variant: "destructive",
+                })
+            );
+        });
+    });
+
+    it("should handle missing variant ID and content", async () => {
+        const mockToast = vi.mocked(useToast)().toast;
+
+        render(
+            <ComplianceValidator
+                onValidationComplete={mockOnValidationComplete}
+                embedded={false}
+            />
+        );
+
+        const runButton = screen.getByText("Run Validation");
+        fireEvent.click(runButton);
+
+        await waitFor(() => {
+            expect(mockToast).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    title: "Validation Error",
+                    variant: "destructive",
                 })
             );
         });

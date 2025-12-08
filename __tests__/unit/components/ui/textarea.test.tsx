@@ -60,7 +60,9 @@ describe("Textarea", () => {
         const user = userEvent.setup();
         render(<Textarea placeholder="Type here" />);
 
-        const textarea = screen.getByPlaceholderText("Type here") as HTMLTextAreaElement;
+        const textarea = screen.getByPlaceholderText(
+            "Type here"
+        ) as HTMLTextAreaElement;
         await user.type(textarea, "Hello World");
 
         expect(textarea.value).toBe("Hello World");
@@ -98,7 +100,9 @@ describe("Textarea", () => {
         const user = userEvent.setup();
         render(<Textarea placeholder="Multiline text" />);
 
-        const textarea = screen.getByPlaceholderText("Multiline text") as HTMLTextAreaElement;
+        const textarea = screen.getByPlaceholderText(
+            "Multiline text"
+        ) as HTMLTextAreaElement;
         await user.type(textarea, "Line 1{Enter}Line 2{Enter}Line 3");
 
         expect(textarea.value).toContain("Line 1");

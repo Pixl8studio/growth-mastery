@@ -9,23 +9,57 @@ export function createChainableMock(defaultData: any = null, defaultError: any =
     const mock: any = {
         // Terminal methods - return data
         single: vi.fn().mockResolvedValue({ data: defaultData, error: defaultError }),
-        maybeSingle: vi.fn().mockResolvedValue({ data: defaultData, error: defaultError }),
-        execute: vi.fn().mockResolvedValue({ data: defaultData ? [defaultData] : [], error: defaultError }),
-        then: vi.fn().mockResolvedValue({ data: defaultData ? [defaultData] : [], error: defaultError }),
+        maybeSingle: vi
+            .fn()
+            .mockResolvedValue({ data: defaultData, error: defaultError }),
+        execute: vi.fn().mockResolvedValue({
+            data: defaultData ? [defaultData] : [],
+            error: defaultError,
+        }),
+        then: vi.fn().mockResolvedValue({
+            data: defaultData ? [defaultData] : [],
+            error: defaultError,
+        }),
         // Configure default resolved value for non-terminal chain end
-        _defaultResolve: { data: defaultData ? [defaultData] : [], error: defaultError },
+        _defaultResolve: {
+            data: defaultData ? [defaultData] : [],
+            error: defaultError,
+        },
     };
 
     // Chainable methods - return the mock for chaining
     const chainableMethods = [
-        "from", "select", "insert", "update", "delete", "upsert",
-        "eq", "neq", "gt", "gte", "lt", "lte", "like", "ilike",
-        "is", "in", "contains", "containedBy", "range",
-        "order", "limit", "offset", "filter", "match", "not",
-        "or", "and", "textSearch",
+        "from",
+        "select",
+        "insert",
+        "update",
+        "delete",
+        "upsert",
+        "eq",
+        "neq",
+        "gt",
+        "gte",
+        "lt",
+        "lte",
+        "like",
+        "ilike",
+        "is",
+        "in",
+        "contains",
+        "containedBy",
+        "range",
+        "order",
+        "limit",
+        "offset",
+        "filter",
+        "match",
+        "not",
+        "or",
+        "and",
+        "textSearch",
     ];
 
-    chainableMethods.forEach(method => {
+    chainableMethods.forEach((method) => {
         mock[method] = vi.fn().mockReturnValue(mock);
     });
 
@@ -40,11 +74,13 @@ export function createChainableMock(defaultData: any = null, defaultError: any =
  * Creates a mock Supabase client for testing
  * Supports proper method chaining like: supabase.from('table').select('*').eq('id', 1).single()
  */
-export function createMockSupabaseClient(overrides: {
-    data?: any;
-    error?: any;
-    user?: any;
-} = {}) {
+export function createMockSupabaseClient(
+    overrides: {
+        data?: any;
+        error?: any;
+        user?: any;
+    } = {}
+) {
     const { data = null, error = null, user } = overrides;
     const queryMock = createChainableMock(data, error);
 
@@ -60,7 +96,11 @@ export function createMockSupabaseClient(overrides: {
                 error: null,
             }),
             getSession: vi.fn().mockResolvedValue({
-                data: { session: { user: user ?? { id: "test-user-id", email: "test@example.com" } } },
+                data: {
+                    session: {
+                        user: user ?? { id: "test-user-id", email: "test@example.com" },
+                    },
+                },
                 error: null,
             }),
             signOut: vi.fn().mockResolvedValue({ error: null }),
@@ -69,10 +109,14 @@ export function createMockSupabaseClient(overrides: {
         rpc: vi.fn().mockResolvedValue({ data, error }),
         storage: {
             from: vi.fn().mockReturnValue({
-                upload: vi.fn().mockResolvedValue({ data: { path: "test-path" }, error: null }),
+                upload: vi
+                    .fn()
+                    .mockResolvedValue({ data: { path: "test-path" }, error: null }),
                 download: vi.fn().mockResolvedValue({ data: new Blob(), error: null }),
                 remove: vi.fn().mockResolvedValue({ data: null, error: null }),
-                getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: "https://example.com/file" } }),
+                getPublicUrl: vi.fn().mockReturnValue({
+                    data: { publicUrl: "https://example.com/file" },
+                }),
             }),
         },
         // Expose query mock for test assertions

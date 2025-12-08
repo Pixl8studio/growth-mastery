@@ -49,7 +49,7 @@ describe("POST /api/followup/stories", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -72,7 +72,7 @@ describe("POST /api/followup/stories", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toContain("required");
@@ -102,7 +102,7 @@ describe("GET /api/followup/stories", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ stories: Array<unknown> }>(response);
 
         expect(response.status).toBe(200);
         expect(data.stories).toHaveLength(1);

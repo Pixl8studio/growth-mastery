@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "@/app/api/marketing/briefs/[briefId]/generate/route";
 import { NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 // Mock services
 vi.mock("@/lib/marketing/story-weaver-service", () => ({
@@ -127,17 +128,14 @@ describe("POST /api/marketing/briefs/[briefId]/generate", () => {
     });
 
     it("returns 401 for unauthenticated requests", async () => {
-        vi.mocked(await import("@/lib/supabase/server")).createClient = vi.fn(
-            () =>
-                ({
-                    auth: {
-                        getUser: vi.fn(() => ({
-                            data: { user: null },
-                            error: new Error("Not authenticated"),
-                        })),
-                    },
-                }) as any
-        );
+        vi.mocked(createClient).mockReturnValue({
+            auth: {
+                getUser: vi.fn(() => ({
+                    data: { user: null },
+                    error: new Error("Not authenticated"),
+                })),
+            },
+        } as any);
 
         const request = new NextRequest(
             "http://localhost/api/marketing/briefs/brief-123/generate",
@@ -154,27 +152,24 @@ describe("POST /api/marketing/briefs/[briefId]/generate", () => {
     });
 
     it("returns 404 when brief not found", async () => {
-        vi.mocked(await import("@/lib/supabase/server")).createClient = vi.fn(
-            () =>
-                ({
-                    auth: {
-                        getUser: vi.fn(() => ({
-                            data: { user: { id: "user-123" } },
-                            error: null,
-                        })),
-                    },
-                    from: vi.fn(() => ({
-                        select: vi.fn(() => ({
-                            eq: vi.fn(() => ({
-                                single: vi.fn(() => ({
-                                    data: null,
-                                    error: new Error("Not found"),
-                                })),
-                            })),
+        vi.mocked(createClient).mockReturnValue({
+            auth: {
+                getUser: vi.fn(() => ({
+                    data: { user: { id: "user-123" } },
+                    error: null,
+                })),
+            },
+            from: vi.fn(() => ({
+                select: vi.fn(() => ({
+                    eq: vi.fn(() => ({
+                        single: vi.fn(() => ({
+                            data: null,
+                            error: new Error("Not found"),
                         })),
                     })),
-                }) as any
-        );
+                })),
+            })),
+        } as any);
 
         const request = new NextRequest(
             "http://localhost/api/marketing/briefs/brief-123/generate",

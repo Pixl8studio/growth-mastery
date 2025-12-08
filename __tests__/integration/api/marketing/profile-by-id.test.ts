@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET, PUT } from "@/app/api/marketing/profiles/[profileId]/route";
 import { NextRequest } from "next/server";
+import { getProfile } from "@/lib/marketing/brand-voice-service";
 
 vi.mock("@/lib/marketing/brand-voice-service", () => ({
     getProfile: vi.fn(() =>
@@ -65,13 +66,10 @@ describe("GET /api/marketing/profiles/[profileId]", () => {
     });
 
     it("returns 401 for unauthorized access", async () => {
-        vi.mocked(await import("@/lib/marketing/brand-voice-service")).getProfile =
-            vi.fn(() =>
-                Promise.resolve({
-                    success: true,
-                    profile: { id: "profile-123", user_id: "different-user" },
-                })
-            );
+        vi.mocked(getProfile).mockResolvedValue({
+            success: true,
+            profile: { id: "profile-123", user_id: "different-user" } as any,
+        });
 
         const request = new NextRequest(
             "http://localhost/api/marketing/profiles/profile-123"

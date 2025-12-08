@@ -21,6 +21,10 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
+
 describe("SchedulingModal", () => {
     const mockOnClose = vi.fn();
     const mockOnScheduleComplete = vi.fn();
@@ -37,11 +41,25 @@ describe("SchedulingModal", () => {
         global.fetch = vi.fn();
     });
 
+    it("should render correctly when open", () => {
+        render(<SchedulingModal {...defaultProps} />);
+
+        expect(screen.getByText("Schedule Post")).toBeInTheDocument();
+        expect(screen.getByText(/instagram/i)).toBeInTheDocument();
+    });
+
     it("should not render when closed", () => {
         const { container } = render(
             <SchedulingModal {...defaultProps} isOpen={false} />
         );
         expect(container.firstChild).toBeNull();
+    });
+
+    it("should display date and time inputs", () => {
+        render(<SchedulingModal {...defaultProps} />);
+
+        expect(screen.getByLabelText(/date/i)).toBeInTheDocument();
+        expect(screen.getByLabelText(/time/i)).toBeInTheDocument();
     });
 
     it("should display timezone information", () => {
@@ -51,6 +69,24 @@ describe("SchedulingModal", () => {
         expect(screen.getByText(timezone)).toBeInTheDocument();
     });
 
+    it("should handle date selection", () => {
+        render(<SchedulingModal {...defaultProps} />);
+
+        const dateInput = screen.getByLabelText(/date/i);
+        fireEvent.change(dateInput, { target: { value: "2024-12-25" } });
+
+        expect(dateInput).toHaveValue("2024-12-25");
+    });
+
+    it("should handle time selection", () => {
+        render(<SchedulingModal {...defaultProps} />);
+
+        const timeInput = screen.getByLabelText(/time/i);
+        fireEvent.change(timeInput, { target: { value: "15:00" } });
+
+        expect(timeInput).toHaveValue("15:00");
+    });
+
     it("should display best time suggestions for platform", () => {
         render(<SchedulingModal {...defaultProps} />);
 
@@ -58,6 +94,21 @@ describe("SchedulingModal", () => {
         expect(screen.getByText("9:00 AM")).toBeInTheDocument();
         expect(screen.getByText("12:00 PM")).toBeInTheDocument();
         expect(screen.getByText("5:00 PM")).toBeInTheDocument();
+    });
+
+    it("should apply best time suggestion when clicked", () => {
+        const mockToast = vi.mocked(useToast)().toast;
+
+        render(<SchedulingModal {...defaultProps} />);
+
+        const bestTimeButton = screen.getByText("9:00 AM");
+        fireEvent.click(bestTimeButton);
+
+        expect(mockToast).toHaveBeenCalledWith(
+            expect.objectContaining({
+                title: "Best Time Applied",
+            })
+        );
     });
 
     it("should display space selector", () => {
@@ -92,6 +143,114 @@ describe("SchedulingModal", () => {
         expect(recurringSwitch).toBeChecked();
     });
 
+    it("should require date before scheduling", async () => {
+        const mockToast = vi.mocked(useToast)().toast;
+
+        render(<SchedulingModal {...defaultProps} />);
+
+        const scheduleButton = screen.getByText("Schedule Post");
+        fireEvent.click(scheduleButton);
+
+        await waitFor(() => {
+            expect(mockToast).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    title: "Date Required",
+                    variant: "destructive",
+                })
+            );
+        });
+    });
+
+    it("should handle successful scheduling", async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+            json: async () => ({ success: true }),
+        });
+
+        const mockToast = vi.mocked(useToast)().toast;
+
+        render(<SchedulingModal {...defaultProps} />);
+
+        const dateInput = screen.getByLabelText(/date/i);
+        fireEvent.change(dateInput, { target: { value: "2024-12-25" } });
+
+        const scheduleButton = screen.getByText("Schedule Post");
+        fireEvent.click(scheduleButton);
+
+        await waitFor(() => {
+            expect(global.fetch).toHaveBeenCalledWith(
+                expect.stringContaining("/api/marketing/calendar"),
+                expect.objectContaining({
+                    method: "POST",
+                    body: expect.stringContaining("variant-123"),
+                })
+            );
+        });
+
+        await waitFor(() => {
+            expect(mockToast).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    title: "Post Scheduled",
+                })
+            );
+            expect(mockOnScheduleComplete).toHaveBeenCalled();
+            expect(mockOnClose).toHaveBeenCalled();
+        });
+    });
+
+    it("should handle scheduling error", async () => {
+        (global.fetch as any).mockRejectedValueOnce(new Error("Scheduling failed"));
+
+        const mockLogger = vi.mocked(logger);
+        const mockToast = vi.mocked(useToast)().toast;
+
+        render(<SchedulingModal {...defaultProps} />);
+
+        const dateInput = screen.getByLabelText(/date/i);
+        fireEvent.change(dateInput, { target: { value: "2024-12-25" } });
+
+        const scheduleButton = screen.getByText("Schedule Post");
+        fireEvent.click(scheduleButton);
+
+        await waitFor(() => {
+            expect(mockLogger.error).toHaveBeenCalled();
+            expect(mockToast).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    title: "Scheduling Failed",
+                    variant: "destructive",
+                })
+            );
+        });
+    });
+
+    it("should show scheduling state during submission", async () => {
+        (global.fetch as any).mockImplementation(
+            () =>
+                new Promise((resolve) =>
+                    setTimeout(
+                        () => resolve({ json: async () => ({ success: true }) }),
+                        100
+                    )
+                )
+        );
+
+        render(<SchedulingModal {...defaultProps} />);
+
+        const dateInput = screen.getByLabelText(/date/i);
+        fireEvent.change(dateInput, { target: { value: "2024-12-25" } });
+
+        const scheduleButton = screen.getByText("Schedule Post");
+        fireEvent.click(scheduleButton);
+
+        expect(screen.getByText("Scheduling...")).toBeInTheDocument();
+    });
+
+    it("should disable schedule button without date", () => {
+        render(<SchedulingModal {...defaultProps} />);
+
+        const scheduleButton = screen.getByText("Schedule Post");
+        expect(scheduleButton).toBeDisabled();
+    });
+
     it("should close modal when cancel clicked", () => {
         render(<SchedulingModal {...defaultProps} />);
 
@@ -108,6 +267,15 @@ describe("SchedulingModal", () => {
         fireEvent.click(closeButton);
 
         expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it("should set minimum date to today", () => {
+        render(<SchedulingModal {...defaultProps} />);
+
+        const dateInput = screen.getByLabelText(/date/i) as HTMLInputElement;
+        const today = new Date().toISOString().split("T")[0];
+
+        expect(dateInput.min).toBe(today);
     });
 
     it("should show conflict warning when enabled", () => {

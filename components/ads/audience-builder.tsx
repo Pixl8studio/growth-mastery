@@ -32,13 +32,7 @@ export function AudienceBuilder({
         upper: number;
     } | null>(null);
 
-    // Auto-configure when inputs change
-    useEffect(() => {
-        if (audienceType === "interest" && idealCustomer.trim()) {
-            configureInterestAudience();
-        }
-    }, [idealCustomer, audienceType]);
-
+    // Function must be declared before useEffect that calls it
     const configureInterestAudience = () => {
         const config = {
             type: "interest",
@@ -55,6 +49,15 @@ export function AudienceBuilder({
         onConfigured(config, dailyBudget);
         setEstimatedReach({ lower: 50000, upper: 200000 }); // Mock estimate
     };
+
+    // Auto-configure when inputs change
+    useEffect(() => {
+        if (audienceType === "interest" && idealCustomer.trim()) {
+            requestAnimationFrame(() => {
+                configureInterestAudience();
+            });
+        }
+    }, [idealCustomer, audienceType, configureInterestAudience]);
 
     const handleBudgetChange = (value: number[]) => {
         const newBudget = value[0];

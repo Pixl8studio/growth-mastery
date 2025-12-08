@@ -19,7 +19,7 @@ describe("Debug Env API Route", () => {
 
             expect(typeof data.hasSupabaseUrl).toBe("boolean");
             expect(typeof data.hasSupabaseAnonKey).toBe("boolean");
-            
+
             if (data.supabaseUrlFirst20) {
                 expect(data.supabaseUrlFirst20.length).toBeLessThanOrEqual(20);
             }

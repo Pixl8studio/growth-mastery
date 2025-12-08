@@ -122,9 +122,9 @@ describe("POST /api/pages/enrollment/[pageId]/rewrite-field", () => {
     });
 
     it("should handle AI generation errors", async () => {
-        vi.mocked((await import("@/lib/ai/client")).generateTextWithAI).mockRejectedValueOnce(
-            new Error("AI service error")
-        );
+        vi.mocked(
+            (await import("@/lib/ai/client")).generateTextWithAI
+        ).mockRejectedValueOnce(new Error("AI service error"));
 
         const request = new NextRequest(
             "http://localhost:3000/api/pages/enrollment/test-page-id/rewrite-field",

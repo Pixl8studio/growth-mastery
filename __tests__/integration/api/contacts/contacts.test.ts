@@ -68,7 +68,11 @@ describe("GET /api/contacts", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            contacts: Array<{ id: string; email: string; name?: string }>;
+            pagination: { total: number; page: number; pageSize: number };
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -79,12 +83,10 @@ describe("GET /api/contacts", () => {
     it("should return 401 for unauthenticated users", async () => {
         const mockSupabase = {
             auth: {
-                getUser: vi
-                    .fn()
-                    .mockResolvedValue({
-                        data: { user: null },
-                        error: { message: "Unauthorized" },
-                    }),
+                getUser: vi.fn().mockResolvedValue({
+                    data: { user: null },
+                    error: { message: "Unauthorized" },
+                }),
             },
         };
 
@@ -95,7 +97,7 @@ describe("GET /api/contacts", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Unauthorized");
@@ -130,7 +132,10 @@ describe("GET /api/contacts", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            contacts: Array<{ id: string; email: string }>;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -162,7 +167,10 @@ describe("GET /api/contacts", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            contacts: Array<{ id: string; email: string }>;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -195,7 +203,10 @@ describe("GET /api/contacts", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            contacts: Array<{ id: string; email: string }>;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -227,7 +238,7 @@ describe("GET /api/contacts", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Failed to fetch contacts");
@@ -235,7 +246,6 @@ describe("GET /api/contacts", () => {
 });
 
 describe("POST /api/contacts", () => {
-    const mockUser = { id: "user-123", email: "test@example.com" };
     const mockProject = { user_id: "user-123" };
 
     beforeEach(() => {
@@ -311,7 +321,15 @@ describe("POST /api/contacts", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            contact: {
+                id: string;
+                email: string;
+                name?: string;
+                funnel_project_id?: string;
+            };
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -336,7 +354,7 @@ describe("POST /api/contacts", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("Invalid input");
@@ -357,7 +375,7 @@ describe("POST /api/contacts", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("Invalid input");
@@ -387,7 +405,7 @@ describe("POST /api/contacts", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(404);
         expect(data.error).toBe("Project not found");
@@ -450,7 +468,10 @@ describe("POST /api/contacts", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            contact: { id: string; email: string };
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -497,7 +518,7 @@ describe("POST /api/contacts", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Failed to create contact");

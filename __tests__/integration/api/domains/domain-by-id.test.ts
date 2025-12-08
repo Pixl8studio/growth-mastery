@@ -78,7 +78,7 @@ describe("DELETE /api/domains/[domainId]", () => {
         const response = await DELETE(request, {
             params: Promise.resolve({ domainId: "domain-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -107,7 +107,7 @@ describe("DELETE /api/domains/[domainId]", () => {
         const response = await DELETE(request, {
             params: Promise.resolve({ domainId: "nonexistent" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(404);
         expect(data.error).toBe("Domain not found");
@@ -136,7 +136,7 @@ describe("DELETE /api/domains/[domainId]", () => {
         const response = await DELETE(request, {
             params: Promise.resolve({ domainId: "domain-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(404);
         expect(data.error).toBe("Domain not found");
@@ -184,7 +184,7 @@ describe("DELETE /api/domains/[domainId]", () => {
         const response = await DELETE(request, {
             params: Promise.resolve({ domainId: "domain-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -228,7 +228,7 @@ describe("DELETE /api/domains/[domainId]", () => {
         const response = await DELETE(request, {
             params: Promise.resolve({ domainId: "domain-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Failed to delete domain");
@@ -269,7 +269,7 @@ describe("DELETE /api/domains/[domainId]", () => {
         const response = await DELETE(request, {
             params: Promise.resolve({ domainId: "domain-123" }),
         });
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -285,7 +285,7 @@ describe("DELETE /api/domains/[domainId]", () => {
         const response = await DELETE(request, {
             params: Promise.resolve({ domainId: "domain-123" }),
         });
-        const data = await parseJsonResponse(response);
+        await parseJsonResponse<{ error?: string }>(response);
 
         expect(response.status).toBe(500);
     });

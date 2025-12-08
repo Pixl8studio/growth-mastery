@@ -184,7 +184,9 @@ describe("ProspectsKanban", () => {
         render(<ProspectsKanban userId={mockUserId} />);
 
         await waitFor(() => {
-            const segmentBadges = document.querySelectorAll(".bg-red-500, .bg-yellow-500, .bg-primary");
+            const segmentBadges = document.querySelectorAll(
+                ".bg-red-500, .bg-yellow-500, .bg-primary"
+            );
             expect(segmentBadges.length).toBeGreaterThan(0);
         });
     });

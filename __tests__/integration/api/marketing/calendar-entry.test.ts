@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { PUT, DELETE } from "@/app/api/marketing/calendar/[entryId]/route";
 import { NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 vi.mock("@/lib/marketing/publisher-service", () => ({
     cancelScheduledPost: vi.fn(() => Promise.resolve({ success: true })),
@@ -66,17 +67,14 @@ describe("PUT /api/marketing/calendar/[entryId]", () => {
     });
 
     it("returns 401 for unauthenticated requests", async () => {
-        vi.mocked(await import("@/lib/supabase/server")).createClient = vi.fn(
-            () =>
-                ({
-                    auth: {
-                        getUser: vi.fn(() => ({
-                            data: { user: null },
-                            error: new Error("Not authenticated"),
-                        })),
-                    },
-                }) as any
-        );
+        vi.mocked(createClient).mockReturnValue({
+            auth: {
+                getUser: vi.fn(() => ({
+                    data: { user: null },
+                    error: new Error("Not authenticated"),
+                })),
+            },
+        } as any);
 
         const request = new NextRequest(
             "http://localhost/api/marketing/calendar/entry-123",

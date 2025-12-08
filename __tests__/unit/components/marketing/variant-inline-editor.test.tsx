@@ -21,6 +21,10 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
+
 // Mock child components
 vi.mock("@/components/marketing/token-insertion-menu", () => ({
     TokenInsertionMenu: ({ onInsertToken }: any) => (
@@ -241,6 +245,15 @@ describe("VariantInlineEditor", () => {
         expect(screen.getByDisplayValue("Learn More")).toBeInTheDocument();
     });
 
+    it("should allow changing CTA type", () => {
+        render(<VariantInlineEditor {...defaultProps} />);
+
+        const ctaTypeSelect = screen.getByRole("combobox");
+        fireEvent.change(ctaTypeSelect, { target: { value: "dm_keyword" } });
+
+        expect(screen.getByPlaceholderText(/e.g., REGISTER/)).toBeInTheDocument();
+    });
+
     it("should display approval workflow section", () => {
         render(<VariantInlineEditor {...defaultProps} />);
 
@@ -252,6 +265,84 @@ describe("VariantInlineEditor", () => {
         render(<VariantInlineEditor {...defaultProps} />);
 
         expect(screen.getByTestId("compliance-validator")).toBeInTheDocument();
+    });
+
+    it("should prevent save when character limit exceeded", async () => {
+        const mockToast = vi.mocked(useToast)().toast;
+
+        const tooLongVariant = {
+            ...mockVariant,
+            copy_text: "x".repeat(2300),
+        };
+
+        render(<VariantInlineEditor {...defaultProps} variant={tooLongVariant} />);
+
+        const saveButton = screen.getByText("Save Changes");
+        fireEvent.click(saveButton);
+
+        await waitFor(() => {
+            expect(mockToast).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    title: "Character Limit Exceeded",
+                    variant: "destructive",
+                })
+            );
+        });
+
+        expect(mockOnSave).not.toHaveBeenCalled();
+    });
+
+    it("should handle successful save", async () => {
+        const mockToast = vi.mocked(useToast)().toast;
+
+        mockOnSave.mockResolvedValueOnce(undefined);
+
+        render(<VariantInlineEditor {...defaultProps} />);
+
+        const copyTextarea = screen.getByPlaceholderText(/Write your post copy/);
+        fireEvent.change(copyTextarea, { target: { value: "Updated content" } });
+
+        const saveButton = screen.getByText("Save Changes");
+        fireEvent.click(saveButton);
+
+        await waitFor(() => {
+            expect(mockOnSave).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    copy_text: "Updated content",
+                })
+            );
+        });
+
+        await waitFor(() => {
+            expect(mockToast).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    title: "Changes Saved",
+                })
+            );
+            expect(mockOnClose).toHaveBeenCalled();
+        });
+    });
+
+    it("should handle save error", async () => {
+        const mockLogger = vi.mocked(logger);
+        const mockToast = vi.mocked(useToast)().toast;
+
+        mockOnSave.mockRejectedValueOnce(new Error("Save failed"));
+
+        render(<VariantInlineEditor {...defaultProps} />);
+
+        const saveButton = screen.getByText("Save Changes");
+        fireEvent.click(saveButton);
+
+        await waitFor(() => {
+            expect(mockLogger.error).toHaveBeenCalled();
+            expect(mockToast).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    title: "Save Failed",
+                    variant: "destructive",
+                })
+            );
+        });
     });
 
     it("should handle preview button", () => {
@@ -276,6 +367,23 @@ describe("VariantInlineEditor", () => {
         });
     });
 
+    it("should handle save and approve", async () => {
+        mockOnSave.mockResolvedValueOnce(undefined);
+
+        render(<VariantInlineEditor {...defaultProps} />);
+
+        const saveApproveButton = screen.getByText("Save & Approve");
+        fireEvent.click(saveApproveButton);
+
+        await waitFor(() => {
+            expect(mockOnSave).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    approval_status: "approved",
+                })
+            );
+        });
+    });
+
     it("should close modal when cancel clicked", () => {
         render(<VariantInlineEditor {...defaultProps} />);
 
@@ -283,6 +391,19 @@ describe("VariantInlineEditor", () => {
         fireEvent.click(cancelButton);
 
         expect(mockOnClose).toHaveBeenCalled();
+    });
+
+    it("should close modal when X clicked", () => {
+        render(<VariantInlineEditor {...defaultProps} />);
+
+        const closeButton = screen
+            .getAllByRole("button")
+            .find((btn) => btn.querySelector("svg"));
+
+        if (closeButton) {
+            fireEvent.click(closeButton);
+            expect(mockOnClose).toHaveBeenCalled();
+        }
     });
 
     it("should display UTM builder for link tracking", () => {

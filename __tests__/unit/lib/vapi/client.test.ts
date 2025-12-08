@@ -191,6 +191,7 @@ describe("VAPI Client", () => {
             const secret = "webhook-secret";
 
             // Create actual HMAC signature
+
             const crypto = require("crypto");
             const hmac = crypto.createHmac("sha256", secret);
             hmac.update(payload);

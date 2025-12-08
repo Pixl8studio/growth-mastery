@@ -19,7 +19,6 @@ import {
     detectPlatformType,
     scrapeAndExtractContent,
 } from "@/lib/marketing/social-scraper-service";
-import { logger } from "@/lib/logger";
 import { createClient } from "@/lib/supabase/server";
 import { decryptToken } from "@/lib/crypto/token-encryption";
 import { extractTextFromUrl } from "@/lib/intake/processors";

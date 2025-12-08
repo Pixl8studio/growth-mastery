@@ -5,7 +5,6 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest } from "next/server";
-import { logger } from "@/lib/logger";
 
 // Mock logger
 vi.mock("@/lib/logger", () => ({

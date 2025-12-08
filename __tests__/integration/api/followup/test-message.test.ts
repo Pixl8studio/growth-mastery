@@ -59,9 +59,7 @@ describe("POST /api/followup/test-message", () => {
         };
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
-        vi.mocked(getEmailProvider).mockResolvedValue(
-            mockEmailProvider as any
-        );
+        vi.mocked(getEmailProvider).mockResolvedValue(mockEmailProvider as any);
 
         const request = createMockRequest({
             method: "POST",
@@ -73,7 +71,11 @@ describe("POST /api/followup/test-message", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            channel: string;
+            delivery_id: string;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -126,7 +128,11 @@ describe("POST /api/followup/test-message", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            channel: string;
+            delivery_id: string;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -151,7 +157,7 @@ describe("POST /api/followup/test-message", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("agent_config_id is required");
@@ -177,7 +183,7 @@ describe("POST /api/followup/test-message", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("channel must be 'email' or 'sms'");
@@ -219,7 +225,7 @@ describe("POST /api/followup/test-message", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("Recipient phone is required for SMS");
@@ -246,7 +252,7 @@ describe("POST /api/followup/test-message", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Authentication required");
@@ -285,7 +291,7 @@ describe("POST /api/followup/test-message", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Access denied to agent config");
@@ -324,9 +330,7 @@ describe("POST /api/followup/test-message", () => {
         };
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
-        vi.mocked(getEmailProvider).mockResolvedValue(
-            mockEmailProvider as any
-        );
+        vi.mocked(getEmailProvider).mockResolvedValue(mockEmailProvider as any);
 
         const request = createMockRequest({
             method: "POST",
@@ -338,7 +342,7 @@ describe("POST /api/followup/test-message", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Failed to send email");

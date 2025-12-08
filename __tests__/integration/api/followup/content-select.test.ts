@@ -77,9 +77,7 @@ describe("POST /api/followup/content/select", () => {
             ],
         });
         vi.mocked(detectObjections).mockReturnValue(["price", "time"]);
-        vi.mocked(getRecommendedStoryTypes).mockReturnValue([
-            "transformation",
-        ]);
+        vi.mocked(getRecommendedStoryTypes).mockReturnValue(["transformation"]);
 
         const request = createMockRequest({
             method: "POST",
@@ -92,7 +90,11 @@ describe("POST /api/followup/content/select", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            stories: Array<unknown>;
+            detected_objections: string[];
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -117,7 +119,7 @@ describe("POST /api/followup/content/select", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("prospect_id is required");
@@ -141,7 +143,7 @@ describe("POST /api/followup/content/select", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Authentication required");
@@ -180,7 +182,7 @@ describe("POST /api/followup/content/select", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Access denied to prospect");
@@ -223,7 +225,7 @@ describe("POST /api/followup/content/select", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Failed to select stories");

@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "@/app/api/marketing/profiles/[profileId]/analyze-url/route";
 import { NextRequest } from "next/server";
+import { scrapeAndExtractContent } from "@/lib/marketing/social-scraper-service";
 
 vi.mock("@/lib/marketing/social-scraper-service", () => ({
     scrapeAndExtractContent: vi.fn(() =>
@@ -91,14 +92,10 @@ describe("POST /api/marketing/profiles/[profileId]/analyze-url", () => {
     });
 
     it("returns 400 when no content extracted", async () => {
-        vi.mocked(
-            await import("@/lib/marketing/social-scraper-service")
-        ).scrapeAndExtractContent = vi.fn(() =>
-            Promise.resolve({
-                success: true,
-                data: { content: [], platform: "instagram" },
-            })
-        );
+        vi.mocked(scrapeAndExtractContent).mockResolvedValue({
+            success: true,
+            data: { content: [], platform: "instagram", source: "scrape" },
+        });
 
         const request = new NextRequest(
             "http://localhost/api/marketing/profiles/profile-123/analyze-url",

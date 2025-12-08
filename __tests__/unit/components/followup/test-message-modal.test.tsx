@@ -2,7 +2,7 @@
  * TestMessageModal Component Tests
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { TestMessageModal } from "@/components/followup/test-message-modal";
 
@@ -34,6 +34,17 @@ describe("TestMessageModal", () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+
+        // Reset fetch mock with default resolved value
+        (global.fetch as any).mockReset();
+        (global.fetch as any).mockResolvedValue({
+            ok: true,
+            json: async () => ({ delivery_id: "del-123" }),
+        });
+    });
+
+    afterEach(() => {
+        vi.useRealTimers(); // Clean up any fake timers to prevent test interference
     });
 
     it("should render when open is true", () => {
@@ -163,10 +174,17 @@ describe("TestMessageModal", () => {
 
     it("should show loading state while sending", async () => {
         (global.fetch as any).mockImplementation(
-            () => new Promise((resolve) => setTimeout(() => resolve({
-                ok: true,
-                json: async () => ({ delivery_id: "del-123" }),
-            }), 100))
+            () =>
+                new Promise((resolve) =>
+                    setTimeout(
+                        () =>
+                            resolve({
+                                ok: true,
+                                json: async () => ({ delivery_id: "del-123" }),
+                            }),
+                        100
+                    )
+                )
         );
 
         render(<TestMessageModal {...mockProps} />);
@@ -210,6 +228,33 @@ describe("TestMessageModal", () => {
                 screen.getByText(/Check your inbox at user@example.com/)
             ).toBeInTheDocument();
         });
+    });
+
+    it("should auto-close modal after successful send", async () => {
+        vi.useFakeTimers();
+
+        (global.fetch as any).mockResolvedValue({
+            ok: true,
+            json: async () => ({ delivery_id: "del-123" }),
+        });
+
+        render(<TestMessageModal {...mockProps} />);
+
+        const sendButton = screen.getByText("Send Test Email");
+        fireEvent.click(sendButton);
+
+        await waitFor(() => {
+            expect(screen.getByText("Test Message Sent!")).toBeInTheDocument();
+        });
+
+        // Run all timers to execute the setTimeout callback
+        await vi.runAllTimersAsync();
+
+        await waitFor(() => {
+            expect(mockProps.onClose).toHaveBeenCalled();
+        });
+
+        vi.useRealTimers();
     });
 
     it("should reset sent state when modal is reopened", () => {
@@ -262,5 +307,34 @@ describe("TestMessageModal", () => {
 
         const emailButton = screen.getByText("Email").closest("button");
         expect(emailButton).toHaveClass("border-primary");
+    });
+
+    it("should handle API error gracefully", async () => {
+        (global.fetch as any).mockRejectedValue(new Error("Network error"));
+
+        render(<TestMessageModal {...mockProps} />);
+
+        const sendButton = screen.getByText("Send Test Email");
+        fireEvent.click(sendButton);
+
+        await waitFor(() => {
+            expect(screen.queryByText("Test Message Sent!")).not.toBeInTheDocument();
+        });
+    });
+
+    it("should display close button in success state", async () => {
+        (global.fetch as any).mockResolvedValue({
+            ok: true,
+            json: async () => ({ delivery_id: "del-123" }),
+        });
+
+        render(<TestMessageModal {...mockProps} />);
+
+        const sendButton = screen.getByText("Send Test Email");
+        fireEvent.click(sendButton);
+
+        await waitFor(() => {
+            expect(screen.getByText("Close")).toBeInTheDocument();
+        });
     });
 });

@@ -11,10 +11,14 @@ vi.mock("next/link", () => ({
     default: ({ children, href }: any) => <a href={href}>{children}</a>,
 }));
 
-// Mock utils
-vi.mock("@/lib/utils", () => ({
-    formatDate: (date: string) => new Date(date).toLocaleDateString(),
-}));
+// Mock utils - use importOriginal to preserve cn and other exports
+vi.mock("@/lib/utils", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("@/lib/utils")>();
+    return {
+        ...actual,
+        formatDate: (date: string) => new Date(date).toLocaleDateString(),
+    };
+});
 
 // Mock completion utils
 const mockGetStepCompletionStatus = vi.fn();

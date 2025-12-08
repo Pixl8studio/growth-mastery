@@ -140,6 +140,13 @@ describe("DomainsSettings", () => {
                             id: "dom-3",
                             domain: "newdomain.com",
                             verified: false,
+                            verification_status: "pending",
+                            funnel_projects: { id: "proj-1", name: "My Funnel" },
+                            dns_instructions: {
+                                type: "CNAME",
+                                name: "www",
+                                value: "proxy.example.com",
+                            },
                         },
                     }),
                 });
@@ -271,6 +278,14 @@ describe("DomainsSettings", () => {
                         domain: {
                             id: "dom-3",
                             domain: "newdomain.com",
+                            verified: false,
+                            verification_status: "pending",
+                            funnel_projects: { id: "proj-1", name: "My Funnel" },
+                            dns_instructions: {
+                                type: "CNAME",
+                                name: "www",
+                                value: "proxy.example.com",
+                            },
                         },
                     }),
                 });

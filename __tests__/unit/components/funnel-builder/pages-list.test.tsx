@@ -48,10 +48,14 @@ vi.mock("@/components/pages/slug-editor", () => ({
     ),
 }));
 
-// Mock utils
-vi.mock("@/lib/utils", () => ({
-    formatDate: (date: string) => new Date(date).toLocaleDateString(),
-}));
+// Mock utils - use importOriginal to preserve cn and other exports
+vi.mock("@/lib/utils", async (importOriginal) => {
+    const actual = await importOriginal<typeof import("@/lib/utils")>();
+    return {
+        ...actual,
+        formatDate: (date: string) => new Date(date).toLocaleDateString(),
+    };
+});
 
 // Mock next/link
 vi.mock("next/link", () => ({
@@ -64,32 +68,36 @@ describe("PagesList", () => {
         username: "testuser",
     };
 
+    const mockRegistrationData = [
+        {
+            id: "reg-1",
+            headline: "Register Now",
+            vanity_slug: "register-webinar",
+            is_published: true,
+            updated_at: "2024-01-01T00:00:00Z",
+            funnel_projects: { id: "project-1", name: "My Funnel" },
+        },
+    ];
+
     beforeEach(() => {
         vi.clearAllMocks();
 
-        // Setup default mock chain
-        const mockData = {
-            registration_pages: [
-                {
-                    id: "reg-1",
-                    headline: "Register Now",
-                    vanity_slug: "register-webinar",
-                    is_published: true,
-                    updated_at: "2024-01-01T00:00:00Z",
-                    funnel_projects: { id: "project-1", name: "My Funnel" },
-                },
-            ],
-            watch_pages: [],
-            enrollment_pages: [],
-        };
+        // Setup mock to return different data based on table name
+        mockFrom.mockImplementation((tableName: string) => {
+            const createChain = (data: any[]) => ({
+                select: () => ({
+                    eq: () => ({
+                        order: () => Promise.resolve({ data, error: null }),
+                    }),
+                }),
+            });
 
-        mockOrder.mockResolvedValue({
-            data: mockData.registration_pages,
-            error: null,
+            if (tableName === "registration_pages") {
+                return createChain(mockRegistrationData);
+            }
+            // Return empty arrays for watch and enrollment pages
+            return createChain([]);
         });
-        mockEq.mockReturnValue({ order: mockOrder });
-        mockSelect.mockReturnValue({ eq: mockEq });
-        mockFrom.mockReturnValue({ select: mockSelect });
     });
 
     it("should render loading state initially", () => {
@@ -102,7 +110,10 @@ describe("PagesList", () => {
         render(<PagesList {...mockProps} />);
 
         await waitFor(() => {
-            expect(screen.getByText("Register Now")).toBeInTheDocument();
+            // Use heading selector since headline appears in multiple places
+            expect(
+                screen.getByRole("heading", { name: "Register Now" })
+            ).toBeInTheDocument();
         });
     });
 
@@ -139,10 +150,12 @@ describe("PagesList", () => {
         render(<PagesList {...mockProps} />);
 
         await waitFor(() => {
-            expect(screen.getByText("Register Now")).toBeInTheDocument();
+            expect(
+                screen.getByRole("heading", { name: "Register Now" })
+            ).toBeInTheDocument();
         });
 
-        const copyButton = screen.getAllByRole("button", { name: "" })[0];
+        const copyButton = screen.getByTitle("Copy full URL");
         fireEvent.click(copyButton);
 
         await waitFor(() => {
@@ -154,52 +167,54 @@ describe("PagesList", () => {
         });
     });
 
-    it("should show error toast when copying without slug", async () => {
-        mockOrder.mockResolvedValue({
-            data: [
-                {
-                    id: "reg-1",
-                    headline: "Register Now",
-                    vanity_slug: null,
-                    is_published: true,
-                    updated_at: "2024-01-01T00:00:00Z",
-                    funnel_projects: { id: "project-1", name: "My Funnel" },
-                },
-            ],
-            error: null,
-        });
+    it("should not show Public URL section when slug is null", async () => {
+        const noSlugData = [
+            {
+                id: "reg-1",
+                headline: "Register Now",
+                vanity_slug: null,
+                is_published: true,
+                updated_at: "2024-01-01T00:00:00Z",
+                funnel_projects: { id: "project-1", name: "My Funnel" },
+            },
+        ];
 
-        const mockClipboard = {
-            writeText: vi.fn().mockResolvedValue(undefined),
-        };
-        Object.assign(navigator, { clipboard: mockClipboard });
+        mockFrom.mockImplementation((tableName: string) => {
+            const createChain = (data: any[]) => ({
+                select: () => ({
+                    eq: () => ({
+                        order: () => Promise.resolve({ data, error: null }),
+                    }),
+                }),
+            });
+
+            if (tableName === "registration_pages") {
+                return createChain(noSlugData);
+            }
+            return createChain([]);
+        });
 
         render(<PagesList {...mockProps} />);
 
         await waitFor(() => {
-            expect(screen.getByText("Register Now")).toBeInTheDocument();
+            expect(
+                screen.getByRole("heading", { name: "Register Now" })
+            ).toBeInTheDocument();
         });
 
-        const copyButtons = screen.getAllByRole("button", { name: "" });
-        if (copyButtons.length > 0) {
-            fireEvent.click(copyButtons[0]);
-
-            await waitFor(() => {
-                expect(mockToast).toHaveBeenCalledWith(
-                    expect.objectContaining({
-                        title: "No slug set",
-                        variant: "destructive",
-                    })
-                );
-            });
-        }
+        // When there's no slug, the Public URL section and copy button are not rendered
+        expect(screen.queryByText("Public URL")).not.toBeInTheDocument();
+        expect(screen.queryByTitle("Copy full URL")).not.toBeInTheDocument();
     });
 
     it("should display no pages message when empty", async () => {
-        mockOrder.mockResolvedValue({
-            data: [],
-            error: null,
-        });
+        mockFrom.mockImplementation(() => ({
+            select: () => ({
+                eq: () => ({
+                    order: () => Promise.resolve({ data: [], error: null }),
+                }),
+            }),
+        }));
 
         render(<PagesList {...mockProps} />);
 
@@ -216,7 +231,9 @@ describe("PagesList", () => {
         render(<PagesList {...mockProps} />);
 
         await waitFor(() => {
-            expect(screen.getByText("Register Now")).toBeInTheDocument();
+            expect(
+                screen.getByRole("heading", { name: "Register Now" })
+            ).toBeInTheDocument();
         });
 
         const updateButton = screen.getByText("Update Slug");

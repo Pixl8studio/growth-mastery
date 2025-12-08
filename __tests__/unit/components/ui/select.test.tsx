@@ -152,7 +152,11 @@ describe("Select", () => {
         );
 
         await user.click(screen.getByRole("combobox"));
-        const separator = screen.getByText("Option 1").nextElementSibling;
+        // Verify both options are rendered correctly
+        expect(screen.getByText("Option 1")).toBeInTheDocument();
+        expect(screen.getByText("Option 2")).toBeInTheDocument();
+        // Separator is decorative (aria-hidden), verify it renders in the document
+        const separator = document.querySelector('[aria-hidden="true"].bg-gray-200');
         expect(separator).toBeInTheDocument();
     });
 

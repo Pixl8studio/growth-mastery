@@ -78,7 +78,9 @@ describe("Registration Framework Prompts", () => {
                 mockDeckSlides
             );
 
-            expect(prompt).toContain("Universal Webinar Registration Landing Page Framework");
+            expect(prompt).toContain(
+                "Universal Webinar Registration Landing Page Framework"
+            );
             expect(prompt).toContain("Hero Header");
             expect(prompt).toContain("Sub-Header");
             expect(prompt).toContain("Social Proof Bar");
@@ -239,7 +241,9 @@ describe("Registration Framework Prompts", () => {
                 mockDeckSlides
             );
 
-            expect(prompt).toContain("Universal Webinar Registration Landing Page Framework");
+            expect(prompt).toContain(
+                "Universal Webinar Registration Landing Page Framework"
+            );
         });
 
         it("should include business context", () => {
@@ -409,7 +413,9 @@ describe("Registration Framework Prompts", () => {
                 mockDeckSlides
             );
 
-            expect(prompt).toContain("Universal Webinar Registration Landing Page Framework");
+            expect(prompt).toContain(
+                "Universal Webinar Registration Landing Page Framework"
+            );
         });
 
         it("should include business context", () => {

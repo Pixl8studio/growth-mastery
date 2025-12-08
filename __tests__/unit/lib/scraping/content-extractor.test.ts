@@ -9,6 +9,8 @@ vi.mock("@/lib/logger", () => ({
     logger: {
         info: vi.fn(),
         error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn(),
     },
 }));
 
@@ -16,7 +18,7 @@ vi.mock("@/lib/logger", () => ({
 const mockFetchWithRetry = vi.fn();
 const mockValidateUrl = vi.fn();
 
-vi.mock("./fetch-utils", () => ({
+vi.mock("@/lib/scraping/fetch-utils", () => ({
     fetchWithRetry: mockFetchWithRetry,
     validateUrl: mockValidateUrl,
 }));
@@ -185,7 +187,10 @@ describe("Content Extractor Service", () => {
         });
 
         it("limits links to 50 items", async () => {
-            const links = Array.from({ length: 100 }, (_, i) => `<a href="/link${i}">Link ${i}</a>`);
+            const links = Array.from(
+                { length: 100 },
+                (_, i) => `<a href="/link${i}">Link ${i}</a>`
+            );
             const html = `
                 <html>
                     <body>${links.join("")}</body>
@@ -285,10 +290,12 @@ describe("Content Extractor Service", () => {
             expect(result.metadata.author).toBeUndefined();
         });
 
-        it("throws error on invalid HTML", async () => {
-            await expect(async () => {
-                await extractContent("", "https://example.com");
-            }).rejects.toThrow();
+        it("handles empty HTML gracefully", async () => {
+            const result = await extractContent("", "https://example.com");
+
+            expect(result.title).toBe("");
+            expect(result.mainContent).toBe("");
+            expect(result.headings).toEqual([]);
         });
     });
 
@@ -340,9 +347,9 @@ describe("Content Extractor Service", () => {
                 error: "Network error",
             });
 
-            await expect(
-                extractContentFromUrl("https://example.com")
-            ).rejects.toThrow("Network error");
+            await expect(extractContentFromUrl("https://example.com")).rejects.toThrow(
+                "Network error"
+            );
         });
 
         it("throws error when fetch returns no HTML", async () => {
@@ -352,9 +359,9 @@ describe("Content Extractor Service", () => {
                 html: null,
             });
 
-            await expect(
-                extractContentFromUrl("https://example.com")
-            ).rejects.toThrow("Failed to fetch URL");
+            await expect(extractContentFromUrl("https://example.com")).rejects.toThrow(
+                "Failed to fetch URL"
+            );
         });
     });
 });

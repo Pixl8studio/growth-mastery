@@ -23,7 +23,7 @@ describe("Features Template", () => {
         it("should include section wrapper with proper attributes", () => {
             const html = generateFeaturesTemplate();
 
-            expect(html).toContain('<section');
+            expect(html).toContain("<section");
             expect(html).toContain('class="block features-section"');
             expect(html).toContain('data-block-type="features"');
         });

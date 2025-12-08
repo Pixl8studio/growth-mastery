@@ -24,6 +24,33 @@ vi.mock("@/lib/logger", () => ({
     },
 }));
 
+/**
+ * Creates a chainable and thenable mock for Supabase queries
+ */
+function createChainableMock(result: { data: unknown; error: unknown }) {
+    const chain: Record<string, unknown> = {};
+    const methods = [
+        "select",
+        "eq",
+        "gte",
+        "lte",
+        "in",
+        "or",
+        "not",
+        "order",
+        "limit",
+        "single",
+        "update",
+    ];
+    methods.forEach((method) => {
+        chain[method] = vi.fn(() => chain);
+    });
+    // Make it thenable for await
+    chain.then = (resolve: (value: unknown) => void) =>
+        Promise.resolve(result).then(resolve);
+    return chain;
+}
+
 // Import after mocks are defined
 const { aggregateKnowledgeBase, updateAgentKnowledge } = await import(
     "@/lib/followup/knowledge-base-aggregator"
@@ -154,17 +181,8 @@ describe("Knowledge Base Aggregator", () => {
         });
 
         it("handles missing data sources gracefully", async () => {
-            mockSupabase.from.mockReturnValue({
-                select: vi.fn().mockReturnThis(),
-                eq: vi.fn().mockReturnThis(),
-                order: vi.fn().mockReturnThis(),
-                limit: vi.fn().mockReturnValue({
-                    single: vi.fn().mockResolvedValue({
-                        data: null,
-                        error: { message: "Not found" },
-                    }),
-                }),
-            });
+            const mockChain = createChainableMock({ data: null, error: null });
+            mockSupabase.from.mockReturnValue(mockChain);
 
             const result = await aggregateKnowledgeBase("funnel-123", "offer-123");
 
@@ -184,17 +202,8 @@ describe("Knowledge Base Aggregator", () => {
         });
 
         it("includes source metadata", async () => {
-            mockSupabase.from.mockReturnValue({
-                select: vi.fn().mockReturnThis(),
-                eq: vi.fn().mockReturnThis(),
-                order: vi.fn().mockReturnThis(),
-                limit: vi.fn().mockReturnValue({
-                    single: vi.fn().mockResolvedValue({
-                        data: null,
-                        error: null,
-                    }),
-                }),
-            });
+            const mockChain = createChainableMock({ data: null, error: null });
+            mockSupabase.from.mockReturnValue(mockChain);
 
             const result = await aggregateKnowledgeBase("funnel-123", "offer-123");
 
@@ -209,32 +218,11 @@ describe("Knowledge Base Aggregator", () => {
 
     describe("updateAgentKnowledge", () => {
         it("updates agent config with aggregated knowledge", async () => {
-            // Mock aggregation
-            let callCount = 0;
             mockSupabase.from.mockImplementation((table) => {
-                callCount++;
-
                 if (table === "followup_agent_configs") {
-                    return {
-                        update: vi.fn().mockReturnValue({
-                            eq: vi.fn().mockResolvedValue({
-                                error: null,
-                            }),
-                        }),
-                    };
+                    return createChainableMock({ data: null, error: null });
                 }
-
-                return {
-                    select: vi.fn().mockReturnThis(),
-                    eq: vi.fn().mockReturnThis(),
-                    order: vi.fn().mockReturnThis(),
-                    limit: vi.fn().mockReturnValue({
-                        single: vi.fn().mockResolvedValue({
-                            data: null,
-                            error: null,
-                        }),
-                    }),
-                };
+                return createChainableMock({ data: null, error: null });
             });
 
             const result = await updateAgentKnowledge(
@@ -250,26 +238,12 @@ describe("Knowledge Base Aggregator", () => {
         it("returns error when update fails", async () => {
             mockSupabase.from.mockImplementation((table) => {
                 if (table === "followup_agent_configs") {
-                    return {
-                        update: vi.fn().mockReturnValue({
-                            eq: vi.fn().mockResolvedValue({
-                                error: { message: "Update failed" },
-                            }),
-                        }),
-                    };
+                    return createChainableMock({
+                        data: null,
+                        error: { message: "Update failed" },
+                    });
                 }
-
-                return {
-                    select: vi.fn().mockReturnThis(),
-                    eq: vi.fn().mockReturnThis(),
-                    order: vi.fn().mockReturnThis(),
-                    limit: vi.fn().mockReturnValue({
-                        single: vi.fn().mockResolvedValue({
-                            data: null,
-                            error: null,
-                        }),
-                    }),
-                };
+                return createChainableMock({ data: null, error: null });
             });
 
             const result = await updateAgentKnowledge(

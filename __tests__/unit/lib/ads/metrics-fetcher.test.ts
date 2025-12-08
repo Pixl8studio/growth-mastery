@@ -8,6 +8,7 @@ import {
     createTestContentBrief,
     createTestPostVariant,
 } from "@/__tests__/fixtures/db-fixtures";
+import type { MetaInsightsResponse } from "@/types/ads";
 
 // Create chainable query builder that supports .eq().eq().single() patterns
 function createChainableBuilder(response: { data: unknown; error: unknown }) {
@@ -143,7 +144,7 @@ describe("Metrics Fetcher", () => {
                         ],
                     },
                 ],
-            } as unknown);
+            } as unknown as MetaInsightsResponse);
 
             const result = await syncAllAdMetrics();
 
@@ -219,7 +220,7 @@ describe("Metrics Fetcher", () => {
                             actions: [],
                         },
                     ],
-                } as unknown);
+                } as unknown as MetaInsightsResponse);
 
             const result = await syncAllAdMetrics();
 
@@ -275,7 +276,7 @@ describe("Metrics Fetcher", () => {
                         actions: [{ action_type: "lead", value: "25" }],
                     },
                 ],
-            } as unknown);
+            } as unknown as MetaInsightsResponse);
 
             await syncCampaignMetrics(briefId, userId);
 
@@ -341,12 +342,14 @@ describe("Metrics Fetcher", () => {
                         actions: [],
                     },
                 ],
-            } as unknown);
+            } as unknown as MetaInsightsResponse);
 
             await syncCampaignMetrics(briefId, userId);
 
             // CPC = 10000 cents / 200 clicks = 50 cents
-            expect(savedAnalytics?.cpc_cents).toBe(50);
+            expect(
+                (savedAnalytics as unknown as Record<string, unknown>)?.cpc_cents
+            ).toBe(50);
         });
 
         it("should calculate CPM correctly", async () => {
@@ -404,12 +407,14 @@ describe("Metrics Fetcher", () => {
                         actions: [],
                     },
                 ],
-            } as unknown);
+            } as unknown as MetaInsightsResponse);
 
             await syncCampaignMetrics(briefId, userId);
 
             // CPM = (5000 cents / 10000 impressions) * 1000 = 500 cents ($5.00 per 1000 impressions)
-            expect(savedAnalytics?.cpm_cents).toBe(500);
+            expect(
+                (savedAnalytics as unknown as Record<string, unknown>)?.cpm_cents
+            ).toBe(500);
         });
 
         it("should calculate CTR correctly", async () => {
@@ -467,12 +472,14 @@ describe("Metrics Fetcher", () => {
                         actions: [],
                     },
                 ],
-            } as unknown);
+            } as unknown as MetaInsightsResponse);
 
             await syncCampaignMetrics(briefId, userId);
 
             // CTR = (250 / 10000) * 100 = 2.5%
-            expect(savedAnalytics?.ctr_percent).toBe(2.5);
+            expect(
+                (savedAnalytics as unknown as Record<string, unknown>)?.ctr_percent
+            ).toBe(2.5);
         });
 
         it("should calculate cost per lead correctly", async () => {
@@ -536,14 +543,19 @@ describe("Metrics Fetcher", () => {
                         ],
                     },
                 ],
-            } as unknown);
+            } as unknown as MetaInsightsResponse);
 
             await syncCampaignMetrics(briefId, userId);
 
             // Total leads = 20 + 5 = 25
             // CPL = 10000 cents / 25 leads = 400 cents ($4.00 per lead)
-            expect(savedAnalytics?.cost_per_lead_cents).toBe(400);
-            expect(savedAnalytics?.leads_count).toBe(25);
+            expect(
+                (savedAnalytics as unknown as Record<string, unknown>)
+                    ?.cost_per_lead_cents
+            ).toBe(400);
+            expect(
+                (savedAnalytics as unknown as Record<string, unknown>)?.leads_count
+            ).toBe(25);
         });
 
         it("should create snapshot after syncing metrics", async () => {
@@ -600,17 +612,18 @@ describe("Metrics Fetcher", () => {
             };
             vi.mocked(getCampaignInsights).mockResolvedValue({
                 data: [mockInsightData],
-            } as unknown);
+            } as unknown as MetaInsightsResponse);
 
             await syncCampaignMetrics(briefId, userId);
 
             expect(snapshotData).toBeTruthy();
-            expect(snapshotData?.post_variant_id).toBe("variant-1");
-            expect(snapshotData?.user_id).toBe(userId);
-            expect(snapshotData?.impressions).toBe(10000);
-            expect(snapshotData?.clicks).toBe(250);
-            expect(snapshotData?.leads).toBe(20);
-            expect(snapshotData?.raw_metrics).toEqual(mockInsightData);
+            const snapshot = snapshotData as unknown as Record<string, unknown>;
+            expect(snapshot?.post_variant_id).toBe("variant-1");
+            expect(snapshot?.user_id).toBe(userId);
+            expect(snapshot?.impressions).toBe(10000);
+            expect(snapshot?.clicks).toBe(250);
+            expect(snapshot?.leads).toBe(20);
+            expect(snapshot?.raw_metrics).toEqual(mockInsightData);
         });
 
         it("should handle missing Facebook connection", async () => {
@@ -709,7 +722,7 @@ describe("Metrics Fetcher", () => {
                         actions: [],
                     },
                 ],
-            } as unknown);
+            } as unknown as MetaInsightsResponse);
 
             const result = await syncUserAdMetrics(userId);
 

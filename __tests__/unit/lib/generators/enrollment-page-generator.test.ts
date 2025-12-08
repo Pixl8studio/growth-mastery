@@ -175,17 +175,30 @@ describe("Enrollment Page Generator", () => {
         });
 
         it("should extract testimonials from deck slides", () => {
+            // Mock deck with quoted content (implementation looks for quotes)
+            const deckWithQuotes = {
+                ...mockDeckStructure,
+                slides: [
+                    {
+                        slideNumber: 1,
+                        title: '"Amazing transformation"',
+                        description: "This program changed my life and business completely",
+                        section: "solution" as const,
+                    },
+                ],
+            };
+
             const html = generateEnrollmentHTML({
                 projectId: "project-123",
                 offer: mockOffer,
-                deckStructure: mockDeckStructure,
+                deckStructure: deckWithQuotes,
                 theme: mockTheme,
             });
 
             expect(html).toContain("testimonial-block");
             expect(html).toContain("testimonial-card");
             expect(html).toContain("testimonial-quote");
-            expect(html).toContain(mockDeckStructure.slides[0].title);
+            expect(html).toContain("Amazing transformation");
         });
 
         it("should use default testimonials if none in deck", () => {

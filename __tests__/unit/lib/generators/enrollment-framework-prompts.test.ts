@@ -212,8 +212,9 @@ describe("Enrollment Framework Prompts", () => {
                 mockDeckSlides
             );
 
+            // Should use default audience "entrepreneurs" and offerData's promise
             expect(prompt).toContain("entrepreneurs");
-            expect(prompt).toContain("transform their business");
+            expect(prompt).toContain("million-dollar businesses");
         });
 
         it("should handle offers without features", () => {

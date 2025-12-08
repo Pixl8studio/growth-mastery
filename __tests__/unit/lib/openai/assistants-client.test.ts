@@ -18,14 +18,14 @@ vi.mock("openai", () => {
         default: vi.fn().mockImplementation(() => ({
             beta: {
                 threads: {
-                    create: vi.fn(),
+                    create: vi.fn().mockResolvedValue({ id: "thread-mock-123" }),
                     messages: {
-                        create: vi.fn(),
-                        list: vi.fn(),
+                        create: vi.fn().mockResolvedValue({ id: "msg-mock-123" }),
+                        list: vi.fn().mockResolvedValue({ data: [] }),
                     },
                     runs: {
-                        create: vi.fn(),
-                        retrieve: vi.fn(),
+                        create: vi.fn().mockResolvedValue({ id: "run-mock-123" }),
+                        retrieve: vi.fn().mockResolvedValue({ id: "run-mock-123", status: "completed" }),
                     },
                 },
             },
@@ -67,10 +67,22 @@ describe("OpenAI Assistants Client", () => {
         });
 
         it("should throw error when API key is missing", async () => {
+            vi.resetModules();
+
             vi.doMock("@/lib/env", () => ({
                 env: {
                     OPENAI_API_KEY: undefined,
                 },
+            }));
+
+            vi.doMock("openai", () => ({
+                default: vi.fn().mockImplementation(() => ({
+                    beta: {
+                        threads: {
+                            create: vi.fn().mockResolvedValue({ id: "thread-mock-123" }),
+                        },
+                    },
+                })),
             }));
 
             const { createThread: create } = await import(
@@ -114,11 +126,25 @@ describe("OpenAI Assistants Client", () => {
         });
 
         it("should throw error when assistant ID is missing", async () => {
+            vi.resetModules();
+
             vi.doMock("@/lib/env", () => ({
                 env: {
                     OPENAI_API_KEY: "sk-test-key",
                     OPENAI_ASSISTANT_ID: undefined,
                 },
+            }));
+
+            vi.doMock("openai", () => ({
+                default: vi.fn().mockImplementation(() => ({
+                    beta: {
+                        threads: {
+                            runs: {
+                                create: vi.fn().mockResolvedValue({ id: "run-mock-123" }),
+                            },
+                        },
+                    },
+                })),
             }));
 
             const { runAssistant: run } = await import(

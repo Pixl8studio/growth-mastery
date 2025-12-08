@@ -21,6 +21,7 @@ describe("AdVariationsReview", () => {
                 curiosity: "What if you could...",
             },
             call_to_action: "Learn More",
+            selected: false,
         },
         {
             id: "var-2",
@@ -35,6 +36,7 @@ describe("AdVariationsReview", () => {
                 curiosity: "The one thing missing...",
             },
             call_to_action: "Sign Up",
+            selected: false,
         },
     ];
 

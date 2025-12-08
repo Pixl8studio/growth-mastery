@@ -34,6 +34,7 @@ vi.mock("@/components/marketing/profile-config-form-enhanced", () => ({
 describe("MarketingSettingsEnhanced", () => {
     const defaultProps = {
         funnelProjectId: "test-funnel-123",
+        profileId: "profile-1",
     };
 
     const mockProfile = {

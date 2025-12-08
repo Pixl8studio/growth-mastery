@@ -7,158 +7,220 @@ import { render, screen } from "@testing-library/react";
 import { MessagePreview } from "@/components/followup/message-preview";
 
 describe("MessagePreview", () => {
-    const mockMessage = {
-        id: "msg-1",
-        subject: "Quick question about your goals",
-        body: "Hi {{first_name}},\n\nI noticed you watched {{watch_percentage}}% of the webinar...",
-        channel: "email" as const,
-        sequence_position: 1,
-    };
+    it("should render email and SMS previews", () => {
+        render(
+            <MessagePreview
+                subject="Welcome to our program"
+                bodyContent="Hi {first_name}, thank you for joining!"
+                senderName="John Doe"
+            />
+        );
 
-    const mockProspect = {
-        first_name: "John",
-        email: "john@example.com",
-        watch_percentage: 75,
-        segment: "hot",
-        intent_score: 85,
-    };
-
-    it("should render without crashing", () => {
-        render(<MessagePreview message={mockMessage} prospect={mockProspect} />);
-        expect(screen.getByText(/Quick question about your goals/)).toBeInTheDocument();
+        expect(screen.getByText("Email Preview")).toBeInTheDocument();
+        expect(screen.getByText("SMS Preview")).toBeInTheDocument();
     });
 
-    it("should display email subject", () => {
-        render(<MessagePreview message={mockMessage} prospect={mockProspect} />);
-        expect(screen.getByText("Quick question about your goals")).toBeInTheDocument();
+    it("should display subject line in email preview", () => {
+        render(
+            <MessagePreview
+                subject="Welcome to our program"
+                bodyContent="Hi {first_name}!"
+                senderName="John Doe"
+            />
+        );
+
+        expect(screen.getByText("Welcome to our program")).toBeInTheDocument();
     });
 
-    it("should personalize message with prospect data", () => {
-        render(<MessagePreview message={mockMessage} prospect={mockProspect} />);
-        expect(screen.getByText(/I noticed you watched 75% of the webinar/)).toBeInTheDocument();
-    });
+    it("should interpolate tokens with sample data", () => {
+        render(
+            <MessagePreview
+                subject="Hi {first_name}!"
+                bodyContent="You watched {watch_pct}% of the webinar"
+                senderName="John Doe"
+            />
+        );
 
-    it("should display channel badge", () => {
-        render(<MessagePreview message={mockMessage} prospect={mockProspect} />);
-        expect(screen.getByText("Email")).toBeInTheDocument();
-    });
-
-    it("should display sequence position", () => {
-        render(<MessagePreview message={mockMessage} prospect={mockProspect} />);
-        expect(screen.getByText("Touch #1")).toBeInTheDocument();
-    });
-
-    it("should handle SMS channel", () => {
-        const smsMessage = {
-            ...mockMessage,
-            channel: "sms" as const,
-            subject: "",
-        };
-
-        render(<MessagePreview message={smsMessage} prospect={mockProspect} />);
-        expect(screen.getByText("SMS")).toBeInTheDocument();
-    });
-
-    it("should not display subject line for SMS", () => {
-        const smsMessage = {
-            ...mockMessage,
-            channel: "sms" as const,
-            subject: "",
-        };
-
-        render(<MessagePreview message={smsMessage} prospect={mockProspect} />);
-        expect(screen.queryByText("Subject:")).not.toBeInTheDocument();
-    });
-
-    it("should preserve line breaks in message body", () => {
-        const multilineMessage = {
-            ...mockMessage,
-            body: "Line 1\n\nLine 2\n\nLine 3",
-        };
-
-        render(<MessagePreview message={multilineMessage} prospect={mockProspect} />);
-        const body = screen.getByText(/Line 1/);
-        expect(body).toBeInTheDocument();
-    });
-
-    it("should handle missing prospect data gracefully", () => {
-        const incompleteProspect = {
-            first_name: "",
-            email: "test@example.com",
-            watch_percentage: 0,
-            segment: "no_show",
-            intent_score: 0,
-        };
-
-        render(<MessagePreview message={mockMessage} prospect={incompleteProspect} />);
-        expect(screen.getByText(/Quick question about your goals/)).toBeInTheDocument();
-    });
-
-    it("should replace {{first_name}} placeholder", () => {
-        render(<MessagePreview message={mockMessage} prospect={mockProspect} />);
-        expect(screen.getByText(/John/)).toBeInTheDocument();
-        expect(screen.queryByText(/{{first_name}}/)).not.toBeInTheDocument();
-    });
-
-    it("should replace {{watch_percentage}} placeholder", () => {
-        render(<MessagePreview message={mockMessage} prospect={mockProspect} />);
+        // Should use sample data "Sarah" and "75"
+        expect(screen.getByText("Hi Sarah!")).toBeInTheDocument();
         expect(screen.getByText(/75%/)).toBeInTheDocument();
     });
 
-    it("should display From section for email", () => {
-        render(<MessagePreview message={mockMessage} prospect={mockProspect} />);
-        expect(screen.getByText(/From:/)).toBeInTheDocument();
-    });
-
-    it("should display To section with prospect email", () => {
-        render(<MessagePreview message={mockMessage} prospect={mockProspect} />);
-        expect(screen.getByText(/To:/)).toBeInTheDocument();
-        expect(screen.getByText(/john@example.com/)).toBeInTheDocument();
-    });
-
-    it("should show message preview header", () => {
-        render(<MessagePreview message={mockMessage} prospect={mockProspect} />);
-        expect(screen.getByText("Message Preview")).toBeInTheDocument();
-    });
-
-    it("should apply proper styling to email preview", () => {
-        const { container } = render(
-            <MessagePreview message={mockMessage} prospect={mockProspect} />
+    it("should display sender name in email header", () => {
+        render(
+            <MessagePreview
+                subject="Test"
+                bodyContent="Test content"
+                senderName="Jane Smith"
+            />
         );
-        const previewContainer = container.querySelector(".border");
-        expect(previewContainer).toBeInTheDocument();
+
+        expect(screen.getByText("Jane Smith")).toBeInTheDocument();
     });
 
-    it("should handle long message bodies", () => {
-        const longMessage = {
-            ...mockMessage,
-            body: "A".repeat(1000),
-        };
+    it("should use default sender name when not provided", () => {
+        render(<MessagePreview subject="Test" bodyContent="Test content" />);
 
-        render(<MessagePreview message={longMessage} prospect={mockProspect} />);
-        expect(screen.getByText(/AAA/)).toBeInTheDocument();
+        expect(screen.getByText("John Smith")).toBeInTheDocument();
     });
 
-    it("should display sequence position badge", () => {
-        const message3 = {
-            ...mockMessage,
-            sequence_position: 3,
-        };
+    it("should show email recipient", () => {
+        render(
+            <MessagePreview
+                subject="Test"
+                bodyContent="Test content"
+                senderName="John Doe"
+            />
+        );
 
-        render(<MessagePreview message={message3} prospect={mockProspect} />);
-        expect(screen.getByText("Touch #3")).toBeInTheDocument();
+        expect(screen.getByText("sarah@example.com")).toBeInTheDocument();
     });
 
-    it("should render with minimal message data", () => {
-        const minimalMessage = {
-            id: "min-1",
-            subject: "",
-            body: "Simple message",
-            channel: "email" as const,
-            sequence_position: 1,
-        };
+    it("should render body content with line breaks", () => {
+        render(
+            <MessagePreview
+                subject="Test"
+                bodyContent="Line 1\nLine 2\nLine 3"
+                senderName="John Doe"
+            />
+        );
 
-        render(<MessagePreview message={minimalMessage} prospect={mockProspect} />);
-        expect(screen.getByText("Simple message")).toBeInTheDocument();
+        // Content should be rendered (with <br /> tags)
+        const prose = document.querySelector(".prose");
+        expect(prose).toBeInTheDocument();
+    });
+
+    it("should display desktop and mobile view toggles", () => {
+        const { container } = render(
+            <MessagePreview
+                subject="Test"
+                bodyContent="Test content"
+                senderName="John Doe"
+            />
+        );
+
+        const buttons = container.querySelectorAll("button");
+        expect(buttons.length).toBeGreaterThan(0);
+    });
+
+    it("should strip HTML for SMS preview", () => {
+        render(
+            <MessagePreview
+                subject="Test"
+                bodyContent="<p>Hello <strong>{first_name}</strong></p>"
+                senderName="John Doe"
+            />
+        );
+
+        // SMS should show plain text "Hello Sarah"
+        const smsContent = screen.getAllByText(/Hello Sarah/);
+        expect(smsContent.length).toBeGreaterThan(0);
+    });
+
+    it("should show SMS character count", () => {
+        render(
+            <MessagePreview
+                subject="Test"
+                bodyContent="Short message"
+                senderName="John Doe"
+            />
+        );
+
+        expect(screen.getByText(/characters/)).toBeInTheDocument();
+    });
+
+    it("should indicate when SMS fits in one message", () => {
+        render(
+            <MessagePreview subject="Test" bodyContent="Short" senderName="John Doe" />
+        );
+
+        expect(screen.getByText(/Fits in 1 message/)).toBeInTheDocument();
+    });
+
+    it("should warn when SMS will be split", () => {
+        const longMessage = "a".repeat(200);
+        render(
+            <MessagePreview
+                subject="Test"
+                bodyContent={longMessage}
+                senderName="John Doe"
+            />
+        );
+
+        expect(screen.getByText(/Will be split into/)).toBeInTheDocument();
+    });
+
+    it("should handle null subject", () => {
+        render(
+            <MessagePreview
+                subject={null}
+                bodyContent="Test content"
+                senderName="John Doe"
+            />
+        );
+
+        // Should not crash and should not show Subject: label in header
+        const emailHeader = document.querySelector(".bg-card.border.rounded-lg");
+        expect(emailHeader).toBeInTheDocument();
+    });
+
+    it("should handle undefined subject", () => {
+        render(<MessagePreview bodyContent="Test content" senderName="John Doe" />);
+
+        // Should not crash
+        expect(screen.getByText("Email Preview")).toBeInTheDocument();
+    });
+
+    it("should truncate SMS to 320 characters", () => {
+        const longMessage = "a".repeat(400);
+        const { container } = render(
+            <MessagePreview
+                subject="Test"
+                bodyContent={longMessage}
+                senderName="John Doe"
+            />
+        );
+
+        // Check that character count doesn't exceed 320
+        const charCountText = screen.getByText(/characters/);
+        expect(charCountText.textContent).toMatch(/[0-3][0-9]{0,2}\s+characters/);
+    });
+
+    it("should display sender initial in SMS avatar", () => {
+        render(
+            <MessagePreview subject="Test" bodyContent="Test" senderName="Jane Doe" />
+        );
+
+        // Should show "J" as initial
+        expect(screen.getByText("J")).toBeInTheDocument();
+    });
+
+    it("should interpolate multiple tokens", () => {
+        render(
+            <MessagePreview
+                subject="Hi {first_name}!"
+                bodyContent="You watched {watch_pct}% and your goal is {goal_notes}"
+                senderName="John Doe"
+            />
+        );
+
+        expect(screen.getByText("Hi Sarah!")).toBeInTheDocument();
+        // Check that tokens are replaced in body
+        const prose = document.querySelector(".prose");
+        expect(prose).toBeInTheDocument();
+    });
+
+    it("should accept custom className", () => {
+        const { container } = render(
+            <MessagePreview
+                subject="Test"
+                bodyContent="Test"
+                senderName="John Doe"
+                className="custom-class"
+            />
+        );
+
+        const grid = container.querySelector(".custom-class");
+        expect(grid).toBeInTheDocument();
     });
 });

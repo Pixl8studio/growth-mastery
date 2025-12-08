@@ -15,11 +15,9 @@ describe("OfferEditor", () => {
         description: "Learn advanced techniques",
         price: 997,
         currency: "USD",
-        features: {
-            features: ["Feature 1", "Feature 2"],
-            bonuses: ["Bonus 1"],
-            guarantee: "30-day money back",
-        },
+        features: ["Feature 1", "Feature 2"],
+        bonuses: ["Bonus 1"],
+        guarantee: "30-day money back",
         promise: "Transform your skills",
         person: "Beginners to intermediate",
         process: "12-week program",
@@ -104,10 +102,7 @@ describe("OfferEditor", () => {
     it("should enforce max features limit", () => {
         const offerWithMaxFeatures = {
             ...mockOffer,
-            features: {
-                ...mockOffer.features,
-                features: Array(6).fill("Feature"),
-            },
+            features: Array(6).fill("Feature"),
         };
 
         render(<OfferEditor initialOffer={offerWithMaxFeatures} onSave={mockOnSave} />);
@@ -119,10 +114,7 @@ describe("OfferEditor", () => {
     it("should enforce max bonuses limit", () => {
         const offerWithMaxBonuses = {
             ...mockOffer,
-            features: {
-                ...mockOffer.features,
-                bonuses: Array(5).fill("Bonus"),
-            },
+            bonuses: Array(5).fill("Bonus"),
         };
 
         render(<OfferEditor initialOffer={offerWithMaxBonuses} onSave={mockOnSave} />);

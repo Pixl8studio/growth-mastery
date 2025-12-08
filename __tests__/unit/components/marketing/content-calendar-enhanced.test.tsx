@@ -37,6 +37,7 @@ vi.mock("@/components/marketing/scheduling-modal", () => ({
 describe("ContentCalendarEnhanced", () => {
     const defaultProps = {
         funnelProjectId: "test-funnel-123",
+        onUpdate: vi.fn(),
     };
 
     const mockScheduledPosts = [

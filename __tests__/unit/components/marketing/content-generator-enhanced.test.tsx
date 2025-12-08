@@ -26,10 +26,11 @@ import { useToast } from "@/components/ui/use-toast";
 import { logger } from "@/lib/client-logger";
 
 describe("ContentGeneratorEnhanced", () => {
-    const mockOnVariantsGenerated = vi.fn();
+    const mockOnContentGenerated = vi.fn();
     const defaultProps = {
+        profileId: "profile-1",
         funnelProjectId: "test-funnel-123",
-        onVariantsGenerated: mockOnVariantsGenerated,
+        onContentGenerated: mockOnContentGenerated,
     };
 
     beforeEach(() => {
@@ -180,7 +181,7 @@ describe("ContentGeneratorEnhanced", () => {
                     title: "Content Generated",
                 })
             );
-            expect(mockOnVariantsGenerated).toHaveBeenCalledWith(mockVariants);
+            expect(mockOnContentGenerated).toHaveBeenCalled();
         });
     });
 

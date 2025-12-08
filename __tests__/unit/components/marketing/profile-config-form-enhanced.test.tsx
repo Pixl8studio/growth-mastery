@@ -52,12 +52,12 @@ describe("ProfileConfigFormEnhanced", () => {
                 vulnerability: 40,
             },
         },
-    };
+    } as any;
 
     const defaultProps = {
         profile: mockProfile,
         onUpdate: mockOnUpdate,
-    };
+    } as any;
 
     beforeEach(() => {
         vi.clearAllMocks();

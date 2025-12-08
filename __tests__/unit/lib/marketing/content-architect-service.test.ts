@@ -83,13 +83,14 @@ describe("ContentArchitectService", () => {
 
             vi.mocked(getPlatformSpec).mockResolvedValue({
                 success: true,
-                spec: mockPlatformSpec,
+                spec: mockPlatformSpec as any,
             });
 
             vi.mocked(validateContent).mockResolvedValue({
                 success: true,
                 valid: true,
                 violations: [],
+                warnings: [],
             });
 
             vi.mocked(generateWithAI).mockResolvedValue(mockAIResponse);
@@ -145,13 +146,14 @@ describe("ContentArchitectService", () => {
 
             vi.mocked(getPlatformSpec).mockResolvedValue({
                 success: true,
-                spec: mockPlatformSpec,
+                spec: mockPlatformSpec as any,
             });
 
             vi.mocked(validateContent).mockResolvedValue({
                 success: true,
                 valid: true,
                 violations: [],
+                warnings: [],
             });
 
             vi.mocked(generateWithAI).mockResolvedValue(mockAIResponse);
@@ -205,13 +207,14 @@ describe("ContentArchitectService", () => {
 
             vi.mocked(getPlatformSpec).mockResolvedValue({
                 success: true,
-                spec: mockPlatformSpec,
+                spec: mockPlatformSpec as any,
             });
 
             vi.mocked(validateContent).mockResolvedValue({
                 success: true,
                 valid: false,
                 violations: ["Too long"],
+                warnings: [],
             });
 
             vi.mocked(generateWithAI).mockResolvedValue(mockAIResponse);
@@ -243,7 +246,7 @@ describe("ContentArchitectService", () => {
 
             vi.mocked(getPlatformSpec).mockResolvedValue({
                 success: true,
-                spec: mockPlatformSpec,
+                spec: mockPlatformSpec as any,
             });
 
             vi.mocked(generateWithAI).mockResolvedValue(mockAIResponse);
@@ -310,7 +313,7 @@ describe("ContentArchitectService", () => {
 
             vi.mocked(getPlatformSpec).mockResolvedValue({
                 success: true,
-                spec: mockPlatformSpec,
+                spec: mockPlatformSpec as any,
             });
 
             vi.mocked(generateWithAI).mockResolvedValue(mockAIResponse);
@@ -339,7 +342,7 @@ describe("ContentArchitectService", () => {
 
             vi.mocked(getPlatformSpec).mockResolvedValue({
                 success: true,
-                spec: mockPlatformSpec,
+                spec: mockPlatformSpec as any,
             });
 
             vi.mocked(generateWithAI).mockResolvedValue(mockAIResponse);
@@ -377,7 +380,7 @@ describe("ContentArchitectService", () => {
 
             vi.mocked(getPlatformSpec).mockResolvedValue({
                 success: true,
-                spec: mockPlatformSpec,
+                spec: mockPlatformSpec as any,
             });
 
             const result = await atomizeBrief(mockBriefWithPlatforms as any);
@@ -400,7 +403,7 @@ describe("ContentArchitectService", () => {
             vi.mocked(getPlatformSpec).mockImplementation(async () => {
                 callCount++;
                 if (callCount === 1) {
-                    return { success: true, spec: { best_practices: {} } };
+                    return { success: true, spec: { best_practices: {} } as any };
                 }
                 return { success: false, error: "Failed" };
             });

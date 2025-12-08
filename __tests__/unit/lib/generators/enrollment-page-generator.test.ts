@@ -19,13 +19,13 @@ describe("Enrollment Page Generator", () => {
                 slideNumber: 1,
                 title: "Amazing transformation",
                 description: "This program changed my life and business completely",
-                section: "testimonial" as const,
+                section: "solution" as const,
             },
             {
                 slideNumber: 2,
                 title: "Best decision ever",
                 description: "I saw results within the first week",
-                section: "testimonial" as const,
+                section: "offer" as const,
             },
         ],
         metadata: {

@@ -86,7 +86,7 @@ describe("VariantInlineEditor", () => {
         },
         approval_status: "pending",
         approval_notes: "",
-    };
+    } as any;
 
     const defaultProps = {
         isOpen: true,
@@ -94,7 +94,7 @@ describe("VariantInlineEditor", () => {
         variant: mockVariant,
         onSave: mockOnSave,
         funnelProjectId: "test-funnel-123",
-    };
+    } as any;
 
     beforeEach(() => {
         vi.clearAllMocks();

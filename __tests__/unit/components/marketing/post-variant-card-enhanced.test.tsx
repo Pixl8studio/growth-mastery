@@ -64,14 +64,14 @@ describe("PostVariantCardEnhanced", () => {
         cta_config: {
             text: "Learn More",
         },
-    };
+    } as any;
 
     const defaultProps = {
         variant: mockVariant,
         onUpdate: mockOnUpdate,
         onSchedule: mockOnSchedule,
         funnelProjectId: "test-funnel-123",
-    };
+    } as any;
 
     beforeEach(() => {
         vi.clearAllMocks();

@@ -47,6 +47,7 @@ describe("Iterative Message Generator", () => {
         mainPromise: "Learn to scale",
         keyPoints: ["Point 1", "Point 2", "Point 3"],
         painPoints: ["Pain 1", "Pain 2"],
+        solutions: ["Solution 1", "Solution 2"],
     };
 
     const mockOfferContext = {

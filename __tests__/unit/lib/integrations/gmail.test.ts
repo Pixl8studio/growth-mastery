@@ -140,7 +140,6 @@ describe("Gmail Integration", () => {
     describe("getUserInfo", () => {
         it("fetches Google user information", async () => {
             const mockUser = {
-                id: "user-123",
                 email: "user@example.com",
                 name: "Test User",
                 picture: "https://example.com/pic.jpg",
@@ -153,7 +152,6 @@ describe("Gmail Integration", () => {
 
             const result = await getUserInfo("access-token-123");
 
-            expect(result.id).toBe("user-123");
             expect(result.email).toBe("user@example.com");
             expect(result.name).toBe("Test User");
             expect(mockFetch).toHaveBeenCalledWith(

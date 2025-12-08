@@ -35,6 +35,12 @@ export async function generateUploadUrl(metadata?: {
             );
         }
 
+        // Build the meta object with only metadata fields (not API parameters)
+        const meta: Record<string, string> = {};
+        if (metadata?.name) {
+            meta.name = metadata.name;
+        }
+
         const response = await fetch(
             `${CLOUDFLARE_API_BASE}/accounts/${accountId}/stream/direct_upload`,
             {
@@ -45,8 +51,8 @@ export async function generateUploadUrl(metadata?: {
                 },
                 body: JSON.stringify({
                     maxDurationSeconds: 3600, // 1 hour max
-                    meta: metadata || {},
-                    requireSignedURLs: metadata?.requireSignedURLs || false,
+                    meta,
+                    requireSignedURLs: metadata?.requireSignedURLs ?? false,
                 }),
             }
         );

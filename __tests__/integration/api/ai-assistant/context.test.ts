@@ -115,7 +115,14 @@ describe("POST /api/ai-assistant/context", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            context: {
+                user: { id: string };
+                currentProject: { id: string };
+                offers: unknown;
+                analytics: unknown;
+            };
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.context).toBeDefined();
@@ -169,7 +176,12 @@ describe("POST /api/ai-assistant/context", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            context: {
+                user: { id: string };
+                currentProject: null | { id: string };
+            };
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.context).toBeDefined();
@@ -181,12 +193,10 @@ describe("POST /api/ai-assistant/context", () => {
     it("should return 401 for unauthenticated users", async () => {
         const mockSupabase = {
             auth: {
-                getUser: vi
-                    .fn()
-                    .mockResolvedValue({
-                        data: { user: null },
-                        error: { message: "Unauthorized" },
-                    }),
+                getUser: vi.fn().mockResolvedValue({
+                    data: { user: null },
+                    error: { message: "Unauthorized" },
+                }),
             },
         };
 
@@ -198,7 +208,7 @@ describe("POST /api/ai-assistant/context", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Unauthorized");
@@ -247,7 +257,11 @@ describe("POST /api/ai-assistant/context", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            context: {
+                user: { fullName?: string };
+            };
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.context).toBeDefined();
@@ -274,7 +288,7 @@ describe("POST /api/ai-assistant/context", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Failed to load context");

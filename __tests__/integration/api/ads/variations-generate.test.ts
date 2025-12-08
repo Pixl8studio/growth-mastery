@@ -207,7 +207,10 @@ describe("POST /api/ads/variations/generate", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            variations: Array<{ framework: string }>;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -239,7 +242,7 @@ describe("POST /api/ads/variations/generate", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Authentication required");
@@ -264,7 +267,7 @@ describe("POST /api/ads/variations/generate", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toContain("Invalid funnel project ID");
@@ -664,7 +667,9 @@ describe("POST /api/ads/variations/generate", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            variations: Array<{ framework: string }>;
+        }>(response);
 
         const frameworks = data.variations.map((v: any) => v.framework);
         expect(frameworks).toContain("plus_minus");

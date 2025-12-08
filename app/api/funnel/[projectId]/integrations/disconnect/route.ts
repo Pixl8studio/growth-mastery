@@ -4,9 +4,11 @@
  * Disconnects any social or calendar integration.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 export async function POST(
     request: NextRequest,
@@ -49,7 +51,10 @@ export async function POST(
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error("Disconnect error:", error);
+        logger.error({ error, action: "disconnect_integration" }, "Disconnect error");
+        Sentry.captureException(error, {
+            tags: { component: "api", action: "disconnect_integration" },
+        });
         return NextResponse.json(
             { error: "Failed to disconnect integration" },
             { status: 500 }

@@ -3,11 +3,13 @@
  * Handles LinkedIn OAuth callback and stores connection
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { exchangeCodeForToken, getUserInfo } from "@/lib/integrations/linkedin";
 import { encryptToken } from "@/lib/integrations/crypto";
+import { logger } from "@/lib/logger";
 
 export async function GET(
     request: NextRequest,
@@ -61,7 +63,10 @@ export async function GET(
             `${process.env.NEXT_PUBLIC_APP_URL}/funnel-builder/${projectId}/step/12?tab=settings`
         );
     } catch (error) {
-        console.error("LinkedIn callback error:", error);
+        logger.error({ error, action: "linkedin_callback" }, "LinkedIn callback error");
+        Sentry.captureException(error, {
+            tags: { component: "api", action: "linkedin_callback" },
+        });
         const { projectId } = await params;
         return NextResponse.redirect(
             `${process.env.NEXT_PUBLIC_APP_URL}/funnel-builder/${projectId}/step/12?tab=settings&error=linkedin_connection_failed`

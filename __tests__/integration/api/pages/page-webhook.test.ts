@@ -120,16 +120,16 @@ describe("GET /api/pages/[pageId]/webhook", () => {
     });
 
     it("should return 401 when user is not authenticated", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce(
-            {
-                auth: {
-                    getUser: vi.fn(async () => ({
-                        data: { user: null },
-                        error: { message: "Unauthorized" },
-                    })),
-                },
-            } as any
-        );
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
+            auth: {
+                getUser: vi.fn(async () => ({
+                    data: { user: null },
+                    error: { message: "Unauthorized" },
+                })),
+            },
+        } as any);
 
         const request = new NextRequest(
             "http://localhost:3000/api/pages/test-page-id/webhook?pageType=registration"
@@ -145,28 +145,28 @@ describe("GET /api/pages/[pageId]/webhook", () => {
     });
 
     it("should return 404 when page is not found", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce(
-            {
-                auth: {
-                    getUser: vi.fn(async () => ({
-                        data: {
-                            user: { id: "test-user-id" },
-                        },
-                        error: null,
-                    })),
-                },
-                from: vi.fn(() => ({
-                    select: vi.fn(() => ({
-                        eq: vi.fn(() => ({
-                            single: vi.fn(async () => ({
-                                data: null,
-                                error: { message: "Not found" },
-                            })),
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
+            auth: {
+                getUser: vi.fn(async () => ({
+                    data: {
+                        user: { id: "test-user-id" },
+                    },
+                    error: null,
+                })),
+            },
+            from: vi.fn(() => ({
+                select: vi.fn(() => ({
+                    eq: vi.fn(() => ({
+                        single: vi.fn(async () => ({
+                            data: null,
+                            error: { message: "Not found" },
                         })),
                     })),
                 })),
-            } as any
-        );
+            })),
+        } as any);
 
         const request = new NextRequest(
             "http://localhost:3000/api/pages/test-page-id/webhook?pageType=registration"
@@ -257,31 +257,31 @@ describe("PUT /api/pages/[pageId]/webhook", () => {
     });
 
     it("should return 401 when user does not own the page", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce(
-            {
-                auth: {
-                    getUser: vi.fn(async () => ({
-                        data: {
-                            user: { id: "test-user-id" },
-                        },
-                        error: null,
-                    })),
-                },
-                from: vi.fn(() => ({
-                    select: vi.fn(() => ({
-                        eq: vi.fn(() => ({
-                            single: vi.fn(async () => ({
-                                data: {
-                                    id: "test-page-id",
-                                    user_id: "different-user-id",
-                                },
-                                error: null,
-                            })),
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
+            auth: {
+                getUser: vi.fn(async () => ({
+                    data: {
+                        user: { id: "test-user-id" },
+                    },
+                    error: null,
+                })),
+            },
+            from: vi.fn(() => ({
+                select: vi.fn(() => ({
+                    eq: vi.fn(() => ({
+                        single: vi.fn(async () => ({
+                            data: {
+                                id: "test-page-id",
+                                user_id: "different-user-id",
+                            },
+                            error: null,
                         })),
                     })),
                 })),
-            } as any
-        );
+            })),
+        } as any);
 
         const request = new NextRequest(
             "http://localhost:3000/api/pages/test-page-id/webhook",
@@ -331,14 +331,14 @@ describe("POST /api/pages/[pageId]/webhook", () => {
     });
 
     it("should return 400 when webhook is not configured", async () => {
-        vi.mocked((await import("@/lib/webhook-service")).getWebhookConfig).mockResolvedValueOnce(
-            {
-                enabled: false,
-                url: null,
-                secret: null,
-                isInherited: false,
-            }
-        );
+        vi.mocked(
+            (await import("@/lib/webhook-service")).getWebhookConfig
+        ).mockResolvedValueOnce({
+            enabled: false,
+            url: null,
+            secret: null,
+            isInherited: false,
+        });
 
         const request = new NextRequest(
             "http://localhost:3000/api/pages/test-page-id/webhook",

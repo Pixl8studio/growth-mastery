@@ -88,7 +88,10 @@ export async function GET(
             `${process.env.NEXT_PUBLIC_APP_URL}/funnel-builder/${projectId}?tab=settings`
         );
     } catch (error) {
-        logger.error({ error, action: "instagram_callback" }, "Instagram callback error");
+        logger.error(
+            { error, action: "instagram_callback" },
+            "Instagram callback error"
+        );
         Sentry.captureException(error, {
             tags: { component: "api", action: "instagram_callback" },
         });

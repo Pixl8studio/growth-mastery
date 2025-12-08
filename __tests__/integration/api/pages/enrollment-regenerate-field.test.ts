@@ -30,11 +30,7 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/lib/ai/client", () => ({
     generateTextWithAI: vi.fn(async () => "Regenerated enrollment field content"),
     generateWithAI: vi.fn(async () => ({
-        variations: [
-            "First variation",
-            "Second variation",
-            "Third variation",
-        ],
+        variations: ["First variation", "Second variation", "Third variation"],
     })),
 }));
 
@@ -64,7 +60,8 @@ vi.mock("@/lib/supabase/server", () => ({
                                         id: "test-page-id",
                                         user_id: "test-user-id",
                                         funnel_project_id: "test-project-id",
-                                        html_content: "<div data-field-id='headline'>Old</div>",
+                                        html_content:
+                                            "<div data-field-id='headline'>Old</div>",
                                         offers: {
                                             id: "offer-id",
                                             name: "Test Offer",
@@ -248,7 +245,9 @@ describe("POST /api/pages/enrollment/[pageId]/regenerate-field", () => {
     });
 
     it("should return 404 when page is not found", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             from: vi.fn(() => ({
                 select: vi.fn(() => ({
                     eq: vi.fn(() => ({
@@ -284,7 +283,9 @@ describe("POST /api/pages/enrollment/[pageId]/regenerate-field", () => {
     });
 
     it("should return 400 when offer is missing", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             from: vi.fn(() => ({
                 select: vi.fn(() => ({
                     eq: vi.fn(() => ({
@@ -324,9 +325,9 @@ describe("POST /api/pages/enrollment/[pageId]/regenerate-field", () => {
     });
 
     it("should handle AI generation errors", async () => {
-        vi.mocked((await import("@/lib/ai/client")).generateTextWithAI).mockRejectedValueOnce(
-            new Error("AI error")
-        );
+        vi.mocked(
+            (await import("@/lib/ai/client")).generateTextWithAI
+        ).mockRejectedValueOnce(new Error("AI error"));
 
         const request = new NextRequest(
             "http://localhost:3000/api/pages/enrollment/test-page-id/regenerate-field",

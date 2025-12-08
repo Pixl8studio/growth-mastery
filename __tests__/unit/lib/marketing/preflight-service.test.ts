@@ -37,7 +37,6 @@ import {
     enforceCharacterLimits,
     createPreflightStatus,
 } from "@/lib/marketing/preflight-service";
-import { logger } from "@/lib/logger";
 import { generateWithAI } from "@/lib/ai/client";
 import {
     validateContent,

@@ -81,9 +81,7 @@ describe("GET /api/followup/gmail/callback", () => {
         const response = await GET(request);
 
         expect(response.status).toBe(307);
-        expect(response.headers.get("location")).toContain(
-            "gmail_connected=true"
-        );
+        expect(response.headers.get("location")).toContain("gmail_connected=true");
         expect(exchangeCodeForTokens).toHaveBeenCalledWith("auth-code-123");
         expect(getGmailUserInfo).toHaveBeenCalledWith("access-token-123");
         expect(storeGmailTokens).toHaveBeenCalledWith(
@@ -101,9 +99,7 @@ describe("GET /api/followup/gmail/callback", () => {
         const response = await GET(request);
 
         expect(response.status).toBe(307);
-        expect(response.headers.get("location")).toContain(
-            "error=gmail_denied"
-        );
+        expect(response.headers.get("location")).toContain("error=gmail_denied");
     });
 
     it("should redirect with error when code is missing", async () => {
@@ -121,9 +117,7 @@ describe("GET /api/followup/gmail/callback", () => {
         const response = await GET(request);
 
         expect(response.status).toBe(307);
-        expect(response.headers.get("location")).toContain(
-            "error=invalid_callback"
-        );
+        expect(response.headers.get("location")).toContain("error=invalid_callback");
     });
 
     it("should redirect with error when state is missing", async () => {
@@ -134,9 +128,7 @@ describe("GET /api/followup/gmail/callback", () => {
         const response = await GET(request);
 
         expect(response.status).toBe(307);
-        expect(response.headers.get("location")).toContain(
-            "error=invalid_callback"
-        );
+        expect(response.headers.get("location")).toContain("error=invalid_callback");
     });
 
     it("should redirect with error when user mismatch", async () => {
@@ -164,9 +156,7 @@ describe("GET /api/followup/gmail/callback", () => {
         const response = await GET(request);
 
         expect(response.status).toBe(307);
-        expect(response.headers.get("location")).toContain(
-            "error=unauthorized"
-        );
+        expect(response.headers.get("location")).toContain("error=unauthorized");
     });
 
     it("should redirect with error when accessing other user's config", async () => {
@@ -207,9 +197,7 @@ describe("GET /api/followup/gmail/callback", () => {
         const response = await GET(request);
 
         expect(response.status).toBe(307);
-        expect(response.headers.get("location")).toContain(
-            "error=unauthorized"
-        );
+        expect(response.headers.get("location")).toContain("error=unauthorized");
     });
 
     it("should redirect with error when token exchange fails", async () => {

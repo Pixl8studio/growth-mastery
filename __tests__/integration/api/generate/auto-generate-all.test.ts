@@ -597,7 +597,7 @@ describe("POST /api/generate/auto-generate-all", () => {
         const partialResult = {
             success: false,
             completedSteps: [1, 2],
-            failedSteps: [3],
+            failedSteps: [{ step: 3, error: "AI generation failed" }],
             progress: [
                 {
                     step: 1,

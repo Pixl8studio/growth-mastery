@@ -79,8 +79,10 @@ vi.mock("@/lib/supabase/server", () => ({
                                     single: vi.fn(async () => ({
                                         data: {
                                             id: "test-page-id",
-                                            html_content: "<html>Generated content</html>",
-                                            headline: "Transform Your Business in 90 Days",
+                                            html_content:
+                                                "<html>Generated content</html>",
+                                            headline:
+                                                "Transform Your Business in 90 Days",
                                         },
                                         error: null,
                                     })),
@@ -188,7 +190,9 @@ describe("POST /api/pages/registration/[pageId]/regenerate", () => {
     });
 
     it("should return 404 when page is not found", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             from: vi.fn(() => ({
                 select: vi.fn(() => ({
                     eq: vi.fn(() => ({
@@ -221,9 +225,9 @@ describe("POST /api/pages/registration/[pageId]/regenerate", () => {
     });
 
     it("should handle AI generation errors", async () => {
-        vi.mocked((await import("@/lib/ai/client")).generateTextWithAI).mockRejectedValueOnce(
-            new Error("AI service unavailable")
-        );
+        vi.mocked(
+            (await import("@/lib/ai/client")).generateTextWithAI
+        ).mockRejectedValueOnce(new Error("AI service unavailable"));
 
         const request = new NextRequest(
             "http://localhost:3000/api/pages/registration/test-page-id/regenerate",
@@ -243,9 +247,9 @@ describe("POST /api/pages/registration/[pageId]/regenerate", () => {
     });
 
     it("should handle invalid AI response format", async () => {
-        vi.mocked((await import("@/lib/ai/client")).generateTextWithAI).mockResolvedValueOnce(
-            "Invalid response without JSON"
-        );
+        vi.mocked(
+            (await import("@/lib/ai/client")).generateTextWithAI
+        ).mockResolvedValueOnce("Invalid response without JSON");
 
         const request = new NextRequest(
             "http://localhost:3000/api/pages/registration/test-page-id/regenerate",
@@ -265,7 +269,9 @@ describe("POST /api/pages/registration/[pageId]/regenerate", () => {
     });
 
     it("should return 500 when project data fetch fails", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             from: vi.fn((table) => {
                 if (table === "registration_pages") {
                     return {

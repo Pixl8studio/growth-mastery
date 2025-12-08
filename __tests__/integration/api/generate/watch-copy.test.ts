@@ -97,7 +97,10 @@ describe("POST /api/generate/watch-copy", () => {
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
         vi.mocked(generateWithAI).mockResolvedValue(mockWatchCopy);
-        vi.mocked(createWatchPageCopyPrompt).mockReturnValue("mock prompt");
+        vi.mocked(createWatchPageCopyPrompt).mockReturnValue([
+            { role: "system", content: "mock system prompt" },
+            { role: "user", content: "mock user prompt" },
+        ]);
 
         const request = new NextRequest("http://localhost/api/generate/watch-copy", {
             method: "POST",
@@ -159,7 +162,10 @@ describe("POST /api/generate/watch-copy", () => {
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
         vi.mocked(generateWithAI).mockResolvedValue(mockWatchCopy);
-        vi.mocked(createWatchPageCopyPrompt).mockReturnValue("mock prompt");
+        vi.mocked(createWatchPageCopyPrompt).mockReturnValue([
+            { role: "system", content: "mock system prompt" },
+            { role: "user", content: "mock user prompt" },
+        ]);
 
         const request = new NextRequest("http://localhost/api/generate/watch-copy", {
             method: "POST",

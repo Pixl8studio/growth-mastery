@@ -126,7 +126,10 @@ describe("POST /api/generate/offer", () => {
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
         vi.mocked(generateWithAI).mockResolvedValue(mockGeneratedOffer);
-        vi.mocked(createOfferGenerationPrompt).mockReturnValue("mock prompt");
+        vi.mocked(createOfferGenerationPrompt).mockReturnValue([
+            { role: "system", content: "mock system prompt" },
+            { role: "user", content: "mock user prompt" },
+        ]);
 
         const request = new NextRequest("http://localhost/api/generate/offer", {
             method: "POST",

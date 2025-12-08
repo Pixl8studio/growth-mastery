@@ -35,13 +35,17 @@ export function PreviewIframe({ html, deviceMode, isProcessing }: PreviewIframeP
         try {
             const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
             if (iframeDoc) {
-                setScrollPosition(iframeDoc.documentElement.scrollTop || 0);
+                requestAnimationFrame(() => {
+                    setScrollPosition(iframeDoc.documentElement.scrollTop || 0);
+                });
             }
         } catch {
             // Cross-origin iframe, ignore
         }
 
-        setIsLoading(true);
+        requestAnimationFrame(() => {
+            setIsLoading(true);
+        });
 
         // Use srcdoc for sandboxed content
         const fullHtml = html || getPlaceholderHtml();
@@ -92,10 +96,7 @@ export function PreviewIframe({ html, deviceMode, isProcessing }: PreviewIframeP
                 ref={iframeRef}
                 title="Page Preview"
                 sandbox="allow-scripts allow-same-origin"
-                className={cn(
-                    "border-0 bg-white",
-                    "transition-all duration-300"
-                )}
+                className={cn("border-0 bg-white", "transition-all duration-300")}
                 style={{
                     width: deviceMode === "desktop" ? "100%" : `${width}px`,
                     height: "100%",

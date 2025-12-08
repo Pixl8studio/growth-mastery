@@ -66,7 +66,10 @@ export async function POST(request: NextRequest) {
             .single();
 
         if (jobError || !job) {
-            logger.error({ error: jobError, action: "create_talk_track_job" }, "Failed to create job");
+            logger.error(
+                { error: jobError, action: "create_talk_track_job" },
+                "Failed to create job"
+            );
             Sentry.captureException(jobError, {
                 tags: { component: "api", action: "create_talk_track_job" },
             });
@@ -85,7 +88,10 @@ export async function POST(request: NextRequest) {
             },
             body: JSON.stringify({ jobId: job.id }),
         }).catch((error) => {
-            logger.error({ error, action: "invoke_edge_function" }, "Failed to invoke Edge Function");
+            logger.error(
+                { error, action: "invoke_edge_function" },
+                "Failed to invoke Edge Function"
+            );
             Sentry.captureException(error, {
                 tags: { component: "api", action: "invoke_edge_function" },
             });
@@ -97,7 +103,10 @@ export async function POST(request: NextRequest) {
             jobId: job.id,
         });
     } catch (error) {
-        logger.error({ error, action: "talk_track_job" }, "Failed to create talk track job");
+        logger.error(
+            { error, action: "talk_track_job" },
+            "Failed to create talk track job"
+        );
         Sentry.captureException(error, {
             tags: { component: "api", action: "talk_track_job" },
         });

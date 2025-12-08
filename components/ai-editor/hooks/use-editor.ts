@@ -161,11 +161,15 @@ export function useEditor({
                         } catch (fetchError) {
                             // Handle network errors and aborts gracefully
                             if (fetchError instanceof Error) {
-                                if (fetchError.name === 'AbortError') {
-                                    throw new ValidationError("Request timed out. Please try again with a simpler request.");
+                                if (fetchError.name === "AbortError") {
+                                    throw new ValidationError(
+                                        "Request timed out. Please try again with a simpler request."
+                                    );
                                 }
-                                if (fetchError.message === 'Failed to fetch') {
-                                    throw new ValidationError("Network connection lost. Please check your internet connection and try again.");
+                                if (fetchError.message === "Failed to fetch") {
+                                    throw new ValidationError(
+                                        "Network connection lost. Please check your internet connection and try again."
+                                    );
                                 }
                             }
                             throw fetchError;
@@ -177,15 +181,16 @@ export function useEditor({
                         span.setAttribute("thinking_time_seconds", thinkingTime);
 
                         if (!response.ok) {
-                            const errorBody = await response
+                            const _errorBody = await response
                                 .text()
                                 .catch(() => "Unknown error");
                             // Provide user-friendly error messages based on status
-                            const userMessage = response.status === 500
-                                ? "The AI service encountered an error. Please try again."
-                                : response.status === 429
-                                    ? "Too many requests. Please wait a moment and try again."
-                                    : response.status === 401
+                            const userMessage =
+                                response.status === 500
+                                    ? "The AI service encountered an error. Please try again."
+                                    : response.status === 429
+                                      ? "Too many requests. Please wait a moment and try again."
+                                      : response.status === 401
                                         ? "Your session has expired. Please refresh the page."
                                         : `AI response failed: ${response.status}`;
                             throw new ValidationError(userMessage);
@@ -337,19 +342,25 @@ export function useEditor({
                         });
                     } catch (fetchError) {
                         // Handle network errors gracefully
-                        if (fetchError instanceof Error && fetchError.message === 'Failed to fetch') {
-                            throw new ValidationError("Unable to save. Please check your internet connection.");
+                        if (
+                            fetchError instanceof Error &&
+                            fetchError.message === "Failed to fetch"
+                        ) {
+                            throw new ValidationError(
+                                "Unable to save. Please check your internet connection."
+                            );
                         }
                         throw fetchError;
                     }
 
                     if (!response.ok) {
                         // Provide user-friendly error messages based on status
-                        const userMessage = response.status === 401
-                            ? "Your session has expired. Please refresh the page and try again."
-                            : response.status === 409
-                                ? "This page was modified elsewhere. Please refresh and try again."
-                                : `Save failed. Please try again.`;
+                        const userMessage =
+                            response.status === 401
+                                ? "Your session has expired. Please refresh the page and try again."
+                                : response.status === 409
+                                  ? "This page was modified elsewhere. Please refresh and try again."
+                                  : `Save failed. Please try again.`;
                         throw new ValidationError(userMessage);
                     }
 

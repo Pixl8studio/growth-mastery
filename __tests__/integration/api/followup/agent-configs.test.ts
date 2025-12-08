@@ -52,7 +52,7 @@ describe("POST /api/followup/agent-configs", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -75,7 +75,7 @@ describe("POST /api/followup/agent-configs", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("funnel_project_id is required");
@@ -110,7 +110,9 @@ describe("GET /api/followup/agent-configs", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ configs: Array<{ id: string }> }>(
+            response
+        );
 
         expect(response.status).toBe(200);
         expect(data.configs).toHaveLength(1);

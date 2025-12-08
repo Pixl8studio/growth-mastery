@@ -469,7 +469,10 @@ export function VapiCallWidget({
                             isCleanupSave: true, // Flag to indicate this is a cleanup save
                         }),
                     }).catch((err) => {
-                        logger.error({ error: err }, "Failed to save transcript during cleanup");
+                        logger.error(
+                            { error: err },
+                            "Failed to save transcript during cleanup"
+                        );
                     });
                 }
 
@@ -492,7 +495,8 @@ export function VapiCallWidget({
                 // Standard way to show browser's native "unsaved changes" dialog
                 e.preventDefault();
                 // For older browsers
-                e.returnValue = "You have an active call. Are you sure you want to leave?";
+                e.returnValue =
+                    "You have an active call. Are you sure you want to leave?";
                 return e.returnValue;
             }
         };

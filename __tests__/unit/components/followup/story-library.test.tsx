@@ -129,6 +129,40 @@ describe("StoryLibrary", () => {
         expect(screen.queryByText("Quick ROI Story")).not.toBeInTheDocument();
     });
 
+    it("should filter stories by objection category", () => {
+        render(
+            <StoryLibrary
+                stories={mockStories}
+                onCreateStory={mockOnCreateStory}
+                onUpdateStory={mockOnUpdateStory}
+                onDeleteStory={mockOnDeleteStory}
+            />
+        );
+
+        const objectionFilter = screen.getAllByRole("combobox")[1];
+        fireEvent.change(objectionFilter, { target: { value: "price_concern" } });
+
+        expect(screen.getByText("Sarah Doubled Revenue")).toBeInTheDocument();
+        expect(screen.queryByText("Quick ROI Story")).not.toBeInTheDocument();
+    });
+
+    it("should filter stories by type", () => {
+        render(
+            <StoryLibrary
+                stories={mockStories}
+                onCreateStory={mockOnCreateStory}
+                onUpdateStory={mockOnUpdateStory}
+                onDeleteStory={mockOnDeleteStory}
+            />
+        );
+
+        const typeFilter = screen.getAllByRole("combobox")[2];
+        fireEvent.change(typeFilter, { target: { value: "testimonial" } });
+
+        expect(screen.getByText("Sarah Doubled Revenue")).toBeInTheDocument();
+        expect(screen.queryByText("Quick ROI Story")).not.toBeInTheDocument();
+    });
+
     it("should show create form when add story is clicked", () => {
         render(
             <StoryLibrary
@@ -143,6 +177,22 @@ describe("StoryLibrary", () => {
         fireEvent.click(addButton);
 
         expect(screen.getByText("Add New Story")).toBeInTheDocument();
+    });
+
+    it("should display story metadata", () => {
+        render(
+            <StoryLibrary
+                stories={mockStories}
+                onCreateStory={mockOnCreateStory}
+                onUpdateStory={mockOnUpdateStory}
+                onDeleteStory={mockOnDeleteStory}
+            />
+        );
+
+        // These texts appear in multiple places (dropdowns + story cards)
+        expect(screen.getAllByText("testimonial").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("$mid").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("price concern").length).toBeGreaterThan(0);
     });
 
     it("should display effectiveness score", () => {
@@ -275,7 +325,9 @@ describe("StoryLibrary", () => {
         const addButton = screen.getByText("Add Story");
         fireEvent.click(addButton);
 
-        const titleInput = screen.getByPlaceholderText("Sarah doubled revenue in 90 days");
+        const titleInput = screen.getByPlaceholderText(
+            "Sarah doubled revenue in 90 days"
+        );
         fireEvent.change(titleInput, { target: { value: "New Story" } });
 
         const contentTextarea = screen.getByPlaceholderText(/Sarah was skeptical/);

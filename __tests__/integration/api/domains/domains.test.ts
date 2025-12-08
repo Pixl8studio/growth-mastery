@@ -74,7 +74,10 @@ describe("POST /api/domains", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            domain: { id: string; domain: string; verified?: boolean };
+            dnsInstructions: { type: string; host: string; value: string }[];
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.domain).toBeDefined();
@@ -93,7 +96,7 @@ describe("POST /api/domains", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("Invalid domain format");
@@ -112,7 +115,7 @@ describe("POST /api/domains", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Domain service not configured");
@@ -135,7 +138,7 @@ describe("POST /api/domains", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toContain("Domain already exists");
@@ -171,7 +174,7 @@ describe("POST /api/domains", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Failed to save domain");
@@ -189,7 +192,7 @@ describe("POST /api/domains", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        await parseJsonResponse<{ error?: string }>(response);
 
         expect(response.status).toBe(500);
     });
@@ -223,12 +226,10 @@ describe("GET /api/domains", () => {
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
 
-        const request = createMockRequest({
-            url: "http://localhost:3000/api/domains",
-        });
-
         const response = await GET();
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            domains: Array<{ id: string; domain: string; verified: boolean }>;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.domains).toHaveLength(2);
@@ -251,7 +252,9 @@ describe("GET /api/domains", () => {
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
 
         const response = await GET();
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            domains: Array<{ id: string; domain: string; verified: boolean }>;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.domains).toHaveLength(0);
@@ -274,7 +277,7 @@ describe("GET /api/domains", () => {
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
 
         const response = await GET();
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Failed to fetch domains");
@@ -284,7 +287,7 @@ describe("GET /api/domains", () => {
         vi.mocked(requireAuth).mockRejectedValue(new Error("Unauthorized"));
 
         const response = await GET();
-        const data = await parseJsonResponse(response);
+        await parseJsonResponse<{ error?: string }>(response);
 
         expect(response.status).toBe(500);
     });

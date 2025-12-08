@@ -53,7 +53,10 @@ export async function GET(
             .order("created_at", { ascending: false });
 
         if (deckError) {
-            logger.error({ error: deckError, action: "fetch_deck_structures" }, "Failed to fetch deck structures");
+            logger.error(
+                { error: deckError, action: "fetch_deck_structures" },
+                "Failed to fetch deck structures"
+            );
             Sentry.captureException(deckError, {
                 tags: { component: "api", action: "fetch_deck_structures" },
             });
@@ -65,13 +68,13 @@ export async function GET(
 
         return NextResponse.json({ deckStructures: deckStructures || [] });
     } catch (error) {
-        logger.error({ error, action: "deck_structures_api" }, "Deck structures API error");
+        logger.error(
+            { error, action: "deck_structures_api" },
+            "Deck structures API error"
+        );
         Sentry.captureException(error, {
             tags: { component: "api", action: "deck_structures_api" },
         });
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

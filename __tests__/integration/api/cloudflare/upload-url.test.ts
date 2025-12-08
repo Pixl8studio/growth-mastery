@@ -43,7 +43,10 @@ describe("POST /api/cloudflare/upload-url", () => {
             "http://localhost:3000/api/cloudflare/upload-url",
             {
                 method: "POST",
-                body: JSON.stringify({ fileName: "test-video.mp4", projectId: "proj-123" }),
+                body: JSON.stringify({
+                    fileName: "test-video.mp4",
+                    projectId: "proj-123",
+                }),
             }
         );
 

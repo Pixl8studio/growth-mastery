@@ -65,7 +65,9 @@ describe("POST /api/followup/sender/update", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean; message: string }>(
+            response
+        );
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -91,7 +93,7 @@ describe("POST /api/followup/sender/update", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("agent_config_id is required");
@@ -115,7 +117,7 @@ describe("POST /api/followup/sender/update", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Authentication required");
@@ -151,7 +153,7 @@ describe("POST /api/followup/sender/update", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Access denied to agent config");
@@ -200,7 +202,7 @@ describe("POST /api/followup/sender/update", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("Failed to update sender information");

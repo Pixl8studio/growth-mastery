@@ -52,8 +52,12 @@ describe("SequenceManager", () => {
     it("should disable buttons when no offer is provided", () => {
         render(<SequenceManager funnelProjectId="funnel-123" />);
 
-        const aiButton = screen.getByRole("button", { name: /generate ai-powered sequence/i });
-        const defaultButton = screen.getByRole("button", { name: /use default templates/i });
+        const aiButton = screen.getByRole("button", {
+            name: /generate ai-powered sequence/i,
+        });
+        const defaultButton = screen.getByRole("button", {
+            name: /use default templates/i,
+        });
 
         expect(aiButton).toBeDisabled();
         expect(defaultButton).toBeDisabled();

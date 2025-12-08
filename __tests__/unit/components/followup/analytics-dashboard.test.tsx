@@ -114,7 +114,9 @@ describe("AnalyticsDashboard", () => {
         render(<AnalyticsDashboard data={emptyData} />);
 
         expect(
-            screen.getByText("No sequence data yet. Start sending follow-ups to see performance metrics.")
+            screen.getByText(
+                "No sequence data yet. Start sending follow-ups to see performance metrics."
+            )
         ).toBeInTheDocument();
     });
 

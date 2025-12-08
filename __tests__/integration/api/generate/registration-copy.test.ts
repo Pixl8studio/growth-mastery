@@ -125,7 +125,10 @@ describe("POST /api/generate/registration-copy", () => {
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
         vi.mocked(generateWithAI).mockResolvedValue(mockRegistrationCopy);
-        vi.mocked(createRegistrationCopyPrompt).mockReturnValue("mock prompt");
+        vi.mocked(createRegistrationCopyPrompt).mockReturnValue([
+            { role: "system", content: "mock system prompt" },
+            { role: "user", content: "mock user prompt" },
+        ]);
 
         const request = new NextRequest(
             "http://localhost/api/generate/registration-copy",
@@ -191,7 +194,10 @@ describe("POST /api/generate/registration-copy", () => {
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
         vi.mocked(generateWithAI).mockResolvedValue(mockRegistrationCopy);
-        vi.mocked(createRegistrationCopyPrompt).mockReturnValue("mock prompt");
+        vi.mocked(createRegistrationCopyPrompt).mockReturnValue([
+            { role: "system", content: "mock system prompt" },
+            { role: "user", content: "mock user prompt" },
+        ]);
 
         const request = new NextRequest(
             "http://localhost/api/generate/registration-copy",

@@ -93,8 +93,8 @@ function createQueryBuilder(config: TableMockConfig = {}) {
     // Make chainable methods also resolve to the default response when awaited
     // This handles cases like: await supabase.from('table').select().eq('id', '123')
     chainableMethods.forEach((method) => {
-        const originalFn = builder[method] as ReturnType<typeof vi.fn>;
-        builder[method] = vi.fn().mockImplementation((...args) => {
+        const _originalFn = builder[method] as ReturnType<typeof vi.fn>;
+        builder[method] = vi.fn().mockImplementation((..._args) => {
             const result = {
                 ...builder,
                 then: (resolve: (value: unknown) => void) => resolve(defaultResponse),
@@ -143,11 +143,9 @@ export function createSupabaseMock(config: SupabaseMockConfig = {}) {
                     .fn()
                     .mockResolvedValue({ data: { path: "test-path" }, error: null }),
                 download: vi.fn().mockResolvedValue({ data: new Blob(), error: null }),
-                getPublicUrl: vi
-                    .fn()
-                    .mockReturnValue({
-                        data: { publicUrl: "https://example.com/test" },
-                    }),
+                getPublicUrl: vi.fn().mockReturnValue({
+                    data: { publicUrl: "https://example.com/test" },
+                }),
                 remove: vi.fn().mockResolvedValue({ data: null, error: null }),
                 list: vi.fn().mockResolvedValue({ data: [], error: null }),
             }),

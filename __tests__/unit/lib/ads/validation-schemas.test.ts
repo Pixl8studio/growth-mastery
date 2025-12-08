@@ -12,7 +12,6 @@ import {
     GetMetricsSchema,
     GenerateVariationsSchema,
 } from "@/lib/ads/validation-schemas";
-import { z } from "zod";
 
 describe("Validation Schemas", () => {
     describe("AdVariationSchema", () => {

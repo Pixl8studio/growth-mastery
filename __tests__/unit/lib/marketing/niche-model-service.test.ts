@@ -18,7 +18,6 @@ import {
     getNextContentRecommendation,
 } from "@/lib/marketing/niche-model-service";
 import { createClient } from "@/lib/supabase/server";
-import { logger } from "@/lib/logger";
 
 describe("NicheModelService", () => {
     const mockUserId = "user-123";

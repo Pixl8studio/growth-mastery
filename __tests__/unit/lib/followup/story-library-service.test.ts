@@ -29,7 +29,6 @@ vi.mock("@/lib/logger", () => ({
 const {
     createStory,
     findMatchingStories,
-    getStory,
     updateStory,
     deleteStory,
     recordStoryUsage,

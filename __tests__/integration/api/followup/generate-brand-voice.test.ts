@@ -34,9 +34,7 @@ describe("POST /api/followup/generate-brand-voice", () => {
             "## Brand Voice Guidelines\n\n**Tone:** Professional\n**Style:** Conversational\n**Voice Attributes:** Friendly, Authoritative";
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
-        vi.mocked(generateBrandVoiceGuidelines).mockResolvedValue(
-            mockBrandVoice
-        );
+        vi.mocked(generateBrandVoiceGuidelines).mockResolvedValue(mockBrandVoice);
 
         const request = createMockRequest({
             method: "POST",
@@ -53,7 +51,9 @@ describe("POST /api/followup/generate-brand-voice", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean; brandVoice: string }>(
+            response
+        );
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -79,12 +79,10 @@ describe("POST /api/followup/generate-brand-voice", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
-        expect(data.error).toBe(
-            "businessContext and productKnowledge are required"
-        );
+        expect(data.error).toBe("businessContext and productKnowledge are required");
     });
 
     it("should return 400 for missing productKnowledge", async () => {
@@ -106,12 +104,10 @@ describe("POST /api/followup/generate-brand-voice", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
-        expect(data.error).toBe(
-            "businessContext and productKnowledge are required"
-        );
+        expect(data.error).toBe("businessContext and productKnowledge are required");
     });
 
     it("should return 401 for unauthenticated users", async () => {
@@ -135,7 +131,7 @@ describe("POST /api/followup/generate-brand-voice", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Authentication required");
@@ -164,7 +160,7 @@ describe("POST /api/followup/generate-brand-voice", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Failed to generate brand voice guidelines");

@@ -68,7 +68,11 @@ describe("POST /api/ads/optimize", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            optimizations: Array<{ action: string }>;
+            autopilot: boolean;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -97,7 +101,7 @@ describe("POST /api/ads/optimize", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Authentication required");
@@ -133,7 +137,7 @@ describe("POST /api/ads/optimize", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ autopilot: boolean }>(response);
 
         expect(response.status).toBe(200);
         expect(data.autopilot).toBe(true);
@@ -174,7 +178,7 @@ describe("POST /api/ads/optimize", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ autopilot: boolean }>(response);
 
         expect(response.status).toBe(200);
         expect(data.autopilot).toBe(false);
@@ -205,7 +209,7 @@ describe("POST /api/ads/optimize", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBeDefined();
@@ -268,7 +272,9 @@ describe("POST /api/ads/optimize", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            optimizations: unknown[];
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.optimizations).toHaveLength(2);
@@ -304,7 +310,9 @@ describe("POST /api/ads/optimize", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            optimizations: unknown[];
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.optimizations).toHaveLength(1);
@@ -368,7 +376,10 @@ describe("GET /api/ads/optimize", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            optimizations: Array<{ status: string }>;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -393,7 +404,7 @@ describe("GET /api/ads/optimize", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Authentication required");
@@ -451,7 +462,9 @@ describe("GET /api/ads/optimize", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            optimizations: unknown[];
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.optimizations).toHaveLength(1);
@@ -490,7 +503,10 @@ describe("GET /api/ads/optimize", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            optimizations: unknown[];
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);

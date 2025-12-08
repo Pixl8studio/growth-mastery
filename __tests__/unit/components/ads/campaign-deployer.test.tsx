@@ -17,6 +17,7 @@ describe("CampaignDeployer", () => {
             link_description: "Learn More",
             hooks: { long: "", short: "", curiosity: "" },
             call_to_action: "Sign Up",
+            selected: false,
         },
         {
             id: "var-2",
@@ -27,6 +28,7 @@ describe("CampaignDeployer", () => {
             link_description: "See How",
             hooks: { long: "", short: "", curiosity: "" },
             call_to_action: "Learn More",
+            selected: false,
         },
     ];
 

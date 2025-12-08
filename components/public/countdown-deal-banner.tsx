@@ -38,12 +38,17 @@ export function CountdownDealBanner({ variant = "light" }: CountdownDealBannerPr
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
-        setMounted(true);
+        requestAnimationFrame(() => {
+            setMounted(true);
+        });
 
         // Find the current active deal
         const now = new Date();
         const activeDeal = DEALS.find((deal) => now < deal.endDate);
-        setCurrentDeal(activeDeal || null);
+
+        requestAnimationFrame(() => {
+            setCurrentDeal(activeDeal || null);
+        });
 
         if (!activeDeal) return;
 
@@ -63,7 +68,9 @@ export function CountdownDealBanner({ variant = "light" }: CountdownDealBannerPr
         };
 
         // Initial calculation
-        setTimeLeft(calculateTimeLeft());
+        requestAnimationFrame(() => {
+            setTimeLeft(calculateTimeLeft());
+        });
 
         // Update every second
         const timer = setInterval(() => {

@@ -24,7 +24,6 @@ import {
     generateShortLink,
 } from "@/lib/marketing/cta-strategist-service";
 import { generateWithAI } from "@/lib/ai/client";
-import { logger } from "@/lib/logger";
 
 describe("CTAStrategistService", () => {
     const mockBrief = {

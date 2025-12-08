@@ -6,6 +6,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET, POST } from "@/app/api/marketing/briefs/route";
 import { NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 // Mock Supabase client
 const mockSupabaseClient = () => {
@@ -86,9 +87,7 @@ describe("POST /api/marketing/briefs", () => {
             error: null,
         });
 
-        vi.mocked(await import("@/lib/supabase/server")).createClient = vi.fn(
-            () => mockClient as any
-        );
+        vi.mocked(createClient).mockReturnValue(mockClient as any);
 
         const request = new NextRequest("http://localhost/api/marketing/briefs", {
             method: "POST",
@@ -115,9 +114,7 @@ describe("POST /api/marketing/briefs", () => {
             error: new Error("Not authenticated"),
         });
 
-        vi.mocked(await import("@/lib/supabase/server")).createClient = vi.fn(
-            () => mockClient as any
-        );
+        vi.mocked(createClient).mockReturnValue(mockClient as any);
 
         const request = new NextRequest("http://localhost/api/marketing/briefs", {
             method: "POST",
@@ -140,9 +137,7 @@ describe("POST /api/marketing/briefs", () => {
             error: null,
         });
 
-        vi.mocked(await import("@/lib/supabase/server")).createClient = vi.fn(
-            () => mockClient as any
-        );
+        vi.mocked(createClient).mockReturnValue(mockClient as any);
 
         const request = new NextRequest("http://localhost/api/marketing/briefs", {
             method: "POST",
@@ -166,9 +161,7 @@ describe("POST /api/marketing/briefs", () => {
             error: null,
         });
 
-        vi.mocked(await import("@/lib/supabase/server")).createClient = vi.fn(
-            () => mockClient as any
-        );
+        vi.mocked(createClient).mockReturnValue(mockClient as any);
 
         const request = new NextRequest("http://localhost/api/marketing/briefs", {
             method: "POST",
@@ -192,9 +185,7 @@ describe("POST /api/marketing/briefs", () => {
             error: null,
         });
 
-        vi.mocked(await import("@/lib/supabase/server")).createClient = vi.fn(
-            () => mockClient as any
-        );
+        vi.mocked(createClient).mockReturnValue(mockClient as any);
 
         const request = new NextRequest("http://localhost/api/marketing/briefs", {
             method: "POST",
@@ -224,9 +215,7 @@ describe("GET /api/marketing/briefs", () => {
             error: null,
         });
 
-        vi.mocked(await import("@/lib/supabase/server")).createClient = vi.fn(
-            () => mockClient as any
-        );
+        vi.mocked(createClient).mockReturnValue(mockClient as any);
 
         const request = new NextRequest("http://localhost/api/marketing/briefs");
 
@@ -246,9 +235,7 @@ describe("GET /api/marketing/briefs", () => {
             error: new Error("Not authenticated"),
         });
 
-        vi.mocked(await import("@/lib/supabase/server")).createClient = vi.fn(
-            () => mockClient as any
-        );
+        vi.mocked(createClient).mockReturnValue(mockClient as any);
 
         const request = new NextRequest("http://localhost/api/marketing/briefs");
 

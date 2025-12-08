@@ -39,13 +39,16 @@ describe("POST /api/support/chat/message", () => {
             },
         ]);
 
-        const request = new NextRequest("http://localhost:3000/api/support/chat/message", {
-            method: "POST",
-            body: JSON.stringify({
-                threadId: "thread-123",
-                message: "I need help",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/support/chat/message",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    threadId: "thread-123",
+                    message: "I need help",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -55,12 +58,15 @@ describe("POST /api/support/chat/message", () => {
     });
 
     it("should handle missing threadId", async () => {
-        const request = new NextRequest("http://localhost:3000/api/support/chat/message", {
-            method: "POST",
-            body: JSON.stringify({
-                message: "Test",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/support/chat/message",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    message: "Test",
+                }),
+            }
+        );
 
         const response = await POST(request);
 
@@ -71,13 +77,16 @@ describe("POST /api/support/chat/message", () => {
         const { sendMessage } = await import("@/lib/openai/assistants-client");
         (sendMessage as any).mockRejectedValue(new Error("Failed to send"));
 
-        const request = new NextRequest("http://localhost:3000/api/support/chat/message", {
-            method: "POST",
-            body: JSON.stringify({
-                threadId: "thread-123",
-                message: "Test",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/support/chat/message",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    threadId: "thread-123",
+                    message: "Test",
+                }),
+            }
+        );
 
         const response = await POST(request);
 

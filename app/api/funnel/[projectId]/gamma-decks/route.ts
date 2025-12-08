@@ -53,7 +53,10 @@ export async function GET(
             .order("created_at", { ascending: false });
 
         if (gammaError) {
-            logger.error({ error: gammaError, action: "fetch_gamma_decks" }, "Failed to fetch gamma decks");
+            logger.error(
+                { error: gammaError, action: "fetch_gamma_decks" },
+                "Failed to fetch gamma decks"
+            );
             Sentry.captureException(gammaError, {
                 tags: { component: "api", action: "fetch_gamma_decks" },
             });
@@ -69,10 +72,7 @@ export async function GET(
         Sentry.captureException(error, {
             tags: { component: "api", action: "gamma_decks_api" },
         });
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
 
@@ -108,7 +108,10 @@ export async function DELETE(
             .eq("user_id", user.id);
 
         if (deleteError) {
-            logger.error({ error: deleteError, action: "delete_gamma_deck" }, "Failed to delete gamma deck");
+            logger.error(
+                { error: deleteError, action: "delete_gamma_deck" },
+                "Failed to delete gamma deck"
+            );
             Sentry.captureException(deleteError, {
                 tags: { component: "api", action: "delete_gamma_deck" },
             });
@@ -120,14 +123,14 @@ export async function DELETE(
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        logger.error({ error, action: "delete_gamma_deck" }, "Delete gamma deck API error");
+        logger.error(
+            { error, action: "delete_gamma_deck" },
+            "Delete gamma deck API error"
+        );
         Sentry.captureException(error, {
             tags: { component: "api", action: "delete_gamma_deck" },
         });
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
 
@@ -165,7 +168,10 @@ export async function PATCH(
             .single();
 
         if (updateError) {
-            logger.error({ error: updateError, action: "update_gamma_deck" }, "Failed to update gamma deck");
+            logger.error(
+                { error: updateError, action: "update_gamma_deck" },
+                "Failed to update gamma deck"
+            );
             Sentry.captureException(updateError, {
                 tags: { component: "api", action: "update_gamma_deck" },
             });
@@ -177,13 +183,13 @@ export async function PATCH(
 
         return NextResponse.json({ gammaDeck: updatedDeck });
     } catch (error) {
-        logger.error({ error, action: "update_gamma_deck" }, "Update gamma deck API error");
+        logger.error(
+            { error, action: "update_gamma_deck" },
+            "Update gamma deck API error"
+        );
         Sentry.captureException(error, {
             tags: { component: "api", action: "update_gamma_deck" },
         });
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

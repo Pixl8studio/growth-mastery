@@ -169,7 +169,14 @@ describe("POST /api/ads/campaigns/create", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            campaign: {
+                meta_campaign_id: string;
+                meta_adset_id: string;
+                ads_created: number;
+            };
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -202,7 +209,7 @@ describe("POST /api/ads/campaigns/create", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Authentication required");
@@ -227,7 +234,7 @@ describe("POST /api/ads/campaigns/create", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBeDefined();
@@ -279,7 +286,7 @@ describe("POST /api/ads/campaigns/create", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toContain("Daily budget cannot exceed");
@@ -346,7 +353,7 @@ describe("POST /api/ads/campaigns/create", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Access denied to funnel project");
@@ -525,7 +532,7 @@ describe("POST /api/ads/campaigns/create", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBeDefined();
@@ -602,7 +609,7 @@ describe("POST /api/ads/campaigns/create", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("Facebook not connected");

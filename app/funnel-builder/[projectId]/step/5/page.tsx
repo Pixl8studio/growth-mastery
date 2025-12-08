@@ -122,7 +122,9 @@ export default function Step4Page({
             if (!projectId) return;
 
             try {
-                const response = await fetch(`/api/funnel/${projectId}/deck-structures`);
+                const response = await fetch(
+                    `/api/funnel/${projectId}/deck-structures`
+                );
 
                 if (!response.ok) {
                     throw new Error("Failed to fetch deck structures");

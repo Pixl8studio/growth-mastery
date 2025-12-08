@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "@/app/api/marketing/validate/[variantId]/route";
 import { NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 vi.mock("@/lib/supabase/server", () => ({
     createClient: vi.fn(() => ({
@@ -42,17 +43,14 @@ describe("POST /api/marketing/validate/[variantId]", () => {
     });
 
     it("returns 401 for unauthenticated requests", async () => {
-        vi.mocked(await import("@/lib/supabase/server")).createClient = vi.fn(
-            () =>
-                ({
-                    auth: {
-                        getUser: vi.fn(() => ({
-                            data: { user: null },
-                            error: null,
-                        })),
-                    },
-                }) as any
-        );
+        vi.mocked(createClient).mockReturnValue({
+            auth: {
+                getUser: vi.fn(() => ({
+                    data: { user: null },
+                    error: null,
+                })),
+            },
+        } as any);
 
         const request = new NextRequest(
             "http://localhost/api/marketing/validate/variant-123",

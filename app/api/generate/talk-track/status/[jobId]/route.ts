@@ -41,7 +41,10 @@ export async function GET(
 
         return NextResponse.json({ job });
     } catch (error) {
-        logger.error({ error, action: "fetch_job_status" }, "Failed to fetch job status");
+        logger.error(
+            { error, action: "fetch_job_status" },
+            "Failed to fetch job status"
+        );
         Sentry.captureException(error, {
             tags: { component: "api", action: "fetch_job_status" },
         });

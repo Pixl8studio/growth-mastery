@@ -31,10 +31,7 @@ export function PublicPageWrapper({ htmlContent, theme }: PublicPageWrapperProps
                 rel="stylesheet"
                 href="/funnel-system/config/theme-variables.css?v=6.1"
             />
-            <link
-                rel="stylesheet"
-                href="/funnel-system/assets/css/blocks.css?v=6.1"
-            />
+            <link rel="stylesheet" href="/funnel-system/assets/css/blocks.css?v=6.1" />
 
             {/* Inject theme CSS variables */}
             <style>{`

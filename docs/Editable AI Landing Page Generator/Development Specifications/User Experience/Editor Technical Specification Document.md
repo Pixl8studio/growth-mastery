@@ -1,6 +1,7 @@
 # Conversational AI Editor - Technical Specification Document
 
-Based on the screenshot, here is a detailed breakdown of the conversational AI-powered visual editor interface for your development team.
+Based on the screenshot, here is a detailed breakdown of the conversational AI-powered
+visual editor interface for your development team.
 
 ## 1. Overall Layout Architecture
 
@@ -13,7 +14,8 @@ The interface follows a split-pane design:
 
 ### Top Navigation Bar
 
-- **Project Title** (top-left): "Training - Launch Your Profitable Webinar In A Day" with dropdown indicator for project switching
+- **Project Title** (top-left): "Training - Launch Your Profitable Webinar In A Day"
+  with dropdown indicator for project switching
 - **Status Indicator**: "Previewing last saved version" subtitle text
 
 ### Center Toolbar Icons
@@ -38,9 +40,11 @@ The interface follows a split-pane design:
 
 ### Chat Message Thread
 
-- **User Messages**: Displayed in gray/light background bubbles, right-aligned or distinct styling
+- **User Messages**: Displayed in gray/light background bubbles, right-aligned or
+  distinct styling
 - **AI Responses**: Include:
-  - **Thinking/Processing Indicator**: "Thought for 15s" with lightbulb icon - shows AI reasoning time
+  - **Thinking/Processing Indicator**: "Thought for 15s" with lightbulb icon - shows AI
+    reasoning time
   - **Response Text**: Natural language explanation of what the AI did
   - **Edit Summary**: "2 edits made" with "Show all" link to expand
 
@@ -48,7 +52,9 @@ The interface follows a split-pane design:
 
 After processing, the AI provides:
 
-- **Summary of Changes**: "Updated all messaging to reflect the training recording instead of the live event - removed time-specific language, 'limited spots,' and changed CTAs to 'Watch Now' and 'Get Instant Access.'"
+- **Summary of Changes**: "Updated all messaging to reflect the training recording
+  instead of the live event - removed time-specific language, 'limited spots,' and
+  changed CTAs to 'Watch Now' and 'Get Instant Access.'"
 - **Expandable Action Items**: Collapsible cards showing:
   - "Update recording messaging" with chevron for expansion
   - "Preview Latest" link
@@ -88,7 +94,9 @@ These are contextual suggestions the AI offers for next steps.
 Displays the actual webpage/landing page being edited:
 
 **Hero Section:**
-- Large headline: "Launch a Profitable Webinar in a Day" (with gradient text effect on "Webinar in a Day")
+
+- Large headline: "Launch a Profitable Webinar in a Day" (with gradient text effect on
+  "Webinar in a Day")
 - Subheadline paragraph with value proposition
 - Primary CTA Button: "Watch the Training" (green button with down arrow)
 - Supporting text: "Full Training Recording Available Now"
@@ -140,4 +148,6 @@ Displays the actual webpage/landing page being edited:
 
 ## Summary
 
-This is a sophisticated AI-first content editor that abstracts away direct editing in favor of conversational interactions, while maintaining transparency through edit tracking and code access.
+This is a sophisticated AI-first content editor that abstracts away direct editing in
+favor of conversational interactions, while maintaining transparency through edit
+tracking and code access.

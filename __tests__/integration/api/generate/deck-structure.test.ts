@@ -32,10 +32,10 @@ vi.mock("path", () => ({
 }));
 
 describe("POST /api/generate/deck-structure", () => {
-    const mockUserId = "user-123";
-    const mockTranscriptId = "transcript-123e4567-e89b-12d3-a456-426614174000";
-    const mockProjectId = "project-123e4567-e89b-12d3-a456-426614174000";
-    const mockDeckId = "deck-123e4567-e89b-12d3-a456-426614174000";
+    const mockUserId = "123e4567-e89b-12d3-a456-426614174001";
+    const mockTranscriptId = "223e4567-e89b-12d3-a456-426614174001";
+    const mockProjectId = "323e4567-e89b-12d3-a456-426614174001";
+    const mockDeckId = "423e4567-e89b-12d3-a456-426614174001";
 
     const mockTranscript = {
         id: mockTranscriptId,

@@ -96,6 +96,43 @@ describe("GlobalDashboard", () => {
         });
     });
 
+    it("should display segment breakdown", async () => {
+        render(<GlobalDashboard userId={mockUserId} />);
+
+        await waitFor(() => {
+            expect(screen.getByText("Prospects by Segment")).toBeInTheDocument();
+            expect(screen.getByText("No Show")).toBeInTheDocument();
+            expect(screen.getByText("Skimmer")).toBeInTheDocument();
+            expect(screen.getByText("Sampler")).toBeInTheDocument();
+            expect(screen.getByText("Engaged")).toBeInTheDocument();
+            expect(screen.getByText("Hot")).toBeInTheDocument();
+        });
+    });
+
+    it("should display engagement level breakdown", async () => {
+        render(<GlobalDashboard userId={mockUserId} />);
+
+        await waitFor(() => {
+            expect(
+                screen.getByText("Prospects by Engagement Level")
+            ).toBeInTheDocument();
+            expect(screen.getByText("Cold")).toBeInTheDocument();
+            expect(screen.getByText("Warm")).toBeInTheDocument();
+            expect(screen.getByText("Hot")).toBeInTheDocument();
+        });
+    });
+
+    it("should display funnel performance when data exists", async () => {
+        render(<GlobalDashboard userId={mockUserId} />);
+
+        await waitFor(() => {
+            expect(screen.getByText("Performance by Funnel")).toBeInTheDocument();
+            expect(screen.getByText("Main Webinar Funnel")).toBeInTheDocument();
+            expect(screen.getByText("Secondary Funnel")).toBeInTheDocument();
+            expect(screen.getByText("150 prospects")).toBeInTheDocument();
+        });
+    });
+
     it("should display recent activity", async () => {
         render(<GlobalDashboard userId={mockUserId} />);
 
@@ -134,6 +171,15 @@ describe("GlobalDashboard", () => {
 
         await waitFor(() => {
             expect(screen.getByText("No recent activity")).toBeInTheDocument();
+        });
+    });
+
+    it("should calculate percentages correctly for segments", async () => {
+        render(<GlobalDashboard userId={mockUserId} />);
+
+        await waitFor(() => {
+            // No Show: 50/250 = 20%
+            expect(screen.getByText(/50 \(20%\)/)).toBeInTheDocument();
         });
     });
 

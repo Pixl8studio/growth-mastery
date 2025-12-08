@@ -39,11 +39,15 @@ export function MobileNavDrawer({ isOpen, onClose, userEmail }: MobileNavDrawerP
     useEffect(() => {
         if (isOpen) {
             // Delay for animation
-            setTimeout(() => setIsVisible(true), 10);
+            requestAnimationFrame(() => {
+                setTimeout(() => setIsVisible(true), 10);
+            });
             // Prevent body scroll when drawer is open
             document.body.style.overflow = "hidden";
         } else {
-            setIsVisible(false);
+            requestAnimationFrame(() => {
+                setIsVisible(false);
+            });
             document.body.style.overflow = "";
         }
 

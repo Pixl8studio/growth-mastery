@@ -74,9 +74,13 @@ describe("SenderSetupTab", () => {
         render(<SenderSetupTab {...mockProps} />);
 
         await waitFor(() => {
-            expect(screen.getByText("Sender Information (SendGrid)")).toBeInTheDocument();
+            expect(
+                screen.getByText("Sender Information (SendGrid)")
+            ).toBeInTheDocument();
             expect(screen.getByLabelText("From Name *")).toHaveValue("Test Sender");
-            expect(screen.getByLabelText("From Email *")).toHaveValue("sender@example.com");
+            expect(screen.getByLabelText("From Email *")).toHaveValue(
+                "sender@example.com"
+            );
         });
     });
 
@@ -110,13 +114,15 @@ describe("SenderSetupTab", () => {
     });
 
     it("should call save API when save button is clicked", async () => {
-        (global.fetch as any).mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ available: true }),
-        }).mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ success: true }),
-        });
+        (global.fetch as any)
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ available: true }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ success: true }),
+            });
 
         render(<SenderSetupTab {...mockProps} />);
 
@@ -150,13 +156,15 @@ describe("SenderSetupTab", () => {
     });
 
     it("should open Gmail OAuth popup on connect", async () => {
-        (global.fetch as any).mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ available: true }),
-        }).mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ authUrl: "https://oauth.example.com" }),
-        });
+        (global.fetch as any)
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ available: true }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ authUrl: "https://oauth.example.com" }),
+            });
 
         render(<SenderSetupTab {...mockProps} />);
 
@@ -180,7 +188,9 @@ describe("SenderSetupTab", () => {
         render(<SenderSetupTab {...gmailProps} />);
 
         await waitFor(() => {
-            expect(screen.queryByText("Sender Information (SendGrid)")).not.toBeInTheDocument();
+            expect(
+                screen.queryByText("Sender Information (SendGrid)")
+            ).not.toBeInTheDocument();
         });
     });
 
@@ -201,7 +211,9 @@ describe("SenderSetupTab", () => {
         render(<SenderSetupTab {...mockProps} />);
 
         await waitFor(() => {
-            const progressBar = document.querySelector(".bg-gradient-to-r.from-primary");
+            const progressBar = document.querySelector(
+                ".bg-gradient-to-r.from-primary"
+            );
             expect(progressBar).toBeInTheDocument();
         });
     });
@@ -241,13 +253,15 @@ describe("SenderSetupTab", () => {
     it("should call onUpdate callback when provided", async () => {
         const mockOnUpdate = vi.fn();
 
-        (global.fetch as any).mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ available: true }),
-        }).mockResolvedValueOnce({
-            ok: true,
-            json: async () => ({ success: true }),
-        });
+        (global.fetch as any)
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ available: true }),
+            })
+            .mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ success: true }),
+            });
 
         render(<SenderSetupTab {...mockProps} onUpdate={mockOnUpdate} />);
 
@@ -265,8 +279,12 @@ describe("SenderSetupTab", () => {
         render(<SenderSetupTab {...mockProps} />);
 
         await waitFor(() => {
-            expect(screen.getByText(/Example: "Sarah from Acme Corp"/)).toBeInTheDocument();
-            expect(screen.getByText(/Use an email from your SendGrid authenticated domain/)).toBeInTheDocument();
+            expect(
+                screen.getByText(/Example: "Sarah from Acme Corp"/)
+            ).toBeInTheDocument();
+            expect(
+                screen.getByText(/Use an email from your SendGrid authenticated domain/)
+            ).toBeInTheDocument();
         });
     });
 });

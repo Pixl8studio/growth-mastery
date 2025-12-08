@@ -100,37 +100,37 @@ test.describe("Flow Setup - Prerequisites and Publishing", () => {
         ).toBeVisible();
     });
 
-    test("Prerequisite detection - missing pages", async ({ page }) => {
+    test("Prerequisite detection - missing pages", async ({ page: _page }) => {
         // Mock test without actual page creation
         test.skip();
     });
 
-    test("Publish toggle functionality", async ({ page }) => {
+    test("Publish toggle functionality", async ({ page: _page }) => {
         // Test publish/unpublish toggle
         test.skip();
     });
 
-    test("Connection map tooltips", async ({ page }) => {
+    test("Connection map tooltips", async ({ page: _page }) => {
         // Test tooltip display on hover
         test.skip();
     });
 
-    test("Automatic flow creation on all pages published", async ({ page }) => {
+    test("Automatic flow creation on all pages published", async ({ page: _page }) => {
         // Test that flow auto-creates when conditions met
         test.skip();
     });
 });
 
 test.describe("Flow Setup - Visual Indicators", () => {
-    test("Green check icons persist in sidebar", async ({ page }) => {
+    test("Green check icons persist in sidebar", async ({ page: _page }) => {
         test.skip();
     });
 
-    test("Connection map shows correct publish status", async ({ page }) => {
+    test("Connection map shows correct publish status", async ({ page: _page }) => {
         test.skip();
     });
 
-    test("Dependency warnings show specific missing pages", async ({ page }) => {
+    test("Dependency warnings show specific missing pages", async ({ page: _page }) => {
         test.skip();
     });
 });

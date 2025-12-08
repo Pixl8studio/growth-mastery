@@ -71,7 +71,10 @@ describe("Section Copy Generator", () => {
                 eq: vi.fn().mockReturnThis(),
                 order: vi.fn().mockReturnThis(),
                 limit: vi.fn().mockReturnThis(),
-                single: vi.fn().mockResolvedValue({ data: { transcript_text: "Benefits text" }, error: null }),
+                single: vi.fn().mockResolvedValue({
+                    data: { transcript_text: "Benefits text" },
+                    error: null,
+                }),
             })),
         };
 
@@ -100,14 +103,20 @@ describe("Section Copy Generator", () => {
                         eq: vi.fn().mockReturnThis(),
                         order: vi.fn().mockReturnThis(),
                         limit: vi.fn().mockReturnThis(),
-                        single: vi.fn().mockResolvedValue({ data: null, error: { message: "Not found" } }),
+                        single: vi.fn().mockResolvedValue({
+                            data: null,
+                            error: { message: "Not found" },
+                        }),
                     };
                 }
                 if (table === "funnel_projects") {
                     return {
                         select: vi.fn().mockReturnThis(),
                         eq: vi.fn().mockReturnThis(),
-                        single: vi.fn().mockResolvedValue({ data: { name: "Project" }, error: null }),
+                        single: vi.fn().mockResolvedValue({
+                            data: { name: "Project" },
+                            error: null,
+                        }),
                     };
                 }
                 return { select: vi.fn().mockReturnThis() };

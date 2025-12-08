@@ -72,9 +72,7 @@ describe("Supabase Middleware", () => {
                 },
             }));
 
-            const { updateSession: update } = await import(
-                "@/lib/supabase/middleware"
-            );
+            const { updateSession: update } = await import("@/lib/supabase/middleware");
 
             const response = await update(mockRequest);
 

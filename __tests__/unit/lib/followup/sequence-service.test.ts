@@ -28,15 +28,11 @@ vi.mock("@/lib/logger", () => ({
 // Import after mocks are defined
 const {
     createSequence,
-    getSequence,
     listSequences,
     updateSequence,
     deleteSequence,
     createMessage,
-    getMessage,
     listMessages,
-    updateMessage,
-    deleteMessage,
 } = await import("@/lib/followup/sequence-service");
 
 describe("Sequence Service", () => {

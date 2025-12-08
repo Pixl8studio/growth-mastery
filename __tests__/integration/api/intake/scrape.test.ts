@@ -61,7 +61,9 @@ describe("POST /api/intake/scrape", () => {
             success: true,
             html: "<html><body>Test content</body></html>",
         });
-        vi.mocked(extractTextFromUrl).mockResolvedValue("Test content from scraped page");
+        vi.mocked(extractTextFromUrl).mockResolvedValue(
+            "Test content from scraped page"
+        );
 
         const mockSupabase = {
             from: vi.fn(() => ({
@@ -86,7 +88,11 @@ describe("POST /api/intake/scrape", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            intakeId: string;
+            method: string;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -107,7 +113,7 @@ describe("POST /api/intake/scrape", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("Invalid URL");
@@ -122,7 +128,7 @@ describe("POST /api/intake/scrape", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBeDefined();
@@ -161,7 +167,7 @@ describe("POST /api/intake/scrape", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ success: boolean }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -186,7 +192,7 @@ describe("POST /api/intake/scrape", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Failed to fetch");

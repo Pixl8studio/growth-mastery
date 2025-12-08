@@ -63,12 +63,15 @@ describe("PATCH /api/pages/watch/[pageId]", () => {
     });
 
     it("should update vanity_slug successfully", async () => {
-        const request = new NextRequest("http://localhost:3000/api/pages/watch/test-page-id", {
-            method: "PATCH",
-            body: JSON.stringify({
-                vanity_slug: "new-slug",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/watch/test-page-id",
+            {
+                method: "PATCH",
+                body: JSON.stringify({
+                    vanity_slug: "new-slug",
+                }),
+            }
+        );
 
         const response = await PATCH(request, {
             params: Promise.resolve({ pageId: "test-page-id" }),
@@ -81,7 +84,9 @@ describe("PATCH /api/pages/watch/[pageId]", () => {
     });
 
     it("should return 400 when slug already exists", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             from: vi.fn(() => ({
                 select: vi.fn(() => ({
                     eq: vi.fn(() => ({
@@ -96,12 +101,15 @@ describe("PATCH /api/pages/watch/[pageId]", () => {
             })),
         } as any);
 
-        const request = new NextRequest("http://localhost:3000/api/pages/watch/test-page-id", {
-            method: "PATCH",
-            body: JSON.stringify({
-                vanity_slug: "existing-slug",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/watch/test-page-id",
+            {
+                method: "PATCH",
+                body: JSON.stringify({
+                    vanity_slug: "existing-slug",
+                }),
+            }
+        );
 
         const response = await PATCH(request, {
             params: Promise.resolve({ pageId: "test-page-id" }),
@@ -113,7 +121,9 @@ describe("PATCH /api/pages/watch/[pageId]", () => {
     });
 
     it("should handle database errors", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             from: vi.fn(() => ({
                 select: vi.fn(() => ({
                     eq: vi.fn(() => ({
@@ -140,12 +150,15 @@ describe("PATCH /api/pages/watch/[pageId]", () => {
             })),
         } as any);
 
-        const request = new NextRequest("http://localhost:3000/api/pages/watch/test-page-id", {
-            method: "PATCH",
-            body: JSON.stringify({
-                vanity_slug: "new-slug",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/watch/test-page-id",
+            {
+                method: "PATCH",
+                body: JSON.stringify({
+                    vanity_slug: "new-slug",
+                }),
+            }
+        );
 
         const response = await PATCH(request, {
             params: Promise.resolve({ pageId: "test-page-id" }),
@@ -157,16 +170,19 @@ describe("PATCH /api/pages/watch/[pageId]", () => {
     });
 
     it("should handle authentication errors", async () => {
-        vi.mocked((await import("@/lib/auth")).getCurrentUserWithProfile).mockRejectedValueOnce(
-            new Error("Auth error")
-        );
+        vi.mocked(
+            (await import("@/lib/auth")).getCurrentUserWithProfile
+        ).mockRejectedValueOnce(new Error("Auth error"));
 
-        const request = new NextRequest("http://localhost:3000/api/pages/watch/test-page-id", {
-            method: "PATCH",
-            body: JSON.stringify({
-                vanity_slug: "new-slug",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/watch/test-page-id",
+            {
+                method: "PATCH",
+                body: JSON.stringify({
+                    vanity_slug: "new-slug",
+                }),
+            }
+        );
 
         const response = await PATCH(request, {
             params: Promise.resolve({ pageId: "test-page-id" }),

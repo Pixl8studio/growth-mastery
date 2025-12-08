@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { loadBusinessContext, formatBusinessContextForPrompt } from "@/lib/ai-assistant/business-context";
+import {
+    loadBusinessContext,
+    formatBusinessContextForPrompt,
+} from "@/lib/ai-assistant/business-context";
 import type { BusinessContext } from "@/lib/ai-assistant/business-context";
 
 vi.mock("@/lib/supabase/client", () => ({
@@ -25,7 +28,9 @@ describe("Business Context", () => {
 
             const mockSupabase = {
                 auth: {
-                    getUser: vi.fn().mockResolvedValue({ data: { user: mockUser }, error: null }),
+                    getUser: vi
+                        .fn()
+                        .mockResolvedValue({ data: { user: mockUser }, error: null }),
                 },
                 from: vi.fn((table: string) => {
                     if (table === "user_profiles") {
@@ -60,14 +65,18 @@ describe("Business Context", () => {
                             select: vi.fn().mockReturnThis(),
                             eq: vi.fn().mockReturnThis(),
                             order: vi.fn().mockResolvedValue({
-                                data: [{ id: "offer-1", name: "Main Offer", price: 997 }],
+                                data: [
+                                    { id: "offer-1", name: "Main Offer", price: 997 },
+                                ],
                                 error: null,
                             }),
                         };
                     }
                     if (table === "contacts") {
                         return {
-                            select: vi.fn().mockResolvedValue({ count: 100, error: null }),
+                            select: vi
+                                .fn()
+                                .mockResolvedValue({ count: 100, error: null }),
                         };
                     }
                     if (table === "payment_transactions") {
@@ -99,14 +108,18 @@ describe("Business Context", () => {
 
             const mockSupabase = {
                 auth: {
-                    getUser: vi.fn().mockResolvedValue({ data: { user: mockUser }, error: null }),
+                    getUser: vi
+                        .fn()
+                        .mockResolvedValue({ data: { user: mockUser }, error: null }),
                 },
                 from: vi.fn((table: string) => {
                     if (table === "user_profiles") {
                         return {
                             select: vi.fn().mockReturnThis(),
                             eq: vi.fn().mockReturnThis(),
-                            single: vi.fn().mockResolvedValue({ data: null, error: null }),
+                            single: vi
+                                .fn()
+                                .mockResolvedValue({ data: null, error: null }),
                         };
                     }
                     if (table === "funnel_projects") {
@@ -131,7 +144,10 @@ describe("Business Context", () => {
         it("should return error when not authenticated", async () => {
             const mockSupabase = {
                 auth: {
-                    getUser: vi.fn().mockResolvedValue({ data: { user: null }, error: { message: "Not authenticated" } }),
+                    getUser: vi.fn().mockResolvedValue({
+                        data: { user: null },
+                        error: { message: "Not authenticated" },
+                    }),
                 },
             };
 
@@ -163,9 +179,7 @@ describe("Business Context", () => {
                     { id: "project-123", name: "Test Project", status: "active" },
                     { id: "project-456", name: "Other Project", status: "draft" },
                 ],
-                offers: [
-                    { id: "offer-1", name: "Main Offer", price: 997 },
-                ],
+                offers: [{ id: "offer-1", name: "Main Offer", price: 997 }],
                 analytics: {
                     totalContacts: 100,
                     totalRevenue: 2994,

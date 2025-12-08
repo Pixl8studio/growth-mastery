@@ -64,7 +64,12 @@ describe("GET /api/analytics/funnel", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            registrations: unknown;
+            views: unknown;
+            enrollments: unknown;
+            revenue: unknown;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.registrations).toBeDefined();
@@ -76,12 +81,10 @@ describe("GET /api/analytics/funnel", () => {
     it("should return 401 for unauthenticated users", async () => {
         const mockSupabase = {
             auth: {
-                getUser: vi
-                    .fn()
-                    .mockResolvedValue({
-                        data: { user: null },
-                        error: { message: "Unauthorized" },
-                    }),
+                getUser: vi.fn().mockResolvedValue({
+                    data: { user: null },
+                    error: { message: "Unauthorized" },
+                }),
             },
         };
 
@@ -92,7 +95,7 @@ describe("GET /api/analytics/funnel", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Unauthorized");
@@ -114,7 +117,7 @@ describe("GET /api/analytics/funnel", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toBe("Missing project_id");
@@ -156,7 +159,7 @@ describe("GET /api/analytics/funnel", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        await parseJsonResponse<Record<string, unknown>>(response);
 
         expect(response.status).toBe(200);
     });
@@ -180,7 +183,7 @@ describe("GET /api/analytics/funnel", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(500);
         expect(data.error).toBe("Failed to fetch analytics");

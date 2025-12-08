@@ -97,10 +97,13 @@ describe("POST /api/pages/upload-image", () => {
         formData.append("image", file);
         formData.append("projectId", "test-project-id");
 
-        const request = new NextRequest("http://localhost:3000/api/pages/upload-image", {
-            method: "POST",
-            body: formData,
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/upload-image",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -119,10 +122,13 @@ describe("POST /api/pages/upload-image", () => {
         formData.append("projectId", "test-project-id");
         formData.append("pageId", "test-page-id");
 
-        const request = new NextRequest("http://localhost:3000/api/pages/upload-image", {
-            method: "POST",
-            body: formData,
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/upload-image",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -137,10 +143,13 @@ describe("POST /api/pages/upload-image", () => {
         formData.append("image", file);
         formData.append("projectId", "test-project-id");
 
-        const request = new NextRequest("http://localhost:3000/api/pages/upload-image", {
-            method: "POST",
-            body: formData,
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/upload-image",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -155,10 +164,13 @@ describe("POST /api/pages/upload-image", () => {
         formData.append("image", file);
         formData.append("projectId", "test-project-id");
 
-        const request = new NextRequest("http://localhost:3000/api/pages/upload-image", {
-            method: "POST",
-            body: formData,
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/upload-image",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -173,10 +185,13 @@ describe("POST /api/pages/upload-image", () => {
         formData.append("image", file);
         formData.append("projectId", "test-project-id");
 
-        const request = new NextRequest("http://localhost:3000/api/pages/upload-image", {
-            method: "POST",
-            body: formData,
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/upload-image",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -186,7 +201,9 @@ describe("POST /api/pages/upload-image", () => {
     });
 
     it("should return 401 when user is not authenticated", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             auth: {
                 getUser: vi.fn(async () => ({
                     data: { user: null },
@@ -200,10 +217,13 @@ describe("POST /api/pages/upload-image", () => {
         formData.append("image", file);
         formData.append("projectId", "test-project-id");
 
-        const request = new NextRequest("http://localhost:3000/api/pages/upload-image", {
-            method: "POST",
-            body: formData,
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/upload-image",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -216,10 +236,13 @@ describe("POST /api/pages/upload-image", () => {
         const formData = new FormData();
         formData.append("projectId", "test-project-id");
 
-        const request = new NextRequest("http://localhost:3000/api/pages/upload-image", {
-            method: "POST",
-            body: formData,
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/upload-image",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -233,10 +256,13 @@ describe("POST /api/pages/upload-image", () => {
         const file = new File(["fake image data"], "test.png", { type: "image/png" });
         formData.append("image", file);
 
-        const request = new NextRequest("http://localhost:3000/api/pages/upload-image", {
-            method: "POST",
-            body: formData,
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/upload-image",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -253,10 +279,13 @@ describe("POST /api/pages/upload-image", () => {
         formData.append("image", file);
         formData.append("projectId", "test-project-id");
 
-        const request = new NextRequest("http://localhost:3000/api/pages/upload-image", {
-            method: "POST",
-            body: formData,
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/upload-image",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -271,10 +300,13 @@ describe("POST /api/pages/upload-image", () => {
         formData.append("image", file);
         formData.append("projectId", "test-project-id");
 
-        const request = new NextRequest("http://localhost:3000/api/pages/upload-image", {
-            method: "POST",
-            body: formData,
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/upload-image",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -284,7 +316,9 @@ describe("POST /api/pages/upload-image", () => {
     });
 
     it("should return 404 when project is not found", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             auth: {
                 getUser: vi.fn(async () => ({
                     data: { user: { id: "test-user-id" } },
@@ -310,10 +344,13 @@ describe("POST /api/pages/upload-image", () => {
         formData.append("image", file);
         formData.append("projectId", "invalid-project-id");
 
-        const request = new NextRequest("http://localhost:3000/api/pages/upload-image", {
-            method: "POST",
-            body: formData,
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/upload-image",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -323,7 +360,9 @@ describe("POST /api/pages/upload-image", () => {
     });
 
     it("should handle storage upload errors", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             auth: {
                 getUser: vi.fn(async () => ({
                     data: { user: { id: "test-user-id" } },
@@ -335,7 +374,10 @@ describe("POST /api/pages/upload-image", () => {
                     eq: vi.fn(() => ({
                         eq: vi.fn(() => ({
                             single: vi.fn(async () => ({
-                                data: { id: "test-project-id", user_id: "test-user-id" },
+                                data: {
+                                    id: "test-project-id",
+                                    user_id: "test-user-id",
+                                },
                                 error: null,
                             })),
                         })),
@@ -356,10 +398,13 @@ describe("POST /api/pages/upload-image", () => {
         formData.append("image", file);
         formData.append("projectId", "test-project-id");
 
-        const request = new NextRequest("http://localhost:3000/api/pages/upload-image", {
-            method: "POST",
-            body: formData,
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/upload-image",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -370,14 +415,19 @@ describe("POST /api/pages/upload-image", () => {
 
     it("should sanitize filenames", async () => {
         const formData = new FormData();
-        const file = new File(["fake image data"], "test file@#$%.png", { type: "image/png" });
+        const file = new File(["fake image data"], "test file@#$%.png", {
+            type: "image/png",
+        });
         formData.append("image", file);
         formData.append("projectId", "test-project-id");
 
-        const request = new NextRequest("http://localhost:3000/api/pages/upload-image", {
-            method: "POST",
-            body: formData,
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/upload-image",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -388,17 +438,22 @@ describe("POST /api/pages/upload-image", () => {
 
     it("should handle image dimension reading errors gracefully", async () => {
         // Mock createImageBitmap to fail
-        global.createImageBitmap = vi.fn().mockRejectedValueOnce(new Error("Cannot read dimensions"));
+        global.createImageBitmap = vi
+            .fn()
+            .mockRejectedValueOnce(new Error("Cannot read dimensions"));
 
         const formData = new FormData();
         const file = new File(["fake image data"], "test.png", { type: "image/png" });
         formData.append("image", file);
         formData.append("projectId", "test-project-id");
 
-        const request = new NextRequest("http://localhost:3000/api/pages/upload-image", {
-            method: "POST",
-            body: formData,
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/upload-image",
+            {
+                method: "POST",
+                body: formData,
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();

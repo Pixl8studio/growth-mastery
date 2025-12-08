@@ -3,6 +3,7 @@
 Auto-generated SQL files tracked by Supabase's migration system.
 
 **NEVER manually create or edit migration files.** Generate migrations using:
+
 ```bash
 supabase db diff -f migration_name
 ```

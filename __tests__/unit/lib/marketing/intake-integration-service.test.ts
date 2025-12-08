@@ -21,7 +21,6 @@ import {
     generateInitialBriefFromIntake,
 } from "@/lib/marketing/intake-integration-service";
 import { createClient } from "@/lib/supabase/server";
-import { logger } from "@/lib/logger";
 import { initializeProfile } from "@/lib/marketing/brand-voice-service";
 
 describe("IntakeIntegrationService", () => {

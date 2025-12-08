@@ -55,7 +55,10 @@ describe("POST /api/followup/sequences/[sequenceId]/messages", () => {
         const context = { params: Promise.resolve({ sequenceId: "seq-123" }) };
 
         const response = await POST(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            message: { name: string };
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -85,7 +88,7 @@ describe("POST /api/followup/sequences/[sequenceId]/messages", () => {
         const context = { params: Promise.resolve({ sequenceId: "seq-123" }) };
 
         const response = await POST(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(400);
         expect(data.error).toContain("required");
@@ -119,7 +122,7 @@ describe("GET /api/followup/sequences/[sequenceId]/messages", () => {
         const context = { params: Promise.resolve({ sequenceId: "seq-123" }) };
 
         const response = await GET(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ messages: Array<unknown> }>(response);
 
         expect(response.status).toBe(200);
         expect(data.messages).toHaveLength(2);

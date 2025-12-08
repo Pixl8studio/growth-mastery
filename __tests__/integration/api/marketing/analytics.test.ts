@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GET } from "@/app/api/marketing/analytics/route";
 import { NextRequest } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 vi.mock("@/lib/marketing/analytics-collector-service", () => ({
     getDashboardAnalytics: vi.fn(() =>
@@ -67,27 +68,24 @@ describe("GET /api/marketing/analytics", () => {
     });
 
     it("returns 401 for unauthorized project access", async () => {
-        vi.mocked(await import("@/lib/supabase/server")).createClient = vi.fn(
-            () =>
-                ({
-                    auth: {
-                        getUser: vi.fn(() => ({
-                            data: { user: { id: "user-123" } },
+        vi.mocked(createClient).mockReturnValue({
+            auth: {
+                getUser: vi.fn(() => ({
+                    data: { user: { id: "user-123" } },
+                    error: null,
+                })),
+            },
+            from: vi.fn(() => ({
+                select: vi.fn(() => ({
+                    eq: vi.fn(() => ({
+                        single: vi.fn(() => ({
+                            data: { user_id: "different-user" },
                             error: null,
                         })),
-                    },
-                    from: vi.fn(() => ({
-                        select: vi.fn(() => ({
-                            eq: vi.fn(() => ({
-                                single: vi.fn(() => ({
-                                    data: { user_id: "different-user" },
-                                    error: null,
-                                })),
-                            })),
-                        })),
                     })),
-                }) as any
-        );
+                })),
+            })),
+        } as any);
 
         const request = new NextRequest(
             "http://localhost/api/marketing/analytics?funnel_project_id=project-123"

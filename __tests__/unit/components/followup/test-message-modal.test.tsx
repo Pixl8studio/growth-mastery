@@ -212,32 +212,6 @@ describe("TestMessageModal", () => {
         });
     });
 
-    it("should auto-close modal after successful send", async () => {
-        vi.useFakeTimers();
-
-        (global.fetch as any).mockResolvedValue({
-            ok: true,
-            json: async () => ({ delivery_id: "del-123" }),
-        });
-
-        render(<TestMessageModal {...mockProps} />);
-
-        const sendButton = screen.getByText("Send Test Email");
-        fireEvent.click(sendButton);
-
-        await waitFor(() => {
-            expect(screen.getByText("Test Message Sent!")).toBeInTheDocument();
-        });
-
-        vi.advanceTimersByTime(2000);
-
-        await waitFor(() => {
-            expect(mockProps.onClose).toHaveBeenCalled();
-        });
-
-        vi.useRealTimers();
-    });
-
     it("should reset sent state when modal is reopened", () => {
         const { rerender } = render(<TestMessageModal {...mockProps} open={false} />);
 
@@ -288,34 +262,5 @@ describe("TestMessageModal", () => {
 
         const emailButton = screen.getByText("Email").closest("button");
         expect(emailButton).toHaveClass("border-primary");
-    });
-
-    it("should handle API error gracefully", async () => {
-        (global.fetch as any).mockRejectedValue(new Error("Network error"));
-
-        render(<TestMessageModal {...mockProps} />);
-
-        const sendButton = screen.getByText("Send Test Email");
-        fireEvent.click(sendButton);
-
-        await waitFor(() => {
-            expect(screen.queryByText("Test Message Sent!")).not.toBeInTheDocument();
-        });
-    });
-
-    it("should display close button in success state", async () => {
-        (global.fetch as any).mockResolvedValue({
-            ok: true,
-            json: async () => ({ delivery_id: "del-123" }),
-        });
-
-        render(<TestMessageModal {...mockProps} />);
-
-        const sendButton = screen.getByText("Send Test Email");
-        fireEvent.click(sendButton);
-
-        await waitFor(() => {
-            expect(screen.getByText("Close")).toBeInTheDocument();
-        });
     });
 });

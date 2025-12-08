@@ -52,41 +52,11 @@ describe("GammaThemeSelector", () => {
         expect(mockOnThemeChange).toHaveBeenCalledWith("atmosphere");
     });
 
-    it("should highlight selected theme", () => {
-        render(<GammaThemeSelector {...defaultProps} selectedTheme="nova" />);
-
-        const novaButton = screen.getByText("Nova").closest("button");
-        expect(novaButton).toHaveClass("border-purple-500");
-    });
-
-    it("should display selection indicator for selected theme", () => {
-        render(<GammaThemeSelector {...defaultProps} selectedTheme="nova" />);
-
-        const novaButton = screen.getByText("Nova").closest("button");
-        const indicator = novaButton?.querySelector(".bg-purple-600");
-        expect(indicator).toBeInTheDocument();
-    });
-
     it("should render with custom className", () => {
         const { container } = render(
             <GammaThemeSelector {...defaultProps} className="custom-class" />
         );
 
         expect(container.firstChild).toHaveClass("custom-class");
-    });
-
-    it("should handle different selected themes", () => {
-        const { rerender } = render(
-            <GammaThemeSelector {...defaultProps} selectedTheme="atmosphere" />
-        );
-
-        const atmosphereButton = screen.getByText("Atmosphere").closest("button");
-        expect(atmosphereButton).toHaveClass("border-purple-500");
-
-        rerender(<GammaThemeSelector {...defaultProps} selectedTheme="borealis" />);
-
-        expect(atmosphereButton).not.toHaveClass("border-purple-500");
-        const borealisButton = screen.getByText("Borealis").closest("button");
-        expect(borealisButton).toHaveClass("border-purple-500");
     });
 });

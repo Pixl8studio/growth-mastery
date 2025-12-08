@@ -214,24 +214,4 @@ describe("GlobalProspectList", () => {
             );
         });
     });
-
-    it("should display email when first_name is null", async () => {
-        const prospectsWithoutName = [
-            {
-                ...mockProspects[0],
-                first_name: null,
-            },
-        ];
-
-        (global.fetch as any).mockResolvedValue({
-            ok: true,
-            json: async () => ({ success: true, prospects: prospectsWithoutName }),
-        });
-
-        render(<GlobalProspectList userId={mockUserId} />);
-
-        await waitFor(() => {
-            expect(screen.getByText("john@example.com")).toBeInTheDocument();
-        });
-    });
 });

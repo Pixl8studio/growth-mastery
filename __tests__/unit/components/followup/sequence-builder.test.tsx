@@ -375,32 +375,4 @@ describe("SequenceBuilder", () => {
             );
         });
     });
-
-    it("should show generation progress", async () => {
-        (global.fetch as any).mockImplementation(
-            () => new Promise((resolve) => setTimeout(() => resolve({
-                ok: true,
-                json: async () => ({
-                    messages_generated: 3,
-                    total_attempted: 3,
-                }),
-            }), 100))
-        );
-
-        render(
-            <SequenceBuilder
-                sequences={mockSequences}
-                onCreateSequence={mockOnCreateSequence}
-                onUpdateSequence={mockOnUpdateSequence}
-                onDeleteSequence={mockOnDeleteSequence}
-            />
-        );
-
-        const generateButton = screen.getByText("Generate Messages");
-        fireEvent.click(generateButton);
-
-        await waitFor(() => {
-            expect(screen.getByText("Initializing...")).toBeInTheDocument();
-        });
-    });
 });

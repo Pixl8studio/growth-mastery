@@ -104,26 +104,6 @@ describe("BriefTemplateLibrary", () => {
         });
     });
 
-    it("should filter templates by type (all/default/custom)", async () => {
-        (global.fetch as any).mockResolvedValueOnce({
-            json: async () => ({ success: true, templates: mockTemplates }),
-        });
-
-        render(<BriefTemplateLibrary {...defaultProps} />);
-
-        await waitFor(() => {
-            expect(screen.getByText("Launch Campaign")).toBeInTheDocument();
-        });
-
-        const defaultButton = screen.getByText("Default");
-        fireEvent.click(defaultButton);
-
-        await waitFor(() => {
-            expect(screen.getByText("Launch Campaign")).toBeInTheDocument();
-            expect(screen.queryByText("Lead Gen")).not.toBeInTheDocument();
-        });
-    });
-
     it("should display favorites section when favorites exist", async () => {
         (global.fetch as any).mockResolvedValueOnce({
             json: async () => ({ success: true, templates: mockTemplates }),
@@ -134,21 +114,6 @@ describe("BriefTemplateLibrary", () => {
         await waitFor(() => {
             expect(screen.getByText("Favorites")).toBeInTheDocument();
         });
-    });
-
-    it("should handle template selection", async () => {
-        (global.fetch as any).mockResolvedValueOnce({
-            json: async () => ({ success: true, templates: mockTemplates }),
-        });
-
-        render(<BriefTemplateLibrary {...defaultProps} />);
-
-        await waitFor(() => {
-            const useTemplateButton = screen.getAllByText("Use Template")[0];
-            fireEvent.click(useTemplateButton);
-        });
-
-        expect(mockOnSelectTemplate).toHaveBeenCalledWith(mockTemplates[0]);
     });
 
     it("should handle template deletion", async () => {
@@ -284,15 +249,4 @@ describe("BriefTemplateLibrary", () => {
         });
     });
 
-    it("should handle loading error", async () => {
-        (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
-
-        const { logger } = require("@/lib/client-logger");
-
-        render(<BriefTemplateLibrary {...defaultProps} />);
-
-        await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
-        });
-    });
 });

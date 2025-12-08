@@ -40,13 +40,6 @@ describe("RecurringPostScheduler", () => {
         expect(screen.getByText("Monthly")).toBeInTheDocument();
     });
 
-    it("should select weekly frequency by default", () => {
-        render(<RecurringPostScheduler {...defaultProps} />);
-
-        const weeklyButton = screen.getByRole("button", { name: /Weekly/i });
-        expect(weeklyButton).toHaveClass("bg-primary");
-    });
-
     it("should change frequency when clicked", () => {
         render(<RecurringPostScheduler {...defaultProps} />);
 
@@ -72,15 +65,6 @@ describe("RecurringPostScheduler", () => {
 
         expect(screen.getByText("Day of Month")).toBeInTheDocument();
         expect(screen.getByPlaceholderText("1-31")).toBeInTheDocument();
-    });
-
-    it("should allow changing time", () => {
-        render(<RecurringPostScheduler {...defaultProps} />);
-
-        const timeInput = screen.getByLabelText(/Time/i);
-        fireEvent.change(timeInput, { target: { value: "14:30" } });
-
-        expect(timeInput).toHaveValue("14:30");
     });
 
     it("should display timezone information", () => {

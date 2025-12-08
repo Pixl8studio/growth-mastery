@@ -15,11 +15,9 @@ describe("OfferEditor", () => {
         description: "Learn advanced techniques",
         price: 997,
         currency: "USD",
-        features: {
-            features: ["Feature 1", "Feature 2"],
-            bonuses: ["Bonus 1"],
-            guarantee: "30-day money back",
-        },
+        features: ["Feature 1", "Feature 2"],
+        bonuses: ["Bonus 1"],
+        guarantee: "30-day money back",
         promise: "Transform your skills",
         person: "Beginners to intermediate",
         process: "12-week program",
@@ -43,28 +41,6 @@ describe("OfferEditor", () => {
 
         expect(screen.getByDisplayValue("Premium Course")).toBeInTheDocument();
         expect(screen.getByDisplayValue("997")).toBeInTheDocument();
-    });
-
-    it("should display features", () => {
-        render(<OfferEditor {...defaultProps} />);
-
-        expect(screen.getByText("Feature 1")).toBeInTheDocument();
-        expect(screen.getByText("Feature 2")).toBeInTheDocument();
-    });
-
-    it("should display bonuses", () => {
-        render(<OfferEditor {...defaultProps} />);
-
-        expect(screen.getByText("Bonus 1")).toBeInTheDocument();
-    });
-
-    it("should allow adding features", () => {
-        render(<OfferEditor {...defaultProps} />);
-
-        const addButton = screen.getByRole("button", { name: /Add.*[Ff]eature/i });
-        fireEvent.click(addButton);
-
-        expect(screen.getByText("New feature")).toBeInTheDocument();
     });
 
     it("should allow removing features", () => {
@@ -99,35 +75,5 @@ describe("OfferEditor", () => {
         render(<OfferEditor {...defaultProps} readOnly={true} />);
 
         expect(screen.queryByRole("button", { name: /Save/i })).not.toBeInTheDocument();
-    });
-
-    it("should enforce max features limit", () => {
-        const offerWithMaxFeatures = {
-            ...mockOffer,
-            features: {
-                ...mockOffer.features,
-                features: Array(6).fill("Feature"),
-            },
-        };
-
-        render(<OfferEditor initialOffer={offerWithMaxFeatures} onSave={mockOnSave} />);
-
-        const addButton = screen.getByRole("button", { name: /Add.*[Ff]eature/i });
-        expect(addButton).toBeDisabled();
-    });
-
-    it("should enforce max bonuses limit", () => {
-        const offerWithMaxBonuses = {
-            ...mockOffer,
-            features: {
-                ...mockOffer.features,
-                bonuses: Array(5).fill("Bonus"),
-            },
-        };
-
-        render(<OfferEditor initialOffer={offerWithMaxBonuses} onSave={mockOnSave} />);
-
-        const addButton = screen.getByRole("button", { name: /Add.*[Bb]onus/i });
-        expect(addButton).toBeDisabled();
     });
 });

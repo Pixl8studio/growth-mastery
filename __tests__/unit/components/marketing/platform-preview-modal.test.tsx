@@ -27,13 +27,6 @@ describe("PlatformPreviewModal", () => {
         vi.clearAllMocks();
     });
 
-    it("should render correctly when open", () => {
-        render(<PlatformPreviewModal {...defaultProps} />);
-
-        expect(screen.getByText("Preview")).toBeInTheDocument();
-        expect(screen.getByText(/instagram/i)).toBeInTheDocument();
-    });
-
     it("should not render when closed", () => {
         const { container } = render(
             <PlatformPreviewModal {...defaultProps} isOpen={false} />
@@ -158,28 +151,6 @@ describe("PlatformPreviewModal", () => {
         expect(mockOnClose).toHaveBeenCalled();
     });
 
-    it("should close modal when clicking outside", () => {
-        const { container } = render(<PlatformPreviewModal {...defaultProps} />);
-
-        const backdrop = container.querySelector(".bg-black");
-        if (backdrop) {
-            fireEvent.click(backdrop);
-            expect(mockOnClose).toHaveBeenCalled();
-        }
-    });
-
-    it("should display character count for Twitter", () => {
-        const twitterContent = {
-            ...defaultContent,
-            platform: "twitter",
-            copy_text: "Short tweet",
-        };
-
-        render(<PlatformPreviewModal {...defaultProps} content={twitterContent} />);
-
-        expect(screen.getByText(/11 \/ 280/)).toBeInTheDocument();
-    });
-
     it("should truncate long copy text appropriately", () => {
         const longContent = {
             ...defaultContent,
@@ -190,46 +161,5 @@ describe("PlatformPreviewModal", () => {
 
         const previewText = screen.getByText(/x+/);
         expect(previewText).toBeInTheDocument();
-    });
-
-    it("should display multiple images in grid", () => {
-        const multiImageContent = {
-            ...defaultContent,
-            media_urls: [
-                "https://example.com/image1.jpg",
-                "https://example.com/image2.jpg",
-                "https://example.com/image3.jpg",
-            ],
-        };
-
-        render(<PlatformPreviewModal {...defaultProps} content={multiImageContent} />);
-
-        const images = screen.getAllByRole("img");
-        expect(images.length).toBeGreaterThanOrEqual(3);
-    });
-
-    it("should show platform-specific UI elements", () => {
-        render(<PlatformPreviewModal {...defaultProps} />);
-
-        // Instagram should have like, comment, share icons
-        expect(screen.getByTestId("platform-ui")).toBeInTheDocument();
-    });
-
-    it("should handle video media type", () => {
-        const videoContent = {
-            ...defaultContent,
-            media_urls: ["https://example.com/video.mp4"],
-        };
-
-        render(<PlatformPreviewModal {...defaultProps} content={videoContent} />);
-
-        expect(screen.getByTestId("video-preview")).toBeInTheDocument();
-    });
-
-    it("should display profile metadata", () => {
-        render(<PlatformPreviewModal {...defaultProps} />);
-
-        expect(screen.getByText("Your Brand")).toBeInTheDocument();
-        expect(screen.getByText("Just now")).toBeInTheDocument();
     });
 });

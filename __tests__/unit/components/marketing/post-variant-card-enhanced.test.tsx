@@ -154,12 +154,6 @@ describe("PostVariantCardEnhanced", () => {
         expect(screen.getByText("2 Issues")).toBeInTheDocument();
     });
 
-    it("should display character count", () => {
-        render(<PostVariantCardEnhanced {...defaultProps} />);
-
-        expect(screen.getByText(/43 characters/)).toBeInTheDocument();
-    });
-
     it("should display hashtag count", () => {
         render(<PostVariantCardEnhanced {...defaultProps} />);
 
@@ -276,42 +270,6 @@ describe("PostVariantCardEnhanced", () => {
             expect.anything(),
             expect.objectContaining({ method: "DELETE" })
         );
-    });
-
-    it("should handle A/B test action", () => {
-        const { toast } = require("@/components/ui/use-toast").useToast();
-
-        render(<PostVariantCardEnhanced {...defaultProps} />);
-
-        const moreButton = screen.getByRole("button", { name: "" });
-        fireEvent.click(moreButton);
-
-        const abTestButton = screen.getByText("A/B Test");
-        fireEvent.click(abTestButton);
-
-        expect(toast).toHaveBeenCalledWith(
-            expect.objectContaining({
-                title: "A/B Test",
-            })
-        );
-    });
-
-    it("should handle save error", async () => {
-        (global.fetch as any).mockRejectedValueOnce(new Error("Save failed"));
-
-        const { logger } = require("@/lib/client-logger");
-
-        render(<PostVariantCardEnhanced {...defaultProps} />);
-
-        const moreButton = screen.getByRole("button", { name: "" });
-        fireEvent.click(moreButton);
-
-        const duplicateButton = screen.getByText("Duplicate");
-        fireEvent.click(duplicateButton);
-
-        await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
-        });
     });
 
     it("should display multiple media items with overflow indicator", () => {

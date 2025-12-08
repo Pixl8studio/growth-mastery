@@ -61,6 +61,17 @@ import { expect, afterEach, beforeAll, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
+// Mock ResizeObserver globally for component tests using Radix UI
+class ResizeObserverMock {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+}
+global.ResizeObserver = ResizeObserverMock;
+
+// Mock scrollIntoView for components that need it
+Element.prototype.scrollIntoView = vi.fn();
+
 // CRITICAL: Block all real process spawning in tests to prevent system freezes
 beforeAll(() => {
     // Mock child_process to prevent real subprocess spawning

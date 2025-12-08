@@ -87,7 +87,9 @@ describe("MetaAccountSelector", () => {
             expect(screen.getByText(/ID: act_123/)).toBeInTheDocument();
         });
 
-        expect(screen.getByText(/USD/)).toBeInTheDocument();
+        // Both accounts have USD and both have timezone info
+        const usdElements = screen.getAllByText(/USD/);
+        expect(usdElements.length).toBeGreaterThan(0);
         expect(screen.getByText(/America\/New_York/)).toBeInTheDocument();
     });
 
@@ -139,9 +141,9 @@ describe("MetaAccountSelector", () => {
         render(<MetaAccountSelector {...mockProps} />);
 
         await waitFor(() => {
-            // Check for active indicators (checkmarks)
-            const activeIndicators = screen.getAllByRole("img", { hidden: true });
-            expect(activeIndicators.length).toBeGreaterThan(0);
+            // Both accounts are active, verify we have status text showing active
+            const statusElements = screen.getAllByText(/Status: ACTIVE/);
+            expect(statusElements.length).toBe(2);
         });
     });
 
@@ -189,7 +191,9 @@ describe("MetaAccountSelector", () => {
         render(<MetaAccountSelector {...mockProps} />);
 
         await waitFor(() => {
-            expect(screen.getByText(/Status: ACTIVE/)).toBeInTheDocument();
+            // Both accounts have ACTIVE status, so use getAllByText
+            const statusElements = screen.getAllByText(/Status: ACTIVE/);
+            expect(statusElements.length).toBeGreaterThan(0);
         });
     });
 });

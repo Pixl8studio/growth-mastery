@@ -34,6 +34,17 @@ describe("PagesList", () => {
         username: "testuser",
     };
 
+    const mockRegistrationData = [
+        {
+            id: "reg-1",
+            headline: "Register Now",
+            vanity_slug: "register-webinar",
+            is_published: true,
+            updated_at: "2024-01-01T00:00:00Z",
+            funnel_projects: { id: "project-1", name: "My Funnel" },
+        },
+    ];
+
     beforeEach(() => {
         vi.clearAllMocks();
         global.fetch = vi.fn().mockResolvedValue({

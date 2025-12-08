@@ -84,16 +84,18 @@ describe("LinkedIn API Client", () => {
 
     describe("extractTextFromLinkedInPosts", () => {
         it("extracts text from posts", () => {
-            const posts = [{
-                id: "1",
-                text: "This is a long enough post",
-                createdAt: "2024-01-01",
-                likeCount: 10,
-                commentCount: 5,
-                shareCount: 2,
-                visibility: "PUBLIC",
-                author: "author",
-            }];
+            const posts = [
+                {
+                    id: "1",
+                    text: "This is a long enough post",
+                    createdAt: "2024-01-01",
+                    likeCount: 10,
+                    commentCount: 5,
+                    shareCount: 2,
+                    visibility: "PUBLIC",
+                    author: "author",
+                },
+            ];
             const result = extractTextFromLinkedInPosts(posts);
             expect(result.length).toBeGreaterThan(0);
         });

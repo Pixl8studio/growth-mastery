@@ -4,6 +4,47 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import {
+    createTestContentBrief,
+    createTestPostVariant,
+    createTestMarketingAnalytics,
+} from "@/__tests__/fixtures/db-fixtures";
+
+// Create chainable query builder that supports .eq().eq().single() patterns
+function createChainableBuilder(response: { data: unknown; error: unknown }) {
+    const builder: Record<string, ReturnType<typeof vi.fn>> = {};
+
+    // Terminal methods
+    builder.single = vi.fn().mockResolvedValue(response);
+    builder.maybeSingle = vi.fn().mockResolvedValue(response);
+
+    // Chainable methods that return the builder
+    const chainableMethods = [
+        "select",
+        "insert",
+        "update",
+        "delete",
+        "upsert",
+        "eq",
+        "neq",
+        "not",
+        "in",
+        "order",
+        "limit",
+    ];
+
+    chainableMethods.forEach((method) => {
+        builder[method] = vi.fn().mockImplementation(() => {
+            // Return an object that can be awaited (for .then()) or chained
+            return {
+                ...builder,
+                then: (resolve: (val: unknown) => void) => resolve(response),
+            };
+        });
+    });
+
+    return builder;
+}
 
 // Create mocks
 const mockSupabase = {
@@ -26,12 +67,12 @@ vi.mock("@/lib/logger", () => ({
 }));
 
 vi.mock("@/lib/integrations/meta-ads", () => ({
-    updateAdStatus: vi.fn(),
-    updateCampaignStatus: vi.fn(),
+    updateAdStatus: vi.fn().mockResolvedValue(undefined),
+    updateCampaignStatus: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("@/lib/crypto/token-encryption", () => ({
-    decryptToken: vi.fn(),
+    decryptToken: vi.fn().mockResolvedValue("decrypted-token"),
 }));
 
 vi.mock("@/lib/ads/ad-generator", () => ({
@@ -53,48 +94,52 @@ describe("Optimization Engine", () => {
     describe("optimizeAllCampaigns", () => {
         it("should analyze all active campaigns", async () => {
             const mockBriefs = [
-                { id: "brief-1", user_id: "user-123", meta_campaign_id: "campaign-1" },
-                { id: "brief-2", user_id: "user-123", meta_campaign_id: "campaign-2" },
+                createTestContentBrief({
+                    id: "brief-1",
+                    user_id: "user-123",
+                    meta_campaign_id: "campaign-1",
+                    status: "active",
+                }),
+                createTestContentBrief({
+                    id: "brief-2",
+                    user_id: "user-123",
+                    meta_campaign_id: "campaign-2",
+                    status: "active",
+                }),
+            ];
+
+            const mockVariants = [
+                createTestPostVariant({
+                    id: "variant-1",
+                    brief_id: "brief-1",
+                    meta_ad_id: "ad-1",
+                }),
+            ];
+
+            const mockAnalytics = [
+                createTestMarketingAnalytics({
+                    post_variant_id: "variant-1",
+                    cost_per_lead_cents: 1000,
+                    leads_count: 5,
+                    ctr_percent: 1.5,
+                    impressions: 10000,
+                }),
             ];
 
             mockSupabase.from.mockImplementation((table: string) => {
                 if (table === "marketing_content_briefs") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockReturnThis(),
-                        not: vi.fn().mockResolvedValue({ data: mockBriefs }),
-                    };
+                    return createChainableBuilder({ data: mockBriefs, error: null });
                 }
                 if (table === "marketing_post_variants") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockResolvedValue({
-                            data: [{ id: "variant-1", meta_ad_id: "ad-1" }],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockVariants, error: null });
                 }
                 if (table === "marketing_analytics") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        in: vi.fn().mockResolvedValue({
-                            data: [
-                                {
-                                    post_variant_id: "variant-1",
-                                    cost_per_lead_cents: 1000,
-                                    leads_count: 5,
-                                    ctr_percent: 1.5,
-                                    impressions: 10000,
-                                },
-                            ],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockAnalytics, error: null });
                 }
                 if (table === "marketing_ad_optimizations") {
-                    return {
-                        insert: vi.fn().mockResolvedValue({ error: null }),
-                    };
+                    return createChainableBuilder({ data: null, error: null });
                 }
-                return { select: vi.fn().mockReturnThis() };
+                return createChainableBuilder({ data: null, error: null });
             });
 
             const results = await optimizeAllCampaigns(false);
@@ -105,13 +150,9 @@ describe("Optimization Engine", () => {
         it("should return empty array when no active campaigns", async () => {
             mockSupabase.from.mockImplementation((table: string) => {
                 if (table === "marketing_content_briefs") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockReturnThis(),
-                        not: vi.fn().mockResolvedValue({ data: [] }),
-                    };
+                    return createChainableBuilder({ data: [], error: null });
                 }
-                return { select: vi.fn().mockReturnThis() };
+                return createChainableBuilder({ data: null, error: null });
             });
 
             const results = await optimizeAllCampaigns(false);
@@ -125,46 +166,38 @@ describe("Optimization Engine", () => {
             const briefId = "brief-123";
             const userId = "user-123";
 
+            const mockBrief = createTestContentBrief({ id: briefId, user_id: userId });
+            const mockVariants = [
+                createTestPostVariant({
+                    id: "variant-1",
+                    brief_id: briefId,
+                    meta_ad_id: "ad-1",
+                }),
+            ];
+            const mockAnalytics = [
+                createTestMarketingAnalytics({
+                    post_variant_id: "variant-1",
+                    cost_per_lead_cents: 1100, // $11.00 (>2x benchmark of $5.00)
+                    leads_count: 5,
+                    ctr_percent: 1.5,
+                    impressions: 10000,
+                }),
+            ];
+
             mockSupabase.from.mockImplementation((table: string) => {
                 if (table === "marketing_content_briefs") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockReturnThis(),
-                        single: vi.fn().mockResolvedValue({
-                            data: { id: briefId, user_id: userId },
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockBrief, error: null });
                 }
                 if (table === "marketing_post_variants") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockResolvedValue({
-                            data: [{ id: "variant-1", meta_ad_id: "ad-1" }],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockVariants, error: null });
                 }
                 if (table === "marketing_analytics") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        in: vi.fn().mockResolvedValue({
-                            data: [
-                                {
-                                    post_variant_id: "variant-1",
-                                    cost_per_lead_cents: 1100, // $11.00 (>2x benchmark of $5.00)
-                                    leads_count: 5,
-                                    ctr_percent: 1.5,
-                                    impressions: 10000,
-                                },
-                            ],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockAnalytics, error: null });
                 }
                 if (table === "marketing_ad_optimizations") {
-                    return {
-                        insert: vi.fn().mockResolvedValue({ error: null }),
-                    };
+                    return createChainableBuilder({ data: null, error: null });
                 }
-                return { select: vi.fn().mockReturnThis() };
+                return createChainableBuilder({ data: null, error: null });
             });
 
             const results = await optimizeCampaign(briefId, userId, false);
@@ -179,61 +212,44 @@ describe("Optimization Engine", () => {
             const briefId = "brief-123";
             const userId = "user-123";
 
+            const mockBrief = createTestContentBrief({ id: briefId, user_id: userId });
+            const mockVariants = [
+                createTestPostVariant({
+                    id: "variant-1",
+                    brief_id: briefId,
+                    meta_ad_id: "ad-123",
+                }),
+            ];
+            const mockAnalytics = [
+                createTestMarketingAnalytics({
+                    post_variant_id: "variant-1",
+                    cost_per_lead_cents: 1100,
+                    leads_count: 5,
+                    ctr_percent: 1.5,
+                    impressions: 10000,
+                }),
+            ];
+
             mockSupabase.from.mockImplementation((table: string) => {
                 if (table === "marketing_content_briefs") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockReturnThis(),
-                        single: vi.fn().mockResolvedValue({
-                            data: { id: briefId, user_id: userId },
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockBrief, error: null });
                 }
                 if (table === "marketing_post_variants") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockResolvedValue({
-                            data: [{ id: "variant-1", meta_ad_id: "ad-123" }],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockVariants, error: null });
                 }
                 if (table === "marketing_analytics") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        in: vi.fn().mockResolvedValue({
-                            data: [
-                                {
-                                    post_variant_id: "variant-1",
-                                    cost_per_lead_cents: 1100,
-                                    leads_count: 5,
-                                    ctr_percent: 1.5,
-                                    impressions: 10000,
-                                },
-                            ],
-                        }),
-                        single: vi.fn().mockResolvedValue({
-                            data: {
-                                post_variant_id: "variant-1",
-                                cost_per_lead_cents: 1100,
-                            },
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockAnalytics, error: null });
                 }
                 if (table === "marketing_oauth_connections") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockReturnThis(),
-                        single: vi.fn().mockResolvedValue({
-                            data: { access_token_encrypted: "encrypted-token" },
-                        }),
-                    };
+                    return createChainableBuilder({
+                        data: { access_token_encrypted: "encrypted-token" },
+                        error: null,
+                    });
                 }
                 if (table === "marketing_ad_optimizations") {
-                    return {
-                        insert: vi.fn().mockResolvedValue({ error: null }),
-                    };
+                    return createChainableBuilder({ data: null, error: null });
                 }
-                return { select: vi.fn().mockReturnThis() };
+                return createChainableBuilder({ data: null, error: null });
             });
 
             vi.mocked(decryptToken).mockResolvedValue("decrypted-token");
@@ -251,46 +267,38 @@ describe("Optimization Engine", () => {
             const briefId = "brief-123";
             const userId = "user-123";
 
+            const mockBrief = createTestContentBrief({ id: briefId, user_id: userId });
+            const mockVariants = [
+                createTestPostVariant({
+                    id: "variant-1",
+                    brief_id: briefId,
+                    meta_ad_id: "ad-1",
+                }),
+            ];
+            const mockAnalytics = [
+                createTestMarketingAnalytics({
+                    post_variant_id: "variant-1",
+                    cost_per_lead_cents: 200, // $2.00 (<0.5x benchmark of $5.00)
+                    leads_count: 10,
+                    ctr_percent: 2.5,
+                    impressions: 10000,
+                }),
+            ];
+
             mockSupabase.from.mockImplementation((table: string) => {
                 if (table === "marketing_content_briefs") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockReturnThis(),
-                        single: vi.fn().mockResolvedValue({
-                            data: { id: briefId, user_id: userId },
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockBrief, error: null });
                 }
                 if (table === "marketing_post_variants") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockResolvedValue({
-                            data: [{ id: "variant-1", meta_ad_id: "ad-1" }],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockVariants, error: null });
                 }
                 if (table === "marketing_analytics") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        in: vi.fn().mockResolvedValue({
-                            data: [
-                                {
-                                    post_variant_id: "variant-1",
-                                    cost_per_lead_cents: 200, // $2.00 (<0.5x benchmark of $5.00)
-                                    leads_count: 10,
-                                    ctr_percent: 2.5,
-                                    impressions: 10000,
-                                },
-                            ],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockAnalytics, error: null });
                 }
                 if (table === "marketing_ad_optimizations") {
-                    return {
-                        insert: vi.fn().mockResolvedValue({ error: null }),
-                    };
+                    return createChainableBuilder({ data: null, error: null });
                 }
-                return { select: vi.fn().mockReturnThis() };
+                return createChainableBuilder({ data: null, error: null });
             });
 
             const results = await optimizeCampaign(briefId, userId, false);
@@ -306,46 +314,38 @@ describe("Optimization Engine", () => {
             const briefId = "brief-123";
             const userId = "user-123";
 
+            const mockBrief = createTestContentBrief({ id: briefId, user_id: userId });
+            const mockVariants = [
+                createTestPostVariant({
+                    id: "variant-1",
+                    brief_id: briefId,
+                    meta_ad_id: "ad-1",
+                }),
+            ];
+            const mockAnalytics = [
+                createTestMarketingAnalytics({
+                    post_variant_id: "variant-1",
+                    cost_per_lead_cents: 500,
+                    leads_count: 5,
+                    ctr_percent: 0.5, // Below 1% threshold
+                    impressions: 15000, // Over 10,000 impressions
+                }),
+            ];
+
             mockSupabase.from.mockImplementation((table: string) => {
                 if (table === "marketing_content_briefs") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockReturnThis(),
-                        single: vi.fn().mockResolvedValue({
-                            data: { id: briefId, user_id: userId },
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockBrief, error: null });
                 }
                 if (table === "marketing_post_variants") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockResolvedValue({
-                            data: [{ id: "variant-1", meta_ad_id: "ad-1" }],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockVariants, error: null });
                 }
                 if (table === "marketing_analytics") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        in: vi.fn().mockResolvedValue({
-                            data: [
-                                {
-                                    post_variant_id: "variant-1",
-                                    cost_per_lead_cents: 500,
-                                    leads_count: 5,
-                                    ctr_percent: 0.5, // Below 1% threshold
-                                    impressions: 15000, // Over 10,000 impressions
-                                },
-                            ],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockAnalytics, error: null });
                 }
                 if (table === "marketing_ad_optimizations") {
-                    return {
-                        insert: vi.fn().mockResolvedValue({ error: null }),
-                    };
+                    return createChainableBuilder({ data: null, error: null });
                 }
-                return { select: vi.fn().mockReturnThis() };
+                return createChainableBuilder({ data: null, error: null });
             });
 
             const results = await optimizeCampaign(briefId, userId, false);
@@ -360,41 +360,35 @@ describe("Optimization Engine", () => {
             const briefId = "brief-123";
             const userId = "user-123";
 
+            const mockBrief = createTestContentBrief({ id: briefId, user_id: userId });
+            const mockVariants = [
+                createTestPostVariant({
+                    id: "variant-1",
+                    brief_id: briefId,
+                    meta_ad_id: "ad-1",
+                }),
+            ];
+            const mockAnalytics = [
+                createTestMarketingAnalytics({
+                    post_variant_id: "variant-1",
+                    cost_per_lead_cents: 1100, // High CPL
+                    leads_count: 3, // But only 3 leads (< 5 minimum)
+                    ctr_percent: 1.5,
+                    impressions: 10000,
+                }),
+            ];
+
             mockSupabase.from.mockImplementation((table: string) => {
                 if (table === "marketing_content_briefs") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockReturnThis(),
-                        single: vi.fn().mockResolvedValue({
-                            data: { id: briefId, user_id: userId },
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockBrief, error: null });
                 }
                 if (table === "marketing_post_variants") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockResolvedValue({
-                            data: [{ id: "variant-1", meta_ad_id: "ad-1" }],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockVariants, error: null });
                 }
                 if (table === "marketing_analytics") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        in: vi.fn().mockResolvedValue({
-                            data: [
-                                {
-                                    post_variant_id: "variant-1",
-                                    cost_per_lead_cents: 1100, // High CPL
-                                    leads_count: 3, // But only 3 leads (< 5 minimum)
-                                    ctr_percent: 1.5,
-                                    impressions: 10000,
-                                },
-                            ],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockAnalytics, error: null });
                 }
-                return { select: vi.fn().mockReturnThis() };
+                return createChainableBuilder({ data: null, error: null });
             });
 
             const results = await optimizeCampaign(briefId, userId, false);
@@ -410,41 +404,35 @@ describe("Optimization Engine", () => {
             const briefId = "brief-123";
             const userId = "user-123";
 
+            const mockBrief = createTestContentBrief({ id: briefId, user_id: userId });
+            const mockVariants = [
+                createTestPostVariant({
+                    id: "variant-1",
+                    brief_id: briefId,
+                    meta_ad_id: "ad-1",
+                }),
+            ];
+            const mockAnalytics = [
+                createTestMarketingAnalytics({
+                    post_variant_id: "variant-1",
+                    cost_per_lead_cents: 200, // Low CPL
+                    leads_count: 8, // But only 8 leads (< 10 minimum)
+                    ctr_percent: 2.5,
+                    impressions: 10000,
+                }),
+            ];
+
             mockSupabase.from.mockImplementation((table: string) => {
                 if (table === "marketing_content_briefs") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockReturnThis(),
-                        single: vi.fn().mockResolvedValue({
-                            data: { id: briefId, user_id: userId },
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockBrief, error: null });
                 }
                 if (table === "marketing_post_variants") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockResolvedValue({
-                            data: [{ id: "variant-1", meta_ad_id: "ad-1" }],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockVariants, error: null });
                 }
                 if (table === "marketing_analytics") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        in: vi.fn().mockResolvedValue({
-                            data: [
-                                {
-                                    post_variant_id: "variant-1",
-                                    cost_per_lead_cents: 200, // Low CPL
-                                    leads_count: 8, // But only 8 leads (< 10 minimum)
-                                    ctr_percent: 2.5,
-                                    impressions: 10000,
-                                },
-                            ],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockAnalytics, error: null });
                 }
-                return { select: vi.fn().mockReturnThis() };
+                return createChainableBuilder({ data: null, error: null });
             });
 
             const results = await optimizeCampaign(briefId, userId, false);
@@ -460,31 +448,26 @@ describe("Optimization Engine", () => {
             const briefId = "brief-123";
             const userId = "user-123";
 
+            const mockBrief = createTestContentBrief({ id: briefId, user_id: userId });
+            const mockVariants = [
+                createTestPostVariant({
+                    id: "variant-1",
+                    brief_id: briefId,
+                    meta_ad_id: "ad-1",
+                }),
+            ];
+
             mockSupabase.from.mockImplementation((table: string) => {
                 if (table === "marketing_content_briefs") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockReturnThis(),
-                        single: vi.fn().mockResolvedValue({
-                            data: { id: briefId, user_id: userId },
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockBrief, error: null });
                 }
                 if (table === "marketing_post_variants") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockResolvedValue({
-                            data: [{ id: "variant-1", meta_ad_id: "ad-1" }],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockVariants, error: null });
                 }
                 if (table === "marketing_analytics") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        in: vi.fn().mockResolvedValue({ data: [] }),
-                    };
+                    return createChainableBuilder({ data: [], error: null });
                 }
-                return { select: vi.fn().mockReturnThis() };
+                return createChainableBuilder({ data: null, error: null });
             });
 
             const results = await optimizeCampaign(briefId, userId, false);
@@ -496,56 +479,50 @@ describe("Optimization Engine", () => {
             const briefId = "brief-123";
             const userId = "user-123";
 
+            const mockBrief = createTestContentBrief({ id: briefId, user_id: userId });
+            const mockVariants = [
+                createTestPostVariant({
+                    id: "variant-1",
+                    brief_id: briefId,
+                    meta_ad_id: "ad-1",
+                }),
+                createTestPostVariant({
+                    id: "variant-2",
+                    brief_id: briefId,
+                    meta_ad_id: "ad-2",
+                }),
+            ];
+            const mockAnalytics = [
+                createTestMarketingAnalytics({
+                    post_variant_id: "variant-1",
+                    cost_per_lead_cents: 1100, // Underperformer
+                    leads_count: 5,
+                    ctr_percent: 1.5,
+                    impressions: 10000,
+                }),
+                createTestMarketingAnalytics({
+                    post_variant_id: "variant-2",
+                    cost_per_lead_cents: 200, // Winner
+                    leads_count: 10,
+                    ctr_percent: 2.5,
+                    impressions: 10000,
+                }),
+            ];
+
             mockSupabase.from.mockImplementation((table: string) => {
                 if (table === "marketing_content_briefs") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockReturnThis(),
-                        single: vi.fn().mockResolvedValue({
-                            data: { id: briefId, user_id: userId },
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockBrief, error: null });
                 }
                 if (table === "marketing_post_variants") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockResolvedValue({
-                            data: [
-                                { id: "variant-1", meta_ad_id: "ad-1" },
-                                { id: "variant-2", meta_ad_id: "ad-2" },
-                            ],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockVariants, error: null });
                 }
                 if (table === "marketing_analytics") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        in: vi.fn().mockResolvedValue({
-                            data: [
-                                {
-                                    post_variant_id: "variant-1",
-                                    cost_per_lead_cents: 1100, // Underperformer
-                                    leads_count: 5,
-                                    ctr_percent: 1.5,
-                                    impressions: 10000,
-                                },
-                                {
-                                    post_variant_id: "variant-2",
-                                    cost_per_lead_cents: 200, // Winner
-                                    leads_count: 10,
-                                    ctr_percent: 2.5,
-                                    impressions: 10000,
-                                },
-                            ],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockAnalytics, error: null });
                 }
                 if (table === "marketing_ad_optimizations") {
-                    return {
-                        insert: vi.fn().mockResolvedValue({ error: null }),
-                    };
+                    return createChainableBuilder({ data: null, error: null });
                 }
-                return { select: vi.fn().mockReturnThis() };
+                return createChainableBuilder({ data: null, error: null });
             });
 
             const results = await optimizeCampaign(briefId, userId, false);
@@ -561,57 +538,56 @@ describe("Optimization Engine", () => {
             const userId = "user-123";
             const niche = "business_coaching";
 
+            const mockBriefs = [{ id: "brief-1" }, { id: "brief-2" }];
+            const mockVariants = [
+                createTestPostVariant({
+                    id: "variant-1",
+                    brief_id: "brief-1",
+                    story_framework: "plus_minus",
+                }),
+                createTestPostVariant({
+                    id: "variant-2",
+                    brief_id: "brief-1",
+                    story_framework: "hormozi",
+                }),
+                createTestPostVariant({
+                    id: "variant-3",
+                    brief_id: "brief-2",
+                    story_framework: "plus_minus",
+                }),
+            ];
+            const mockAnalytics = [
+                createTestMarketingAnalytics({
+                    post_variant_id: "variant-1",
+                    leads_count: 10,
+                    spend_cents: 5000,
+                }),
+                createTestMarketingAnalytics({
+                    post_variant_id: "variant-2",
+                    leads_count: 5,
+                    spend_cents: 3000,
+                }),
+                createTestMarketingAnalytics({
+                    post_variant_id: "variant-3",
+                    leads_count: 8,
+                    spend_cents: 4000,
+                }),
+            ];
+
             mockSupabase.from.mockImplementation((table: string) => {
                 if (table === "marketing_content_briefs") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockResolvedValue({
-                            data: [{ id: "brief-1" }, { id: "brief-2" }],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockBriefs, error: null });
                 }
                 if (table === "marketing_post_variants") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        in: vi.fn().mockResolvedValue({
-                            data: [
-                                { id: "variant-1", story_framework: "plus_minus" },
-                                { id: "variant-2", story_framework: "hormozi" },
-                                { id: "variant-3", story_framework: "plus_minus" },
-                            ],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockVariants, error: null });
                 }
                 if (table === "marketing_analytics") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        in: vi.fn().mockResolvedValue({
-                            data: [
-                                {
-                                    post_variant_id: "variant-1",
-                                    leads_count: 10,
-                                    spend_cents: 5000,
-                                },
-                                {
-                                    post_variant_id: "variant-2",
-                                    leads_count: 5,
-                                    spend_cents: 3000,
-                                },
-                                {
-                                    post_variant_id: "variant-3",
-                                    leads_count: 8,
-                                    spend_cents: 4000,
-                                },
-                            ],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockAnalytics, error: null });
                 }
                 if (table === "marketing_niche_models") {
-                    return {
-                        upsert: vi.fn().mockResolvedValue({ error: null }),
-                    };
+                    return createChainableBuilder({ data: null, error: null });
                 }
-                return { select: vi.fn().mockReturnThis() };
+                return createChainableBuilder({ data: null, error: null });
             });
 
             const result = await analyzePatterns(userId, niche);
@@ -634,12 +610,9 @@ describe("Optimization Engine", () => {
         it("should handle no campaigns", async () => {
             mockSupabase.from.mockImplementation((table: string) => {
                 if (table === "marketing_content_briefs") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockResolvedValue({ data: [] }),
-                    };
+                    return createChainableBuilder({ data: [], error: null });
                 }
-                return { select: vi.fn().mockReturnThis() };
+                return createChainableBuilder({ data: null, error: null });
             });
 
             const result = await analyzePatterns("user-123", "niche");
@@ -648,30 +621,26 @@ describe("Optimization Engine", () => {
         });
 
         it("should handle no analytics data", async () => {
+            const mockBriefs = [{ id: "brief-1" }];
+            const mockVariants = [
+                createTestPostVariant({
+                    id: "variant-1",
+                    brief_id: "brief-1",
+                    story_framework: "plus_minus",
+                }),
+            ];
+
             mockSupabase.from.mockImplementation((table: string) => {
                 if (table === "marketing_content_briefs") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        eq: vi.fn().mockResolvedValue({
-                            data: [{ id: "brief-1" }],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockBriefs, error: null });
                 }
                 if (table === "marketing_post_variants") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        in: vi.fn().mockResolvedValue({
-                            data: [{ id: "variant-1", story_framework: "plus_minus" }],
-                        }),
-                    };
+                    return createChainableBuilder({ data: mockVariants, error: null });
                 }
                 if (table === "marketing_analytics") {
-                    return {
-                        select: vi.fn().mockReturnThis(),
-                        in: vi.fn().mockResolvedValue({ data: [] }),
-                    };
+                    return createChainableBuilder({ data: [], error: null });
                 }
-                return { select: vi.fn().mockReturnThis() };
+                return createChainableBuilder({ data: null, error: null });
             });
 
             const result = await analyzePatterns("user-123", "niche");

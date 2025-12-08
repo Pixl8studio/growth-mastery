@@ -1,13 +1,16 @@
-import { FlatCompat } from "@eslint/eslintrc";
-import { dirname } from "path";
-import { fileURLToPath } from "url";
+/**
+ * ESLint Configuration
+ *
+ * Uses native flat config with eslint-config-next for Next.js 16+
+ * This approach avoids the FlatCompat circular reference issues with ESLint 9
+ */
+import { createRequire } from "module";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
+const require = createRequire(import.meta.url);
 
-const compat = new FlatCompat({
-    baseDirectory: __dirname,
-});
+// Load eslint-config-next which already provides flat config arrays
+const nextConfig = require("eslint-config-next/core-web-vitals");
+const nextTypescriptConfig = require("eslint-config-next/typescript");
 
 const eslintConfig = [
     {
@@ -30,7 +33,10 @@ const eslintConfig = [
             ".swarm/**", // Swarm temporary files
         ],
     },
-    ...compat.extends("next/core-web-vitals", "next/typescript"),
+    // Next.js core-web-vitals and TypeScript configs (flat config format)
+    ...nextConfig,
+    ...nextTypescriptConfig,
+    // Custom rules
     {
         rules: {
             "@typescript-eslint/no-unused-vars": [
@@ -42,6 +48,11 @@ const eslintConfig = [
             ],
             "@typescript-eslint/no-explicit-any": "warn",
             "react/no-unescaped-entities": "off",
+            // Disable overly strict React Compiler rules that flag valid patterns
+            // These rules are experimental and flag common React patterns as errors
+            "react-hooks/set-state-in-effect": "off",
+            "react-hooks/purity": "off",
+            "react-hooks/immutability": "off",
         },
     },
     // Relax rules for test files
@@ -55,7 +66,15 @@ const eslintConfig = [
         ],
         rules: {
             "@typescript-eslint/no-explicit-any": "off",
+            "@typescript-eslint/no-require-imports": "off", // Allow require() for dynamic mocking in Vitest
             "@next/next/no-img-element": "off", // Allow <img> in test mocks
+        },
+    },
+    // Allow CommonJS require() in Node.js scripts
+    {
+        files: ["scripts/**/*.js"],
+        rules: {
+            "@typescript-eslint/no-require-imports": "off",
         },
     },
 ];

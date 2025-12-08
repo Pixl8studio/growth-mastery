@@ -102,7 +102,10 @@ describe("AdVariationsReview", () => {
     it("should display link description", () => {
         render(<AdVariationsReview {...mockProps} />);
 
-        expect(screen.getByText("Learn More")).toBeInTheDocument();
+        // "Learn More" appears in both link_description and call_to_action badge
+        // Use getAllByText to verify it exists
+        const learnMoreElements = screen.getAllByText("Learn More");
+        expect(learnMoreElements.length).toBeGreaterThan(0);
     });
 
     it("should toggle edit mode", () => {
@@ -142,9 +145,14 @@ describe("AdVariationsReview", () => {
     it("should display hook variations in tabs", () => {
         render(<AdVariationsReview {...mockProps} />);
 
-        expect(screen.getByText("Long")).toBeInTheDocument();
-        expect(screen.getByText("Short")).toBeInTheDocument();
-        expect(screen.getByText("Curiosity")).toBeInTheDocument();
+        // Multiple variations each have their own hook tabs
+        const longTabs = screen.getAllByText("Long");
+        const shortTabs = screen.getAllByText("Short");
+        const curiosityTabs = screen.getAllByText("Curiosity");
+
+        expect(longTabs.length).toBeGreaterThan(0);
+        expect(shortTabs.length).toBeGreaterThan(0);
+        expect(curiosityTabs.length).toBeGreaterThan(0);
     });
 
     it("should show selected count", () => {
@@ -174,8 +182,13 @@ describe("AdVariationsReview", () => {
     it("should display character counts", () => {
         render(<AdVariationsReview {...mockProps} />);
 
-        expect(screen.getByText(/\/95/)).toBeInTheDocument();
-        expect(screen.getByText(/\/40/)).toBeInTheDocument();
-        expect(screen.getByText(/\/30/)).toBeInTheDocument();
+        // Multiple variations each have character counts
+        const count95 = screen.getAllByText(/\/95/);
+        const count40 = screen.getAllByText(/\/40/);
+        const count30 = screen.getAllByText(/\/30/);
+
+        expect(count95.length).toBeGreaterThan(0);
+        expect(count40.length).toBeGreaterThan(0);
+        expect(count30.length).toBeGreaterThan(0);
     });
 });

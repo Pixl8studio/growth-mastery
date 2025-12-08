@@ -205,13 +205,20 @@ describe("Enrollment Framework Prompts", () => {
 
         it("should use defaults for missing intake data", () => {
             const minimalIntake = {};
+            // Use offer without promise to test the default outcome gets used
+            const minimalOffer = {
+                name: "Test Product",
+                price: 997,
+                currency: "USD",
+            };
 
             const prompt = createFullPageEnrollmentPrompt(
-                mockOfferData,
+                minimalOffer,
                 minimalIntake,
                 mockDeckSlides
             );
 
+            // Defaults: entrepreneurs (audience) and transform their business (outcome)
             expect(prompt).toContain("entrepreneurs");
             expect(prompt).toContain("transform their business");
         });

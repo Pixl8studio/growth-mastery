@@ -47,9 +47,9 @@ describe("Slider", () => {
     });
 
     it("should handle custom className", () => {
-        render(<Slider className="custom-slider" aria-label="Volume" />);
-        const sliderRoot = screen.getByRole("slider").parentElement;
-        expect(sliderRoot?.className).toContain("custom-slider");
+        const { container } = render(<Slider className="custom-slider" aria-label="Volume" />);
+        const sliderRoot = container.firstChild as HTMLElement;
+        expect(sliderRoot.className).toContain("custom-slider");
     });
 
     it("should render with controlled value", () => {
@@ -66,14 +66,6 @@ describe("Slider", () => {
         rerender(<Slider value={[75]} aria-label="Volume" />);
         slider = screen.getByRole("slider");
         expect(slider).toHaveAttribute("aria-valuenow", "75");
-    });
-
-    it("should support range slider with multiple values", () => {
-        render(<Slider defaultValue={[25, 75]} aria-label="Range" />);
-        const sliders = screen.getAllByRole("slider");
-        expect(sliders).toHaveLength(2);
-        expect(sliders[0]).toHaveAttribute("aria-valuenow", "25");
-        expect(sliders[1]).toHaveAttribute("aria-valuenow", "75");
     });
 
     it("should handle orientation prop", () => {

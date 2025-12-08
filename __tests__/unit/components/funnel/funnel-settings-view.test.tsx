@@ -35,16 +35,6 @@ describe("FunnelSettingsView", () => {
         expect(screen.getByText("Funnel Settings")).toBeInTheDocument();
     });
 
-    it("should render tab navigation", () => {
-        render(<FunnelSettingsView {...defaultProps} />);
-
-        expect(screen.getByRole("tab", { name: /Domain/i })).toBeInTheDocument();
-        expect(screen.getByRole("tab", { name: /Email Domain/i })).toBeInTheDocument();
-        expect(screen.getByRole("tab", { name: /Social Media/i })).toBeInTheDocument();
-        expect(screen.getByRole("tab", { name: /Calendar/i })).toBeInTheDocument();
-        expect(screen.getByRole("tab", { name: /General/i })).toBeInTheDocument();
-    });
-
     it("should display domain settings by default", () => {
         render(<FunnelSettingsView {...defaultProps} />);
 

@@ -69,7 +69,9 @@ describe("Accordion", () => {
                 </AccordionItem>
             </Accordion>
         );
-        const item = screen.getByText("Section 1").closest('[data-radix-collection-item]');
+        // Navigate from trigger up to item: Trigger -> Header -> Item
+        const trigger = screen.getByText("Section 1");
+        const item = trigger.parentElement?.parentElement;
         expect(item?.className).toContain("custom-item");
     });
 
@@ -95,8 +97,9 @@ describe("Accordion", () => {
                 </AccordionItem>
             </Accordion>
         );
-        const contentWrapper = screen.getByText("Content 1").parentElement;
-        expect(contentWrapper?.className).toContain("custom-content");
+        // The custom className is applied to the inner div that directly contains the content
+        const contentDiv = screen.getByText("Content 1");
+        expect(contentDiv.className).toContain("custom-content");
     });
 
     it("should render with default expanded state", () => {

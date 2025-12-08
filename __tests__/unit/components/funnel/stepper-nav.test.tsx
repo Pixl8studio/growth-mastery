@@ -14,14 +14,16 @@ vi.mock("next/navigation", () => ({
 
 vi.mock("@/app/funnel-builder/master-steps-config", () => ({
     MASTER_STEPS: [
-        { id: 1, name: "Business Context", subSteps: [1] },
-        { id: 2, name: "Define Offer", subSteps: [2] },
+        { id: 1, title: "Business Context", subSteps: [1] },
+        { id: 2, title: "Define Offer", subSteps: [2] },
     ],
-    getMasterStepForSubStep: vi.fn(() => ({ id: 1, name: "Business Context" })),
+    getMasterStepForSubStep: vi.fn(() => ({ id: 1, title: "Business Context" })),
     calculateMasterStepCompletion: vi.fn(() => ({
-        isCompleted: false,
-        completedSubSteps: 0,
-        totalSubSteps: 1,
+        isFullyComplete: false,
+        isPartiallyComplete: false,
+        completedCount: 0,
+        totalCount: 1,
+        percentage: 0,
     })),
 }));
 
@@ -55,14 +57,16 @@ describe("StepperNav", () => {
 
         const contextStep = screen.getByText("Context");
         const link = contextStep.closest("a");
-        expect(link).toHaveClass("bg-primary/10");
+        // The link should have primary styling when it's the active step
+        expect(link).toHaveClass("border-primary/30");
     });
 
     it("should show completed steps", () => {
         render(<StepperNav {...defaultProps} completedSteps={[1]} />);
 
-        const completedIcon = document.querySelector(".text-primary");
-        expect(completedIcon).toBeInTheDocument();
+        // Check for the green checkmark indicator for completed steps
+        const checkIcons = document.querySelectorAll(".bg-green-500");
+        expect(checkIcons.length).toBeGreaterThan(0);
     });
 
     it("should render with custom className", () => {

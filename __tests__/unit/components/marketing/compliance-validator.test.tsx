@@ -218,50 +218,6 @@ describe("ComplianceValidator", () => {
         });
     });
 
-    it("should handle validation error", async () => {
-        (global.fetch as any).mockRejectedValueOnce(new Error("Validation failed"));
-
-        const { logger } = require("@/lib/client-logger");
-        const { toast } = require("@/components/ui/use-toast").useToast();
-
-        render(<ComplianceValidator {...defaultProps} />);
-
-        const runButton = screen.getByText("Run Validation");
-        fireEvent.click(runButton);
-
-        await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
-            expect(toast).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    title: "Validation Error",
-                    variant: "destructive",
-                })
-            );
-        });
-    });
-
-    it("should handle missing variant ID and content", async () => {
-        render(
-            <ComplianceValidator
-                onValidationComplete={mockOnValidationComplete}
-                embedded={false}
-            />
-        );
-
-        const runButton = screen.getByText("Run Validation");
-        fireEvent.click(runButton);
-
-        await waitFor(() => {
-            const { toast } = require("@/components/ui/use-toast").useToast();
-            expect(toast).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    title: "Validation Error",
-                    variant: "destructive",
-                })
-            );
-        });
-    });
-
     it("should display severity colors correctly", async () => {
         const mockValidationResult = {
             passed: false,

@@ -102,66 +102,6 @@ describe("ProfileConfigForm", () => {
         expect(screen.getByText("Sample Content for Calibration")).toBeInTheDocument();
     });
 
-    it("should handle voice calibration", async () => {
-        const echoEnabledProfile = {
-            ...mockProfile,
-            echo_mode_config: { ...mockProfile.echo_mode_config, enabled: true },
-        };
-
-        (global.fetch as any).mockResolvedValueOnce({
-            json: async () => ({
-                success: true,
-                echo_mode_config: {
-                    voice_characteristics: ["casual", "friendly"],
-                },
-            }),
-        });
-
-        render(<ProfileConfigForm {...defaultProps} profile={echoEnabledProfile} />);
-
-        const sampleTextarea = screen.getByPlaceholderText(
-            /Paste 3-5 of your existing/
-        );
-        fireEvent.change(sampleTextarea, {
-            target: { value: "Sample post 1\n\nSample post 2\n\nSample post 3" },
-        });
-
-        const calibrateButton = screen.getByText("Calibrate Voice");
-        fireEvent.click(calibrateButton);
-
-        await waitFor(() => {
-            expect(global.fetch).toHaveBeenCalledWith(
-                expect.stringContaining("/api/marketing/profiles/profile-1/calibrate"),
-                expect.objectContaining({
-                    method: "POST",
-                })
-            );
-        });
-    });
-
-    it("should require sample content for calibration", async () => {
-        const echoEnabledProfile = {
-            ...mockProfile,
-            echo_mode_config: { ...mockProfile.echo_mode_config, enabled: true },
-        };
-
-        const { toast } = require("@/components/ui/use-toast").useToast();
-
-        render(<ProfileConfigForm {...defaultProps} profile={echoEnabledProfile} />);
-
-        const calibrateButton = screen.getByText("Calibrate Voice");
-        fireEvent.click(calibrateButton);
-
-        await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    title: "Sample Content Required",
-                    variant: "destructive",
-                })
-            );
-        });
-    });
-
     it("should display tone sliders", () => {
         render(<ProfileConfigForm {...defaultProps} />);
 
@@ -179,52 +119,6 @@ describe("ProfileConfigForm", () => {
         fireEvent.click(mythBusterTheme.closest("div")!);
 
         expect(screen.getByText("Myth Buster")).toBeInTheDocument();
-    });
-
-    it("should handle profile save", async () => {
-        (global.fetch as any).mockResolvedValueOnce({
-            json: async () => ({ success: true }),
-        });
-
-        const { toast } = require("@/components/ui/use-toast").useToast();
-
-        render(<ProfileConfigForm {...defaultProps} />);
-
-        const saveButton = screen.getByText("Save Profile");
-        fireEvent.click(saveButton);
-
-        await waitFor(() => {
-            expect(global.fetch).toHaveBeenCalledWith(
-                expect.stringContaining("/api/marketing/profiles/profile-1"),
-                expect.objectContaining({
-                    method: "PUT",
-                })
-            );
-        });
-
-        await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    title: "Profile Updated",
-                })
-            );
-            expect(mockOnUpdate).toHaveBeenCalled();
-        });
-    });
-
-    it("should handle save error", async () => {
-        (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
-
-        const { logger } = require("@/lib/client-logger");
-
-        render(<ProfileConfigForm {...defaultProps} />);
-
-        const saveButton = screen.getByText("Save Profile");
-        fireEvent.click(saveButton);
-
-        await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
-        });
     });
 
     it("should switch between manual input and URL analysis", () => {

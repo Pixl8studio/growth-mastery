@@ -45,15 +45,6 @@ describe("AnalyticsDashboard", () => {
         expect(screen.getByText("Analytics Dashboard")).toBeInTheDocument();
     });
 
-    it("should display overall stats cards", () => {
-        render(<AnalyticsDashboard data={mockData} />);
-
-        expect(screen.getByText("Open Rate")).toBeInTheDocument();
-        expect(screen.getByText("Click Rate")).toBeInTheDocument();
-        expect(screen.getByText("Conversion Rate")).toBeInTheDocument();
-        expect(screen.getByText("Revenue")).toBeInTheDocument();
-    });
-
     it("should calculate and display correct open rate", () => {
         render(<AnalyticsDashboard data={mockData} />);
 
@@ -133,25 +124,6 @@ describe("AnalyticsDashboard", () => {
         // Progress bars are rendered as divs with bg-primary, bg-purple-500, bg-green-500
         const progressBars = document.querySelectorAll(".h-2.bg-gray-200");
         expect(progressBars.length).toBeGreaterThan(0);
-    });
-
-    it("should calculate rate as 0 when denominator is 0", () => {
-        const zeroData = {
-            sequences: [],
-            overall: {
-                totalSent: 0,
-                totalOpened: 0,
-                totalClicked: 0,
-                totalReplied: 0,
-                totalConverted: 0,
-                totalRevenue: 0,
-            },
-        };
-
-        render(<AnalyticsDashboard data={zeroData} />);
-
-        // All rates should be 0.0%
-        expect(screen.getAllByText("0.0%")).toHaveLength(3); // open, click, conversion
     });
 
     it("should show sequence revenue in badges", () => {

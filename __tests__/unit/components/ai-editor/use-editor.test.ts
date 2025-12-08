@@ -179,18 +179,14 @@ describe("useEditor", () => {
         });
 
         it("should track edit summary", async () => {
-            const edits = [
-                { type: "text", description: "Changed headline" },
-                { type: "style", description: "Updated colors" },
-            ];
-
+            // API returns editsApplied count, not full edits array
             mockFetch.mockResolvedValueOnce({
                 ok: true,
                 json: async () => ({
-                    explanation: "Made changes",
+                    response: "Made changes",
                     updatedHtml: "<h1>Updated</h1>",
-                    edits,
-                    suggestedActions: [],
+                    editsApplied: 2,
+                    suggestions: [],
                 }),
             });
 
@@ -201,7 +197,9 @@ describe("useEditor", () => {
             });
 
             expect(result.current.lastEditSummary).toBeTruthy();
-            expect(result.current.lastEditSummary?.edits).toHaveLength(2);
+            expect(result.current.lastEditSummary?.timestamp).toBeDefined();
+            // API no longer returns full edit details, just count
+            expect(result.current.lastEditSummary?.edits).toEqual([]);
         });
     });
 

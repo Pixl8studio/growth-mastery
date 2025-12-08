@@ -125,7 +125,10 @@ describe("POST /api/generate/enrollment-copy", () => {
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
         vi.mocked(generateWithAI).mockResolvedValue(mockEnrollmentCopy);
-        vi.mocked(createEnrollmentCopyPrompt).mockReturnValue("mock prompt");
+        vi.mocked(createEnrollmentCopyPrompt).mockReturnValue([
+            { role: "system", content: "mock system prompt" },
+            { role: "user", content: "mock user prompt" },
+        ]);
 
         const request = new NextRequest(
             "http://localhost/api/generate/enrollment-copy",
@@ -205,7 +208,10 @@ describe("POST /api/generate/enrollment-copy", () => {
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
         vi.mocked(generateWithAI).mockResolvedValue(mockEnrollmentCopy);
-        vi.mocked(createEnrollmentCopyPrompt).mockReturnValue("mock prompt");
+        vi.mocked(createEnrollmentCopyPrompt).mockReturnValue([
+            { role: "system", content: "mock system prompt" },
+            { role: "user", content: "mock user prompt" },
+        ]);
 
         const request = new NextRequest(
             "http://localhost/api/generate/enrollment-copy",
@@ -284,7 +290,10 @@ describe("POST /api/generate/enrollment-copy", () => {
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
         vi.mocked(generateWithAI).mockResolvedValue(mockEnrollmentCopy);
-        vi.mocked(createEnrollmentCopyPrompt).mockReturnValue("mock prompt");
+        vi.mocked(createEnrollmentCopyPrompt).mockReturnValue([
+            { role: "system", content: "mock system prompt" },
+            { role: "user", content: "mock user prompt" },
+        ]);
 
         const request = new NextRequest(
             "http://localhost/api/generate/enrollment-copy",

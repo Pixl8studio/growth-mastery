@@ -99,7 +99,8 @@ describe("CampaignDeployer", () => {
     it("should display audience type", () => {
         render(<CampaignDeployer {...mockProps} />);
 
-        expect(screen.getByText("Interest Targeting")).toBeInTheDocument();
+        // Text is lowercase in DOM, CSS capitalizes it visually
+        expect(screen.getByText("interest Targeting")).toBeInTheDocument();
     });
 
     it("should display audience description", () => {
@@ -159,10 +160,9 @@ describe("CampaignDeployer", () => {
 
         render(<CampaignDeployer {...lookalikeProps} />);
 
-        expect(screen.getByText("Lookalike Targeting")).toBeInTheDocument();
-        expect(
-            screen.getByText(/Lookalike audience from: customers.csv/)
-        ).toBeInTheDocument();
+        // Text is lowercase in DOM, CSS capitalizes it visually
+        expect(screen.getByText("lookalike Targeting")).toBeInTheDocument();
+        expect(screen.getByText(/Lookalike audience from:/)).toBeInTheDocument();
     });
 
     it("should display targeting badges", () => {

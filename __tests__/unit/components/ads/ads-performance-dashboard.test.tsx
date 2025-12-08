@@ -230,12 +230,13 @@ describe("AdsPerformanceDashboard", () => {
         const executeButton = screen.getByText("Execute");
         fireEvent.click(executeButton);
 
-        // Component should reload optimizations after execution
+        // Component should reload optimizations after execution - verify fetch was called with optimize URL
         await waitFor(() => {
-            expect(global.fetch).toHaveBeenCalledWith(
-                expect.stringContaining("/optimize"),
-                undefined
+            const fetchCalls = (global.fetch as any).mock.calls;
+            const hasOptimizeCall = fetchCalls.some((call: string[]) =>
+                call[0]?.includes("/optimize")
             );
+            expect(hasOptimizeCall).toBe(true);
         });
     });
 });

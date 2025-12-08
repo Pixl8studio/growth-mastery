@@ -39,12 +39,12 @@ describe("ProfileConfigForm", () => {
             enabled: false,
         },
         story_themes: ["founder_saga"],
-    };
+    } as any;
 
     const defaultProps = {
         profile: mockProfile,
         onUpdate: mockOnUpdate,
-    };
+    } as any;
 
     beforeEach(() => {
         vi.clearAllMocks();

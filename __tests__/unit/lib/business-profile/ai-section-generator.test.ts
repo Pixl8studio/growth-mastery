@@ -122,7 +122,7 @@ describe("AI Section Generator", () => {
 
                 expect(result.success).toBe(true);
                 expect(result.data).toMatchObject(mockResponse);
-                expect(result.data?.pricing).toEqual({
+                expect((result.data as any)?.pricing).toEqual({
                     regular: 5000,
                     webinar: 3000,
                 });
@@ -198,7 +198,7 @@ describe("AI Section Generator", () => {
 
                 expect(result.success).toBe(true);
                 expect(result.data).toMatchObject(mockResponse);
-                expect(result.data?.top_objections).toHaveLength(2);
+                expect((result.data as any)?.top_objections).toHaveLength(2);
             });
         });
 

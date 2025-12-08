@@ -64,6 +64,7 @@ describe("PreflightService", () => {
                 success: true,
                 valid: true,
                 violations: [],
+                warnings: [],
             });
 
             vi.mocked(getProfile).mockResolvedValue({
@@ -109,6 +110,7 @@ describe("PreflightService", () => {
                 success: true,
                 valid: true,
                 violations: [],
+                warnings: [],
             });
 
             vi.mocked(getProfile).mockResolvedValue({

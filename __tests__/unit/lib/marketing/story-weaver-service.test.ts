@@ -121,7 +121,7 @@ describe("StoryWeaverService", () => {
     describe("expandStory", () => {
         it("should expand story angle into full content", async () => {
             const mockAngle = {
-                angle: "Founder",
+                angle: "Founder" as const,
                 framework: "founder_saga" as const,
                 hook: "3 years ago, I almost gave up...",
                 story_outline: "Struggle → Discovery → Transformation",

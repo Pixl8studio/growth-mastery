@@ -28,7 +28,7 @@ describe("StoryAngleSelector", () => {
     const mockOnSelectAngle = vi.fn();
     const mockOnRegenerateAngles = vi.fn();
 
-    const mockAngles: StoryAngle[] = [
+    const mockAngles = [
         {
             angle: "Authority Builder",
             hook: "Discover the secret strategy top marketers use",
@@ -44,7 +44,7 @@ describe("StoryAngleSelector", () => {
             hook: "How I went from zero to hero",
             story_outline: "Before > Journey > After transformation...",
         },
-    ];
+    ] as any;
 
     const defaultProps = {
         angles: mockAngles,

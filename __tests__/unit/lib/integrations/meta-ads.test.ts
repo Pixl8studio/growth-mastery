@@ -265,7 +265,7 @@ describe("Meta Ads Integration", () => {
                 createAdSet(
                     "campaign-123",
                     "Test",
-                    {},
+                    { geo_locations: {} },
                     1000,
                     "IMPRESSIONS",
                     "LEAD_GENERATION",
@@ -620,7 +620,7 @@ describe("Meta Ads Integration", () => {
 
             const result = await getDeliveryEstimate(
                 "act_123",
-                {},
+                { geo_locations: {} },
                 "LEAD_GENERATION",
                 "access-token-123"
             );

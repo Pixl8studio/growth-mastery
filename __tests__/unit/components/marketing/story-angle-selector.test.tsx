@@ -6,8 +6,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { StoryAngleSelector } from "@/components/marketing/story-angle-selector";
-import type { StoryAngle } from "@/types/marketing";
-import { logger } from "@/lib/client-logger";
 
 // Mock dependencies
 const mockToast = vi.fn();
@@ -17,11 +15,13 @@ vi.mock("@/components/ui/use-toast", () => ({
     }),
 }));
 
+const mockLogger = {
+    info: vi.fn(),
+    error: vi.fn(),
+};
+
 vi.mock("@/lib/client-logger", () => ({
-    logger: {
-        info: vi.fn(),
-        error: vi.fn(),
-    },
+    logger: mockLogger,
 }));
 
 describe("StoryAngleSelector", () => {
@@ -200,7 +200,7 @@ describe("StoryAngleSelector", () => {
         fireEvent.click(regenerateButton);
 
         await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
+            expect(mockLogger.error).toHaveBeenCalled();
             expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Regeneration Failed",

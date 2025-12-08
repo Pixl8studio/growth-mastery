@@ -173,7 +173,7 @@ describe("MessagePreview", () => {
 
     it("should truncate SMS to 320 characters", () => {
         const longMessage = "a".repeat(400);
-        const { container } = render(
+        render(
             <MessagePreview
                 subject="Test"
                 bodyContent={longMessage}

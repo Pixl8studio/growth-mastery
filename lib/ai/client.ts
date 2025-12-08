@@ -4,6 +4,7 @@
  */
 
 import OpenAI from "openai";
+import * as Sentry from "@sentry/nextjs";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { retry } from "@/lib/utils";
@@ -57,43 +58,78 @@ export async function generateWithAI<T>(
     requestLogger.info("Generating content with OpenAI");
 
     try {
-        const result = await retry(
-            async () => {
-                const completion = await openai.chat.completions.create({
-                    model,
-                    messages,
-                    temperature,
-                    max_tokens: maxTokens,
-                    response_format: { type: "json_object" },
-                });
+        const result = await Sentry.startSpan(
+            { op: "ai.openai.chat.completions", name: `OpenAI Chat: ${model}` },
+            async (span) => {
+                span.setAttribute("model", model);
+                span.setAttribute("temperature", temperature);
+                span.setAttribute("max_tokens", maxTokens);
 
-                const content = completion.choices[0]?.message?.content;
+                const completion = await retry(
+                    async () => {
+                        const response = await openai.chat.completions.create({
+                            model,
+                            messages,
+                            temperature,
+                            max_tokens: maxTokens,
+                            response_format: { type: "json_object" },
+                        });
 
-                if (!content) {
-                    throw new Error("No content returned from OpenAI");
-                }
+                        const content = response.choices[0]?.message?.content;
 
-                requestLogger.info(
-                    {
-                        tokensUsed: completion.usage?.total_tokens,
-                        promptTokens: completion.usage?.prompt_tokens,
-                        completionTokens: completion.usage?.completion_tokens,
+                        if (!content) {
+                            throw new Error("No content returned from OpenAI");
+                        }
+
+                        requestLogger.info(
+                            {
+                                tokensUsed: response.usage?.total_tokens,
+                                promptTokens: response.usage?.prompt_tokens,
+                                completionTokens: response.usage?.completion_tokens,
+                            },
+                            "OpenAI generation successful"
+                        );
+
+                        span.setAttribute("tokens_used", response.usage?.total_tokens ?? 0);
+                        span.setAttribute(
+                            "prompt_tokens",
+                            response.usage?.prompt_tokens ?? 0
+                        );
+                        span.setAttribute(
+                            "completion_tokens",
+                            response.usage?.completion_tokens ?? 0
+                        );
+
+                        return JSON.parse(content) as T;
                     },
-                    "OpenAI generation successful"
+                    {
+                        maxAttempts: 3,
+                        delayMs: 1000,
+                        backoffMultiplier: 2,
+                    }
                 );
 
-                return JSON.parse(content) as T;
-            },
-            {
-                maxAttempts: 3,
-                delayMs: 1000,
-                backoffMultiplier: 2,
+                return completion;
             }
         );
 
         return result;
     } catch (error) {
         requestLogger.error({ error, model }, "Failed to generate content with OpenAI");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "openai",
+                operation: "chat_completions",
+                model,
+            },
+            extra: {
+                temperature,
+                maxTokens,
+                messageCount: messages.length,
+            },
+        });
+
         throw new Error(
             `AI generation failed: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -112,45 +148,81 @@ export async function generateTextWithAI(
     const temperature = options?.temperature ?? AI_CONFIG.defaultTemperature;
     const maxTokens = options?.maxTokens || AI_CONFIG.defaultMaxTokens;
 
-    console.log(
-        `[AI] Generating text with OpenAI - Model: ${model}, Temperature: ${temperature}, MaxTokens: ${maxTokens}`
-    );
+    const requestLogger = logger.child({ model, temperature, maxTokens });
+    requestLogger.info("Generating text with OpenAI");
 
     try {
-        const result = await retry(
-            async () => {
-                const completion = await openai.chat.completions.create({
-                    model,
-                    messages,
-                    temperature,
-                    max_tokens: maxTokens,
-                });
+        const result = await Sentry.startSpan(
+            { op: "ai.openai.text.completions", name: `OpenAI Text: ${model}` },
+            async (span) => {
+                span.setAttribute("model", model);
+                span.setAttribute("temperature", temperature);
+                span.setAttribute("max_tokens", maxTokens);
 
-                const content = completion.choices[0]?.message?.content;
+                const completion = await retry(
+                    async () => {
+                        const response = await openai.chat.completions.create({
+                            model,
+                            messages,
+                            temperature,
+                            max_tokens: maxTokens,
+                        });
 
-                if (!content) {
-                    throw new Error("No content returned from OpenAI");
-                }
+                        const content = response.choices[0]?.message?.content;
 
-                console.log(
-                    `[AI] OpenAI text generation successful - Tokens: ${completion.usage?.total_tokens} (prompt: ${completion.usage?.prompt_tokens}, completion: ${completion.usage?.completion_tokens})`
+                        if (!content) {
+                            throw new Error("No content returned from OpenAI");
+                        }
+
+                        requestLogger.info(
+                            {
+                                tokensUsed: response.usage?.total_tokens,
+                                promptTokens: response.usage?.prompt_tokens,
+                                completionTokens: response.usage?.completion_tokens,
+                            },
+                            "OpenAI text generation successful"
+                        );
+
+                        span.setAttribute("tokens_used", response.usage?.total_tokens ?? 0);
+                        span.setAttribute(
+                            "prompt_tokens",
+                            response.usage?.prompt_tokens ?? 0
+                        );
+                        span.setAttribute(
+                            "completion_tokens",
+                            response.usage?.completion_tokens ?? 0
+                        );
+
+                        return content;
+                    },
+                    {
+                        maxAttempts: 3,
+                        delayMs: 1000,
+                        backoffMultiplier: 2,
+                    }
                 );
 
-                return content;
-            },
-            {
-                maxAttempts: 3,
-                delayMs: 1000,
-                backoffMultiplier: 2,
+                return completion;
             }
         );
 
         return result;
     } catch (error) {
-        console.error(
-            `[AI] Failed to generate text with OpenAI - Model: ${model}`,
-            error
-        );
+        requestLogger.error({ error, model }, "Failed to generate text with OpenAI");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "openai",
+                operation: "text_completions",
+                model,
+            },
+            extra: {
+                temperature,
+                maxTokens,
+                messageCount: messages.length,
+            },
+        });
+
         throw new Error(
             `AI text generation failed: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -176,42 +248,54 @@ export async function generateImageWithAI(
     );
 
     try {
-        const result = await retry(
-            async () => {
-                const response = await openai.images.generate({
-                    model: "dall-e-3",
-                    prompt,
-                    n: 1,
-                    size,
-                    quality,
-                    style,
-                });
+        const result = await Sentry.startSpan(
+            { op: "ai.openai.image.generate", name: "DALL-E Image Generation" },
+            async (span) => {
+                span.setAttribute("model", "dall-e-3");
+                span.setAttribute("size", size);
+                span.setAttribute("quality", quality);
+                span.setAttribute("style", style);
 
-                if (!response.data || response.data.length === 0) {
-                    throw new Error("No image returned from DALL-E");
-                }
+                const image = await retry(
+                    async () => {
+                        const response = await openai.images.generate({
+                            model: "dall-e-3",
+                            prompt,
+                            n: 1,
+                            size,
+                            quality,
+                            style,
+                        });
 
-                const image = response.data[0];
-                if (!image.url) {
-                    throw new Error("No image URL in DALL-E response");
-                }
+                        if (!response.data || response.data.length === 0) {
+                            throw new Error("No image returned from DALL-E");
+                        }
 
-                requestLogger.info(
-                    {
-                        revisedPrompt: image.revised_prompt?.substring(0, 100),
+                        const imageData = response.data[0];
+                        if (!imageData.url) {
+                            throw new Error("No image URL in DALL-E response");
+                        }
+
+                        requestLogger.info(
+                            {
+                                revisedPrompt: imageData.revised_prompt?.substring(0, 100),
+                            },
+                            "DALL-E image generation successful"
+                        );
+
+                        return {
+                            url: imageData.url,
+                            revisedPrompt: imageData.revised_prompt,
+                        };
                     },
-                    "DALL-E image generation successful"
+                    {
+                        maxAttempts: 2, // DALL-E is slower, reduce retries
+                        delayMs: 2000,
+                        backoffMultiplier: 2,
+                    }
                 );
 
-                return {
-                    url: image.url,
-                    revisedPrompt: image.revised_prompt,
-                };
-            },
-            {
-                maxAttempts: 2, // DALL-E is slower, reduce retries
-                delayMs: 2000,
-                backoffMultiplier: 2,
+                return image;
             }
         );
 
@@ -221,6 +305,21 @@ export async function generateImageWithAI(
             { error, prompt: prompt.substring(0, 100) },
             "Failed to generate image with DALL-E"
         );
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "openai",
+                operation: "image_generate",
+                model: "dall-e-3",
+            },
+            extra: {
+                size,
+                quality,
+                style,
+                promptLength: prompt.length,
+            },
+        });
+
         throw new Error(
             `Image generation failed: ${error instanceof Error ? error.message : "Unknown error"}`
         );

@@ -5,6 +5,7 @@
  * Handles prospect lifecycle from webinar registration through conversion.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import type {
@@ -66,6 +67,19 @@ export async function createProspect(
             { error, userId, email: input.email },
             "❌ Failed to create prospect"
         );
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "prospect",
+                operation: "create_prospect",
+            },
+            extra: {
+                userId,
+                email: input.email,
+                funnelProjectId: input.funnel_project_id,
+            },
+        });
+
         return { success: false, error: error.message };
     }
 
@@ -116,6 +130,18 @@ export async function updateProspectWatchData(
 
     if (error) {
         logger.error({ error, prospectId }, "❌ Failed to update watch data");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "prospect",
+                operation: "update_watch_data",
+            },
+            extra: {
+                prospectId,
+                watchPercentage: watchData.watch_percentage,
+            },
+        });
+
         return { success: false, error: error.message };
     }
 
@@ -161,6 +187,17 @@ export async function updateProspectIntakeData(
 
     if (error) {
         logger.error({ error, prospectId }, "❌ Failed to update intake data");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "prospect",
+                operation: "update_intake_data",
+            },
+            extra: {
+                prospectId,
+            },
+        });
+
         return { success: false, error: error.message };
     }
 
@@ -255,6 +292,18 @@ export async function markProspectConverted(
 
     if (error) {
         logger.error({ error, prospectId }, "❌ Failed to mark prospect as converted");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "prospect",
+                operation: "mark_converted",
+            },
+            extra: {
+                prospectId,
+                conversionValue,
+            },
+        });
+
         return { success: false, error: error.message };
     }
 
@@ -304,6 +353,18 @@ export async function optOutProspect(
 
     if (error) {
         logger.error({ error, prospectId }, "❌ Failed to process opt-out");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "prospect",
+                operation: "opt_out",
+            },
+            extra: {
+                prospectId,
+                reason,
+            },
+        });
+
         return { success: false, error: error.message };
     }
 

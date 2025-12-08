@@ -5,6 +5,7 @@
  * Handles sending, tracking, and updating delivery status.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { getEmailProvider } from "./providers/email-provider";
@@ -39,6 +40,14 @@ export async function processPendingDeliveries(): Promise<{
 
     if (fetchError) {
         logger.error({ error: fetchError }, "❌ Failed to fetch pending deliveries");
+
+        Sentry.captureException(fetchError, {
+            tags: {
+                service: "delivery",
+                operation: "fetch_pending_deliveries",
+            },
+        });
+
         return { success: false, error: fetchError.message };
     }
 
@@ -136,69 +145,94 @@ async function sendEmailDelivery(
     prospect: Record<string, unknown>,
     enhancedBody: string
 ): Promise<{ success: boolean; error?: string }> {
-    const supabase = await createClient();
+    return await Sentry.startSpan(
+        { op: "delivery.email.send", name: "Send Email Delivery" },
+        async (span) => {
+            const supabase = await createClient();
 
-    // Get agentConfigId from delivery
-    const { data: deliveryData } = await supabase
-        .from("followup_deliveries")
-        .select("followup_queues(agent_config_id)")
-        .eq("id", deliveryId)
-        .single();
+            span.setAttribute("delivery_id", deliveryId);
+            span.setAttribute("prospect_email", prospect.email as string);
 
-    const agentConfigId = (deliveryData?.followup_queues as any)?.agent_config_id;
-    const emailProvider = await getEmailProvider(agentConfigId);
+            // Get agentConfigId from delivery
+            const { data: deliveryData } = await supabase
+                .from("followup_deliveries")
+                .select("followup_queues(agent_config_id)")
+                .eq("id", deliveryId)
+                .single();
 
-    logger.info(
-        {
-            deliveryId,
-            to: prospect.email,
-            provider: emailProvider.name,
-        },
-        "📧 Sending email"
+            const agentConfigId = (deliveryData?.followup_queues as any)?.agent_config_id;
+            const emailProvider = await getEmailProvider(agentConfigId);
+
+            span.setAttribute("provider", emailProvider.name);
+
+            logger.info(
+                {
+                    deliveryId,
+                    to: prospect.email,
+                    provider: emailProvider.name,
+                },
+                "📧 Sending email"
+            );
+
+            const result = await emailProvider.sendEmail({
+                to: prospect.email as string,
+                from: process.env.FOLLOWUP_FROM_EMAIL || "followup@example.com",
+                subject: delivery.personalized_subject || "Follow-up",
+                html_body: enhancedBody,
+                tracking_enabled: true,
+                metadata: {
+                    delivery_id: deliveryId,
+                    prospect_id: prospect.id,
+                },
+            });
+
+            if (!result.success) {
+                logger.error({ error: result.error, deliveryId }, "❌ Email send failed");
+
+                Sentry.captureException(new Error(result.error || "Email send failed"), {
+                    tags: {
+                        service: "delivery",
+                        operation: "send_email",
+                        provider: emailProvider.name,
+                    },
+                    extra: {
+                        deliveryId,
+                        prospectId: prospect.id,
+                        prospectEmail: prospect.email,
+                    },
+                });
+
+                await supabase
+                    .from("followup_deliveries")
+                    .update({
+                        delivery_status: "failed",
+                        error_message: result.error,
+                    })
+                    .eq("id", deliveryId);
+
+                return { success: false, error: result.error };
+            }
+
+            // Update delivery status
+            await supabase
+                .from("followup_deliveries")
+                .update({
+                    delivery_status: "sent",
+                    actual_sent_at: new Date().toISOString(),
+                    email_provider_id: result.provider_message_id,
+                })
+                .eq("id", deliveryId);
+
+            logger.info(
+                { deliveryId, providerId: result.provider_message_id },
+                "✅ Email sent"
+            );
+
+            span.setStatus({ code: 1, message: "Success" });
+
+            return { success: true };
+        }
     );
-
-    const result = await emailProvider.sendEmail({
-        to: prospect.email as string,
-        from: process.env.FOLLOWUP_FROM_EMAIL || "followup@example.com",
-        subject: delivery.personalized_subject || "Follow-up",
-        html_body: enhancedBody,
-        tracking_enabled: true,
-        metadata: {
-            delivery_id: deliveryId,
-            prospect_id: prospect.id,
-        },
-    });
-
-    if (!result.success) {
-        logger.error({ error: result.error, deliveryId }, "❌ Email send failed");
-
-        await supabase
-            .from("followup_deliveries")
-            .update({
-                delivery_status: "failed",
-                error_message: result.error,
-            })
-            .eq("id", deliveryId);
-
-        return { success: false, error: result.error };
-    }
-
-    // Update delivery status
-    await supabase
-        .from("followup_deliveries")
-        .update({
-            delivery_status: "sent",
-            actual_sent_at: new Date().toISOString(),
-            email_provider_id: result.provider_message_id,
-        })
-        .eq("id", deliveryId);
-
-    logger.info(
-        { deliveryId, providerId: result.provider_message_id },
-        "✅ Email sent"
-    );
-
-    return { success: true };
 }
 
 /**
@@ -210,73 +244,114 @@ async function sendSMSDelivery(
     prospect: Record<string, unknown>,
     enhancedBody: string
 ): Promise<{ success: boolean; error?: string }> {
-    const supabase = await createClient();
-    const smsProvider = getSMSProvider();
+    return await Sentry.startSpan(
+        { op: "delivery.sms.send", name: "Send SMS Delivery" },
+        async (span) => {
+            const supabase = await createClient();
+            const smsProvider = getSMSProvider();
 
-    // Verify prospect has phone number
-    if (!prospect.phone) {
-        logger.warn(
-            { deliveryId, prospectId: prospect.id },
-            "⚠️  No phone number for SMS"
-        );
+            span.setAttribute("delivery_id", deliveryId);
+            span.setAttribute("provider", smsProvider.name);
 
-        await supabase
-            .from("followup_deliveries")
-            .update({
-                delivery_status: "failed",
-                error_message: "No phone number available",
-            })
-            .eq("id", deliveryId);
+            // Verify prospect has phone number
+            if (!prospect.phone) {
+                logger.warn(
+                    { deliveryId, prospectId: prospect.id },
+                    "⚠️  No phone number for SMS"
+                );
 
-        return { success: false, error: "No phone number" };
-    }
+                const error = new Error("No phone number available");
+                Sentry.captureException(error, {
+                    tags: {
+                        service: "delivery",
+                        operation: "send_sms",
+                        provider: smsProvider.name,
+                    },
+                    extra: {
+                        deliveryId,
+                        prospectId: prospect.id,
+                    },
+                });
 
-    logger.info(
-        {
-            deliveryId,
-            to: prospect.phone,
-            provider: smsProvider.name,
-        },
-        "📱 Sending SMS"
+                await supabase
+                    .from("followup_deliveries")
+                    .update({
+                        delivery_status: "failed",
+                        error_message: "No phone number available",
+                    })
+                    .eq("id", deliveryId);
+
+                return { success: false, error: "No phone number" };
+            }
+
+            span.setAttribute("prospect_phone", prospect.phone as string);
+
+            logger.info(
+                {
+                    deliveryId,
+                    to: prospect.phone,
+                    provider: smsProvider.name,
+                },
+                "📱 Sending SMS"
+            );
+
+            const result = await smsProvider.sendSMS({
+                to: prospect.phone as string,
+                from: process.env.FOLLOWUP_FROM_PHONE || "+15555551234",
+                body: enhancedBody,
+                metadata: {
+                    delivery_id: deliveryId,
+                    prospect_id: prospect.id,
+                },
+            });
+
+            if (!result.success) {
+                logger.error({ error: result.error, deliveryId }, "❌ SMS send failed");
+
+                Sentry.captureException(new Error(result.error || "SMS send failed"), {
+                    tags: {
+                        service: "delivery",
+                        operation: "send_sms",
+                        provider: smsProvider.name,
+                    },
+                    extra: {
+                        deliveryId,
+                        prospectId: prospect.id,
+                        prospectPhone: prospect.phone,
+                    },
+                });
+
+                await supabase
+                    .from("followup_deliveries")
+                    .update({
+                        delivery_status: "failed",
+                        error_message: result.error,
+                    })
+                    .eq("id", deliveryId);
+
+                return { success: false, error: result.error };
+            }
+
+            // Update delivery status
+            await supabase
+                .from("followup_deliveries")
+                .update({
+                    delivery_status: "sent",
+                    actual_sent_at: new Date().toISOString(),
+                    sms_provider_id: result.provider_message_id,
+                })
+                .eq("id", deliveryId);
+
+            logger.info(
+                { deliveryId, providerId: result.provider_message_id },
+                "✅ SMS sent"
+            );
+
+            span.setStatus({ code: 1, message: "Success" });
+
+            return { success: true };
+        }
     );
-
-    const result = await smsProvider.sendSMS({
-        to: prospect.phone as string,
-        from: process.env.FOLLOWUP_FROM_PHONE || "+15555551234",
-        body: enhancedBody,
-        metadata: {
-            delivery_id: deliveryId,
-            prospect_id: prospect.id,
-        },
-    });
-
-    if (!result.success) {
-        logger.error({ error: result.error, deliveryId }, "❌ SMS send failed");
-
-        await supabase
-            .from("followup_deliveries")
-            .update({
-                delivery_status: "failed",
-                error_message: result.error,
-            })
-            .eq("id", deliveryId);
-
-        return { success: false, error: result.error };
-    }
-
-    // Update delivery status
-    await supabase
-        .from("followup_deliveries")
-        .update({
-            delivery_status: "sent",
-            actual_sent_at: new Date().toISOString(),
-            sms_provider_id: result.provider_message_id,
-        })
-        .eq("id", deliveryId);
-
-    logger.info({ deliveryId, providerId: result.provider_message_id }, "✅ SMS sent");
-
-    return { success: true };
 }
 
 // ===========================================

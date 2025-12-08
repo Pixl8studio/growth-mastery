@@ -3,6 +3,7 @@
  * Admin endpoint for managing referral codes (future admin panel support)
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -50,6 +51,17 @@ export async function GET(_request: NextRequest) {
         return NextResponse.json({ referralCodes }, { status: 200 });
     } catch (error) {
         requestLogger.error({ error }, "Failed to list referral codes");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "list-referral-codes",
+                endpoint: "GET /api/admin/referral-codes",
+            },
+            extra: {
+                isAuthenticationError: error instanceof AuthenticationError,
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });
@@ -136,6 +148,18 @@ export async function POST(request: NextRequest) {
     } catch (error) {
         requestLogger.error({ error }, "Failed to create referral code");
 
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "create-referral-code",
+                endpoint: "POST /api/admin/referral-codes",
+            },
+            extra: {
+                isAuthenticationError: error instanceof AuthenticationError,
+                isValidationError: error instanceof ValidationError,
+            },
+        });
+
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });
         }
@@ -221,6 +245,18 @@ export async function PATCH(request: NextRequest) {
         return NextResponse.json({ referralCode: updatedCode }, { status: 200 });
     } catch (error) {
         requestLogger.error({ error }, "Failed to update referral code");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "update-referral-code",
+                endpoint: "PATCH /api/admin/referral-codes",
+            },
+            extra: {
+                isAuthenticationError: error instanceof AuthenticationError,
+                isValidationError: error instanceof ValidationError,
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });

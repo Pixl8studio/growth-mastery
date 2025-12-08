@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { AuthenticationError, ValidationError } from "@/lib/errors";
@@ -208,6 +209,20 @@ export async function POST(request: NextRequest) {
                 "Error during auto-generation"
             );
 
+            Sentry.captureException(error, {
+                tags: {
+                    component: "api",
+                    action: "auto-generate-all-inner",
+                    endpoint: "POST /api/generate/auto-generate-all",
+                },
+                extra: {
+                    projectId,
+                    userId: user.id,
+                    intakeId,
+                    regenerate,
+                },
+            });
+
             // Wrap unknown errors in a user-friendly message
             throw new Error(
                 `Failed to generate content: ${error instanceof Error ? error.message : "Unknown error occurred"}`
@@ -222,6 +237,22 @@ export async function POST(request: NextRequest) {
             },
             "Error in POST /api/generate/auto-generate-all"
         );
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "auto-generate-all",
+                endpoint: "POST /api/generate/auto-generate-all",
+            },
+            extra: {
+                errorType:
+                    error instanceof AuthenticationError
+                        ? "authentication"
+                        : error instanceof ValidationError
+                          ? "validation"
+                          : "unknown",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });

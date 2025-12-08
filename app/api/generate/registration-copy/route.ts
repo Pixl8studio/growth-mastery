@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { generateWithAI } from "@/lib/ai/client";
@@ -107,6 +108,18 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         requestLogger.error({ error }, "Failed to generate registration copy");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "generate-registration-copy",
+                endpoint: "POST /api/generate/registration-copy",
+            },
+            extra: {
+                projectId: (error as any).projectId,
+                deckStructureId: (error as any).deckStructureId,
+            },
+        });
 
         if (error instanceof ValidationError) {
             return NextResponse.json(

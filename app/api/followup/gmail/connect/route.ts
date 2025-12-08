@@ -5,6 +5,7 @@
  * Initiates Gmail OAuth flow by redirecting to Google's authorization page.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -63,6 +64,14 @@ export async function GET(request: NextRequest) {
             },
             "❌ Gmail connect error"
         );
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "gmail_connect",
+                endpoint: "GET /api/followup/gmail/connect",
+            },
+        });
 
         if (error instanceof AuthenticationError || error instanceof ValidationError) {
             return NextResponse.json(

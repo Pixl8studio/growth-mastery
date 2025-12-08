@@ -4,6 +4,8 @@
  */
 
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
+
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/auth";
 import { logger } from "@/lib/logger";
@@ -75,6 +77,14 @@ export async function DELETE(
         return NextResponse.json({ success: true });
     } catch (error) {
         logger.error({ error }, "Failed to delete domain");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "delete_domain",
+                endpoint: "DELETE /api/domains/[domainId]",
+            },
+            extra: {},
+        });
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

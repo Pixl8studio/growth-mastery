@@ -5,6 +5,7 @@
  * Checks if Gmail OAuth is properly configured with required environment variables.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
@@ -27,6 +28,14 @@ export async function GET() {
         });
     } catch (error) {
         logger.error({ error }, "Failed to check Gmail OAuth status");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "gmail_status_check",
+                endpoint: "GET /api/followup/gmail/status",
+            },
+        });
 
         return NextResponse.json(
             {

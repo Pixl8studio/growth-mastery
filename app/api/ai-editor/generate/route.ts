@@ -4,6 +4,7 @@
  * Generates a new landing page using Claude Sonnet 4
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -169,6 +170,17 @@ export async function POST(request: Request) {
             error instanceof Error ? error.message : "Unknown error occurred";
 
         logger.error({ error, errorMessage }, "Page generation failed");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "generate_page",
+                endpoint: "POST /api/ai-editor/generate",
+            },
+            extra: {
+                errorMessage,
+            },
+        });
 
         return NextResponse.json(
             {

@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { AuthenticationError, ValidationError, NotFoundError } from "@/lib/errors";
@@ -68,6 +69,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
         });
     } catch (error) {
         logger.error({ error }, "❌ Error in GET /api/followup/sequences/[sequenceId]");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "get_sequence",
+                endpoint: "GET /api/followup/sequences/[sequenceId]",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });
@@ -165,6 +174,14 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     } catch (error) {
         logger.error({ error }, "❌ Error in PUT /api/followup/sequences/[sequenceId]");
 
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "update_sequence",
+                endpoint: "PUT /api/followup/sequences/[sequenceId]",
+            },
+        });
+
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });
         }
@@ -250,6 +267,14 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
             { error },
             "❌ Error in DELETE /api/followup/sequences/[sequenceId]"
         );
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "delete_sequence",
+                endpoint: "DELETE /api/followup/sequences/[sequenceId]",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });

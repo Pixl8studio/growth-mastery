@@ -5,6 +5,7 @@
  * Sends a test email or SMS to verify sender configuration.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -214,6 +215,14 @@ This is a test message. Unsubscribe functionality will work in production messag
         throw new ValidationError("Invalid channel");
     } catch (error) {
         logger.error({ error }, "❌ Error in POST /api/followup/test-message");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "send_test_message",
+                endpoint: "POST /api/followup/test-message",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });

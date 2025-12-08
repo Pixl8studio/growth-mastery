@@ -3,6 +3,7 @@
  * Generates default sequences and messages for post-webinar follow-up automation
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 
@@ -312,6 +313,18 @@ export async function createSequence(agentConfigId: string, input: SequenceInput
 
         if (error) {
             logger.error({ error, agentConfigId }, "Failed to create sequence");
+
+            Sentry.captureException(error, {
+                tags: {
+                    service: "sequence",
+                    operation: "create_sequence",
+                },
+                extra: {
+                    agentConfigId,
+                    sequenceName: input.name,
+                },
+            });
+
             return { success: false, error: error.message };
         }
 
@@ -319,6 +332,18 @@ export async function createSequence(agentConfigId: string, input: SequenceInput
         return { success: true, sequence };
     } catch (error) {
         logger.error({ error }, "Exception creating sequence");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "sequence",
+                operation: "create_sequence",
+            },
+            extra: {
+                agentConfigId,
+                sequenceName: input.name,
+            },
+        });
+
         return {
             success: false,
             error: error instanceof Error ? error.message : "Unknown error",
@@ -937,6 +962,18 @@ P.S. If you can't make it live, register anyway and I'll send you the replay.`,
         };
     } catch (error) {
         logger.error({ error, agentConfigId }, "❌ Error creating default sequences");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "sequence",
+                operation: "create_default_sequences",
+            },
+            extra: {
+                agentConfigId,
+                offerId,
+            },
+        });
+
         return {
             success: false,
             error: error instanceof Error ? error.message : "Unknown error",

@@ -5,6 +5,7 @@
  * Manages opt-outs, consent tracking, and regulatory adherence.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 
@@ -95,6 +96,18 @@ export async function checkSendingLimits(
 
     if (error) {
         logger.error({ error, userId, channel }, "❌ Failed to check sending limits");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "compliance",
+                operation: "check_sending_limits",
+            },
+            extra: {
+                userId,
+                channel,
+            },
+        });
+
         // Allow send on error (fail open)
         return { allowed: true };
     }

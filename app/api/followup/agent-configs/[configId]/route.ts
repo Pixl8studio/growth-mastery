@@ -5,6 +5,7 @@
  * Supports GET (retrieve), PUT (update), and DELETE operations.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -65,6 +66,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
             { error },
             "❌ Error in GET /api/followup/agent-configs/[configId]"
         );
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "get_agent_config",
+                endpoint: "GET /api/followup/agent-configs/[configId]",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });
@@ -164,6 +173,14 @@ export async function PUT(request: NextRequest, context: RouteContext) {
             "❌ Error in PUT /api/followup/agent-configs/[configId]"
         );
 
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "update_agent_config",
+                endpoint: "PUT /api/followup/agent-configs/[configId]",
+            },
+        });
+
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });
         }
@@ -243,6 +260,14 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
             { error },
             "❌ Error in DELETE /api/followup/agent-configs/[configId]"
         );
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "delete_agent_config",
+                endpoint: "DELETE /api/followup/agent-configs/[configId]",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });

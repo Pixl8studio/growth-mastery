@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { generateImageWithAI } from "@/lib/ai/client";
+import * as Sentry from "@sentry/nextjs";
 
 const MAX_PROMPT_LENGTH = 4000;
 
@@ -178,6 +179,16 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         requestLogger.error({ error }, "Image generation failed");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "generate_image",
+                endpoint: "POST /api/pages/generate-image",
+            },
+            extra: {
+                errorMessage: error instanceof Error ? error.message : "Unknown error",
+            },
+        });
 
         return NextResponse.json(
             {

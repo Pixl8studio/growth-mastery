@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
+import * as Sentry from "@sentry/nextjs";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -192,6 +193,16 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         requestLogger.error({ error }, "Image upload failed");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "upload_image",
+                endpoint: "POST /api/pages/upload-image",
+            },
+            extra: {
+                errorMessage: error instanceof Error ? error.message : "Unknown error",
+            },
+        });
 
         return NextResponse.json(
             {

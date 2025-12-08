@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { generateFollowupTemplates } from "@/lib/followup/template-generator-service";
@@ -150,6 +151,14 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "❌ Unexpected error in template generation");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "generate_sequence_templates",
+                endpoint: "POST /api/followup/sequences/generate",
+            },
+        });
 
         return NextResponse.json(
             {

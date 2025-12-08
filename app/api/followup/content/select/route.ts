@@ -5,6 +5,7 @@
  * Matches content based on objection, niche, price band, and persona.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -95,6 +96,14 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "❌ Error in POST /api/followup/content/select");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "select_content",
+                endpoint: "POST /api/followup/content/select",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });

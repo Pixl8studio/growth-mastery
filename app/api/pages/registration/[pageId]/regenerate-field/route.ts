@@ -11,6 +11,7 @@ import { generateTextWithAI } from "@/lib/ai/client";
 import { createFieldRegenerationPrompt } from "@/lib/generators/registration-framework-prompts";
 import type { Slide } from "@/lib/ai/types";
 import * as cheerio from "cheerio";
+import * as Sentry from "@sentry/nextjs";
 
 export async function POST(
     request: NextRequest,
@@ -171,6 +172,16 @@ export async function POST(
         });
     } catch (error) {
         requestLogger.error({ error }, "Error regenerating field");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "regenerate_registration_field",
+                endpoint: "POST /api/pages/registration/[pageId]/regenerate-field",
+            },
+            extra: {
+                errorMessage: error instanceof Error ? error.message : "Unknown error",
+            },
+        });
         return NextResponse.json(
             {
                 error:

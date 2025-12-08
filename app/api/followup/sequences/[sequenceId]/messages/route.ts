@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { AuthenticationError, ValidationError } from "@/lib/errors";
@@ -108,6 +109,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
             "❌ Error in POST /api/followup/sequences/[sequenceId]/messages"
         );
 
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "create_message",
+                endpoint: "POST /api/followup/sequences/[sequenceId]/messages",
+            },
+        });
+
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });
         }
@@ -172,6 +181,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
             { error },
             "❌ Error in GET /api/followup/sequences/[sequenceId]/messages"
         );
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "list_messages",
+                endpoint: "GET /api/followup/sequences/[sequenceId]/messages",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });

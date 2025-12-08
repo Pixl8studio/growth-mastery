@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { AuthenticationError, NotFoundError, ValidationError } from "@/lib/errors";
@@ -67,6 +68,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
         });
     } catch (error) {
         logger.error({ error }, "❌ Error in GET /api/followup/prospects/[prospectId]");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "get_prospect",
+                endpoint: "GET /api/followup/prospects/[prospectId]",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });
@@ -147,6 +156,14 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
             "❌ Error in PATCH /api/followup/prospects/[prospectId]"
         );
 
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "update_prospect",
+                endpoint: "PATCH /api/followup/prospects/[prospectId]",
+            },
+        });
+
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });
         }
@@ -195,6 +212,14 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
             { error },
             "❌ Error in DELETE /api/followup/prospects/[prospectId]"
         );
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "opt_out_prospect",
+                endpoint: "DELETE /api/followup/prospects/[prospectId]",
+            },
+        });
 
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }

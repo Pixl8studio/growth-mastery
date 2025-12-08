@@ -5,6 +5,7 @@
  * Creates scheduled deliveries based on sequence configuration.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -94,6 +95,14 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "❌ Error in POST /api/followup/trigger");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "trigger_sequence",
+                endpoint: "POST /api/followup/trigger",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });

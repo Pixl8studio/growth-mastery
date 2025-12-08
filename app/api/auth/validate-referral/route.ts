@@ -3,6 +3,7 @@
  * Validates referral codes during user signup
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -113,6 +114,17 @@ export async function POST(request: NextRequest) {
         );
     } catch (error) {
         requestLogger.error({ error }, "Failed to validate referral code");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "validate-referral-code",
+                endpoint: "POST /api/auth/validate-referral",
+            },
+            extra: {
+                isValidationError: error instanceof ValidationError,
+            },
+        });
 
         if (error instanceof ValidationError) {
             return NextResponse.json(

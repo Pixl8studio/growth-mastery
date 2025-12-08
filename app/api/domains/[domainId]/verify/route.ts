@@ -4,6 +4,8 @@
  */
 
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
+
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/auth";
 import { logger } from "@/lib/logger";
@@ -107,6 +109,14 @@ export async function POST(
         });
     } catch (error) {
         logger.error({ error }, "Failed to verify domain");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "verify_domain",
+                endpoint: "POST /api/domains/[domainId]/verify",
+            },
+            extra: {},
+        });
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

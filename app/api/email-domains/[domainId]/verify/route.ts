@@ -5,6 +5,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
+
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { getMailgunProvider } from "@/lib/followup/providers/mailgun-provider";
@@ -106,6 +108,14 @@ export async function POST(
         });
     } catch (error) {
         logger.error({ error }, "❌ Failed to verify email domain");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "verify_email_domain",
+                endpoint: "POST /api/email-domains/[domainId]/verify",
+            },
+            extra: {},
+        });
 
         return NextResponse.json(
             { success: false, error: "Failed to verify email domain" },

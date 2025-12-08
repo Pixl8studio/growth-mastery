@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { logger } from "@/lib/logger";
 import { syncAllAdMetrics } from "@/lib/ads/metrics-fetcher";
 
@@ -45,6 +46,18 @@ export async function GET(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "Error in GET /api/ads/sync");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "sync_ad_metrics",
+                endpoint: "GET /api/ads/sync",
+            },
+            extra: {
+                errorType: error instanceof Error ? error.constructor.name : typeof error,
+            },
+        });
+
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

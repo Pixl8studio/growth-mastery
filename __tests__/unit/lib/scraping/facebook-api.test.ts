@@ -45,7 +45,9 @@ describe("Facebook Graph API Client", () => {
 
             expect(url).toContain("https://www.facebook.com/v18.0/dialog/oauth");
             expect(url).toContain(`client_id=${mockConfig.appId}`);
-            expect(url).toContain(`redirect_uri=${encodeURIComponent(mockConfig.redirectUri)}`);
+            expect(url).toContain(
+                `redirect_uri=${encodeURIComponent(mockConfig.redirectUri)}`
+            );
             expect(url).toContain(`state=${state}`);
             expect(url).toContain("response_type=code");
             expect(url).toContain("scope=pages_read_engagement");
@@ -106,9 +108,9 @@ describe("Facebook Graph API Client", () => {
         it("throws error when network request fails", async () => {
             (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
 
-            await expect(
-                exchangeFacebookCode("test-code", mockConfig)
-            ).rejects.toThrow("Network error");
+            await expect(exchangeFacebookCode("test-code", mockConfig)).rejects.toThrow(
+                "Network error"
+            );
         });
     });
 
@@ -122,10 +124,7 @@ describe("Facebook Graph API Client", () => {
                 }),
             });
 
-            const result = await getFacebookLongLivedToken(
-                "short-token",
-                mockConfig
-            );
+            const result = await getFacebookLongLivedToken("short-token", mockConfig);
 
             expect(result.accessToken).toBe("long-lived-token");
             expect(result.expiresIn).toBe(5184000);
@@ -139,10 +138,7 @@ describe("Facebook Graph API Client", () => {
                 }),
             });
 
-            const result = await getFacebookLongLivedToken(
-                "short-token",
-                mockConfig
-            );
+            const result = await getFacebookLongLivedToken("short-token", mockConfig);
 
             expect(result.expiresIn).toBe(5184000); // 60 days
         });
@@ -324,9 +320,17 @@ describe("Facebook Graph API Client", () => {
     describe("extractTextFromFacebookPosts", () => {
         it("extracts text from posts with messages", () => {
             const posts = [
-                { id: "1", message: "This is a long enough message to be extracted", createdTime: "2024-01-01T00:00:00Z" },
+                {
+                    id: "1",
+                    message: "This is a long enough message to be extracted",
+                    createdTime: "2024-01-01T00:00:00Z",
+                },
                 { id: "2", message: "Short", createdTime: "2024-01-01T00:00:00Z" },
-                { id: "3", message: "Another substantial post that should be included", createdTime: "2024-01-01T00:00:00Z" },
+                {
+                    id: "3",
+                    message: "Another substantial post that should be included",
+                    createdTime: "2024-01-01T00:00:00Z",
+                },
             ];
 
             const result = extractTextFromFacebookPosts(posts as any);
@@ -354,7 +358,11 @@ describe("Facebook Graph API Client", () => {
             const posts = [
                 { id: "1", message: "Hi", createdTime: "2024-01-01T00:00:00Z" },
                 { id: "2", message: "   ", createdTime: "2024-01-01T00:00:00Z" },
-                { id: "3", message: "This is long enough", createdTime: "2024-01-01T00:00:00Z" },
+                {
+                    id: "3",
+                    message: "This message is long enough to pass",
+                    createdTime: "2024-01-01T00:00:00Z",
+                },
             ];
 
             const result = extractTextFromFacebookPosts(posts as any);

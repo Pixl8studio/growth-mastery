@@ -24,6 +24,32 @@ vi.mock("@/lib/logger", () => ({
     },
 }));
 
+/**
+ * Creates a chainable and thenable mock for Supabase queries
+ */
+function createChainableMock(result: { data: unknown; error: unknown }) {
+    const chain: Record<string, unknown> = {};
+    const methods = [
+        "select",
+        "eq",
+        "gte",
+        "lte",
+        "in",
+        "or",
+        "not",
+        "order",
+        "limit",
+        "single",
+    ];
+    methods.forEach((method) => {
+        chain[method] = vi.fn(() => chain);
+    });
+    // Make it thenable for await
+    chain.then = (resolve: (value: unknown) => void) =>
+        Promise.resolve(result).then(resolve);
+    return chain;
+}
+
 // Import after mocks are defined
 const {
     getGlobalProspects,
@@ -72,14 +98,7 @@ describe("Global Analytics Service", () => {
         });
 
         it("filters prospects by segment", async () => {
-            const mockChain = {
-                select: vi.fn().mockReturnThis(),
-                eq: vi.fn().mockReturnThis(),
-                order: vi.fn().mockResolvedValue({
-                    data: [],
-                    error: null,
-                }),
-            };
+            const mockChain = createChainableMock({ data: [], error: null });
 
             mockSupabase.from.mockReturnValue(mockChain);
 
@@ -89,15 +108,7 @@ describe("Global Analytics Service", () => {
         });
 
         it("filters prospects by minimum intent score", async () => {
-            const mockChain = {
-                select: vi.fn().mockReturnThis(),
-                eq: vi.fn().mockReturnThis(),
-                gte: vi.fn().mockReturnThis(),
-                order: vi.fn().mockResolvedValue({
-                    data: [],
-                    error: null,
-                }),
-            };
+            const mockChain = createChainableMock({ data: [], error: null });
 
             mockSupabase.from.mockReturnValue(mockChain);
 
@@ -107,15 +118,7 @@ describe("Global Analytics Service", () => {
         });
 
         it("searches prospects by email or name", async () => {
-            const mockChain = {
-                select: vi.fn().mockReturnThis(),
-                eq: vi.fn().mockReturnThis(),
-                or: vi.fn().mockReturnThis(),
-                order: vi.fn().mockResolvedValue({
-                    data: [],
-                    error: null,
-                }),
-            };
+            const mockChain = createChainableMock({ data: [], error: null });
 
             mockSupabase.from.mockReturnValue(mockChain);
 
@@ -236,15 +239,7 @@ describe("Global Analytics Service", () => {
         });
 
         it("handles date range filtering", async () => {
-            const mockChain = {
-                select: vi.fn().mockReturnThis(),
-                eq: vi.fn().mockReturnThis(),
-                gte: vi.fn().mockReturnThis(),
-                lte: vi.fn().mockResolvedValue({
-                    data: [],
-                    error: null,
-                }),
-            };
+            const mockChain = createChainableMock({ data: [], error: null });
 
             mockSupabase.from.mockReturnValue(mockChain);
 

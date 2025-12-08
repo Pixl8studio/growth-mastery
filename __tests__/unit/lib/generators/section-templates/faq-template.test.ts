@@ -23,7 +23,7 @@ describe("FAQ Template", () => {
         it("should include section wrapper with proper attributes", () => {
             const html = generateFAQTemplate();
 
-            expect(html).toContain('<section');
+            expect(html).toContain("<section");
             expect(html).toContain('class="block faq-section"');
             expect(html).toContain('data-block-type="faq"');
         });

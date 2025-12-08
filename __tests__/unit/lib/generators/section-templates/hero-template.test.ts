@@ -101,7 +101,7 @@ describe("Hero Template", () => {
         it("should make CTA button editable", () => {
             const html = generateHeroTemplate();
 
-            expect(html).toContain('<button');
+            expect(html).toContain("<button");
             expect(html).toContain('data-editable="true"');
         });
 

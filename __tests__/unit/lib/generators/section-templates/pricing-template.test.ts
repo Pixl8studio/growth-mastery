@@ -179,7 +179,10 @@ describe("Pricing Template", () => {
         });
 
         it("should handle many features", () => {
-            const manyFeatures = Array.from({ length: 10 }, (_, i) => `Feature ${i + 1}`);
+            const manyFeatures = Array.from(
+                { length: 10 },
+                (_, i) => `Feature ${i + 1}`
+            );
             const html = generatePricingTemplate({ features: manyFeatures });
 
             expect(html).toContain("Feature 1");

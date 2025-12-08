@@ -24,6 +24,32 @@ vi.mock("@/lib/logger", () => ({
     },
 }));
 
+/**
+ * Creates a chainable and thenable mock for Supabase queries
+ */
+function createChainableMock(result: { data: unknown; error: unknown }) {
+    const chain: Record<string, unknown> = {};
+    const methods = [
+        "select",
+        "eq",
+        "gte",
+        "lte",
+        "in",
+        "or",
+        "not",
+        "order",
+        "limit",
+        "single",
+    ];
+    methods.forEach((method) => {
+        chain[method] = vi.fn(() => chain);
+    });
+    // Make it thenable for await
+    chain.then = (resolve: (value: unknown) => void) =>
+        Promise.resolve(result).then(resolve);
+    return chain;
+}
+
 // Import after mocks are defined
 const {
     getDeliverabilityMetrics,
@@ -296,22 +322,7 @@ describe("Analytics Service", () => {
 
     describe("getDashboardAnalytics", () => {
         it("fetches all analytics successfully", async () => {
-            const mockChain = {
-                select: vi.fn().mockReturnThis(),
-                eq: vi.fn().mockResolvedValue({
-                    data: [],
-                    error: null,
-                }),
-                in: vi.fn().mockResolvedValue({
-                    data: [],
-                    error: null,
-                }),
-                gte: vi.fn().mockReturnThis(),
-                lte: vi.fn().mockResolvedValue({
-                    data: [],
-                    error: null,
-                }),
-            };
+            const mockChain = createChainableMock({ data: [], error: null });
 
             mockSupabase.from.mockReturnValue(mockChain);
 

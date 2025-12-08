@@ -131,9 +131,7 @@ describe("Proof Template", () => {
         });
 
         it("should handle custom icons", () => {
-            const customStats = [
-                { number: "999", label: "Test", icon: "heart" },
-            ];
+            const customStats = [{ number: "999", label: "Test", icon: "heart" }];
 
             const html = generateProofTemplate({ stats: customStats });
 
@@ -141,9 +139,7 @@ describe("Proof Template", () => {
         });
 
         it("should handle single stat", () => {
-            const singleStat = [
-                { number: "100", label: "Perfect", icon: "star" },
-            ];
+            const singleStat = [{ number: "100", label: "Perfect", icon: "star" }];
 
             const html = generateProofTemplate({ stats: singleStat });
 

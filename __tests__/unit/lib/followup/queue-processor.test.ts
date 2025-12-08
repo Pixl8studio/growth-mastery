@@ -24,11 +24,40 @@ vi.mock("@/lib/logger", () => ({
     },
 }));
 
-// Mock delivery service
+// Mock delivery service - also mock isWithinQuietHours to control behavior
 const mockSendDelivery = vi.fn();
+const mockIsWithinQuietHours = vi.fn().mockReturnValue(false);
 vi.mock("@/lib/followup/delivery-service", () => ({
     sendDelivery: mockSendDelivery,
+    isWithinQuietHours: mockIsWithinQuietHours,
 }));
+
+/**
+ * Creates a chainable and thenable mock for Supabase queries
+ */
+function createChainableMock(result: { data: unknown; error: unknown }) {
+    const chain: Record<string, unknown> = {};
+    const methods = [
+        "select",
+        "eq",
+        "gte",
+        "lte",
+        "in",
+        "or",
+        "not",
+        "order",
+        "limit",
+        "single",
+        "update",
+    ];
+    methods.forEach((method) => {
+        chain[method] = vi.fn(() => chain);
+    });
+    // Make it thenable for await
+    chain.then = (resolve: (value: unknown) => void) =>
+        Promise.resolve(result).then(resolve);
+    return chain;
+}
 
 // Import after mocks are defined
 const { processPendingDeliveries, rescheduleQuietHourDeliveries } = await import(
@@ -46,30 +75,26 @@ describe("Queue Processor", () => {
                 {
                     id: "delivery-1",
                     channel: "email",
-                    scheduled_send_at: new Date().toISOString(),
+                    scheduled_send_at: "2024-01-01T15:00:00Z",
                     followup_prospects: {
                         id: "prospect-1",
                         email: "test@example.com",
                         consent_state: "opted_in",
                         timezone: "America/New_York",
                         total_touches: 0,
+                        converted: false,
                     },
                 },
             ];
 
-            const mockChain = {
-                select: vi.fn().mockReturnThis(),
-                eq: vi.fn().mockReturnThis(),
-                lte: vi.fn().mockReturnThis(),
-                order: vi.fn().mockReturnThis(),
-                limit: vi.fn().mockResolvedValue({
-                    data: mockDeliveries,
-                    error: null,
-                }),
-            };
+            const mockChain = createChainableMock({
+                data: mockDeliveries,
+                error: null,
+            });
 
             mockSupabase.from.mockReturnValue(mockChain);
             mockSendDelivery.mockResolvedValue({ success: true });
+            mockIsWithinQuietHours.mockReturnValue(false);
 
             const result = await processPendingDeliveries();
 
@@ -252,30 +277,24 @@ describe("Queue Processor", () => {
 
     describe("rescheduleQuietHourDeliveries", () => {
         it("reschedules deliveries in quiet hours", async () => {
-            const quietTime = new Date();
-            quietTime.setHours(23, 0, 0, 0); // 11 PM
-
+            // 23:00 EST = 04:00 UTC (next day) - quiet hours
             const mockDeliveries = [
                 {
                     id: "delivery-1",
-                    scheduled_send_at: quietTime.toISOString(),
+                    scheduled_send_at: "2024-01-02T04:00:00Z",
                     followup_prospects: {
                         timezone: "America/New_York",
                     },
                 },
             ];
 
-            mockSupabase.from.mockReturnValue({
-                select: vi.fn().mockReturnThis(),
-                eq: vi.fn().mockReturnThis(),
-                limit: vi.fn().mockResolvedValue({
-                    data: mockDeliveries,
-                    error: null,
-                }),
-                update: vi.fn().mockReturnValue({
-                    eq: vi.fn().mockResolvedValue({ error: null }),
-                }),
+            const mockChain = createChainableMock({
+                data: mockDeliveries,
+                error: null,
             });
+
+            mockSupabase.from.mockReturnValue(mockChain);
+            mockIsWithinQuietHours.mockReturnValue(true);
 
             const result = await rescheduleQuietHourDeliveries();
 

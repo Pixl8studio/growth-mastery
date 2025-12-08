@@ -5,6 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { MasterSectionCard } from "@/components/funnel-builder/master-section-card";
+import type { MasterStepCompletion } from "@/app/funnel-builder/completion-types";
 
 // Mock next/link
 vi.mock("next/link", () => ({
@@ -41,15 +42,18 @@ vi.mock("@/app/funnel-builder/master-steps-config", () => ({
 }));
 
 describe("MasterSectionCard", () => {
+    const mockCompletion: MasterStepCompletion = {
+        masterStepId: 1,
+        isFullyComplete: false,
+        isPartiallyComplete: false,
+        completedCount: 0,
+        totalCount: 3,
+        percentage: 0,
+    };
+
     const mockProps = {
         masterStepId: 1,
-        completion: {
-            isFullyComplete: false,
-            isPartiallyComplete: false,
-            completedCount: 0,
-            totalCount: 3,
-            percentage: 0,
-        },
+        completion: mockCompletion,
         completedSubSteps: [],
         projectId: "project-123",
         subStepDetails: [
@@ -89,14 +93,16 @@ describe("MasterSectionCard", () => {
     });
 
     it("should show In Progress badge when partially complete", () => {
+        const partialCompletion: MasterStepCompletion = {
+            ...mockCompletion,
+            isPartiallyComplete: true,
+            completedCount: 1,
+            percentage: 33,
+        };
+
         const partialProps = {
             ...mockProps,
-            completion: {
-                ...mockProps.completion,
-                isPartiallyComplete: true,
-                completedCount: 1,
-                percentage: 33,
-            },
+            completion: partialCompletion,
             completedSubSteps: [1],
         };
 
@@ -108,15 +114,18 @@ describe("MasterSectionCard", () => {
     });
 
     it("should show Complete badge when fully complete", () => {
+        const completeCompletion: MasterStepCompletion = {
+            masterStepId: 1,
+            isFullyComplete: true,
+            isPartiallyComplete: false,
+            completedCount: 3,
+            totalCount: 3,
+            percentage: 100,
+        };
+
         const completeProps = {
             ...mockProps,
-            completion: {
-                isFullyComplete: true,
-                isPartiallyComplete: false,
-                completedCount: 3,
-                totalCount: 3,
-                percentage: 100,
-            },
+            completion: completeCompletion,
             completedSubSteps: [1, 2, 3],
         };
 
@@ -134,13 +143,15 @@ describe("MasterSectionCard", () => {
     });
 
     it("should render Continue button when in progress", () => {
+        const partialCompletion: MasterStepCompletion = {
+            ...mockCompletion,
+            isPartiallyComplete: true,
+            completedCount: 1,
+        };
+
         const partialProps = {
             ...mockProps,
-            completion: {
-                ...mockProps.completion,
-                isPartiallyComplete: true,
-                completedCount: 1,
-            },
+            completion: partialCompletion,
             completedSubSteps: [1],
         };
 
@@ -150,15 +161,18 @@ describe("MasterSectionCard", () => {
     });
 
     it("should render Review Steps button when complete", () => {
+        const completeCompletion: MasterStepCompletion = {
+            masterStepId: 1,
+            isFullyComplete: true,
+            isPartiallyComplete: false,
+            completedCount: 3,
+            totalCount: 3,
+            percentage: 100,
+        };
+
         const completeProps = {
             ...mockProps,
-            completion: {
-                isFullyComplete: true,
-                isPartiallyComplete: false,
-                completedCount: 3,
-                totalCount: 3,
-                percentage: 100,
-            },
+            completion: completeCompletion,
             completedSubSteps: [1, 2, 3],
         };
 

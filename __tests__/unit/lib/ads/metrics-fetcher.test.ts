@@ -134,6 +134,13 @@ describe("Metrics Fetcher", () => {
                         impressions: "10000",
                         clicks: "500",
                         spend: "100.50",
+                        reach: "5000",
+                        frequency: "2.0",
+                        cpc: "0.20",
+                        cpm: "10.05",
+                        ctr: "5.0",
+                        date_start: "2024-01-01",
+                        date_stop: "2024-01-31",
                         actions: [
                             { action_type: "lead", value: "25" },
                             {
@@ -143,7 +150,7 @@ describe("Metrics Fetcher", () => {
                         ],
                     },
                 ],
-            } as unknown);
+            });
 
             const result = await syncAllAdMetrics();
 
@@ -216,10 +223,17 @@ describe("Metrics Fetcher", () => {
                             impressions: "10000",
                             clicks: "500",
                             spend: "100.50",
+                            reach: "5000",
+                            frequency: "2.0",
+                            cpc: "0.20",
+                            cpm: "10.05",
+                            ctr: "5.0",
+                            date_start: "2024-01-01",
+                            date_stop: "2024-01-31",
                             actions: [],
                         },
                     ],
-                } as unknown);
+                });
 
             const result = await syncAllAdMetrics();
 
@@ -272,10 +286,17 @@ describe("Metrics Fetcher", () => {
                         impressions: "10000",
                         clicks: "500",
                         spend: "100.50",
+                        reach: "5000",
+                        frequency: "2.0",
+                        cpc: "0.20",
+                        cpm: "10.05",
+                        ctr: "5.0",
+                        date_start: "2024-01-01",
+                        date_stop: "2024-01-31",
                         actions: [{ action_type: "lead", value: "25" }],
                     },
                 ],
-            } as unknown);
+            });
 
             await syncCampaignMetrics(briefId, userId);
 
@@ -290,7 +311,7 @@ describe("Metrics Fetcher", () => {
             const briefId = "brief-123";
             const userId = "user-123";
 
-            let savedAnalytics: Record<string, unknown> | null = null;
+            let savedAnalytics: any = null;
 
             const mockBrief = createTestContentBrief({
                 id: briefId,
@@ -338,22 +359,29 @@ describe("Metrics Fetcher", () => {
                         impressions: "10000",
                         clicks: "200", // 200 clicks
                         spend: "100.00", // $100.00 = 10000 cents
+                        reach: "5000",
+                        frequency: "2.0",
+                        cpc: "0.50",
+                        cpm: "10.00",
+                        ctr: "2.0",
+                        date_start: "2024-01-01",
+                        date_stop: "2024-01-31",
                         actions: [],
                     },
                 ],
-            } as unknown);
+            });
 
             await syncCampaignMetrics(briefId, userId);
 
             // CPC = 10000 cents / 200 clicks = 50 cents
-            expect(savedAnalytics?.cpc_cents).toBe(50);
+            expect(savedAnalytics.cpc_cents).toBe(50);
         });
 
         it("should calculate CPM correctly", async () => {
             const briefId = "brief-123";
             const userId = "user-123";
 
-            let savedAnalytics: Record<string, unknown> | null = null;
+            let savedAnalytics: any = null;
 
             const mockBrief = createTestContentBrief({
                 id: briefId,
@@ -401,22 +429,29 @@ describe("Metrics Fetcher", () => {
                         impressions: "10000", // 10,000 impressions
                         clicks: "200",
                         spend: "50.00", // $50.00 = 5000 cents
+                        reach: "5000",
+                        frequency: "2.0",
+                        cpc: "0.25",
+                        cpm: "5.00",
+                        ctr: "2.0",
+                        date_start: "2024-01-01",
+                        date_stop: "2024-01-31",
                         actions: [],
                     },
                 ],
-            } as unknown);
+            });
 
             await syncCampaignMetrics(briefId, userId);
 
             // CPM = (5000 cents / 10000 impressions) * 1000 = 500 cents ($5.00 per 1000 impressions)
-            expect(savedAnalytics?.cpm_cents).toBe(500);
+            expect(savedAnalytics.cpm_cents).toBe(500);
         });
 
         it("should calculate CTR correctly", async () => {
             const briefId = "brief-123";
             const userId = "user-123";
 
-            let savedAnalytics: Record<string, unknown> | null = null;
+            let savedAnalytics: any = null;
 
             const mockBrief = createTestContentBrief({
                 id: briefId,
@@ -464,22 +499,29 @@ describe("Metrics Fetcher", () => {
                         impressions: "10000", // 10,000 impressions
                         clicks: "250", // 250 clicks
                         spend: "50.00",
+                        reach: "5000",
+                        frequency: "2.0",
+                        cpc: "0.20",
+                        cpm: "5.00",
+                        ctr: "2.5",
+                        date_start: "2024-01-01",
+                        date_stop: "2024-01-31",
                         actions: [],
                     },
                 ],
-            } as unknown);
+            });
 
             await syncCampaignMetrics(briefId, userId);
 
             // CTR = (250 / 10000) * 100 = 2.5%
-            expect(savedAnalytics?.ctr_percent).toBe(2.5);
+            expect(savedAnalytics.ctr_percent).toBe(2.5);
         });
 
         it("should calculate cost per lead correctly", async () => {
             const briefId = "brief-123";
             const userId = "user-123";
 
-            let savedAnalytics: Record<string, unknown> | null = null;
+            let savedAnalytics: any = null;
 
             const mockBrief = createTestContentBrief({
                 id: briefId,
@@ -527,6 +569,13 @@ describe("Metrics Fetcher", () => {
                         impressions: "10000",
                         clicks: "250",
                         spend: "100.00", // $100.00 = 10000 cents
+                        reach: "5000",
+                        frequency: "2.0",
+                        cpc: "0.40",
+                        cpm: "10.00",
+                        ctr: "2.5",
+                        date_start: "2024-01-01",
+                        date_stop: "2024-01-31",
                         actions: [
                             { action_type: "lead", value: "20" },
                             {
@@ -536,21 +585,21 @@ describe("Metrics Fetcher", () => {
                         ],
                     },
                 ],
-            } as unknown);
+            });
 
             await syncCampaignMetrics(briefId, userId);
 
             // Total leads = 20 + 5 = 25
             // CPL = 10000 cents / 25 leads = 400 cents ($4.00 per lead)
-            expect(savedAnalytics?.cost_per_lead_cents).toBe(400);
-            expect(savedAnalytics?.leads_count).toBe(25);
+            expect(savedAnalytics.cost_per_lead_cents).toBe(400);
+            expect(savedAnalytics.leads_count).toBe(25);
         });
 
         it("should create snapshot after syncing metrics", async () => {
             const briefId = "brief-123";
             const userId = "user-123";
 
-            let snapshotData: Record<string, unknown> | null = null;
+            let snapshotData: any = null;
 
             const mockBrief = createTestContentBrief({
                 id: briefId,
@@ -596,21 +645,28 @@ describe("Metrics Fetcher", () => {
                 impressions: "10000",
                 clicks: "250",
                 spend: "100.00",
+                reach: "5000",
+                frequency: "2.0",
+                cpc: "0.40",
+                cpm: "10.00",
+                ctr: "2.5",
+                date_start: "2024-01-01",
+                date_stop: "2024-01-31",
                 actions: [{ action_type: "lead", value: "20" }],
             };
             vi.mocked(getCampaignInsights).mockResolvedValue({
                 data: [mockInsightData],
-            } as unknown);
+            });
 
             await syncCampaignMetrics(briefId, userId);
 
             expect(snapshotData).toBeTruthy();
-            expect(snapshotData?.post_variant_id).toBe("variant-1");
-            expect(snapshotData?.user_id).toBe(userId);
-            expect(snapshotData?.impressions).toBe(10000);
-            expect(snapshotData?.clicks).toBe(250);
-            expect(snapshotData?.leads).toBe(20);
-            expect(snapshotData?.raw_metrics).toEqual(mockInsightData);
+            expect(snapshotData.post_variant_id).toBe("variant-1");
+            expect(snapshotData.user_id).toBe(userId);
+            expect(snapshotData.impressions).toBe(10000);
+            expect(snapshotData.clicks).toBe(250);
+            expect(snapshotData.leads).toBe(20);
+            expect(snapshotData.raw_metrics).toEqual(mockInsightData);
         });
 
         it("should handle missing Facebook connection", async () => {
@@ -706,10 +762,17 @@ describe("Metrics Fetcher", () => {
                         impressions: "10000",
                         clicks: "500",
                         spend: "100.50",
+                        reach: "5000",
+                        frequency: "2.0",
+                        cpc: "0.20",
+                        cpm: "10.05",
+                        ctr: "5.0",
+                        date_start: "2024-01-01",
+                        date_stop: "2024-01-31",
                         actions: [],
                     },
                 ],
-            } as unknown);
+            });
 
             const result = await syncUserAdMetrics(userId);
 

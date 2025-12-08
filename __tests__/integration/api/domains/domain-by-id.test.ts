@@ -150,6 +150,7 @@ describe("DELETE /api/domains/[domainId]", () => {
             json: async () => ({ error: "Vercel error" }),
         } as any);
 
+        let deleteCallCount = 0;
         const mockSupabase = {
             from: vi.fn((table: string) => {
                 if (table === "custom_domains") {

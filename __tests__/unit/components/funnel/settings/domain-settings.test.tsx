@@ -274,7 +274,7 @@ describe("DomainSettings", () => {
             eq: vi
                 .fn()
                 .mockImplementation(
-                    () => new Promise((resolve) => (resolveUpdate = resolve))
+                    () => new Promise((resolve) => (_resolveUpdate = resolve))
                 ),
         });
 

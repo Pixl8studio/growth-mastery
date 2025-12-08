@@ -122,14 +122,13 @@ export default function Step4Page({
             if (!projectId) return;
 
             try {
-                const supabase = createClient();
-                const { data: deckData, error: deckError } = await supabase
-                    .from("deck_structures")
-                    .select("*")
-                    .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false });
+                const response = await fetch(`/api/funnel/${projectId}/deck-structures`);
 
-                if (deckError) throw deckError;
+                if (!response.ok) {
+                    throw new Error("Failed to fetch deck structures");
+                }
+
+                const { deckStructures: deckData } = await response.json();
 
                 const transformed = (deckData || []).map((deck: any) => ({
                     id: deck.id,
@@ -156,14 +155,13 @@ export default function Step4Page({
             if (!projectId) return;
 
             try {
-                const supabase = createClient();
-                const { data: gammaData, error: gammaError } = await supabase
-                    .from("gamma_decks")
-                    .select("*")
-                    .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false });
+                const response = await fetch(`/api/funnel/${projectId}/gamma-decks`);
 
-                if (gammaError) throw gammaError;
+                if (!response.ok) {
+                    throw new Error("Failed to fetch gamma decks");
+                }
+
+                const { gammaDecks: gammaData } = await response.json();
                 setGammaDecks(gammaData || []);
             } catch (error) {
                 logger.error({ error }, "Failed to load gamma decks");
@@ -216,14 +214,15 @@ export default function Step4Page({
         if (!confirm("Delete this Gamma deck?")) return;
 
         try {
-            const supabase = createClient();
-            const { error } = await supabase
-                .from("gamma_decks")
-                .delete()
-                .eq("id", deckId);
+            const response = await fetch(
+                `/api/funnel/${projectId}/gamma-decks?deckId=${deckId}`,
+                { method: "DELETE" }
+            );
 
-            if (!error) {
+            if (response.ok) {
                 setGammaDecks((prev) => prev.filter((d) => d.id !== deckId));
+            } else {
+                throw new Error("Failed to delete gamma deck");
             }
         } catch (error) {
             logger.error({ error }, "Failed to delete Gamma deck");
@@ -322,13 +321,13 @@ export default function Step4Page({
 
     const handleEditSave = async (deckId: string) => {
         try {
-            const supabase = createClient();
-            const { error } = await supabase
-                .from("gamma_decks")
-                .update({ title: editingName.trim() })
-                .eq("id", deckId);
+            const response = await fetch(`/api/funnel/${projectId}/gamma-decks`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ deckId, title: editingName.trim() }),
+            });
 
-            if (!error) {
+            if (response.ok) {
                 setGammaDecks((prev) =>
                     prev.map((d) =>
                         d.id === deckId ? { ...d, title: editingName.trim() } : d
@@ -336,6 +335,8 @@ export default function Step4Page({
                 );
                 setEditingId(null);
                 setEditingName("");
+            } else {
+                throw new Error("Failed to update deck name");
             }
         } catch (error) {
             logger.error({ error }, "Failed to update deck name");

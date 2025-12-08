@@ -219,10 +219,19 @@ export function EditorPageWrapper({
         }
     };
 
-    // If not in edit mode, just render the HTML content
+    // If not in edit mode, just render the HTML content with essential CSS
     if (!isEditMode) {
         return (
             <>
+                {/* Load essential CSS files for proper page rendering */}
+                <link
+                    rel="stylesheet"
+                    href="/funnel-system/config/theme-variables.css?v=6.1"
+                />
+                <link
+                    rel="stylesheet"
+                    href="/funnel-system/assets/css/blocks.css?v=6.1"
+                />
                 <style>{`
                     :root {
                         --primary-color: ${theme.primary};
@@ -259,6 +268,8 @@ export function EditorPageWrapper({
                     }
 
                     body {
+                        margin: 0;
+                        padding: 0;
                         background: #FFFFFF !important;
                         color: #111827 !important;
                     }

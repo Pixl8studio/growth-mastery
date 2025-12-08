@@ -6,7 +6,7 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Video Upload Flow", () => {
-    test.beforeEach(async ({ page }) => {
+    test.beforeEach(async ({ page: _page }) => {
         // Note: In actual implementation, you'll need to:
         // 1. Login with test credentials
         // 2. Create or use an existing test project

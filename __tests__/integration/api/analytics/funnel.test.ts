@@ -159,7 +159,7 @@ describe("GET /api/analytics/funnel", () => {
         });
 
         const response = await GET(request);
-        const data = await parseJsonResponse<Record<string, unknown>>(response);
+        await parseJsonResponse<Record<string, unknown>>(response);
 
         expect(response.status).toBe(200);
     });

@@ -246,7 +246,6 @@ describe("GET /api/contacts", () => {
 });
 
 describe("POST /api/contacts", () => {
-    const mockUser = { id: "user-123", email: "test@example.com" };
     const mockProject = { user_id: "user-123" };
 
     beforeEach(() => {

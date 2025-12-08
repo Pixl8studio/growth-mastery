@@ -367,7 +367,7 @@ describe("POST /api/domains/[domainId]/verify", () => {
         const response = await POST(request, {
             params: Promise.resolve({ domainId: "domain-123" }),
         });
-        const data = await parseJsonResponse<{ error?: string }>(response);
+        await parseJsonResponse<{ error?: string }>(response);
 
         expect(response.status).toBe(500);
     });

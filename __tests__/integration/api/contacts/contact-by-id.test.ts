@@ -165,11 +165,6 @@ describe("GET /api/contacts/[contactId]", () => {
     });
 
     it("should return 404 when contact belongs to different user", async () => {
-        const otherUserContact = {
-            ...mockContact,
-            user_id: "other-user",
-        };
-
         const mockSupabase = {
             auth: {
                 getUser: vi

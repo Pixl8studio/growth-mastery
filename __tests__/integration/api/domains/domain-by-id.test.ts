@@ -150,7 +150,6 @@ describe("DELETE /api/domains/[domainId]", () => {
             json: async () => ({ error: "Vercel error" }),
         } as any);
 
-        let deleteCallCount = 0;
         const mockSupabase = {
             from: vi.fn((table: string) => {
                 if (table === "custom_domains") {
@@ -285,7 +284,7 @@ describe("DELETE /api/domains/[domainId]", () => {
         const response = await DELETE(request, {
             params: Promise.resolve({ domainId: "domain-123" }),
         });
-        const data = await parseJsonResponse<{ error?: string }>(response);
+        await parseJsonResponse<{ error?: string }>(response);
 
         expect(response.status).toBe(500);
     });

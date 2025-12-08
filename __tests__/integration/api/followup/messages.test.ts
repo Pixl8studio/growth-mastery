@@ -90,7 +90,7 @@ describe("GET /api/followup/messages", () => {
             url: "http://localhost:3000/api/followup/messages?sequence_id=seq-123",
         });
         const response = await GET(request);
-        const data = await parseJsonResponse<{ error: string }>(response);
+        await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
     });

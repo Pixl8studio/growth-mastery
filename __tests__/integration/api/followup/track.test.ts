@@ -15,7 +15,6 @@ vi.mock("@/lib/followup/engagement-service", () => ({
     trackOfferClick: vi.fn(),
 }));
 
-import { createClient } from "@/lib/supabase/server";
 import { trackEngagement } from "@/lib/followup/engagement-service";
 
 describe("POST /api/followup/track", () => {

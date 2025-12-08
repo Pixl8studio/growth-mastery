@@ -192,7 +192,7 @@ describe("POST /api/domains", () => {
         });
 
         const response = await POST(request);
-        const data = await parseJsonResponse<{ error?: string }>(response);
+        await parseJsonResponse<{ error?: string }>(response);
 
         expect(response.status).toBe(500);
     });
@@ -225,10 +225,6 @@ describe("GET /api/domains", () => {
         };
 
         vi.mocked(createClient).mockResolvedValue(mockSupabase as any);
-
-        const request = createMockRequest({
-            url: "http://localhost:3000/api/domains",
-        });
 
         const response = await GET();
         const data = await parseJsonResponse<{
@@ -291,7 +287,7 @@ describe("GET /api/domains", () => {
         vi.mocked(requireAuth).mockRejectedValue(new Error("Unauthorized"));
 
         const response = await GET();
-        const data = await parseJsonResponse<{ error?: string }>(response);
+        await parseJsonResponse<{ error?: string }>(response);
 
         expect(response.status).toBe(500);
     });

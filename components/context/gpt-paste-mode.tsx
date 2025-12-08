@@ -103,19 +103,26 @@ export function GptPasteMode({
 
     // Load profile on mount
     useEffect(() => {
-        const loadProfile = async () => {
-            if (initialProfile) {
-                // Initialize section data from profile
-                initializeSectionData(initialProfile);
-                setIsLoading(false);
-                return;
-            }
+        // Flag to prevent state updates after unmount
+        let isMounted = true;
 
+        const loadProfile = async () => {
             try {
+                if (initialProfile) {
+                    // Initialize section data from profile with safety check
+                    if (isMounted && typeof initializeSectionData === 'function') {
+                        initializeSectionData(initialProfile);
+                        setIsLoading(false);
+                    }
+                    return;
+                }
+
                 const response = await fetch(
                     `/api/context/business-profile?projectId=${projectId}`,
                     { credentials: "include" }
                 );
+
+                if (!isMounted) return;
 
                 if (response.status === 401) {
                     setIsLoading(false);
@@ -124,18 +131,26 @@ export function GptPasteMode({
 
                 const result = await response.json();
 
-                if (response.ok && result.profile) {
+                if (isMounted && response.ok && result.profile) {
                     setProfile(result.profile);
-                    initializeSectionData(result.profile);
+                    if (typeof initializeSectionData === 'function') {
+                        initializeSectionData(result.profile);
+                    }
                 }
             } catch (error) {
                 logger.error({ error }, "Failed to load business profile");
             } finally {
-                setIsLoading(false);
+                if (isMounted) {
+                    setIsLoading(false);
+                }
             }
         };
 
         loadProfile();
+
+        return () => {
+            isMounted = false;
+        };
     }, [projectId, initialProfile, initializeSectionData]);
 
     // Generate copy prompt for a section

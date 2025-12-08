@@ -21,6 +21,9 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { logger } from "@/lib/client-logger";
+
 // Mock child components
 vi.mock("@/components/marketing/scheduling-modal", () => ({
     SchedulingModal: ({ isOpen, onClose }: any) =>
@@ -289,12 +292,12 @@ describe("ContentCalendarEnhanced", () => {
     it("should handle loading error", async () => {
         (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
 
-        const { logger } = require("@/lib/client-logger");
+        const mockLogger = vi.mocked(logger);
 
         render(<ContentCalendarEnhanced {...defaultProps} />);
 
         await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
+            expect(mockLogger.error).toHaveBeenCalled();
         });
     });
 

@@ -21,6 +21,10 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
+
 describe("ExperimentCreatorModal", () => {
     const mockOnClose = vi.fn();
     const mockOnExperimentCreated = vi.fn();
@@ -109,7 +113,7 @@ describe("ExperimentCreatorModal", () => {
     });
 
     it("should require experiment name before creation", async () => {
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ExperimentCreatorModal {...defaultProps} />);
 
@@ -117,7 +121,7 @@ describe("ExperimentCreatorModal", () => {
         fireEvent.click(createButton);
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Name Required",
                     variant: "destructive",
@@ -127,7 +131,7 @@ describe("ExperimentCreatorModal", () => {
     });
 
     it("should require at least 2 variants", async () => {
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ExperimentCreatorModal {...defaultProps} />);
 
@@ -138,7 +142,7 @@ describe("ExperimentCreatorModal", () => {
         fireEvent.click(createButton);
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Variants Required",
                     variant: "destructive",
@@ -152,7 +156,7 @@ describe("ExperimentCreatorModal", () => {
             json: async () => ({ success: true, experiment_id: "exp-123" }),
         });
 
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ExperimentCreatorModal {...defaultProps} />);
 
@@ -177,7 +181,7 @@ describe("ExperimentCreatorModal", () => {
         });
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Experiment Created",
                 })
@@ -190,8 +194,8 @@ describe("ExperimentCreatorModal", () => {
     it("should handle creation error", async () => {
         (global.fetch as any).mockRejectedValueOnce(new Error("Creation failed"));
 
-        const { logger } = require("@/lib/client-logger");
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockLogger = vi.mocked(logger);
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ExperimentCreatorModal {...defaultProps} />);
 
@@ -206,8 +210,8 @@ describe("ExperimentCreatorModal", () => {
         fireEvent.click(createButton);
 
         await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockLogger.error).toHaveBeenCalled();
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Creation Failed",
                     variant: "destructive",

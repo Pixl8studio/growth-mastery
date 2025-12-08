@@ -21,6 +21,10 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
+
 describe("ContentGeneratorEnhanced", () => {
     const mockOnVariantsGenerated = vi.fn();
     const defaultProps = {
@@ -96,7 +100,7 @@ describe("ContentGeneratorEnhanced", () => {
     });
 
     it("should require brief name before generation", async () => {
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ContentGeneratorEnhanced {...defaultProps} />);
 
@@ -104,7 +108,7 @@ describe("ContentGeneratorEnhanced", () => {
         fireEvent.click(generateButton);
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Brief Name Required",
                     variant: "destructive",
@@ -114,7 +118,7 @@ describe("ContentGeneratorEnhanced", () => {
     });
 
     it("should require at least one platform before generation", async () => {
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ContentGeneratorEnhanced {...defaultProps} />);
 
@@ -125,7 +129,7 @@ describe("ContentGeneratorEnhanced", () => {
         fireEvent.click(generateButton);
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Platform Required",
                     variant: "destructive",
@@ -147,7 +151,7 @@ describe("ContentGeneratorEnhanced", () => {
             json: async () => ({ success: true, variants: mockVariants }),
         });
 
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ContentGeneratorEnhanced {...defaultProps} />);
 
@@ -171,7 +175,7 @@ describe("ContentGeneratorEnhanced", () => {
         });
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Content Generated",
                 })
@@ -233,8 +237,8 @@ describe("ContentGeneratorEnhanced", () => {
     it("should handle generation error", async () => {
         (global.fetch as any).mockRejectedValueOnce(new Error("Generation failed"));
 
-        const { logger } = require("@/lib/client-logger");
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockLogger = vi.mocked(logger);
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ContentGeneratorEnhanced {...defaultProps} />);
 
@@ -248,8 +252,8 @@ describe("ContentGeneratorEnhanced", () => {
         fireEvent.click(generateButton);
 
         await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockLogger.error).toHaveBeenCalled();
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Generation Failed",
                     variant: "destructive",

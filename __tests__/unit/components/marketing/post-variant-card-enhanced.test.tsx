@@ -21,6 +21,10 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
+
 // Mock child components
 vi.mock("@/components/marketing/variant-inline-editor", () => ({
     VariantInlineEditor: ({ isOpen, onClose }: any) =>
@@ -279,7 +283,7 @@ describe("PostVariantCardEnhanced", () => {
     });
 
     it("should handle A/B test action", () => {
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<PostVariantCardEnhanced {...defaultProps} />);
 
@@ -289,7 +293,7 @@ describe("PostVariantCardEnhanced", () => {
         const abTestButton = screen.getByText("A/B Test");
         fireEvent.click(abTestButton);
 
-        expect(toast).toHaveBeenCalledWith(
+        expect(mockToast).toHaveBeenCalledWith(
             expect.objectContaining({
                 title: "A/B Test",
             })
@@ -299,7 +303,7 @@ describe("PostVariantCardEnhanced", () => {
     it("should handle save error", async () => {
         (global.fetch as any).mockRejectedValueOnce(new Error("Save failed"));
 
-        const { logger } = require("@/lib/client-logger");
+        const mockLogger = vi.mocked(logger);
 
         render(<PostVariantCardEnhanced {...defaultProps} />);
 
@@ -310,7 +314,7 @@ describe("PostVariantCardEnhanced", () => {
         fireEvent.click(duplicateButton);
 
         await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
+            expect(mockLogger.error).toHaveBeenCalled();
         });
     });
 

@@ -21,6 +21,9 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { logger } from "@/lib/client-logger";
+
 // Mock chart components
 vi.mock("recharts", () => ({
     LineChart: ({ children }: any) => <div data-testid="line-chart">{children}</div>,
@@ -240,12 +243,12 @@ describe("MarketingAnalyticsDashboardEnhanced", () => {
     it("should handle loading error", async () => {
         (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
 
-        const { logger } = require("@/lib/client-logger");
+        const mockLogger = vi.mocked(logger);
 
         render(<MarketingAnalyticsDashboardEnhanced {...defaultProps} />);
 
         await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
+            expect(mockLogger.error).toHaveBeenCalled();
         });
     });
 

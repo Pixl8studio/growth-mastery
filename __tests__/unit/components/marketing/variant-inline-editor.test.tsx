@@ -21,6 +21,10 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
+
 // Mock child components
 vi.mock("@/components/marketing/token-insertion-menu", () => ({
     TokenInsertionMenu: ({ onInsertToken }: any) => (
@@ -264,7 +268,7 @@ describe("VariantInlineEditor", () => {
     });
 
     it("should prevent save when character limit exceeded", async () => {
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         const tooLongVariant = {
             ...mockVariant,
@@ -277,7 +281,7 @@ describe("VariantInlineEditor", () => {
         fireEvent.click(saveButton);
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Character Limit Exceeded",
                     variant: "destructive",
@@ -289,7 +293,7 @@ describe("VariantInlineEditor", () => {
     });
 
     it("should handle successful save", async () => {
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         mockOnSave.mockResolvedValueOnce(undefined);
 
@@ -310,7 +314,7 @@ describe("VariantInlineEditor", () => {
         });
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Changes Saved",
                 })
@@ -320,8 +324,8 @@ describe("VariantInlineEditor", () => {
     });
 
     it("should handle save error", async () => {
-        const { logger } = require("@/lib/client-logger");
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockLogger = vi.mocked(logger);
+        const mockToast = vi.mocked(useToast)().toast;
 
         mockOnSave.mockRejectedValueOnce(new Error("Save failed"));
 
@@ -331,8 +335,8 @@ describe("VariantInlineEditor", () => {
         fireEvent.click(saveButton);
 
         await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockLogger.error).toHaveBeenCalled();
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Save Failed",
                     variant: "destructive",

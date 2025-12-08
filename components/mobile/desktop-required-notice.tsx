@@ -25,7 +25,9 @@ export function DesktopRequiredNotice({
     const [currentUrl, setCurrentUrl] = useState("");
 
     useEffect(() => {
-        setCurrentUrl(window.location.href);
+        requestAnimationFrame(() => {
+            setCurrentUrl(window.location.href);
+        });
     }, []);
 
     const handleEmailSelf = () => {

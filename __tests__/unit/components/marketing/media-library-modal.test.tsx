@@ -21,6 +21,10 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
+
 describe("MediaLibraryModal", () => {
     const mockOnClose = vi.fn();
     const mockOnSelectMedia = vi.fn();
@@ -207,7 +211,7 @@ describe("MediaLibraryModal", () => {
     });
 
     it("should validate file size before upload", async () => {
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<MediaLibraryModal {...defaultProps} />);
 
@@ -224,7 +228,7 @@ describe("MediaLibraryModal", () => {
         fireEvent.change(uploadInput);
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "File Too Large",
                     variant: "destructive",
@@ -234,7 +238,7 @@ describe("MediaLibraryModal", () => {
     });
 
     it("should validate file type before upload", async () => {
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<MediaLibraryModal {...defaultProps} />);
 
@@ -250,7 +254,7 @@ describe("MediaLibraryModal", () => {
         fireEvent.change(uploadInput);
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Invalid File Type",
                     variant: "destructive",
@@ -317,12 +321,12 @@ describe("MediaLibraryModal", () => {
     it("should handle loading error", async () => {
         (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
 
-        const { logger } = require("@/lib/client-logger");
+        const mockLogger = vi.mocked(logger);
 
         render(<MediaLibraryModal {...defaultProps} />);
 
         await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
+            expect(mockLogger.error).toHaveBeenCalled();
         });
     });
 });

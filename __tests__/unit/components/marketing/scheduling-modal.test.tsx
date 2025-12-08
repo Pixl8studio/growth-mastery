@@ -21,6 +21,10 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
+
 describe("SchedulingModal", () => {
     const mockOnClose = vi.fn();
     const mockOnScheduleComplete = vi.fn();
@@ -93,14 +97,14 @@ describe("SchedulingModal", () => {
     });
 
     it("should apply best time suggestion when clicked", () => {
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<SchedulingModal {...defaultProps} />);
 
         const bestTimeButton = screen.getByText("9:00 AM");
         fireEvent.click(bestTimeButton);
 
-        expect(toast).toHaveBeenCalledWith(
+        expect(mockToast).toHaveBeenCalledWith(
             expect.objectContaining({
                 title: "Best Time Applied",
             })
@@ -140,7 +144,7 @@ describe("SchedulingModal", () => {
     });
 
     it("should require date before scheduling", async () => {
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<SchedulingModal {...defaultProps} />);
 
@@ -148,7 +152,7 @@ describe("SchedulingModal", () => {
         fireEvent.click(scheduleButton);
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Date Required",
                     variant: "destructive",
@@ -162,7 +166,7 @@ describe("SchedulingModal", () => {
             json: async () => ({ success: true }),
         });
 
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<SchedulingModal {...defaultProps} />);
 
@@ -183,7 +187,7 @@ describe("SchedulingModal", () => {
         });
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Post Scheduled",
                 })
@@ -196,8 +200,8 @@ describe("SchedulingModal", () => {
     it("should handle scheduling error", async () => {
         (global.fetch as any).mockRejectedValueOnce(new Error("Scheduling failed"));
 
-        const { logger } = require("@/lib/client-logger");
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockLogger = vi.mocked(logger);
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<SchedulingModal {...defaultProps} />);
 
@@ -208,8 +212,8 @@ describe("SchedulingModal", () => {
         fireEvent.click(scheduleButton);
 
         await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockLogger.error).toHaveBeenCalled();
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Scheduling Failed",
                     variant: "destructive",

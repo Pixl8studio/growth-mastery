@@ -21,6 +21,9 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { logger } from "@/lib/client-logger";
+
 // Mock child components
 vi.mock("@/components/marketing/profile-config-form-enhanced", () => ({
     ProfileConfigFormEnhanced: ({ profile }: any) => (
@@ -240,12 +243,12 @@ describe("MarketingSettingsEnhanced", () => {
     it("should handle error loading profile", async () => {
         (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
 
-        const { logger } = require("@/lib/client-logger");
+        const mockLogger = vi.mocked(logger);
 
         render(<MarketingSettingsEnhanced {...defaultProps} />);
 
         await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
+            expect(mockLogger.error).toHaveBeenCalled();
         });
     });
 

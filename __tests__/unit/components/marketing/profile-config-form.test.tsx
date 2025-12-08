@@ -21,6 +21,10 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
+
 describe("ProfileConfigForm", () => {
     const mockOnUpdate = vi.fn();
 
@@ -145,7 +149,7 @@ describe("ProfileConfigForm", () => {
             echo_mode_config: { ...mockProfile.echo_mode_config, enabled: true },
         };
 
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ProfileConfigForm {...defaultProps} profile={echoEnabledProfile} />);
 
@@ -153,7 +157,7 @@ describe("ProfileConfigForm", () => {
         fireEvent.click(calibrateButton);
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Sample Content Required",
                     variant: "destructive",
@@ -186,7 +190,7 @@ describe("ProfileConfigForm", () => {
             json: async () => ({ success: true }),
         });
 
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ProfileConfigForm {...defaultProps} />);
 
@@ -203,7 +207,7 @@ describe("ProfileConfigForm", () => {
         });
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Profile Updated",
                 })
@@ -215,7 +219,7 @@ describe("ProfileConfigForm", () => {
     it("should handle save error", async () => {
         (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
 
-        const { logger } = require("@/lib/client-logger");
+        const mockLogger = vi.mocked(logger);
 
         render(<ProfileConfigForm {...defaultProps} />);
 
@@ -223,7 +227,7 @@ describe("ProfileConfigForm", () => {
         fireEvent.click(saveButton);
 
         await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
+            expect(mockLogger.error).toHaveBeenCalled();
         });
     });
 

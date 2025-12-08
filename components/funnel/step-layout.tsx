@@ -75,10 +75,12 @@ export function StepLayout({
 
     // Load collapse state from localStorage on mount
     useEffect(() => {
-        const savedState = localStorage.getItem("sidebar-collapsed");
-        if (savedState !== null) {
-            setIsCollapsed(savedState === "true");
-        }
+        requestAnimationFrame(() => {
+            const savedState = localStorage.getItem("sidebar-collapsed");
+            if (savedState !== null) {
+                setIsCollapsed(savedState === "true");
+            }
+        });
     }, []);
 
     // Save collapse state to localStorage

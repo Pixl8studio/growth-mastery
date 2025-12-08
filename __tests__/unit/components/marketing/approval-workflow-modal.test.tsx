@@ -21,6 +21,10 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
+
 // Mock child components
 vi.mock("@/components/marketing/compliance-validator", () => ({
     ComplianceValidator: ({ variantId }: any) => (
@@ -177,7 +181,7 @@ describe("ApprovalWorkflowModal", () => {
             json: async () => ({ success: true, variants: [mockVariant] }),
         });
 
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ApprovalWorkflowModal {...defaultProps} />);
 
@@ -192,7 +196,7 @@ describe("ApprovalWorkflowModal", () => {
             fireEvent.click(rejectButton);
         });
 
-        expect(toast).toHaveBeenCalledWith(
+        expect(mockToast).toHaveBeenCalledWith(
             expect.objectContaining({
                 title: "Notes Required",
                 variant: "destructive",
@@ -212,12 +216,12 @@ describe("ApprovalWorkflowModal", () => {
     it("should handle error loading variants", async () => {
         (global.fetch as any).mockRejectedValueOnce(new Error("Network error"));
 
-        const { logger } = require("@/lib/client-logger");
+        const mockLogger = vi.mocked(logger);
 
         render(<ApprovalWorkflowModal {...defaultProps} />);
 
         await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
+            expect(mockLogger.error).toHaveBeenCalled();
         });
     });
 });

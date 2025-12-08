@@ -21,6 +21,10 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
+
 describe("ProfileConfigFormEnhanced", () => {
     const mockOnUpdate = vi.fn();
 
@@ -198,7 +202,7 @@ describe("ProfileConfigFormEnhanced", () => {
             echo_mode_config: { ...mockProfile.echo_mode_config, enabled: true },
         };
 
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(
             <ProfileConfigFormEnhanced {...defaultProps} profile={echoEnabledProfile} />
@@ -208,7 +212,7 @@ describe("ProfileConfigFormEnhanced", () => {
         fireEvent.click(calibrateButton);
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Sample Content Required",
                     variant: "destructive",
@@ -264,7 +268,7 @@ describe("ProfileConfigFormEnhanced", () => {
             echo_mode_config: { ...mockProfile.echo_mode_config, enabled: true },
         };
 
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(
             <ProfileConfigFormEnhanced {...defaultProps} profile={echoEnabledProfile} />
@@ -280,7 +284,7 @@ describe("ProfileConfigFormEnhanced", () => {
         fireEvent.click(analyzeButton);
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Invalid URL",
                     variant: "destructive",
@@ -290,14 +294,14 @@ describe("ProfileConfigFormEnhanced", () => {
     });
 
     it("should apply tone presets", () => {
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ProfileConfigFormEnhanced {...defaultProps} />);
 
         const thoughtLeaderButton = screen.getByText("Thought Leader");
         fireEvent.click(thoughtLeaderButton);
 
-        expect(toast).toHaveBeenCalledWith(
+        expect(mockToast).toHaveBeenCalledWith(
             expect.objectContaining({
                 title: "Tone Preset Applied",
             })
@@ -319,7 +323,7 @@ describe("ProfileConfigFormEnhanced", () => {
             json: async () => ({ success: true }),
         });
 
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ProfileConfigFormEnhanced {...defaultProps} />);
 
@@ -336,7 +340,7 @@ describe("ProfileConfigFormEnhanced", () => {
         });
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Profile Updated",
                 })
@@ -348,8 +352,8 @@ describe("ProfileConfigFormEnhanced", () => {
     it("should handle save error", async () => {
         (global.fetch as any).mockRejectedValueOnce(new Error("Save failed"));
 
-        const { logger } = require("@/lib/client-logger");
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockLogger = vi.mocked(logger);
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ProfileConfigFormEnhanced {...defaultProps} />);
 
@@ -357,8 +361,8 @@ describe("ProfileConfigFormEnhanced", () => {
         fireEvent.click(saveButton);
 
         await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockLogger.error).toHaveBeenCalled();
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Error",
                     variant: "destructive",
@@ -375,7 +379,7 @@ describe("ProfileConfigFormEnhanced", () => {
     });
 
     it("should handle auto-populate from intake", async () => {
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ProfileConfigFormEnhanced {...defaultProps} />);
 
@@ -383,12 +387,12 @@ describe("ProfileConfigFormEnhanced", () => {
         fireEvent.click(intakeButton);
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalled();
+            expect(mockToast).toHaveBeenCalled();
         });
     });
 
     it("should handle auto-populate from offer", async () => {
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ProfileConfigFormEnhanced {...defaultProps} />);
 
@@ -396,7 +400,7 @@ describe("ProfileConfigFormEnhanced", () => {
         fireEvent.click(offerButton);
 
         await waitFor(() => {
-            expect(toast).toHaveBeenCalled();
+            expect(mockToast).toHaveBeenCalled();
         });
     });
 });

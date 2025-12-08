@@ -21,6 +21,10 @@ vi.mock("@/lib/client-logger", () => ({
     },
 }));
 
+// Import mocked modules
+import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
+
 describe("ComplianceValidator", () => {
     const mockOnValidationComplete = vi.fn();
     const defaultProps = {
@@ -221,8 +225,8 @@ describe("ComplianceValidator", () => {
     it("should handle validation error", async () => {
         (global.fetch as any).mockRejectedValueOnce(new Error("Validation failed"));
 
-        const { logger } = require("@/lib/client-logger");
-        const { toast } = require("@/components/ui/use-toast").useToast();
+        const mockLogger = vi.mocked(logger);
+        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ComplianceValidator {...defaultProps} />);
 
@@ -230,8 +234,8 @@ describe("ComplianceValidator", () => {
         fireEvent.click(runButton);
 
         await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockLogger.error).toHaveBeenCalled();
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Validation Error",
                     variant: "destructive",
@@ -241,6 +245,8 @@ describe("ComplianceValidator", () => {
     });
 
     it("should handle missing variant ID and content", async () => {
+        const mockToast = vi.mocked(useToast)().toast;
+
         render(
             <ComplianceValidator
                 onValidationComplete={mockOnValidationComplete}
@@ -252,8 +258,7 @@ describe("ComplianceValidator", () => {
         fireEvent.click(runButton);
 
         await waitFor(() => {
-            const { toast } = require("@/components/ui/use-toast").useToast();
-            expect(toast).toHaveBeenCalledWith(
+            expect(mockToast).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Validation Error",
                     variant: "destructive",

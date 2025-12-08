@@ -147,7 +147,12 @@ describe("GET /api/ads/metrics/[campaignId]", () => {
         };
 
         const response = await GET(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            success: boolean;
+            campaign: unknown;
+            metrics: unknown;
+            variants_count: number;
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.success).toBe(true);
@@ -177,7 +182,7 @@ describe("GET /api/ads/metrics/[campaignId]", () => {
         };
 
         const response = await GET(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(401);
         expect(data.error).toBe("Authentication required");
@@ -218,7 +223,7 @@ describe("GET /api/ads/metrics/[campaignId]", () => {
         };
 
         const response = await GET(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{ error: string }>(response);
 
         expect(response.status).toBe(404);
         expect(data.error).toBe("Campaign not found");
@@ -323,7 +328,14 @@ describe("GET /api/ads/metrics/[campaignId]", () => {
         };
 
         const response = await GET(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            metrics: {
+                impressions: number;
+                clicks: number;
+                spend_cents: number;
+                leads: number;
+            };
+        }>(response);
 
         // Aggregated totals: impressions=30000, clicks=1500, spend=15000, leads=75
         expect(data.metrics.impressions).toBe(30000);
@@ -428,7 +440,9 @@ describe("GET /api/ads/metrics/[campaignId]", () => {
         };
 
         const response = await GET(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            snapshots: Array<{ id: string }>;
+        }>(response);
 
         expect(data.snapshots).toHaveLength(2);
         expect(data.snapshots[0].id).toBe("snapshot-1");
@@ -516,7 +530,14 @@ describe("GET /api/ads/metrics/[campaignId]", () => {
         };
 
         const response = await GET(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            metrics: {
+                cpc_cents: number;
+                cpm_cents: number;
+                ctr_percent: number;
+                cost_per_lead_cents: number;
+            };
+        }>(response);
 
         // CPC = 5000 cents / 250 clicks = 20 cents
         expect(data.metrics.cpc_cents).toBe(20);
@@ -602,7 +623,14 @@ describe("GET /api/ads/metrics/[campaignId]", () => {
         };
 
         const response = await GET(request, context);
-        const data = await parseJsonResponse(response);
+        const data = await parseJsonResponse<{
+            metrics: {
+                impressions: number;
+                clicks: number;
+                spend_cents: number;
+                leads: number;
+            };
+        }>(response);
 
         expect(response.status).toBe(200);
         expect(data.metrics.impressions).toBe(0);

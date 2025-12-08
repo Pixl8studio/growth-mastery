@@ -78,10 +78,23 @@ describe("Cloudflare Client", () => {
         });
 
         it("should throw error when credentials are missing", async () => {
+            vi.resetModules();
+
             vi.doMock("@/lib/env", () => ({
                 env: {
                     CLOUDFLARE_ACCOUNT_ID: undefined,
                     CLOUDFLARE_STREAM_API_TOKEN: undefined,
+                },
+            }));
+
+            vi.doMock("@/lib/logger", () => ({
+                logger: {
+                    child: vi.fn(() => ({
+                        info: vi.fn(),
+                        error: vi.fn(),
+                    })),
+                    info: vi.fn(),
+                    error: vi.fn(),
                 },
             }));
 

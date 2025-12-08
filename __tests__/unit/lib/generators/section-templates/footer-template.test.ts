@@ -88,7 +88,8 @@ describe("Footer Template", () => {
         it("should make copyright text editable", () => {
             const html = generateFooterTemplate();
 
-            const copyrightMatch = html.match(/<p[^>]*>.*©.*<\/p>/);
+            // Regex with [\s\S] to match across newlines
+            const copyrightMatch = html.match(/<p[^>]*>[\s\S]*©[\s\S]*<\/p>/);
             expect(copyrightMatch).toBeTruthy();
             expect(html).toContain('data-editable="true"');
         });

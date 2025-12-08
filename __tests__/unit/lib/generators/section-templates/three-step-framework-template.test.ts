@@ -90,9 +90,10 @@ describe("Three-Step Framework Template", () => {
         it("should include step numbers in badges", () => {
             const html = generateThreeStepTemplate();
 
-            expect(html).toContain(">1<");
-            expect(html).toContain(">2<");
-            expect(html).toContain(">3<");
+            // Step numbers are in badges with whitespace around them
+            expect(html).toMatch(/>\s*1\s*</);
+            expect(html).toMatch(/>\s*2\s*</);
+            expect(html).toMatch(/>\s*3\s*</);
         });
 
         it("should include icons from icon-mapper", () => {

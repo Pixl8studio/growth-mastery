@@ -74,8 +74,8 @@ describe("Gamma Client", () => {
 
             const result1 = await generateDeck(request);
 
-            // Wait a tiny bit to ensure different timestamp
-            await new Promise((resolve) => setTimeout(resolve, 1));
+            // Wait enough time to ensure different timestamp (10ms is reliable)
+            await new Promise((resolve) => setTimeout(resolve, 10));
 
             const result2 = await generateDeck(request);
 
@@ -114,8 +114,8 @@ describe("Gamma Client", () => {
         it("should generate unique session IDs", async () => {
             const session1 = await createSession();
 
-            // Wait a tiny bit to ensure different timestamp
-            await new Promise((resolve) => setTimeout(resolve, 1));
+            // Wait enough time to ensure different timestamp (10ms is reliable)
+            await new Promise((resolve) => setTimeout(resolve, 10));
 
             const session2 = await createSession();
 

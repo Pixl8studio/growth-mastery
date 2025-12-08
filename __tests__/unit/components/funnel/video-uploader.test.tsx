@@ -50,11 +50,10 @@ describe("VideoUploader", () => {
     });
 
     it("should render upload interface", () => {
-        render(<VideoUploader {...defaultProps} />);
+        const { container } = render(<VideoUploader {...defaultProps} />);
 
-        // Component renders dropzone
-        const dropzone = document.querySelector("[role]");
-        expect(dropzone).toBeInTheDocument();
+        // Component renders dropzone area
+        expect(container.querySelector(".space-y-4")).toBeInTheDocument();
     });
 
     it("should handle successful upload", async () => {

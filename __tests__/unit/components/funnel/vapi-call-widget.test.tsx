@@ -49,10 +49,25 @@ describe("VapiCallWidget", () => {
             NEXT_PUBLIC_VAPI_PUBLIC_KEY: "test-public-key",
             NEXT_PUBLIC_VAPI_ASSISTANT_ID: "test-assistant-id",
         };
+
+        // Reset fetch mock with default resolved value
+        (global.fetch as any).mockReset();
+        (global.fetch as any).mockResolvedValue({
+            ok: true,
+            json: async () => ({ success: true }),
+        });
+
+        // Reset VAPI mocks
+        mockVapiStart.mockReset();
+        mockVapiStart.mockResolvedValue(undefined);
+        mockVapiStop.mockReset();
+        mockVapiStop.mockResolvedValue(undefined);
+        mockVapiOn.mockReset();
     });
 
     afterEach(() => {
         process.env = originalEnv;
+        vi.useRealTimers(); // Clean up any fake timers
     });
 
     it("should render loading state initially", () => {
@@ -240,6 +255,8 @@ describe("VapiCallWidget", () => {
     });
 
     it("should save transcript after call ends", async () => {
+        vi.useFakeTimers();
+
         let callStartHandler: any;
         let callEndHandler: any;
         mockVapiOn.mockImplementation((event, handler) => {
@@ -271,6 +288,9 @@ describe("VapiCallWidget", () => {
             callEndHandler();
         }
 
+        // Advance past the 12-second delay in saveTranscript
+        await vi.advanceTimersByTimeAsync(12000);
+
         await waitFor(() => {
             expect(global.fetch).toHaveBeenCalledWith(
                 "/api/vapi/webhook",
@@ -280,6 +300,8 @@ describe("VapiCallWidget", () => {
                 })
             );
         });
+
+        vi.useRealTimers();
     });
 
     it("should display call duration during active call", async () => {
@@ -331,6 +353,8 @@ describe("VapiCallWidget", () => {
     });
 
     it("should handle error during transcript save", async () => {
+        vi.useFakeTimers();
+
         let callEndHandler: any;
         mockVapiOn.mockImplementation((event, handler) => {
             if (event === "call-end") {
@@ -350,6 +374,9 @@ describe("VapiCallWidget", () => {
             callEndHandler();
         }
 
+        // Advance past the 12-second delay in saveTranscript
+        await vi.advanceTimersByTimeAsync(12000);
+
         await waitFor(() => {
             expect(
                 screen.getByText(
@@ -357,9 +384,13 @@ describe("VapiCallWidget", () => {
                 )
             ).toBeInTheDocument();
         });
+
+        vi.useRealTimers();
     });
 
     it("should call onCallComplete callback after successful transcript save", async () => {
+        vi.useFakeTimers();
+
         let callEndHandler: any;
         mockVapiOn.mockImplementation((event, handler) => {
             if (event === "call-end") {
@@ -382,11 +413,16 @@ describe("VapiCallWidget", () => {
             callEndHandler();
         }
 
-        await waitFor(
-            () => {
-                expect(mockProps.onCallComplete).toHaveBeenCalled();
-            },
-            { timeout: 15000 }
-        );
+        // Advance past the 12-second delay in saveTranscript
+        await vi.advanceTimersByTimeAsync(12000);
+
+        // Advance past the 1.5-second delay for onCallComplete
+        await vi.advanceTimersByTimeAsync(1500);
+
+        await waitFor(() => {
+            expect(mockProps.onCallComplete).toHaveBeenCalled();
+        });
+
+        vi.useRealTimers();
     });
 });

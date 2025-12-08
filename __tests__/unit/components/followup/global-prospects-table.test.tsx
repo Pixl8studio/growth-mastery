@@ -27,9 +27,13 @@ describe("GlobalProspectsTable", () => {
             watch_percentage: 75,
             segment: "hot",
             intent_score: 85,
+            fit_score: 80,
+            combined_score: 82,
             engagement_level: "hot",
             total_touches: 3,
+            last_touch_at: "2025-01-15T10:00:00Z",
             converted: false,
+            consent_state: "opt_in",
             next_scheduled_touch: "2025-01-16T10:00:00Z",
             funnel_projects: {
                 id: "funnel-1",
@@ -43,9 +47,13 @@ describe("GlobalProspectsTable", () => {
             watch_percentage: 45,
             segment: "sampler",
             intent_score: 55,
+            fit_score: 60,
+            combined_score: 57,
             engagement_level: "warm",
             total_touches: 2,
+            last_touch_at: "2025-01-14T10:00:00Z",
             converted: true,
+            consent_state: "opt_in",
             next_scheduled_touch: null,
             funnel_projects: {
                 id: "funnel-1",
@@ -56,10 +64,17 @@ describe("GlobalProspectsTable", () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+
+        // Reset and configure fetch mock
+        (global.fetch as any).mockReset();
         (global.fetch as any).mockResolvedValue({
             ok: true,
             json: async () => ({ success: true, prospects: mockProspects }),
         });
+    });
+
+    afterEach(() => {
+        vi.useRealTimers(); // Clean up any fake timers
     });
 
     it("should render loading state initially", () => {
@@ -71,15 +86,16 @@ describe("GlobalProspectsTable", () => {
         render(<GlobalProspectsTable userId={mockUserId} />);
 
         await waitFor(() => {
-            expect(screen.getByText("Name/Email")).toBeInTheDocument();
+            expect(screen.getByText(/Name.*Email/)).toBeInTheDocument();
             expect(screen.getByText("Funnel")).toBeInTheDocument();
             expect(screen.getByText("Segment")).toBeInTheDocument();
-            expect(screen.getByText("Watch %")).toBeInTheDocument();
+            expect(screen.getByText(/Watch/)).toBeInTheDocument();
             expect(screen.getByText("Intent")).toBeInTheDocument();
-            expect(screen.getByText("Engagement")).toBeInTheDocument();
+            expect(screen.getByText("Fit")).toBeInTheDocument();
             expect(screen.getByText("Touches")).toBeInTheDocument();
             expect(screen.getByText("Status")).toBeInTheDocument();
             expect(screen.getByText("Next Touch")).toBeInTheDocument();
+            expect(screen.getByText("Last Touch")).toBeInTheDocument();
         });
     });
 

@@ -34,6 +34,17 @@ describe("TestMessageModal", () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+
+        // Reset fetch mock with default resolved value
+        (global.fetch as any).mockReset();
+        (global.fetch as any).mockResolvedValue({
+            ok: true,
+            json: async () => ({ delivery_id: "del-123" }),
+        });
+    });
+
+    afterEach(() => {
+        vi.useRealTimers(); // Clean up any fake timers to prevent test interference
     });
 
     it("should render when open is true", () => {
@@ -163,10 +174,17 @@ describe("TestMessageModal", () => {
 
     it("should show loading state while sending", async () => {
         (global.fetch as any).mockImplementation(
-            () => new Promise((resolve) => setTimeout(() => resolve({
-                ok: true,
-                json: async () => ({ delivery_id: "del-123" }),
-            }), 100))
+            () =>
+                new Promise((resolve) =>
+                    setTimeout(
+                        () =>
+                            resolve({
+                                ok: true,
+                                json: async () => ({ delivery_id: "del-123" }),
+                            }),
+                        100
+                    )
+                )
         );
 
         render(<TestMessageModal {...mockProps} />);
@@ -229,7 +247,8 @@ describe("TestMessageModal", () => {
             expect(screen.getByText("Test Message Sent!")).toBeInTheDocument();
         });
 
-        vi.advanceTimersByTime(2000);
+        // Use async version to properly handle pending promises
+        await vi.advanceTimersByTimeAsync(2000);
 
         await waitFor(() => {
             expect(mockProps.onClose).toHaveBeenCalled();

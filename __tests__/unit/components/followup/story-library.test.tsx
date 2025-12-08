@@ -189,9 +189,10 @@ describe("StoryLibrary", () => {
             />
         );
 
-        expect(screen.getByText("testimonial")).toBeInTheDocument();
-        expect(screen.getByText("$mid")).toBeInTheDocument();
-        expect(screen.getByText("price concern")).toBeInTheDocument();
+        // These texts appear in multiple places (dropdowns + story cards)
+        expect(screen.getAllByText("testimonial").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("$mid").length).toBeGreaterThan(0);
+        expect(screen.getAllByText("price concern").length).toBeGreaterThan(0);
     });
 
     it("should display effectiveness score", () => {

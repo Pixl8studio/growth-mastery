@@ -247,8 +247,8 @@ describe("TestMessageModal", () => {
             expect(screen.getByText("Test Message Sent!")).toBeInTheDocument();
         });
 
-        // Use async version to properly handle pending promises
-        await vi.advanceTimersByTimeAsync(2000);
+        // Run all timers to execute the setTimeout callback
+        await vi.runAllTimersAsync();
 
         await waitFor(() => {
             expect(mockProps.onClose).toHaveBeenCalled();

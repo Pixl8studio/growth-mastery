@@ -83,7 +83,7 @@ describe("VapiCallWidget", () => {
 
         await waitFor(() => {
             expect(
-                screen.getByText("VAPI public key not configured")
+                screen.getByText("⚠️ VAPI public key not configured")
             ).toBeInTheDocument();
         });
     });

@@ -43,9 +43,9 @@ describe("CalendarIntegration", () => {
     beforeEach(() => {
         vi.clearAllMocks();
 
-        // Setup default mock chain
+        // Setup default mock chain - need to handle two .eq() calls
         mockSingle.mockResolvedValue({ data: null, error: null });
-        mockEq.mockReturnValue({ single: mockSingle });
+        mockEq.mockReturnValue({ eq: mockEq, single: mockSingle });
         mockSelect.mockReturnValue({ eq: mockEq });
         mockFrom.mockReturnValue({ select: mockSelect });
     });
@@ -53,7 +53,8 @@ describe("CalendarIntegration", () => {
     it("should render loading state initially", () => {
         render(<CalendarIntegration {...mockProps} />);
 
-        expect(screen.getByRole("status", { hidden: true })).toBeInTheDocument();
+        const loadingElement = document.querySelector(".animate-pulse");
+        expect(loadingElement).toBeInTheDocument();
     });
 
     it("should render calendar integration title", async () => {
@@ -79,12 +80,12 @@ describe("CalendarIntegration", () => {
 
         await waitFor(() => {
             expect(
-                screen.getByText("Schedule calls and meetings directly from funnel")
+                screen.getByText(/Schedule calls and meetings directly from funnel/)
             ).toBeInTheDocument();
         });
 
         expect(
-            screen.getByText("Automatic calendar event creation for enrollments")
+            screen.getByText(/Automatic calendar event creation for enrollments/)
         ).toBeInTheDocument();
     });
 
@@ -123,7 +124,7 @@ describe("CalendarIntegration", () => {
         render(<CalendarIntegration {...mockProps} />);
 
         await waitFor(() => {
-            expect(screen.getByText(/Connected/)).toBeInTheDocument();
+            expect(screen.getByText(/Connected 1\/1\/2024/)).toBeInTheDocument();
         });
     });
 

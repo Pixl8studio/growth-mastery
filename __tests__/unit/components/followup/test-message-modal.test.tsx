@@ -2,7 +2,7 @@
  * TestMessageModal Component Tests
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { TestMessageModal } from "@/components/followup/test-message-modal";
 

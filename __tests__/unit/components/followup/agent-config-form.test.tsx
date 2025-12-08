@@ -170,7 +170,9 @@ describe("AgentConfigForm", () => {
     });
 
     it("should disable save button when saving", () => {
-        render(<AgentConfigForm config={mockConfig} onSave={mockOnSave} saving={true} />);
+        render(
+            <AgentConfigForm config={mockConfig} onSave={mockOnSave} saving={true} />
+        );
 
         const saveButton = screen.getByText("Saving...");
         expect(saveButton).toBeDisabled();

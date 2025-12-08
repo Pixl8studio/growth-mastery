@@ -45,7 +45,9 @@ describe("Instagram Graph API Client", () => {
 
             expect(url).toContain("https://www.facebook.com/v18.0/dialog/oauth");
             expect(url).toContain(`client_id=${mockConfig.appId}`);
-            expect(url).toContain(`redirect_uri=${encodeURIComponent(mockConfig.redirectUri)}`);
+            expect(url).toContain(
+                `redirect_uri=${encodeURIComponent(mockConfig.redirectUri)}`
+            );
             expect(url).toContain(`state=${state}`);
             expect(url).toContain("response_type=code");
         });
@@ -432,7 +434,9 @@ describe("Instagram Graph API Client", () => {
             const result = extractTextFromPosts(posts);
 
             expect(result).toHaveLength(2);
-            expect(result).toContain("This is a substantial caption with enough content");
+            expect(result).toContain(
+                "This is a substantial caption with enough content"
+            );
         });
 
         it("filters out posts without captions", () => {

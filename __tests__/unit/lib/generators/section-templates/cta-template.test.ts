@@ -18,7 +18,7 @@ describe("CTA Template", () => {
         it("should include section wrapper with proper attributes", () => {
             const html = generateCTATemplate();
 
-            expect(html).toContain('<section');
+            expect(html).toContain("<section");
             expect(html).toContain('class="block cta-section"');
             expect(html).toContain('data-block-type="cta"');
         });

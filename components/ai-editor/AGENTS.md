@@ -16,8 +16,8 @@ Lovable-style conversational landing page editor with Claude Sonnet 4 integratio
 
 ## Current Status (Phase 4)
 
-Implemented: device preview, error handling, auto-save, undo (in-memory)
-Not implemented: version history UI, HTML export, version restore
+Implemented: device preview, error handling, auto-save, undo (in-memory) Not
+implemented: version history UI, HTML export, version restore
 
 ## Related Code
 

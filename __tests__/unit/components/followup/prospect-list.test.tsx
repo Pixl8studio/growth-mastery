@@ -2,7 +2,7 @@
  * ProspectList Component Tests
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ProspectList } from "@/components/followup/prospect-list";
 

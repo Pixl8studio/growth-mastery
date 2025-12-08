@@ -91,7 +91,9 @@ describe("GET /api/funnel/[projectId]/integrations/calendar/connect", () => {
         expect(data.url).toContain("accounts.google.com");
         expect(mockGetCalendarAuthUrl).toHaveBeenCalledWith(
             projectId,
-            expect.stringContaining(`/api/funnel/${projectId}/integrations/calendar/callback`)
+            expect.stringContaining(
+                `/api/funnel/${projectId}/integrations/calendar/callback`
+            )
         );
     });
 
@@ -166,7 +168,12 @@ describe("GET /api/funnel/[projectId]/integrations/calendar/callback", () => {
             expires_in: 3600,
         });
         mockListCalendars.mockResolvedValue([
-            { id: "primary", summary: "Primary Calendar", primary: true, timezone: "UTC" },
+            {
+                id: "primary",
+                summary: "Primary Calendar",
+                primary: true,
+                timezone: "UTC",
+            },
         ]);
         mockGetUserInfo.mockResolvedValue({ email: "user@gmail.com" });
 
@@ -222,7 +229,9 @@ describe("GET /api/funnel/[projectId]/integrations/calendar/callback", () => {
         });
 
         expect(response.status).toBe(307);
-        expect(response.headers.get("Location")).toContain("error=calendar_connection_failed");
+        expect(response.headers.get("Location")).toContain(
+            "error=calendar_connection_failed"
+        );
     });
 
     it("should redirect with error for invalid state", async () => {
@@ -237,7 +246,9 @@ describe("GET /api/funnel/[projectId]/integrations/calendar/callback", () => {
         });
 
         expect(response.status).toBe(307);
-        expect(response.headers.get("Location")).toContain("error=calendar_connection_failed");
+        expect(response.headers.get("Location")).toContain(
+            "error=calendar_connection_failed"
+        );
     });
 
     it("should use first calendar if no primary", async () => {
@@ -285,6 +296,8 @@ describe("GET /api/funnel/[projectId]/integrations/calendar/callback", () => {
         });
 
         expect(response.status).toBe(307);
-        expect(response.headers.get("Location")).toContain("error=calendar_connection_failed");
+        expect(response.headers.get("Location")).toContain(
+            "error=calendar_connection_failed"
+        );
     });
 });

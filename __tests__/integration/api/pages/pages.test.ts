@@ -122,7 +122,9 @@ describe("GET /api/pages", () => {
     });
 
     it("should return 401 when user is not authenticated", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             auth: {
                 getUser: vi.fn(async () => ({
                     data: { user: null },
@@ -141,7 +143,9 @@ describe("GET /api/pages", () => {
     });
 
     it("should handle database errors gracefully", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             auth: {
                 getUser: vi.fn(async () => ({
                     data: { user: { id: "test-user-id" } },

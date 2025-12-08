@@ -25,7 +25,10 @@ vi.mock("openai", () => {
                     },
                     runs: {
                         create: vi.fn().mockResolvedValue({ id: "run-mock-123" }),
-                        retrieve: vi.fn().mockResolvedValue({ id: "run-mock-123", status: "completed" }),
+                        retrieve: vi.fn().mockResolvedValue({
+                            id: "run-mock-123",
+                            status: "completed",
+                        }),
                     },
                 },
             },
@@ -79,7 +82,9 @@ describe("OpenAI Assistants Client", () => {
                 default: vi.fn().mockImplementation(() => ({
                     beta: {
                         threads: {
-                            create: vi.fn().mockResolvedValue({ id: "thread-mock-123" }),
+                            create: vi
+                                .fn()
+                                .mockResolvedValue({ id: "thread-mock-123" }),
                         },
                     },
                 })),
@@ -89,9 +94,7 @@ describe("OpenAI Assistants Client", () => {
                 "@/lib/openai/assistants-client"
             );
 
-            await expect(create()).rejects.toThrow(
-                "OPENAI_API_KEY is not configured"
-            );
+            await expect(create()).rejects.toThrow("OPENAI_API_KEY is not configured");
         });
     });
 
@@ -140,7 +143,9 @@ describe("OpenAI Assistants Client", () => {
                     beta: {
                         threads: {
                             runs: {
-                                create: vi.fn().mockResolvedValue({ id: "run-mock-123" }),
+                                create: vi
+                                    .fn()
+                                    .mockResolvedValue({ id: "run-mock-123" }),
                             },
                         },
                     },

@@ -119,7 +119,9 @@ describe("DropdownMenu", () => {
             <DropdownMenu>
                 <DropdownMenuTrigger>Open Menu</DropdownMenuTrigger>
                 <DropdownMenuContent>
-                    <DropdownMenuCheckboxItem checked>Show Panel</DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem checked>
+                        Show Panel
+                    </DropdownMenuCheckboxItem>
                 </DropdownMenuContent>
             </DropdownMenu>
         );
@@ -135,8 +137,12 @@ describe("DropdownMenu", () => {
                 <DropdownMenuTrigger>Open Menu</DropdownMenuTrigger>
                 <DropdownMenuContent>
                     <DropdownMenuRadioGroup value="option1">
-                        <DropdownMenuRadioItem value="option1">Option 1</DropdownMenuRadioItem>
-                        <DropdownMenuRadioItem value="option2">Option 2</DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="option1">
+                            Option 1
+                        </DropdownMenuRadioItem>
+                        <DropdownMenuRadioItem value="option2">
+                            Option 2
+                        </DropdownMenuRadioItem>
                     </DropdownMenuRadioGroup>
                 </DropdownMenuContent>
             </DropdownMenu>

@@ -103,10 +103,14 @@ describe("Page Context", () => {
             };
 
             usePageContext.getState().setContext(context);
-            usePageContext.getState().updateFormField("contact-form", "email", "test@example.com");
+            usePageContext
+                .getState()
+                .updateFormField("contact-form", "email", "test@example.com");
 
             const state = usePageContext.getState();
-            const emailField = state.context?.forms?.[0].fields.find((f) => f.id === "email");
+            const emailField = state.context?.forms?.[0].fields.find(
+                (f) => f.id === "email"
+            );
             expect(emailField?.value).toBe("test@example.com");
         });
 
@@ -134,10 +138,14 @@ describe("Page Context", () => {
             };
 
             usePageContext.getState().setContext(context);
-            usePageContext.getState().updateFormField("other-form", "email", "new@example.com");
+            usePageContext
+                .getState()
+                .updateFormField("other-form", "email", "new@example.com");
 
             const state = usePageContext.getState();
-            const emailField = state.context?.forms?.[0].fields.find((f) => f.id === "email");
+            const emailField = state.context?.forms?.[0].fields.find(
+                (f) => f.id === "email"
+            );
             expect(emailField?.value).toBe("original@example.com");
         });
     });

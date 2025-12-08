@@ -133,7 +133,11 @@ describe("RadioGroup", () => {
         render(
             <RadioGroup>
                 <div>
-                    <RadioGroupItem value="option1" id="option1" className="custom-item" />
+                    <RadioGroupItem
+                        value="option1"
+                        id="option1"
+                        className="custom-item"
+                    />
                     <Label htmlFor="option1">Option 1</Label>
                 </div>
             </RadioGroup>

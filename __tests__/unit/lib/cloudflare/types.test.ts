@@ -124,9 +124,7 @@ describe("Cloudflare Types", () => {
                 percentage: 50,
             };
 
-            expect(progress.percentage).toBe(
-                (progress.loaded / progress.total) * 100
-            );
+            expect(progress.percentage).toBe((progress.loaded / progress.total) * 100);
         });
 
         it("should handle zero total bytes", () => {
@@ -160,9 +158,7 @@ describe("Cloudflare Types", () => {
             ];
 
             statuses.forEach((status) => {
-                expect(["queued", "inprogress", "ready", "error"]).toContain(
-                    status
-                );
+                expect(["queued", "inprogress", "ready", "error"]).toContain(status);
             });
         });
     });

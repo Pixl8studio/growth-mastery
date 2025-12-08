@@ -324,7 +324,9 @@ describe("StoryLibrary", () => {
         const addButton = screen.getByText("Add Story");
         fireEvent.click(addButton);
 
-        const titleInput = screen.getByPlaceholderText("Sarah doubled revenue in 90 days");
+        const titleInput = screen.getByPlaceholderText(
+            "Sarah doubled revenue in 90 days"
+        );
         fireEvent.change(titleInput, { target: { value: "New Story" } });
 
         const contentTextarea = screen.getByPlaceholderText(/Sarah was skeptical/);

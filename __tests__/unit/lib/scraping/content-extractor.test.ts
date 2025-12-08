@@ -185,7 +185,10 @@ describe("Content Extractor Service", () => {
         });
 
         it("limits links to 50 items", async () => {
-            const links = Array.from({ length: 100 }, (_, i) => `<a href="/link${i}">Link ${i}</a>`);
+            const links = Array.from(
+                { length: 100 },
+                (_, i) => `<a href="/link${i}">Link ${i}</a>`
+            );
             const html = `
                 <html>
                     <body>${links.join("")}</body>
@@ -340,9 +343,9 @@ describe("Content Extractor Service", () => {
                 error: "Network error",
             });
 
-            await expect(
-                extractContentFromUrl("https://example.com")
-            ).rejects.toThrow("Network error");
+            await expect(extractContentFromUrl("https://example.com")).rejects.toThrow(
+                "Network error"
+            );
         });
 
         it("throws error when fetch returns no HTML", async () => {
@@ -352,9 +355,9 @@ describe("Content Extractor Service", () => {
                 html: null,
             });
 
-            await expect(
-                extractContentFromUrl("https://example.com")
-            ).rejects.toThrow("Failed to fetch URL");
+            await expect(extractContentFromUrl("https://example.com")).rejects.toThrow(
+                "Failed to fetch URL"
+            );
         });
     });
 });

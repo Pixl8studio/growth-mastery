@@ -48,7 +48,11 @@ describe("Switch", () => {
         const user = userEvent.setup();
         const onCheckedChange = vi.fn();
         render(
-            <Switch disabled onCheckedChange={onCheckedChange} aria-label="Disabled switch" />
+            <Switch
+                disabled
+                onCheckedChange={onCheckedChange}
+                aria-label="Disabled switch"
+            />
         );
 
         const switchElement = screen.getByRole("switch");
@@ -98,7 +102,9 @@ describe("Switch", () => {
     });
 
     it("should handle controlled state", () => {
-        const { rerender } = render(<Switch checked={false} aria-label="Controlled switch" />);
+        const { rerender } = render(
+            <Switch checked={false} aria-label="Controlled switch" />
+        );
         let switchElement = screen.getByRole("switch");
         expect(switchElement).toHaveAttribute("data-state", "unchecked");
 

@@ -49,7 +49,9 @@ describe("Toast", () => {
                 <ToastViewport />
             </ToastProvider>
         );
-        const toast = screen.getByText("Default Toast").closest('[data-radix-collection-item]');
+        const toast = screen
+            .getByText("Default Toast")
+            .closest("[data-radix-collection-item]");
         expect(toast).toBeInTheDocument();
     });
 
@@ -62,7 +64,7 @@ describe("Toast", () => {
                 <ToastViewport />
             </ToastProvider>
         );
-        const toast = screen.getByText("Error").closest('[data-radix-collection-item]');
+        const toast = screen.getByText("Error").closest("[data-radix-collection-item]");
         expect(toast).toBeInTheDocument();
     });
 
@@ -84,14 +86,18 @@ describe("Toast", () => {
             <ToastProvider>
                 <Toast>
                     <ToastTitle>Complete Toast</ToastTitle>
-                    <ToastDescription>This is a complete toast notification.</ToastDescription>
+                    <ToastDescription>
+                        This is a complete toast notification.
+                    </ToastDescription>
                     <ToastAction altText="Take action">Action</ToastAction>
                 </Toast>
                 <ToastViewport />
             </ToastProvider>
         );
         expect(screen.getByText("Complete Toast")).toBeInTheDocument();
-        expect(screen.getByText("This is a complete toast notification.")).toBeInTheDocument();
+        expect(
+            screen.getByText("This is a complete toast notification.")
+        ).toBeInTheDocument();
         expect(screen.getByText("Action")).toBeInTheDocument();
     });
 
@@ -104,7 +110,9 @@ describe("Toast", () => {
                 <ToastViewport />
             </ToastProvider>
         );
-        const toast = screen.getByText("Custom").closest('[data-radix-collection-item]');
+        const toast = screen
+            .getByText("Custom")
+            .closest("[data-radix-collection-item]");
         expect(toast?.className).toContain("custom-toast");
     });
 

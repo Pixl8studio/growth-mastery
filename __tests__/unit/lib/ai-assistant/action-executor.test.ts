@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { executePageAction, fillFormField, parseActionIntents } from "@/lib/ai-assistant/action-executor";
+import {
+    executePageAction,
+    fillFormField,
+    parseActionIntents,
+} from "@/lib/ai-assistant/action-executor";
 import { usePageContext } from "@/lib/ai-assistant/page-context";
 
 vi.mock("@/lib/client-logger", () => ({
@@ -124,10 +128,18 @@ describe("Action Executor", () => {
             // Mock DOM element
             document.body.innerHTML = '<input id="email" type="email" />';
 
-            const result = await fillFormField("contact-form", "email", "test@example.com");
+            const result = await fillFormField(
+                "contact-form",
+                "email",
+                "test@example.com"
+            );
 
             expect(result.success).toBe(true);
-            expect(mockUpdateFormField).toHaveBeenCalledWith("contact-form", "email", "test@example.com");
+            expect(mockUpdateFormField).toHaveBeenCalledWith(
+                "contact-form",
+                "email",
+                "test@example.com"
+            );
         });
 
         it("should return error when form not found", async () => {
@@ -141,7 +153,11 @@ describe("Action Executor", () => {
                 },
             });
 
-            const result = await fillFormField("nonexistent-form", "email", "test@example.com");
+            const result = await fillFormField(
+                "nonexistent-form",
+                "email",
+                "test@example.com"
+            );
 
             expect(result.success).toBe(false);
             expect(result.error).toContain("not found");
@@ -164,7 +180,11 @@ describe("Action Executor", () => {
                 },
             });
 
-            const result = await fillFormField("contact-form", "email", "test@example.com");
+            const result = await fillFormField(
+                "contact-form",
+                "email",
+                "test@example.com"
+            );
 
             expect(result.success).toBe(false);
             expect(result.error).toContain("not found");
@@ -173,7 +193,8 @@ describe("Action Executor", () => {
 
     describe("parseActionIntents", () => {
         it("should parse fill_field action intents", () => {
-            const response = "Let me help you. [ACTION:fill_field:contact-form:email:test@example.com]";
+            const response =
+                "Let me help you. [ACTION:fill_field:contact-form:email:test@example.com]";
 
             const intents = parseActionIntents(response);
 
@@ -196,7 +217,8 @@ describe("Action Executor", () => {
         });
 
         it("should parse multiple action intents", () => {
-            const response = "[ACTION:fill_field:form1:name:John] and [ACTION:execute:submit]";
+            const response =
+                "[ACTION:fill_field:form1:name:John] and [ACTION:execute:submit]";
 
             const intents = parseActionIntents(response);
 

@@ -113,7 +113,9 @@ describe("GlobalDashboard", () => {
         render(<GlobalDashboard userId={mockUserId} />);
 
         await waitFor(() => {
-            expect(screen.getByText("Prospects by Engagement Level")).toBeInTheDocument();
+            expect(
+                screen.getByText("Prospects by Engagement Level")
+            ).toBeInTheDocument();
             expect(screen.getByText("Cold")).toBeInTheDocument();
             expect(screen.getByText("Warm")).toBeInTheDocument();
             expect(screen.getByText("Hot")).toBeInTheDocument();

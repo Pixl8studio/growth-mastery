@@ -136,7 +136,9 @@ describe("POST /api/pages/enrollment/[pageId]/regenerate", () => {
     });
 
     it("should return 404 when page is not found", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             from: vi.fn(() => ({
                 select: vi.fn(() => ({
                     eq: vi.fn(() => ({
@@ -169,7 +171,9 @@ describe("POST /api/pages/enrollment/[pageId]/regenerate", () => {
     });
 
     it("should return 400 when offer is missing", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             from: vi.fn(() => ({
                 select: vi.fn(() => ({
                     eq: vi.fn(() => ({
@@ -206,9 +210,9 @@ describe("POST /api/pages/enrollment/[pageId]/regenerate", () => {
     });
 
     it("should handle AI generation errors", async () => {
-        vi.mocked((await import("@/lib/ai/client")).generateTextWithAI).mockRejectedValueOnce(
-            new Error("AI error")
-        );
+        vi.mocked(
+            (await import("@/lib/ai/client")).generateTextWithAI
+        ).mockRejectedValueOnce(new Error("AI error"));
 
         const request = new NextRequest(
             "http://localhost:3000/api/pages/enrollment/test-page-id/regenerate",
@@ -228,7 +232,9 @@ describe("POST /api/pages/enrollment/[pageId]/regenerate", () => {
     });
 
     it("should return 500 when project data fetch fails", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             from: vi.fn((table) => {
                 if (table === "enrollment_pages") {
                     return {

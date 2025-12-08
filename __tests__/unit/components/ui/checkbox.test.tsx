@@ -36,7 +36,12 @@ describe("Checkbox", () => {
     it("should handle click events", async () => {
         const user = userEvent.setup();
         const onCheckedChange = vi.fn();
-        render(<Checkbox onCheckedChange={onCheckedChange} aria-label="Clickable checkbox" />);
+        render(
+            <Checkbox
+                onCheckedChange={onCheckedChange}
+                aria-label="Clickable checkbox"
+            />
+        );
 
         const checkbox = screen.getByRole("checkbox");
         await user.click(checkbox);

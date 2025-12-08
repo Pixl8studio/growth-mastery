@@ -21,7 +21,10 @@ describe("Input", () => {
         expect(screen.getByPlaceholderText("Email")).toHaveAttribute("type", "email");
 
         rerender(<Input type="password" placeholder="Password" />);
-        expect(screen.getByPlaceholderText("Password")).toHaveAttribute("type", "password");
+        expect(screen.getByPlaceholderText("Password")).toHaveAttribute(
+            "type",
+            "password"
+        );
 
         rerender(<Input type="number" placeholder="Number" />);
         expect(screen.getByPlaceholderText("Number")).toHaveAttribute("type", "number");

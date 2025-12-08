@@ -61,9 +61,6 @@ export async function GET(
         return NextResponse.json({ deckStructures: deckStructures || [] });
     } catch (error) {
         console.error("Deck structures API error:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

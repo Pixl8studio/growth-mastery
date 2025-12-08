@@ -69,7 +69,9 @@ describe("Accordion", () => {
                 </AccordionItem>
             </Accordion>
         );
-        const item = screen.getByText("Section 1").closest('[data-radix-collection-item]');
+        const item = screen
+            .getByText("Section 1")
+            .closest("[data-radix-collection-item]");
         expect(item?.className).toContain("custom-item");
     });
 
@@ -77,7 +79,9 @@ describe("Accordion", () => {
         render(
             <Accordion type="single" collapsible>
                 <AccordionItem value="item-1">
-                    <AccordionTrigger className="custom-trigger">Section 1</AccordionTrigger>
+                    <AccordionTrigger className="custom-trigger">
+                        Section 1
+                    </AccordionTrigger>
                     <AccordionContent>Content 1</AccordionContent>
                 </AccordionItem>
             </Accordion>
@@ -91,7 +95,9 @@ describe("Accordion", () => {
             <Accordion type="single" defaultValue="item-1">
                 <AccordionItem value="item-1">
                     <AccordionTrigger>Section 1</AccordionTrigger>
-                    <AccordionContent className="custom-content">Content 1</AccordionContent>
+                    <AccordionContent className="custom-content">
+                        Content 1
+                    </AccordionContent>
                 </AccordionItem>
             </Accordion>
         );

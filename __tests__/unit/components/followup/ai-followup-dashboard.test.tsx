@@ -52,7 +52,9 @@ describe("AIFollowupDashboard", () => {
         render(<AIFollowupDashboard userId={mockUserId} />);
 
         expect(screen.getByTestId("global-dashboard")).toBeInTheDocument();
-        expect(screen.getByText(`Global Dashboard - ${mockUserId}`)).toBeInTheDocument();
+        expect(
+            screen.getByText(`Global Dashboard - ${mockUserId}`)
+        ).toBeInTheDocument();
     });
 
     it("should switch to list view when list button is clicked", () => {
@@ -122,7 +124,9 @@ describe("AIFollowupDashboard", () => {
         render(<AIFollowupDashboard userId={mockUserId} />);
 
         // Check dashboard
-        expect(screen.getByText(`Global Dashboard - ${mockUserId}`)).toBeInTheDocument();
+        expect(
+            screen.getByText(`Global Dashboard - ${mockUserId}`)
+        ).toBeInTheDocument();
 
         // Check list
         fireEvent.click(screen.getByText("📋 List"));

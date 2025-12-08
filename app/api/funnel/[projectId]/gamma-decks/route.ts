@@ -61,10 +61,7 @@ export async function GET(
         return NextResponse.json({ gammaDecks: gammaDecks || [] });
     } catch (error) {
         console.error("Gamma decks API error:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
 
@@ -110,10 +107,7 @@ export async function DELETE(
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error("Delete gamma deck API error:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
 
@@ -161,9 +155,6 @@ export async function PATCH(
         return NextResponse.json({ gammaDeck: updatedDeck });
     } catch (error) {
         console.error("Update gamma deck API error:", error);
-        return NextResponse.json(
-            { error: "Internal server error" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

@@ -98,15 +98,18 @@ describe("POST /api/pages/generate-image", () => {
     });
 
     it("should generate and upload image successfully", async () => {
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-image", {
-            method: "POST",
-            body: JSON.stringify({
-                prompt: "A professional business meeting",
-                projectId: "test-project-id",
-                size: "1024x1024",
-                quality: "standard",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-image",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    prompt: "A professional business meeting",
+                    projectId: "test-project-id",
+                    size: "1024x1024",
+                    quality: "standard",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -119,7 +122,9 @@ describe("POST /api/pages/generate-image", () => {
     });
 
     it("should return 401 when user is not authenticated", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             auth: {
                 getUser: vi.fn(async () => ({
                     data: { user: null },
@@ -128,13 +133,16 @@ describe("POST /api/pages/generate-image", () => {
             },
         } as any);
 
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-image", {
-            method: "POST",
-            body: JSON.stringify({
-                prompt: "Test prompt",
-                projectId: "test-project-id",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-image",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    prompt: "Test prompt",
+                    projectId: "test-project-id",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -144,12 +152,15 @@ describe("POST /api/pages/generate-image", () => {
     });
 
     it("should return 400 when prompt is missing", async () => {
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-image", {
-            method: "POST",
-            body: JSON.stringify({
-                projectId: "test-project-id",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-image",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    projectId: "test-project-id",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -159,13 +170,16 @@ describe("POST /api/pages/generate-image", () => {
     });
 
     it("should return 400 when prompt is empty", async () => {
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-image", {
-            method: "POST",
-            body: JSON.stringify({
-                prompt: "   ",
-                projectId: "test-project-id",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-image",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    prompt: "   ",
+                    projectId: "test-project-id",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -176,13 +190,16 @@ describe("POST /api/pages/generate-image", () => {
 
     it("should return 400 when prompt is too long", async () => {
         const longPrompt = "a".repeat(5000);
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-image", {
-            method: "POST",
-            body: JSON.stringify({
-                prompt: longPrompt,
-                projectId: "test-project-id",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-image",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    prompt: longPrompt,
+                    projectId: "test-project-id",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -192,12 +209,15 @@ describe("POST /api/pages/generate-image", () => {
     });
 
     it("should return 400 when projectId is missing", async () => {
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-image", {
-            method: "POST",
-            body: JSON.stringify({
-                prompt: "Test prompt",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-image",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    prompt: "Test prompt",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -207,7 +227,9 @@ describe("POST /api/pages/generate-image", () => {
     });
 
     it("should return 404 when project is not found", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             auth: {
                 getUser: vi.fn(async () => ({
                     data: { user: { id: "test-user-id" } },
@@ -228,13 +250,16 @@ describe("POST /api/pages/generate-image", () => {
             })),
         } as any);
 
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-image", {
-            method: "POST",
-            body: JSON.stringify({
-                prompt: "Test prompt",
-                projectId: "invalid-project-id",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-image",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    prompt: "Test prompt",
+                    projectId: "invalid-project-id",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -244,17 +269,20 @@ describe("POST /api/pages/generate-image", () => {
     });
 
     it("should handle AI generation errors", async () => {
-        vi.mocked((await import("@/lib/ai/client")).generateImageWithAI).mockRejectedValueOnce(
-            new Error("AI service error")
-        );
+        vi.mocked(
+            (await import("@/lib/ai/client")).generateImageWithAI
+        ).mockRejectedValueOnce(new Error("AI service error"));
 
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-image", {
-            method: "POST",
-            body: JSON.stringify({
-                prompt: "Test prompt",
-                projectId: "test-project-id",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-image",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    prompt: "Test prompt",
+                    projectId: "test-project-id",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -264,7 +292,9 @@ describe("POST /api/pages/generate-image", () => {
     });
 
     it("should handle storage upload errors", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             auth: {
                 getUser: vi.fn(async () => ({
                     data: { user: { id: "test-user-id" } },
@@ -276,7 +306,10 @@ describe("POST /api/pages/generate-image", () => {
                     eq: vi.fn(() => ({
                         eq: vi.fn(() => ({
                             single: vi.fn(async () => ({
-                                data: { id: "test-project-id", user_id: "test-user-id" },
+                                data: {
+                                    id: "test-project-id",
+                                    user_id: "test-user-id",
+                                },
                                 error: null,
                             })),
                         })),
@@ -292,13 +325,16 @@ describe("POST /api/pages/generate-image", () => {
             },
         } as any);
 
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-image", {
-            method: "POST",
-            body: JSON.stringify({
-                prompt: "Test prompt",
-                projectId: "test-project-id",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-image",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    prompt: "Test prompt",
+                    projectId: "test-project-id",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();
@@ -308,14 +344,17 @@ describe("POST /api/pages/generate-image", () => {
     });
 
     it("should accept optional pageId parameter", async () => {
-        const request = new NextRequest("http://localhost:3000/api/pages/generate-image", {
-            method: "POST",
-            body: JSON.stringify({
-                prompt: "Test prompt",
-                projectId: "test-project-id",
-                pageId: "test-page-id",
-            }),
-        });
+        const request = new NextRequest(
+            "http://localhost:3000/api/pages/generate-image",
+            {
+                method: "POST",
+                body: JSON.stringify({
+                    prompt: "Test prompt",
+                    projectId: "test-project-id",
+                    pageId: "test-page-id",
+                }),
+            }
+        );
 
         const response = await POST(request);
         const data = await response.json();

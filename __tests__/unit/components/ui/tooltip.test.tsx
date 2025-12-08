@@ -6,7 +6,12 @@
 import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
+import {
+    Tooltip,
+    TooltipTrigger,
+    TooltipContent,
+    TooltipProvider,
+} from "@/components/ui/tooltip";
 
 describe("Tooltip", () => {
     it("should render tooltip trigger", () => {
@@ -52,7 +57,9 @@ describe("Tooltip", () => {
         );
 
         await user.hover(screen.getByText("Info"));
-        expect(await screen.findByText("This is detailed information")).toBeInTheDocument();
+        expect(
+            await screen.findByText("This is detailed information")
+        ).toBeInTheDocument();
     });
 
     it("should handle custom className on TooltipContent", async () => {
@@ -61,7 +68,9 @@ describe("Tooltip", () => {
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger>Hover me</TooltipTrigger>
-                    <TooltipContent className="custom-tooltip">Custom styled</TooltipContent>
+                    <TooltipContent className="custom-tooltip">
+                        Custom styled
+                    </TooltipContent>
                 </Tooltip>
             </TooltipProvider>
         );

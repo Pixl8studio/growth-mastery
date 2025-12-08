@@ -238,8 +238,8 @@ describe("SequenceBuilder", () => {
         );
 
         const editButtons = screen.getAllByRole("button", { name: "" });
-        const editButtonsWithEditIcon = editButtons.filter(btn =>
-            btn.querySelector('svg')
+        const editButtonsWithEditIcon = editButtons.filter((btn) =>
+            btn.querySelector("svg")
         );
         expect(editButtonsWithEditIcon.length).toBeGreaterThan(0);
     });
@@ -378,13 +378,20 @@ describe("SequenceBuilder", () => {
 
     it("should show generation progress", async () => {
         (global.fetch as any).mockImplementation(
-            () => new Promise((resolve) => setTimeout(() => resolve({
-                ok: true,
-                json: async () => ({
-                    messages_generated: 3,
-                    total_attempted: 3,
-                }),
-            }), 100))
+            () =>
+                new Promise((resolve) =>
+                    setTimeout(
+                        () =>
+                            resolve({
+                                ok: true,
+                                json: async () => ({
+                                    messages_generated: 3,
+                                    total_attempted: 3,
+                                }),
+                            }),
+                        100
+                    )
+                )
         );
 
         render(

@@ -39,7 +39,9 @@ describe("Progress", () => {
     });
 
     it("should handle custom className", () => {
-        render(<Progress value={50} className="custom-progress" aria-label="Progress" />);
+        render(
+            <Progress value={50} className="custom-progress" aria-label="Progress" />
+        );
         const progress = screen.getByRole("progressbar");
         expect(progress.className).toContain("custom-progress");
     });

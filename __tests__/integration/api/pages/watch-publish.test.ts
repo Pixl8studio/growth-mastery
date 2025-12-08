@@ -74,7 +74,9 @@ describe("POST /api/pages/watch/[pageId]/publish", () => {
     });
 
     it("should unpublish a watch page successfully", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             from: vi.fn(() => ({
                 update: vi.fn(() => ({
                     eq: vi.fn(() => ({
@@ -115,9 +117,9 @@ describe("POST /api/pages/watch/[pageId]/publish", () => {
     });
 
     it("should return 401 when user is not authenticated", async () => {
-        vi.mocked((await import("@/lib/auth")).getCurrentUserWithProfileForAPI).mockRejectedValueOnce(
-            new Error("Unauthorized")
-        );
+        vi.mocked(
+            (await import("@/lib/auth")).getCurrentUserWithProfileForAPI
+        ).mockRejectedValueOnce(new Error("Unauthorized"));
 
         const request = new NextRequest(
             "http://localhost:3000/api/pages/watch/test-page-id/publish",
@@ -139,7 +141,9 @@ describe("POST /api/pages/watch/[pageId]/publish", () => {
     });
 
     it("should return 500 when database update fails", async () => {
-        vi.mocked((await import("@/lib/supabase/server")).createClient).mockResolvedValueOnce({
+        vi.mocked(
+            (await import("@/lib/supabase/server")).createClient
+        ).mockResolvedValueOnce({
             from: vi.fn(() => ({
                 update: vi.fn(() => ({
                     eq: vi.fn(() => ({

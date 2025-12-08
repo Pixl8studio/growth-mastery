@@ -156,7 +156,7 @@ export default function Step7Page({
                         {
                             totalDecks: transformed.length,
                             decksWithGammaUrls: transformed.filter(
-                                (d) => d.gamma_deck_url
+                                (d: DeckStructure) => d.gamma_deck_url
                             ).length,
                         },
                         "Transformed deck structures"

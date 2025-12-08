@@ -14,7 +14,11 @@ function createChainableBuilder(response: { data: unknown; error: unknown }) {
     const builder: Record<string, ReturnType<typeof vi.fn>> = {};
 
     // Terminal methods
-    builder.single = vi.fn().mockResolvedValue(response);
+    // .single() should return first item if data is an array
+    builder.single = vi.fn().mockImplementation(() => {
+        const data = Array.isArray(response.data) ? response.data[0] : response.data;
+        return Promise.resolve({ ...response, data });
+    });
     builder.maybeSingle = vi.fn().mockResolvedValue(response);
 
     // Chainable methods that return the builder

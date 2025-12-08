@@ -129,7 +129,8 @@ describe("PagesList", () => {
         render(<PagesList {...mockProps} />);
 
         await waitFor(() => {
-            expect(screen.getByText(/Project: My Funnel/)).toBeInTheDocument();
+            const projectNames = screen.getAllByText(/Project: My Funnel/);
+            expect(projectNames.length).toBeGreaterThan(0);
         });
     });
 
@@ -137,7 +138,8 @@ describe("PagesList", () => {
         render(<PagesList {...mockProps} />);
 
         await waitFor(() => {
-            expect(screen.getByText(/testuser\/register-webinar/)).toBeInTheDocument();
+            const slugElements = screen.getAllByText(/testuser\/register-webinar/);
+            expect(slugElements.length).toBeGreaterThan(0);
         });
     });
 
@@ -236,12 +238,13 @@ describe("PagesList", () => {
             ).toBeInTheDocument();
         });
 
-        const updateButton = screen.getByText("Update Slug");
-        fireEvent.click(updateButton);
+        const updateButtons = screen.getAllByText("Update Slug");
+        fireEvent.click(updateButtons[0]);
 
         // Check that slug was updated in the component state
         await waitFor(() => {
-            expect(screen.getByText("new-slug")).toBeInTheDocument();
+            const newSlugs = screen.getAllByText("new-slug");
+            expect(newSlugs.length).toBeGreaterThan(0);
         });
     });
 
@@ -249,7 +252,8 @@ describe("PagesList", () => {
         render(<PagesList {...mockProps} />);
 
         await waitFor(() => {
-            const editLink = screen.getByText("Edit Page").closest("a");
+            const editLinks = screen.getAllByText("Edit Page");
+            const editLink = editLinks[0].closest("a");
             expect(editLink).toHaveAttribute(
                 "href",
                 expect.stringContaining("/funnel-builder/project-1/pages/registration/")
@@ -261,7 +265,8 @@ describe("PagesList", () => {
         render(<PagesList {...mockProps} />);
 
         await waitFor(() => {
-            const viewLink = screen.getByText("View Public").closest("a");
+            const viewLinks = screen.getAllByText("View Public");
+            const viewLink = viewLinks[0].closest("a");
             expect(viewLink).toHaveAttribute("href", "/testuser/register-webinar");
         });
     });

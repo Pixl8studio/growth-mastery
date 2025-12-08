@@ -123,7 +123,7 @@ export function DeckStructureEditor({
                 return (
                     <div key={sectionKey} className="space-y-3">
                         {/* Section Header */}
-                        <div className="sticky top-20 z-[5] rounded-lg border-l-4 border-primary bg-primary/5 px-4 py-3">
+                        <div className="sticky top-20 z-[5] rounded-lg border-l-4 border-primary bg-card px-4 py-3 shadow-sm">
                             <h3 className="text-lg font-semibold text-foreground">
                                 {sectionNames[sectionKey]} ({sectionSlides.length}{" "}
                                 slides)

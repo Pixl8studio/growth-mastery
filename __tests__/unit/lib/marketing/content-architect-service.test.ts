@@ -36,7 +36,6 @@ import {
     atomizeBrief,
 } from "@/lib/marketing/content-architect-service";
 import { generateWithAI } from "@/lib/ai/client";
-import { logger } from "@/lib/logger";
 import {
     getPlatformSpec,
     validateContent,

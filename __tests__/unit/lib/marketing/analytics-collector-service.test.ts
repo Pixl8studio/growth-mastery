@@ -21,7 +21,6 @@ import {
     collectDailyAnalytics,
 } from "@/lib/marketing/analytics-collector-service";
 import { createClient } from "@/lib/supabase/server";
-import { logger } from "@/lib/logger";
 import { learnFromPerformance } from "@/lib/marketing/niche-model-service";
 
 describe("AnalyticsCollectorService", () => {

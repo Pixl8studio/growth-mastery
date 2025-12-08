@@ -24,7 +24,6 @@ import {
     getPublishingQueue,
 } from "@/lib/marketing/publisher-service";
 import { createClient } from "@/lib/supabase/server";
-import { logger } from "@/lib/logger";
 import { decryptToken } from "@/lib/integrations/crypto";
 
 describe("PublisherService", () => {

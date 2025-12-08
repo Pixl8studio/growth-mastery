@@ -4,9 +4,11 @@
  * Initiates Twitter OAuth 2.0 flow for funnel-level connection.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getTwitterAuthUrl, generateCodeChallenge } from "@/lib/integrations/twitter";
+import { logger } from "@/lib/logger";
 
 export async function GET(
     request: NextRequest,
@@ -33,7 +35,10 @@ export async function GET(
             code_verifier: verifier,
         });
     } catch (error) {
-        console.error("Twitter connect error:", error);
+        logger.error({ error, action: "twitter_connect" }, "Twitter connect error");
+        Sentry.captureException(error, {
+            tags: { component: "api", action: "twitter_connect" },
+        });
         return NextResponse.json(
             { error: "Failed to initiate Twitter connection" },
             { status: 500 }

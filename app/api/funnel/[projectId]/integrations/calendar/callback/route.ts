@@ -4,12 +4,14 @@
  * Handles Google Calendar OAuth callback and stores connection.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
 import { exchangeCodeForToken, listCalendars } from "@/lib/integrations/calendar";
 import { getUserInfo } from "@/lib/integrations/gmail";
 import { encryptToken } from "@/lib/integrations/crypto";
+import { logger } from "@/lib/logger";
 
 export async function GET(
     request: NextRequest,
@@ -69,7 +71,10 @@ export async function GET(
             `${process.env.NEXT_PUBLIC_APP_URL}/funnel-builder/${projectId}?tab=settings`
         );
     } catch (error) {
-        console.error("Calendar callback error:", error);
+        logger.error({ error, action: "calendar_callback" }, "Calendar callback error");
+        Sentry.captureException(error, {
+            tags: { component: "api", action: "calendar_callback" },
+        });
         const { projectId } = await params;
         return NextResponse.redirect(
             `${process.env.NEXT_PUBLIC_APP_URL}/funnel-builder/${projectId}?tab=settings&error=calendar_connection_failed`

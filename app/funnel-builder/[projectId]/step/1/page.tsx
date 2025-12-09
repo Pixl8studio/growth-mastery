@@ -573,9 +573,16 @@ export default function Step1Page({
                 {/* Your Intake Sessions - Summary Cards (placed directly after Business Profile Progress) */}
                 <YourIntakeSessions
                     sessions={intakeSessions}
+                    businessProfile={businessProfile}
                     onSessionClick={(session) => {
                         setSelectedSession(session as IntakeSession);
                         setIsViewerOpen(true);
+                    }}
+                    onSectionClick={(sectionId) => {
+                        // Navigate to wizard mode with the selected section
+                        setSelectedMethod("wizard");
+                        // Scroll to top to show the wizard
+                        window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
                 />
 

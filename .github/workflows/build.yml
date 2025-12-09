@@ -90,8 +90,8 @@ jobs:
       - name: 📚 Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: 🧪 Run test suite with coverage
-        run: pnpm test:coverage
+      - name: 🧪 Run full test suite with coverage
+        run: pnpm test:ci
         env:
           NODE_ENV: test
           NEXT_PUBLIC_APP_URL: http://localhost:3000

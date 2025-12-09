@@ -5,6 +5,11 @@
 
 import { generateWithAI } from "@/lib/ai/client";
 import { logger } from "@/lib/logger";
+import {
+    coerceToStringArray,
+    normalizeObjections,
+    normalizePricing,
+} from "@/lib/ai/json-recovery";
 import type {
     SectionId,
     Section1Data,
@@ -553,6 +558,68 @@ RULES:
 }
 
 /**
+ * Clean [Object] placeholders from a value
+ */
+function cleanObjectPlaceholder(value: unknown): unknown {
+    if (typeof value === "string") {
+        if (value === "[Object]" || value === "[object Object]") {
+            return null;
+        }
+    }
+    return value;
+}
+
+/**
+ * Normalize belief shift object
+ * Ensures all fields are proper strings/arrays, not [Object] placeholders
+ */
+function normalizeBeliefShift(value: unknown): Record<string, unknown> | null {
+    if (value === null || value === undefined) {
+        return null;
+    }
+
+    // If it's a string (incorrectly parsed), convert to proper structure
+    if (typeof value === "string") {
+        if (value === "[Object]" || value === "[object Object]") {
+            return null;
+        }
+        return { content: value };
+    }
+
+    if (typeof value !== "object") {
+        return { content: String(value) };
+    }
+
+    const obj = value as Record<string, unknown>;
+    const normalized: Record<string, unknown> = {};
+
+    // Array fields that should be coerced to string arrays
+    const arrayFields = ["key_insights", "mindset_reframes"];
+
+    for (const [key, val] of Object.entries(obj)) {
+        // Clean any [Object] placeholders
+        const cleaned = cleanObjectPlaceholder(val);
+
+        if (cleaned === null) {
+            normalized[key] = null;
+        } else if (arrayFields.includes(key)) {
+            // Coerce to string array using utility function
+            normalized[key] = coerceToStringArray(cleaned);
+        } else if (typeof cleaned === "object" && !Array.isArray(cleaned)) {
+            // Convert nested objects to strings
+            normalized[key] = JSON.stringify(cleaned);
+        } else if (Array.isArray(cleaned)) {
+            // Ensure array items are strings
+            normalized[key] = coerceToStringArray(cleaned);
+        } else {
+            normalized[key] = cleaned;
+        }
+    }
+
+    return normalized;
+}
+
+/**
  * Normalize parsed data to ensure proper structure
  */
 function normalizeSection4Data(data: Record<string, unknown>): Record<string, unknown> {
@@ -567,46 +634,13 @@ function normalizeSection4Data(data: Record<string, unknown>): Record<string, un
 
     for (const field of beliefShiftFields) {
         if (normalized[field]) {
-            const value = normalized[field];
-
-            // If it's a string (incorrectly parsed), convert to proper structure
-            if (typeof value === "string") {
-                normalized[field] = { content: value };
-            } else if (typeof value === "object" && value !== null) {
-                // Ensure nested fields are strings, not objects
-                const obj = value as Record<string, unknown>;
-                for (const [key, val] of Object.entries(obj)) {
-                    if (
-                        typeof val === "object" &&
-                        val !== null &&
-                        !Array.isArray(val)
-                    ) {
-                        // Convert object to string representation
-                        obj[key] = JSON.stringify(val);
-                    }
-                    // Ensure array fields contain only strings
-                    if (Array.isArray(val)) {
-                        obj[key] = val.map((item) =>
-                            typeof item === "object"
-                                ? JSON.stringify(item)
-                                : String(item)
-                        );
-                    }
-                }
-                normalized[field] = obj;
-            }
+            normalized[field] = normalizeBeliefShift(normalized[field]);
         }
     }
 
-    // Ensure poll_questions is an array of strings
+    // Ensure poll_questions is an array of strings using utility function
     if (normalized.poll_questions) {
-        if (typeof normalized.poll_questions === "string") {
-            normalized.poll_questions = [normalized.poll_questions];
-        } else if (Array.isArray(normalized.poll_questions)) {
-            normalized.poll_questions = (normalized.poll_questions as unknown[]).map(
-                (q) => (typeof q === "object" ? JSON.stringify(q) : String(q))
-            );
-        }
+        normalized.poll_questions = coerceToStringArray(normalized.poll_questions);
     }
 
     return normalized;
@@ -618,37 +652,22 @@ function normalizeSection4Data(data: Record<string, unknown>): Record<string, un
 function normalizeSection5Data(data: Record<string, unknown>): Record<string, unknown> {
     const normalized = { ...data };
 
-    // Ensure top_objections is properly structured
-    if (normalized.top_objections) {
-        if (typeof normalized.top_objections === "string") {
-            // Try to parse if it's a string
-            try {
-                normalized.top_objections = JSON.parse(
-                    normalized.top_objections as string
-                );
-            } catch {
-                // If can't parse, wrap it
-                normalized.top_objections = [
-                    { objection: normalized.top_objections as string, response: "" },
-                ];
-            }
-        } else if (Array.isArray(normalized.top_objections)) {
-            // Ensure each item has the correct structure
-            normalized.top_objections = (normalized.top_objections as unknown[]).map(
-                (item) => {
-                    if (typeof item === "string") {
-                        return { objection: item, response: "" };
-                    }
-                    if (typeof item === "object" && item !== null) {
-                        const obj = item as Record<string, unknown>;
-                        return {
-                            objection: String(obj.objection || ""),
-                            response: String(obj.response || ""),
-                        };
-                    }
-                    return { objection: String(item), response: "" };
-                }
-            );
+    // Use utility function for objections normalization
+    if (normalized.top_objections !== undefined) {
+        normalized.top_objections = normalizeObjections(normalized.top_objections);
+    }
+
+    // Clean any [Object] placeholders from string fields
+    const stringFields = [
+        "call_to_action",
+        "incentive",
+        "pricing_disclosure",
+        "path_options",
+    ];
+    for (const field of stringFields) {
+        if (normalized[field]) {
+            const cleaned = cleanObjectPlaceholder(normalized[field]);
+            normalized[field] = cleaned === null ? "" : cleaned;
         }
     }
 
@@ -661,47 +680,28 @@ function normalizeSection5Data(data: Record<string, unknown>): Record<string, un
 function normalizeSection3Data(data: Record<string, unknown>): Record<string, unknown> {
     const normalized = { ...data };
 
-    // Ensure pricing is properly structured
-    if (normalized.pricing) {
-        if (typeof normalized.pricing === "string") {
-            // Try to extract numbers from string
-            const priceMatch = (normalized.pricing as string).match(/\$?([\d,]+)/g);
-            if (priceMatch && priceMatch.length >= 1) {
-                const prices = priceMatch.map((p) =>
-                    parseInt(p.replace(/[$,]/g, ""), 10)
-                );
-                normalized.pricing = {
-                    regular: prices[0] || null,
-                    webinar: prices[1] || null,
-                };
-            } else {
-                normalized.pricing = { regular: null, webinar: null };
-            }
-        } else if (
-            typeof normalized.pricing === "object" &&
-            normalized.pricing !== null
-        ) {
-            const pricingObj = normalized.pricing as Record<string, unknown>;
-            normalized.pricing = {
-                regular:
-                    typeof pricingObj.regular === "number"
-                        ? pricingObj.regular
-                        : pricingObj.regular
-                          ? parseInt(
-                                String(pricingObj.regular).replace(/[$,]/g, ""),
-                                10
-                            )
-                          : null,
-                webinar:
-                    typeof pricingObj.webinar === "number"
-                        ? pricingObj.webinar
-                        : pricingObj.webinar
-                          ? parseInt(
-                                String(pricingObj.webinar).replace(/[$,]/g, ""),
-                                10
-                            )
-                          : null,
-            };
+    // Use utility function for pricing normalization
+    if (normalized.pricing !== undefined) {
+        normalized.pricing = normalizePricing(normalized.pricing);
+    }
+
+    // Clean any [Object] placeholders from string fields
+    const stringFields = [
+        "offer_name",
+        "offer_type",
+        "deliverables",
+        "delivery_process",
+        "problem_solved",
+        "promise_outcome",
+        "guarantee",
+        "testimonials",
+        "bonuses",
+    ];
+
+    for (const field of stringFields) {
+        if (normalized[field]) {
+            const cleaned = cleanObjectPlaceholder(normalized[field]);
+            normalized[field] = cleaned === null ? "" : cleaned;
         }
     }
 

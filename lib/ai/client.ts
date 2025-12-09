@@ -9,6 +9,7 @@ import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import { retry } from "@/lib/utils";
 import { AI_CONFIG } from "@/lib/config";
+import { recoverJSON } from "@/lib/ai/json-recovery";
 import type {
     AIGenerationOptions,
     ImageGenerationOptions,
@@ -103,7 +104,33 @@ export async function generateWithAI<T>(
                             response.usage?.completion_tokens ?? 0
                         );
 
-                        return JSON.parse(content) as T;
+                        // Try direct JSON parse first, fall back to recovery system
+                        try {
+                            return JSON.parse(content) as T;
+                        } catch (parseError) {
+                            requestLogger.warn(
+                                { parseError, contentPreview: content.slice(0, 200) },
+                                "Direct JSON parse failed, attempting recovery"
+                            );
+
+                            const recovered = recoverJSON<T>(content);
+                            if (recovered.success && recovered.data !== undefined) {
+                                requestLogger.info(
+                                    { strategy: recovered.strategy },
+                                    "JSON recovered successfully"
+                                );
+                                span.setAttribute(
+                                    "json_recovery_strategy",
+                                    recovered.strategy || "unknown"
+                                );
+                                return recovered.data;
+                            }
+
+                            // Recovery failed, throw original error
+                            throw new Error(
+                                `Failed to parse AI response as JSON: ${parseError instanceof Error ? parseError.message : "Unknown parse error"}`
+                            );
+                        }
                     },
                     {
                         maxAttempts: 3,

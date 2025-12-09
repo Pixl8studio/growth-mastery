@@ -63,7 +63,9 @@ describe("DomainSettings", () => {
     it("should render loading state initially", () => {
         render(<DomainSettings {...mockProps} />);
 
-        expect(screen.getByRole("status", { hidden: true })).toBeInTheDocument();
+        // Check for the loading skeleton with animate-pulse class
+        const loadingElement = document.querySelector(".animate-pulse");
+        expect(loadingElement).toBeInTheDocument();
     });
 
     it("should render domain settings title", async () => {

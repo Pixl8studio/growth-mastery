@@ -190,7 +190,8 @@ export function parseActionIntents(aiResponse: string): ActionRequest[] {
     const matches = Array.from(aiResponse.matchAll(actionPattern));
 
     return matches.map((match) => {
-        const [, actionType, ...params] = match;
+        const [, actionType, paramsString] = match;
+        const params = paramsString.split(":");
 
         if (actionType === "fill_field") {
             const [formId, fieldId, ...valueParts] = params;

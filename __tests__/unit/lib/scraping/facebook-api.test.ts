@@ -360,7 +360,7 @@ describe("Facebook Graph API Client", () => {
                 { id: "2", message: "   ", createdTime: "2024-01-01T00:00:00Z" },
                 {
                     id: "3",
-                    message: "This is long enough",
+                    message: "This is long enough now",
                     createdTime: "2024-01-01T00:00:00Z",
                 },
             ];

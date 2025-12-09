@@ -56,9 +56,10 @@ export async function hasCompletedIntake(projectId: string): Promise<boolean> {
         ]);
 
         const hasTranscripts = (transcriptsResult.count ?? 0) > 0;
-        const hasBusinessProfile =
+        const hasBusinessProfile = Boolean(
             profileResult.data &&
-            (profileResult.data.completion_status as any)?.overall > 0;
+                (profileResult.data.completion_status as any)?.overall > 0
+        );
 
         const hasIntake = hasTranscripts || hasBusinessProfile;
         requestLogger.info(
@@ -231,9 +232,10 @@ export async function getStepCompletionStatus(
 
         // Step 1 is completed if we have transcripts OR a business profile with completion > 0
         const hasTranscripts = (transcripts.count ?? 0) > 0;
-        const hasBusinessProfile =
+        const hasBusinessProfile = Boolean(
             businessProfiles.data &&
-            (businessProfiles.data.completion_status as any)?.overall > 0;
+                (businessProfiles.data.completion_status as any)?.overall > 0
+        );
         const step1Completed = hasTranscripts || hasBusinessProfile;
 
         const completionStatus: StepCompletion[] = [

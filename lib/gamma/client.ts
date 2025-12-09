@@ -3,6 +3,7 @@
  * Wrapper around Gamma API for AI presentation generation
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { logger } from "@/lib/logger";
 import type { GammaDeckRequest, GammaDeckResponse, GammaSession } from "./types";
 
@@ -59,6 +60,18 @@ export async function generateDeck(
         return response;
     } catch (error) {
         requestLogger.error({ error, request }, "Failed to generate Gamma deck");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "gamma",
+                operation: "generate_deck",
+            },
+            extra: {
+                theme: request.theme,
+                hasText: !!request.text,
+            },
+        });
+
         throw new Error(
             `Failed to generate deck: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -94,6 +107,17 @@ export async function getDeckStatus(deckId: string): Promise<{
         };
     } catch (error) {
         logger.error({ error, deckId }, "Failed to fetch deck status");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "gamma",
+                operation: "get_deck_status",
+            },
+            extra: {
+                deckId,
+            },
+        });
+
         throw new Error(
             `Failed to get deck status: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -133,6 +157,14 @@ export async function createSession(): Promise<GammaSession> {
         return session;
     } catch (error) {
         logger.error({ error }, "Failed to create Gamma session");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "gamma",
+                operation: "create_session",
+            },
+        });
+
         throw new Error(
             `Failed to create session: ${error instanceof Error ? error.message : "Unknown error"}`
         );

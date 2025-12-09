@@ -99,7 +99,8 @@ export async function GET(request: NextRequest) {
                 endpoint: "GET /api/ads/accounts",
             },
             extra: {
-                errorType: error instanceof Error ? error.constructor.name : typeof error,
+                errorType:
+                    error instanceof Error ? error.constructor.name : typeof error,
             },
         });
 

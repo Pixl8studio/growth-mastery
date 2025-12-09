@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { generateConnectUrl } from "@/lib/stripe/connect";
@@ -44,6 +45,12 @@ export async function GET(_request: NextRequest) {
         return NextResponse.redirect(connectUrl);
     } catch (error) {
         requestLogger.error({ error }, "Failed to initiate Stripe Connect");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "GET /api/stripe/connect",
+            },
+        });
         return NextResponse.json(
             { error: "Failed to initiate Stripe Connect" },
             { status: 500 }

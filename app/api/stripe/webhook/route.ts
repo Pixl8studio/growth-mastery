@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { stripe } from "@/lib/stripe/client";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
@@ -37,6 +38,12 @@ export async function POST(request: NextRequest) {
             );
         } catch (err) {
             requestLogger.error({ error: err }, "Invalid webhook signature");
+            Sentry.captureException(err, {
+                tags: {
+                    component: "api",
+                    endpoint: "POST /api/stripe/webhook",
+                },
+            });
             return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
         }
 
@@ -77,6 +84,12 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ received: true });
     } catch (error) {
         requestLogger.error({ error }, "Failed to process Stripe webhook");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/stripe/webhook",
+            },
+        });
         return NextResponse.json(
             { error: "Webhook processing failed" },
             { status: 500 }

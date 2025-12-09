@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { AuthenticationError, NotFoundError } from "@/lib/errors";
@@ -103,6 +104,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
         });
     } catch (error) {
         logger.error({ error }, "Error in POST /api/marketing/trends/[trendId]/brief");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/marketing/trends/[trendId]/brief",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });

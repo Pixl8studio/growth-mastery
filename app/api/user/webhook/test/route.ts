@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { sendWebhookDirect } from "@/lib/webhook-service";
@@ -85,6 +86,14 @@ export async function POST(request: NextRequest) {
         }
     } catch (error) {
         requestLogger.error({ error }, "Failed to send test webhook");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/user/webhook/test",
+            },
+        });
+
         return NextResponse.json(
             { error: "Failed to send test webhook" },
             { status: 500 }

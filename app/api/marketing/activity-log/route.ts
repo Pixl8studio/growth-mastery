@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 
@@ -81,6 +82,13 @@ export async function GET(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "Failed to retrieve activity log");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "GET /api/marketing/activity-log",
+            },
+        });
 
         return NextResponse.json(
             {

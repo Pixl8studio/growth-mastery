@@ -122,7 +122,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
             tags: {
                 component: "api",
                 action: "regenerate_message",
-                endpoint: "POST /api/followup/sequences/[sequenceId]/messages/[messageId]/regenerate",
+                endpoint:
+                    "POST /api/followup/sequences/[sequenceId]/messages/[messageId]/regenerate",
             },
         });
 

@@ -4,6 +4,7 @@
  * Supports both page-level and global webhook configuration
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { retry } from "@/lib/utils";
@@ -117,6 +118,19 @@ export async function getWebhookConfig(
         };
     } catch (error) {
         requestLogger.error({ error }, "Failed to get webhook config");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "webhooks",
+                operation: "get_webhook_config",
+            },
+            extra: {
+                userId,
+                pageId,
+                pageType,
+            },
+        });
+
         return {
             enabled: false,
             url: null,
@@ -239,6 +253,19 @@ export async function sendWebhookDirect(
 
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
+        Sentry.captureException(error, {
+            tags: {
+                service: "webhooks",
+                operation: "send_webhook_direct",
+            },
+            extra: {
+                userId,
+                event: payload.event,
+                webhookUrl: webhookUrl || "not_configured",
+                hasSecret: !!webhookSecret,
+            },
+        });
+
         // Log failed delivery
         await logWebhookDelivery({
             userId,
@@ -359,6 +386,19 @@ export async function sendWebhook(
 
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
 
+        Sentry.captureException(error, {
+            tags: {
+                service: "webhooks",
+                operation: "send_webhook",
+            },
+            extra: {
+                userId,
+                event: payload.event,
+                pageId: options?.pageId,
+                pageType: options?.pageType,
+            },
+        });
+
         // Log failed delivery
         await logWebhookDelivery({
             userId,
@@ -425,6 +465,19 @@ async function logWebhookDelivery(params: {
         });
     } catch (error) {
         logger.error({ error }, "Failed to log webhook delivery");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "webhooks",
+                operation: "log_webhook_delivery",
+            },
+            extra: {
+                userId: params.userId,
+                eventType: params.eventType,
+                success: params.success,
+            },
+        });
+
         // Don't throw - logging failure shouldn't break the webhook flow
     }
 }

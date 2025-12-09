@@ -26,6 +26,7 @@ import { UploadIntake } from "@/components/intake/upload-intake";
 import { ScrapeIntake } from "@/components/intake/scrape-intake";
 import { IntakeDataViewer } from "@/components/intake/intake-data-viewer";
 import { IntakeCompletionCard } from "@/components/intake/intake-completion-card";
+import { YourIntakeSessions } from "@/components/intake/your-intake-sessions";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
@@ -756,6 +757,15 @@ export default function Step1Page({
                         )}
                     </Card>
                 )}
+
+                {/* Your Intake Sessions - Summary Cards */}
+                <YourIntakeSessions
+                    sessions={intakeSessions}
+                    onSessionClick={(session) => {
+                        setSelectedSession(session as IntakeSession);
+                        setIsViewerOpen(true);
+                    }}
+                />
 
                 {/* What's Next */}
                 <Card className="border-border bg-muted/50 p-6">

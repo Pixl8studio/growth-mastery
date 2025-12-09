@@ -570,6 +570,15 @@ export default function Step1Page({
                         </Card>
                     )}
 
+                {/* Your Intake Sessions - Summary Cards (placed directly after Business Profile Progress) */}
+                <YourIntakeSessions
+                    sessions={intakeSessions}
+                    onSessionClick={(session) => {
+                        setSelectedSession(session as IntakeSession);
+                        setIsViewerOpen(true);
+                    }}
+                />
+
                 {/* Legacy Intake Sessions List */}
                 {intakeSessions.length > 0 && (
                     <Card className="p-6">
@@ -757,15 +766,6 @@ export default function Step1Page({
                         )}
                     </Card>
                 )}
-
-                {/* Your Intake Sessions - Summary Cards */}
-                <YourIntakeSessions
-                    sessions={intakeSessions}
-                    onSessionClick={(session) => {
-                        setSelectedSession(session as IntakeSession);
-                        setIsViewerOpen(true);
-                    }}
-                />
 
                 {/* What's Next */}
                 <Card className="border-border bg-muted/50 p-6">

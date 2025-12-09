@@ -3,6 +3,7 @@
  * Uses Enrollment Page Universal Framework (bottom-of-funnel focus)
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserWithProfile } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
@@ -199,6 +200,14 @@ export async function POST(
         });
     } catch (error) {
         requestLogger.error({ error }, "Error regenerating enrollment page");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/pages/enrollment/[pageId]/regenerate",
+            },
+        });
+
         return NextResponse.json(
             {
                 error:

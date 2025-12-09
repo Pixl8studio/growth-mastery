@@ -2,6 +2,7 @@
  * API route to toggle publish status for watch pages
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserWithProfileForAPI } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
@@ -52,6 +53,14 @@ export async function POST(
         }
 
         logger.error({ error }, "Error in watch page publish route");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/pages/watch/[pageId]/publish",
+            },
+        });
+
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

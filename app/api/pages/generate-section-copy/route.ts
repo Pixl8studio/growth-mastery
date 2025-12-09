@@ -3,6 +3,7 @@
  * Generate AI-powered copy for page sections based on intake data
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -120,6 +121,13 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         requestLogger.error({ error }, "Section copy generation failed");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/pages/generate-section-copy",
+            },
+        });
 
         return NextResponse.json(
             {

@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { createThread } from "@/lib/openai/assistants-client";
 import { logger } from "@/lib/logger";
@@ -42,6 +43,14 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ threadId });
     } catch (error) {
         requestLogger.error({ error }, "Failed to create chat thread");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/support/chat/thread",
+            },
+        });
+
         return NextResponse.json({ error: "Failed to create chat" }, { status: 500 });
     }
 }

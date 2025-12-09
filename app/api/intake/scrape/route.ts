@@ -3,6 +3,7 @@
  * Scrapes content from a provided URL (enrollment page, website, etc.)
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
@@ -309,6 +310,14 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "Error in scrape intake endpoint");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/intake/scrape",
+            },
+        });
+
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

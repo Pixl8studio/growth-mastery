@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import {
     sendMessage,
@@ -100,6 +101,14 @@ offer to help them fill it in by asking relevant questions about their business.
         throw new Error("Assistant response timeout");
     } catch (error) {
         requestLogger.error({ error }, "Failed to send message");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/support/chat/message",
+            },
+        });
+
         return NextResponse.json({ error: "Failed to get response" }, { status: 500 });
     }
 }

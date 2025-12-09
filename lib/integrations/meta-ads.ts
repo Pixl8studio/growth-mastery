@@ -6,6 +6,7 @@
  * Access tokens are NEVER passed in URL query parameters to prevent exposure in logs
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import type {
@@ -57,6 +58,13 @@ export async function getAdAccounts(
         return data.data || [];
     } catch (error) {
         logger.error({ error }, "Error fetching Meta ad accounts");
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "meta-ads",
+                operation: "get_ad_accounts",
+            },
+        });
         throw error;
     }
 }
@@ -86,6 +94,16 @@ export async function getAdAccount(
         return await response.json();
     } catch (error) {
         logger.error({ error, adAccountId }, "Error fetching ad account details");
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "meta-ads",
+                operation: "get_ad_account",
+            },
+            extra: {
+                adAccountId,
+            },
+        });
         throw error;
     }
 }
@@ -129,6 +147,19 @@ export async function createCampaign(
         return result;
     } catch (error) {
         logger.error({ error, adAccountId, name }, "Error creating campaign");
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "meta-ads",
+                operation: "create_campaign",
+            },
+            extra: {
+                adAccountId,
+                campaignName: name,
+                objective,
+                status,
+            },
+        });
         throw error;
     }
 }
@@ -167,6 +198,17 @@ export async function updateCampaignStatus(
         return result;
     } catch (error) {
         logger.error({ error, campaignId, status }, "Error updating campaign status");
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "meta-ads",
+                operation: "update_campaign_status",
+            },
+            extra: {
+                campaignId,
+                status,
+            },
+        });
         throw error;
     }
 }
@@ -218,6 +260,19 @@ export async function createAdSet(
         return result;
     } catch (error) {
         logger.error({ error, campaignId, name }, "Error creating ad set");
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "meta-ads",
+                operation: "create_ad_set",
+            },
+            extra: {
+                campaignId,
+                adSetName: name,
+                dailyBudget,
+                optimizationGoal,
+            },
+        });
         throw error;
     }
 }
@@ -281,6 +336,19 @@ export async function createLeadAdCreative(
         return result;
     } catch (error) {
         logger.error({ error, adAccountId, name }, "Error creating ad creative");
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "meta-ads",
+                operation: "create_lead_ad_creative",
+            },
+            extra: {
+                adAccountId,
+                creativeName: name,
+                pageId,
+                formId,
+            },
+        });
         throw error;
     }
 }
@@ -324,6 +392,18 @@ export async function createAd(
         return result;
     } catch (error) {
         logger.error({ error, adSetId, name }, "Error creating ad");
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "meta-ads",
+                operation: "create_ad",
+            },
+            extra: {
+                adSetId,
+                adName: name,
+                creativeId,
+            },
+        });
         throw error;
     }
 }
@@ -362,6 +442,17 @@ export async function updateAdStatus(
         return result;
     } catch (error) {
         logger.error({ error, adId, status }, "Error updating ad status");
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "meta-ads",
+                operation: "update_ad_status",
+            },
+            extra: {
+                adId,
+                status,
+            },
+        });
         throw error;
     }
 }
@@ -400,6 +491,18 @@ export async function getAdInsights(
         return await response.json();
     } catch (error) {
         logger.error({ error, adId, datePreset }, "Error fetching ad insights");
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "meta-ads",
+                operation: "get_ad_insights",
+            },
+            extra: {
+                adId,
+                datePreset,
+                fields,
+            },
+        });
         throw error;
     }
 }
@@ -467,6 +570,17 @@ export async function uploadAdImage(
         return { hash: result.images[imageKey].hash };
     } catch (error) {
         logger.error({ error, adAccountId }, "Error uploading ad image");
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "meta-ads",
+                operation: "upload_ad_image",
+            },
+            extra: {
+                adAccountId,
+                imageUrl,
+            },
+        });
         throw error;
     }
 }
@@ -512,6 +626,17 @@ export async function createCustomAudience(
         return result;
     } catch (error) {
         logger.error({ error, adAccountId, name }, "Error creating custom audience");
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "meta-ads",
+                operation: "create_custom_audience",
+            },
+            extra: {
+                adAccountId,
+                audienceName: name,
+            },
+        });
         throw error;
     }
 }
@@ -560,6 +685,20 @@ export async function createLookalikeAudience(
         return result;
     } catch (error) {
         logger.error({ error, adAccountId, name }, "Error creating lookalike audience");
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "meta-ads",
+                operation: "create_lookalike_audience",
+            },
+            extra: {
+                adAccountId,
+                audienceName: name,
+                sourceAudienceId: spec.source_audience_id,
+                ratio: spec.ratio,
+                country: spec.country,
+            },
+        });
         throw error;
     }
 }
@@ -592,6 +731,16 @@ export async function searchInterests(
         return result.data || [];
     } catch (error) {
         logger.error({ error, query }, "Error searching interests");
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "meta-ads",
+                operation: "search_interests",
+            },
+            extra: {
+                query,
+            },
+        });
         throw error;
     }
 }
@@ -639,6 +788,17 @@ export async function getDeliveryEstimate(
         );
     } catch (error) {
         logger.error({ error, adAccountId }, "Error getting delivery estimate");
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "meta-ads",
+                operation: "get_delivery_estimate",
+            },
+            extra: {
+                adAccountId,
+                optimizationGoal,
+            },
+        });
         throw error;
     }
 }
@@ -693,6 +853,18 @@ export async function sendConversionEvent(
         return { success: true };
     } catch (error) {
         logger.error({ error, pixelId }, "Error sending conversion event");
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "meta-ads",
+                operation: "send_conversion_event",
+            },
+            extra: {
+                pixelId,
+                eventName: eventData.event_name,
+                actionSource: eventData.action_source,
+            },
+        });
         throw error;
     }
 }

@@ -1,7 +1,10 @@
 /**
  * Client-Side Logger
  * Browser-compatible logging for client components
+ * Integrates with Sentry for error monitoring
  */
+
+import * as Sentry from "@sentry/nextjs";
 
 type LogLevel = "debug" | "info" | "warn" | "error";
 
@@ -62,6 +65,29 @@ class ClientLogger {
 
     error(context: LogContext, message?: string) {
         this.log("error", context, message);
+
+        // Automatically capture errors to Sentry
+        const error = context.error;
+        if (error instanceof Error) {
+            Sentry.captureException(error, {
+                tags: { source: "client_logger" },
+                extra: { ...context, message },
+            });
+        } else if (error) {
+            // If error is not an Error object, capture it as a message
+            Sentry.captureMessage(message || "Client error", {
+                level: "error",
+                tags: { source: "client_logger" },
+                extra: context,
+            });
+        } else {
+            // No error object provided, just capture the message
+            Sentry.captureMessage(message || "Client error logged", {
+                level: "error",
+                tags: { source: "client_logger" },
+                extra: context,
+            });
+        }
     }
 }
 

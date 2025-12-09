@@ -4,6 +4,7 @@
  * Manages scheduling, retries, and platform-specific posting logic
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { decryptToken } from "@/lib/integrations/crypto";
@@ -125,6 +126,19 @@ export async function publishNow(
         return result;
     } catch (error) {
         logger.error({ error, variantId, platform }, "Error publishing content");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "marketing",
+                operation: "publish_now",
+            },
+            extra: {
+                variantId,
+                platform,
+                userId,
+            },
+        });
+
         return {
             success: false,
             error: error instanceof Error ? error.message : "Unknown error",
@@ -169,6 +183,20 @@ export async function schedulePost(
         return { success: true, calendarId: data.id };
     } catch (error) {
         logger.error({ error, variantId }, "Error scheduling post");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "marketing",
+                operation: "schedule_post",
+            },
+            extra: {
+                variantId,
+                userId,
+                scheduledAt: scheduledAt.toISOString(),
+                space,
+            },
+        });
+
         return {
             success: false,
             error: error instanceof Error ? error.message : "Unknown error",
@@ -206,6 +234,18 @@ async function publishToInstagram(
         };
     } catch (error) {
         logger.error({ error }, "Instagram publishing error");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "marketing",
+                operation: "publish_to_instagram",
+            },
+            extra: {
+                variantId: variant.id,
+                accountId: connection.account_id,
+            },
+        });
+
         return {
             success: false,
             error: error instanceof Error ? error.message : "Instagram publish failed",
@@ -240,6 +280,18 @@ async function publishToFacebook(
         };
     } catch (error) {
         logger.error({ error }, "Facebook publishing error");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "marketing",
+                operation: "publish_to_facebook",
+            },
+            extra: {
+                variantId: variant.id,
+                pageId: connection.account_id,
+            },
+        });
+
         return {
             success: false,
             error: error instanceof Error ? error.message : "Facebook publish failed",
@@ -274,6 +326,18 @@ async function publishToLinkedIn(
         };
     } catch (error) {
         logger.error({ error }, "LinkedIn publishing error");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "marketing",
+                operation: "publish_to_linkedin",
+            },
+            extra: {
+                variantId: variant.id,
+                personUrn: connection.account_id,
+            },
+        });
+
         return {
             success: false,
             error: error instanceof Error ? error.message : "LinkedIn publish failed",
@@ -307,6 +371,17 @@ async function publishToTwitter(
         };
     } catch (error) {
         logger.error({ error }, "Twitter publishing error");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "marketing",
+                operation: "publish_to_twitter",
+            },
+            extra: {
+                variantId: variant.id,
+            },
+        });
+
         return {
             success: false,
             error: error instanceof Error ? error.message : "Twitter publish failed",
@@ -384,6 +459,17 @@ export async function retryFailedPost(
         return { success: result.success, error: result.error };
     } catch (error) {
         logger.error({ error, calendarId }, "Error retrying failed post");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "marketing",
+                operation: "retry_failed_post",
+            },
+            extra: {
+                calendarId,
+            },
+        });
+
         return {
             success: false,
             error: error instanceof Error ? error.message : "Unknown error",
@@ -418,6 +504,18 @@ export async function cancelScheduledPost(
         return { success: true };
     } catch (error) {
         logger.error({ error, calendarId }, "Error cancelling post");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "marketing",
+                operation: "cancel_scheduled_post",
+            },
+            extra: {
+                calendarId,
+                userId,
+            },
+        });
+
         return {
             success: false,
             error: error instanceof Error ? error.message : "Unknown error",
@@ -452,6 +550,18 @@ export async function promoteToProduction(
         return { success: true };
     } catch (error) {
         logger.error({ error, calendarId }, "Error promoting to production");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "marketing",
+                operation: "promote_to_production",
+            },
+            extra: {
+                calendarId,
+                userId,
+            },
+        });
+
         return {
             success: false,
             error: error instanceof Error ? error.message : "Unknown error",
@@ -490,6 +600,14 @@ export async function getPublishingQueue(): Promise<{
         return { success: true, entries: (entries as ContentCalendar[]) || [] };
     } catch (error) {
         logger.error({ error }, "Error getting publishing queue");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "marketing",
+                operation: "get_publishing_queue",
+            },
+        });
+
         return {
             success: false,
             error: error instanceof Error ? error.message : "Unknown error",

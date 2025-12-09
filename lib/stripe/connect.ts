@@ -3,6 +3,7 @@
  * Handle Stripe Connect OAuth and account management
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { stripe } from "./client";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -56,6 +57,16 @@ export async function generateConnectUrl(
         return connectUrl;
     } catch (error) {
         requestLogger.error({ error }, "Failed to generate Stripe Connect URL");
+        Sentry.captureException(error, {
+            tags: {
+                service: "stripe",
+                operation: "generate_connect_url",
+            },
+            extra: {
+                userId,
+                email,
+            },
+        });
         throw new Error(
             `Failed to generate connect URL: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -133,6 +144,16 @@ export async function completeConnect(
         return { accountId };
     } catch (error) {
         requestLogger.error({ error }, "Failed to complete Stripe Connect");
+        Sentry.captureException(error, {
+            tags: {
+                service: "stripe",
+                operation: "complete_connect",
+            },
+            extra: {
+                userId,
+                code: code.substring(0, 10) + "...", // Partial code for security
+            },
+        });
         throw new Error(
             `Failed to connect Stripe: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -196,6 +217,16 @@ export async function disconnectStripe(
         requestLogger.info("Stripe account disconnected");
     } catch (error) {
         requestLogger.error({ error }, "Failed to disconnect Stripe");
+        Sentry.captureException(error, {
+            tags: {
+                service: "stripe",
+                operation: "disconnect_stripe",
+            },
+            extra: {
+                userId,
+                accountId,
+            },
+        });
         throw new Error(
             `Failed to disconnect Stripe: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -226,6 +257,15 @@ export async function getAccountStatus(accountId: string): Promise<{
         };
     } catch (error) {
         requestLogger.error({ error }, "Failed to fetch account status");
+        Sentry.captureException(error, {
+            tags: {
+                service: "stripe",
+                operation: "get_account_status",
+            },
+            extra: {
+                accountId,
+            },
+        });
         throw new Error(
             `Failed to fetch account status: ${error instanceof Error ? error.message : "Unknown error"}`
         );

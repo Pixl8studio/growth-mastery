@@ -3,6 +3,7 @@
  * Handle payment processing with platform fees
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { stripe } from "./client";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -99,6 +100,20 @@ export async function createPaymentIntent(params: {
         };
     } catch (error) {
         requestLogger.error({ error }, "Failed to create payment intent");
+        Sentry.captureException(error, {
+            tags: {
+                service: "stripe",
+                operation: "create_payment_intent",
+            },
+            extra: {
+                userId: params.userId,
+                funnelProjectId: params.funnelProjectId,
+                offerId: params.offerId,
+                amount: params.amount,
+                sellerAccountId: params.sellerAccountId,
+                customerEmail: params.customerEmail,
+            },
+        });
         throw new Error(
             `Failed to create payment: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -170,6 +185,15 @@ export async function handlePaymentSuccess(paymentIntentId: string): Promise<voi
         requestLogger.info("Payment success processed");
     } catch (error) {
         requestLogger.error({ error }, "Failed to process payment success");
+        Sentry.captureException(error, {
+            tags: {
+                service: "stripe",
+                operation: "handle_payment_success",
+            },
+            extra: {
+                paymentIntentId,
+            },
+        });
         throw error;
     }
 }
@@ -203,6 +227,15 @@ export async function handlePaymentFailed(paymentIntentId: string): Promise<void
         requestLogger.info("Payment failure processed");
     } catch (error) {
         requestLogger.error({ error }, "Failed to process payment failure");
+        Sentry.captureException(error, {
+            tags: {
+                service: "stripe",
+                operation: "handle_payment_failed",
+            },
+            extra: {
+                paymentIntentId,
+            },
+        });
         throw error;
     }
 }
@@ -236,6 +269,15 @@ export async function handleRefund(chargeId: string): Promise<void> {
         requestLogger.info("Refund processed");
     } catch (error) {
         requestLogger.error({ error }, "Failed to process refund");
+        Sentry.captureException(error, {
+            tags: {
+                service: "stripe",
+                operation: "handle_refund",
+            },
+            extra: {
+                chargeId,
+            },
+        });
         throw error;
     }
 }

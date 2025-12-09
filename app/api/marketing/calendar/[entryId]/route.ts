@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { AuthenticationError, NotFoundError } from "@/lib/errors";
@@ -85,6 +86,13 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     } catch (error) {
         logger.error({ error }, "Error in PUT /api/marketing/calendar/[entryId]");
 
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "PUT /api/marketing/calendar/[entryId]",
+            },
+        });
+
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });
         }
@@ -129,6 +137,13 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
         });
     } catch (error) {
         logger.error({ error }, "Error in DELETE /api/marketing/calendar/[entryId]");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "DELETE /api/marketing/calendar/[entryId]",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });

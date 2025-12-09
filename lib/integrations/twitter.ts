@@ -5,6 +5,7 @@
  */
 
 import crypto from "crypto";
+import * as Sentry from "@sentry/nextjs";
 import { env } from "@/lib/env";
 import type { OAuthTokenResponse, TwitterUserInfo } from "@/types/integrations";
 
@@ -121,7 +122,14 @@ export async function verifyToken(accessToken: string): Promise<boolean> {
             },
         });
         return response.ok;
-    } catch {
+    } catch (error) {
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "twitter",
+                operation: "verify_token",
+            },
+        });
         return false;
     }
 }

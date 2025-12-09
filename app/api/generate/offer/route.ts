@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { generateWithAI } from "@/lib/ai/client";
@@ -123,6 +124,18 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         requestLogger.error({ error }, "Failed to generate offer");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "generate-offer",
+                endpoint: "POST /api/generate/offer",
+            },
+            extra: {
+                transcriptId: (error as any).transcriptId,
+                projectId: (error as any).projectId,
+            },
+        });
 
         if (error instanceof ValidationError) {
             return NextResponse.json(

@@ -3,18 +3,32 @@
  * Generates beautiful presentations using Gamma AI
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { ValidationError, AuthenticationError } from "@/lib/errors";
+import { logger as pinoLogger } from "@/lib/logger";
 import { z } from "zod";
 
-// Use console logging to avoid Pino worker thread issues in API routes
-const log = {
-    info: (message: string, data?: any) =>
-        console.log(`[INFO] ${message}`, data ? JSON.stringify(data, null, 2) : ""),
-    error: (message: string, data?: any) =>
-        console.error(`[ERROR] ${message}`, data ? JSON.stringify(data, null, 2) : ""),
-};
+// Environment-aware logging: console in dev, Pino in production
+const isDev = process.env.NODE_ENV === "development";
+const log = isDev
+    ? {
+          info: (message: string, data?: any) =>
+              console.log(
+                  `[INFO] ${message}`,
+                  data ? JSON.stringify(data, null, 2) : ""
+              ),
+          error: (message: string, data?: any) =>
+              console.error(
+                  `[ERROR] ${message}`,
+                  data ? JSON.stringify(data, null, 2) : ""
+              ),
+      }
+    : {
+          info: (message: string, data?: any) => pinoLogger.info(data || {}, message),
+          error: (message: string, data?: any) => pinoLogger.error(data || {}, message),
+      };
 
 // Gamma API configuration
 const GAMMA_API_URL = "https://public-api.gamma.app/v0.2/generations";
@@ -260,7 +274,10 @@ export async function POST(request: NextRequest) {
             throw pollError;
         }
     } catch (error) {
-        log.error("❌ Failed to generate Gamma deck", { error });
+        log.error("Failed to generate Gamma deck", { error });
+        Sentry.captureException(error, {
+            tags: { component: "api", action: "generate_gamma_deck" },
+        });
 
         if (error instanceof ValidationError || error instanceof AuthenticationError) {
             return NextResponse.json(

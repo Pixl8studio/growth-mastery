@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 
@@ -42,6 +43,13 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "Validation failed");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/marketing/validate",
+            },
+        });
 
         return NextResponse.json(
             {

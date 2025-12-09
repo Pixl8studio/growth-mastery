@@ -4,6 +4,7 @@
  * Handles Gmail OAuth and email sending via Google APIs.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { env } from "@/lib/env";
 import type { OAuthTokenResponse, GmailUserInfo } from "@/types/integrations";
 
@@ -105,7 +106,14 @@ export async function verifyToken(accessToken: string): Promise<boolean> {
             },
         });
         return response.ok;
-    } catch {
+    } catch (error) {
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "gmail",
+                operation: "verify_token",
+            },
+        });
         return false;
     }
 }

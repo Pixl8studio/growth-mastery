@@ -4,6 +4,7 @@
  * Handles Instagram account connections via Facebook.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import type { InstagramAccountInfo } from "@/types/integrations";
 
 const FACEBOOK_GRAPH_API = "https://graph.facebook.com/v18.0";
@@ -61,7 +62,17 @@ export async function verifyInstagramAccess(
             `${FACEBOOK_GRAPH_API}/${accountId}?fields=id&access_token=${accessToken}`
         );
         return response.ok;
-    } catch {
+    } catch (error) {
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "instagram",
+                operation: "verify_access",
+            },
+            extra: {
+                accountId,
+            },
+        });
         return false;
     }
 }

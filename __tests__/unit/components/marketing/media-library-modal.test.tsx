@@ -22,7 +22,6 @@ vi.mock("@/lib/client-logger", () => ({
 }));
 
 // Import mocked modules
-import { useToast } from "@/components/ui/use-toast";
 import { logger } from "@/lib/client-logger";
 
 describe("MediaLibraryModal", () => {
@@ -257,11 +256,11 @@ describe("MediaLibraryModal", () => {
         render(<MediaLibraryModal {...defaultProps} />);
 
         // Wait for images to load
-        let firstImage: HTMLElement;
+        let _firstImage: HTMLElement;
         await waitFor(() => {
             const images = screen.queryAllByRole("img");
             expect(images.length).toBeGreaterThan(0);
-            firstImage = images[0];
+            _firstImage = images[0];
         });
 
         // Find all trash icons in the document

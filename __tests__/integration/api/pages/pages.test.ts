@@ -58,7 +58,7 @@ vi.mock("@/lib/supabase/server", () => ({
 
             return {
                 select: vi.fn(() => ({
-                    eq: vi.fn((field, value) => ({
+                    eq: vi.fn((_field, _value) => ({
                         data: mockPages[table as keyof typeof mockPages] || [],
                         error: null,
                     })),

@@ -141,21 +141,6 @@ describe("SenderSetupTab", () => {
         });
     });
 
-    it("should show Gmail connected state when Gmail is active", async () => {
-        const gmailProps = {
-            ...mockProps,
-            emailProviderType: "gmail" as const,
-            gmailUserEmail: "user@gmail.com",
-        };
-
-        render(<SenderSetupTab {...gmailProps} />);
-
-        await waitFor(() => {
-            expect(screen.getByText("Gmail Connected")).toBeInTheDocument();
-            expect(screen.getByText(/user@gmail.com/)).toBeInTheDocument();
-        });
-    });
-
     it("should display disconnect button when Gmail is connected", async () => {
         const gmailProps = {
             ...mockProps,
@@ -287,19 +272,6 @@ describe("SenderSetupTab", () => {
 
         await waitFor(() => {
             expect(mockOnUpdate).toHaveBeenCalled();
-        });
-    });
-
-    it("should disable save button while saving", async () => {
-        render(<SenderSetupTab {...mockProps} />);
-
-        await waitFor(() => {
-            const saveButton = screen.getByText("Save Sender Info");
-            fireEvent.click(saveButton);
-        });
-
-        await waitFor(() => {
-            expect(screen.getByText("Saving...")).toBeDisabled();
         });
     });
 

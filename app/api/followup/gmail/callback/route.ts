@@ -5,6 +5,7 @@
  * Handles the OAuth callback from Google after user authorizes.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -99,6 +100,14 @@ export async function GET(request: NextRequest) {
         );
     } catch (error) {
         logger.error({ error }, "❌ Gmail callback error");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "gmail_callback",
+                endpoint: "GET /api/followup/gmail/callback",
+            },
+        });
 
         return NextResponse.redirect(
             `${process.env.NEXT_PUBLIC_APP_URL}/funnel-builder?error=gmail_connection_failed`

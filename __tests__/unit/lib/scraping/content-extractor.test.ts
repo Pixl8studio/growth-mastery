@@ -9,6 +9,8 @@ vi.mock("@/lib/logger", () => ({
     logger: {
         info: vi.fn(),
         error: vi.fn(),
+        warn: vi.fn(),
+        debug: vi.fn(),
     },
 }));
 
@@ -16,7 +18,7 @@ vi.mock("@/lib/logger", () => ({
 const mockFetchWithRetry = vi.fn();
 const mockValidateUrl = vi.fn();
 
-vi.mock("./fetch-utils", () => ({
+vi.mock("@/lib/scraping/fetch-utils", () => ({
     fetchWithRetry: mockFetchWithRetry,
     validateUrl: mockValidateUrl,
 }));
@@ -288,10 +290,12 @@ describe("Content Extractor Service", () => {
             expect(result.metadata.author).toBeUndefined();
         });
 
-        it("throws error on invalid HTML", async () => {
-            await expect(async () => {
-                await extractContent("", "https://example.com");
-            }).rejects.toThrow();
+        it("handles empty HTML gracefully", async () => {
+            const result = await extractContent("", "https://example.com");
+
+            expect(result.title).toBe("");
+            expect(result.mainContent).toBe("");
+            expect(result.headings).toEqual([]);
         });
     });
 

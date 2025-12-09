@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { generateTextWithAI } from "@/lib/ai/client";
@@ -147,6 +148,18 @@ CRITICAL:
         });
     } catch (error) {
         requestLogger.error({ error }, "Failed to generate alternative offers");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "generate-offer-alternatives",
+                endpoint: "POST /api/generate/offer-alternatives",
+            },
+            extra: {
+                baseOfferId: (error as any).baseOfferId,
+                projectId: (error as any).projectId,
+            },
+        });
 
         if (error instanceof ValidationError) {
             return NextResponse.json(

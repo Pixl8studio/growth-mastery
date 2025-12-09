@@ -38,7 +38,6 @@ const {
     triggerSequence,
     getDeliveriesReadyToSend,
     markDeliverySent,
-    markDeliveryFailed,
     cancelPendingDeliveries,
     updateNextScheduledTouch,
 } = await import("@/lib/followup/scheduler-service");

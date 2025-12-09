@@ -69,10 +69,10 @@ describe("Delivery Service", () => {
                 if (table === "followup_deliveries") {
                     // First call: fetch pending deliveries
                     const selectMock = vi.fn();
-                    let callCount = 0;
+                    let _callCount = 0;
 
                     selectMock.mockImplementation((cols: string) => {
-                        callCount++;
+                        _callCount++;
                         if (cols === "*") {
                             // Initial query to fetch pending deliveries
                             return {
@@ -308,23 +308,23 @@ describe("Delivery Service", () => {
 
     describe("isWithinQuietHours", () => {
         it("returns true for time within quiet hours", () => {
-            // 11 PM - should be quiet hours
-            const scheduledTime = new Date("2024-01-01T23:00:00");
+            // 23:00 EST = 04:00 UTC (next day) - quiet hours in America/New_York
+            const scheduledTime = new Date("2024-01-02T04:00:00Z");
             const result = isWithinQuietHours(scheduledTime, "America/New_York");
 
             expect(result).toBe(true);
         });
 
         it("returns false for time outside quiet hours", () => {
-            // 10 AM - should not be quiet hours
-            const scheduledTime = new Date("2024-01-01T10:00:00");
+            // 10:00 EST = 15:00 UTC - outside quiet hours in America/New_York
+            const scheduledTime = new Date("2024-01-01T15:00:00Z");
             const result = isWithinQuietHours(scheduledTime, "America/New_York");
 
             expect(result).toBe(false);
         });
 
         it("handles invalid timezone gracefully", () => {
-            const scheduledTime = new Date("2024-01-01T10:00:00");
+            const scheduledTime = new Date("2024-01-01T15:00:00Z");
             const result = isWithinQuietHours(scheduledTime, "Invalid/Timezone");
 
             // Should default to safe (quiet hours) on error

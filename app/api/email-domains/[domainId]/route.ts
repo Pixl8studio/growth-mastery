@@ -6,6 +6,8 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
+
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { getMailgunProvider } from "@/lib/followup/providers/mailgun-provider";
@@ -58,6 +60,14 @@ export async function GET(
         });
     } catch (error) {
         logger.error({ error }, "❌ Failed to get email domain");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "get_email_domain",
+                endpoint: "GET /api/email-domains/[domainId]",
+            },
+            extra: {},
+        });
 
         return NextResponse.json(
             { success: false, error: "Failed to get email domain" },
@@ -130,6 +140,14 @@ export async function DELETE(
         });
     } catch (error) {
         logger.error({ error }, "❌ Failed to delete email domain");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "delete_email_domain",
+                endpoint: "DELETE /api/email-domains/[domainId]",
+            },
+            extra: {},
+        });
 
         return NextResponse.json(
             { success: false, error: "Failed to delete email domain" },

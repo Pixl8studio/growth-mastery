@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { ValidationError, AuthenticationError } from "@/lib/errors";
@@ -85,6 +86,17 @@ export async function GET(request: NextRequest) {
         return NextResponse.json(response);
     } catch (error) {
         requestLogger.error({ error }, "Failed to get generation status");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "get-generation-status",
+                endpoint: "GET /api/generate/generation-status",
+            },
+            extra: {
+                projectId: (error as any).projectId,
+            },
+        });
 
         if (error instanceof ValidationError || error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 400 });

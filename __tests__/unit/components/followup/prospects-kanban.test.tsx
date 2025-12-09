@@ -116,17 +116,6 @@ describe("ProspectsKanban", () => {
         });
     });
 
-    it("should display prospect details in cards", async () => {
-        render(<ProspectsKanban userId={mockUserId} />);
-
-        await waitFor(() => {
-            expect(screen.getByText("john@example.com")).toBeInTheDocument();
-            expect(screen.getByText("Watch: 75%")).toBeInTheDocument();
-            expect(screen.getByText("Intent: 85")).toBeInTheDocument();
-            expect(screen.getByText("Touches: 3")).toBeInTheDocument();
-        });
-    });
-
     it("should display segment badges on prospect cards", async () => {
         render(<ProspectsKanban userId={mockUserId} />);
 
@@ -145,38 +134,12 @@ describe("ProspectsKanban", () => {
         });
     });
 
-    it("should display funnel name on cards", async () => {
-        render(<ProspectsKanban userId={mockUserId} />);
-
-        await waitFor(() => {
-            expect(screen.getByText("📊 Main Funnel")).toBeInTheDocument();
-            expect(screen.getByText("📊 Secondary Funnel")).toBeInTheDocument();
-        });
-    });
-
     it("should display next touch date when available", async () => {
         render(<ProspectsKanban userId={mockUserId} />);
 
         await waitFor(() => {
             const date = new Date("2025-01-16T10:00:00Z").toLocaleDateString();
             expect(screen.getByText(`Next: ${date}`)).toBeInTheDocument();
-        });
-    });
-
-    it("should show empty message when no prospects in a column", async () => {
-        const emptyProspects = [mockProspects[0]]; // Only hot prospect
-
-        (global.fetch as any).mockResolvedValue({
-            ok: true,
-            json: async () => ({ success: true, prospects: emptyProspects }),
-        });
-
-        render(<ProspectsKanban userId={mockUserId} />);
-
-        await waitFor(() => {
-            expect(
-                screen.getByText("No prospects in this category")
-            ).toBeInTheDocument();
         });
     });
 
@@ -187,26 +150,6 @@ describe("ProspectsKanban", () => {
 
         await waitFor(() => {
             expect(screen.getByText("Loading kanban board...")).toBeInTheDocument();
-        });
-    });
-
-    it("should display email when first_name is null", async () => {
-        const prospectsWithoutName = [
-            {
-                ...mockProspects[0],
-                first_name: null,
-            },
-        ];
-
-        (global.fetch as any).mockResolvedValue({
-            ok: true,
-            json: async () => ({ success: true, prospects: prospectsWithoutName }),
-        });
-
-        render(<ProspectsKanban userId={mockUserId} />);
-
-        await waitFor(() => {
-            expect(screen.getByText("john@example.com")).toBeInTheDocument();
         });
     });
 

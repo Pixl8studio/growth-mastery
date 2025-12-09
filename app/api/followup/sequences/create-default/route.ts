@@ -5,6 +5,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { AuthenticationError, ValidationError } from "@/lib/errors";
@@ -143,6 +144,14 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "❌ Error creating default sequence");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "create_default_sequence",
+                endpoint: "POST /api/followup/sequences/create-default",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });

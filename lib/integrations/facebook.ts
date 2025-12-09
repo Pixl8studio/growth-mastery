@@ -4,6 +4,7 @@
  * Handles Facebook OAuth and Graph API interactions.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { env } from "@/lib/env";
 import type { OAuthTokenResponse, FacebookPageInfo } from "@/types/integrations";
 
@@ -91,7 +92,14 @@ export async function verifyToken(accessToken: string): Promise<boolean> {
             `${FACEBOOK_GRAPH_API}/me?access_token=${accessToken}`
         );
         return response.ok;
-    } catch {
+    } catch (error) {
+        Sentry.captureException(error, {
+            tags: {
+                service: "integrations",
+                provider: "facebook",
+                operation: "verify_token",
+            },
+        });
         return false;
     }
 }

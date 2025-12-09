@@ -4,6 +4,8 @@
  */
 
 import { NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
+
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/auth";
 import { logger } from "@/lib/logger";
@@ -94,6 +96,16 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: error.message }, { status: 400 });
         }
         logger.error({ error }, "Failed to add domain");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "add_domain",
+                endpoint: "POST /api/domains",
+            },
+            extra: {
+                // Domain info not included to avoid logging sensitive data
+            },
+        });
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
@@ -123,6 +135,14 @@ export async function GET() {
         return NextResponse.json({ domains: data });
     } catch (error) {
         logger.error({ error }, "Failed to fetch domains");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "fetch_domains",
+                endpoint: "GET /api/domains",
+            },
+            extra: {},
+        });
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

@@ -44,16 +44,20 @@ describe("HorizontalMasterSteps", () => {
     };
 
     it("should render horizontal master steps", () => {
-        render(<HorizontalMasterSteps {...defaultProps} />);
+        const { container } = render(<HorizontalMasterSteps {...defaultProps} />);
 
-        const card = document.querySelector(".space-y-4");
-        expect(card).toBeInTheDocument();
+        // Verify the component renders the root div
+        const rootDiv = container.querySelector(".space-y-4");
+        expect(rootDiv).toBeInTheDocument();
     });
 
     it("should render with empty completions", () => {
-        render(<HorizontalMasterSteps {...defaultProps} masterStepCompletions={[]} />);
+        const { container } = render(
+            <HorizontalMasterSteps {...defaultProps} masterStepCompletions={[]} />
+        );
 
-        const card = document.querySelector(".space-y-4");
-        expect(card).toBeInTheDocument();
+        // Verify the component renders even with empty completions
+        const rootDiv = container.querySelector(".space-y-4");
+        expect(rootDiv).toBeInTheDocument();
     });
 });

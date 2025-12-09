@@ -11,6 +11,7 @@ import { generateTextWithAI } from "@/lib/ai/client";
 import { createFullPageRegenerationPrompt } from "@/lib/generators/registration-framework-prompts";
 import { generateRegistrationHTML } from "@/lib/generators/registration-page-generator";
 import type { Slide } from "@/lib/ai/types";
+import * as Sentry from "@sentry/nextjs";
 
 export async function POST(
     request: NextRequest,
@@ -208,6 +209,16 @@ export async function POST(
         });
     } catch (error) {
         requestLogger.error({ error }, "Error regenerating registration page");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "regenerate_registration_page",
+                endpoint: "POST /api/pages/registration/[pageId]/regenerate",
+            },
+            extra: {
+                errorMessage: error instanceof Error ? error.message : "Unknown error",
+            },
+        });
         return NextResponse.json(
             {
                 error:

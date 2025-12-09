@@ -3,8 +3,10 @@
  * Polls status of background talk track generation job
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { logger } from "@/lib/logger";
 
 export async function GET(
     request: NextRequest,
@@ -39,7 +41,13 @@ export async function GET(
 
         return NextResponse.json({ job });
     } catch (error) {
-        console.error("Failed to fetch job status:", error);
+        logger.error(
+            { error, action: "fetch_job_status" },
+            "Failed to fetch job status"
+        );
+        Sentry.captureException(error, {
+            tags: { component: "api", action: "fetch_job_status" },
+        });
         return NextResponse.json(
             { error: "Failed to fetch job status" },
             { status: 500 }

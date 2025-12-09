@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { logger } from "@/lib/logger";
 import { completeConnect } from "@/lib/stripe/connect";
 
@@ -50,6 +51,12 @@ export async function GET(request: NextRequest) {
         );
     } catch (error) {
         requestLogger.error({ error }, "Failed to process Stripe callback");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "GET /api/stripe/callback",
+            },
+        });
         return NextResponse.redirect(
             `${process.env.NEXT_PUBLIC_APP_URL}/settings/payments?error=connection_failed`
         );

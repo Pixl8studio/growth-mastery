@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "@/app/api/intake/upload/route";
-import {
-    createMockRequest,
-    parseJsonResponse,
-} from "@/__tests__/helpers/api-test-helpers";
+import { parseJsonResponse } from "@/__tests__/helpers/api-test-helpers";
 
 vi.mock("@/lib/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/lib/logger", () => ({ logger: { info: vi.fn(), error: vi.fn() } }));

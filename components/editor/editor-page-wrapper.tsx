@@ -201,7 +201,7 @@ export function EditorPageWrapper({
             );
 
             // Flash success - we need to modify DOM element style
-            // eslint-disable-next-line react-hooks/immutability
+
             element.style.background = "#dcfce7";
             setTimeout(() => {
                 element.style.background = "";

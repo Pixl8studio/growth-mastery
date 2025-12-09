@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { AuthenticationError, NotFoundError } from "@/lib/errors";
@@ -72,6 +73,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
         });
     } catch (error) {
         logger.error({ error }, "❌ Error in GET message");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "get_message",
+                endpoint:
+                    "GET /api/followup/sequences/[sequenceId]/messages/[messageId]",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });
@@ -216,6 +226,15 @@ export async function PUT(request: NextRequest, context: RouteContext) {
     } catch (error) {
         logger.error({ error }, "❌ Error in PUT message");
 
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "update_message",
+                endpoint:
+                    "PUT /api/followup/sequences/[sequenceId]/messages/[messageId]",
+            },
+        });
+
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });
         }
@@ -302,6 +321,15 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
         });
     } catch (error) {
         logger.error({ error }, "❌ Error in DELETE message");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "delete_message",
+                endpoint:
+                    "DELETE /api/followup/sequences/[sequenceId]/messages/[messageId]",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });

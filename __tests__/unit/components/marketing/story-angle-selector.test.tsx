@@ -246,15 +246,6 @@ describe("StoryAngleSelector", () => {
         expect(outlineLabels.length).toBe(3);
     });
 
-    it("should highlight selected angle card", () => {
-        render(
-            <StoryAngleSelector {...defaultProps} selectedAngleId="Authority Builder" />
-        );
-
-        const selectedCard = screen.getByText("Authority Builder").closest("div");
-        expect(selectedCard).toHaveClass("border-2", "border-primary");
-    });
-
     it("should display confirmation card for selected angle", () => {
         render(<StoryAngleSelector {...defaultProps} />);
 

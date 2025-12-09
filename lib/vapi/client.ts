@@ -3,6 +3,7 @@
  * Wrapper around VAPI API for AI-powered intake calls
  */
 
+import * as Sentry from "@sentry/nextjs";
 import type { VapiCallConfig, CallSummary, ExtractedCallData } from "./types";
 import { createHmac, timingSafeEqual } from "crypto";
 
@@ -32,6 +33,18 @@ export async function createCall(config: VapiCallConfig): Promise<{ callId: stri
         return { callId };
     } catch (error) {
         console.error("❌ Failed to create VAPI call:", error);
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "vapi",
+                operation: "create_call",
+            },
+            extra: {
+                assistantId: config.assistantId,
+                phoneNumberId: config.phoneNumberId,
+            },
+        });
+
         throw new Error(
             `Failed to initiate call: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -75,6 +88,17 @@ export async function getCall(callId: string) {
         return call;
     } catch (error) {
         console.error("❌ Failed to fetch VAPI call:", callId, error);
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "vapi",
+                operation: "get_call",
+            },
+            extra: {
+                callId,
+            },
+        });
+
         throw new Error(
             `Failed to fetch call: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -98,6 +122,17 @@ export async function listCalls(assistantId?: string) {
         return [];
     } catch (error) {
         console.error("❌ Failed to list VAPI calls:", error);
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "vapi",
+                operation: "list_calls",
+            },
+            extra: {
+                assistantId,
+            },
+        });
+
         throw new Error(
             `Failed to list calls: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -127,6 +162,14 @@ export async function extractDataFromTranscript(
         return extracted;
     } catch (error) {
         console.error("❌ Failed to extract data from transcript:", error);
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "vapi",
+                operation: "extract_transcript_data",
+            },
+        });
+
         throw new Error(
             `Failed to extract data: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -196,6 +239,17 @@ export async function processCompletedCall(callId: string): Promise<CallSummary>
         return summary;
     } catch (error) {
         console.error("❌ Failed to process VAPI call:", callId, error);
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "vapi",
+                operation: "process_completed_call",
+            },
+            extra: {
+                callId,
+            },
+        });
+
         throw new Error(
             `Failed to process call: ${error instanceof Error ? error.message : "Unknown error"}`
         );

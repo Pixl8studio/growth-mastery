@@ -5,6 +5,7 @@
  * through users' Gmail accounts via OAuth.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
@@ -99,7 +100,20 @@ export async function exchangeCodeForTokens(code: string): Promise<GmailOAuthTok
     if (!response.ok) {
         const error = await response.text();
         logger.error({ error, status: response.status }, "❌ Token exchange failed");
-        throw new Error(`Gmail OAuth token exchange failed: ${error}`);
+
+        const exchangeError = new Error(`Gmail OAuth token exchange failed: ${error}`);
+        Sentry.captureException(exchangeError, {
+            tags: {
+                service: "gmail-oauth",
+                operation: "exchange_code",
+            },
+            extra: {
+                status: response.status,
+                errorResponse: error,
+            },
+        });
+
+        throw exchangeError;
     }
 
     const tokens: GmailOAuthTokens = await response.json();
@@ -141,7 +155,20 @@ export async function refreshGmailToken(refreshToken: string): Promise<{
     if (!response.ok) {
         const error = await response.text();
         logger.error({ error }, "❌ Token refresh failed");
-        throw new Error(`Gmail token refresh failed: ${error}`);
+
+        const refreshError = new Error(`Gmail token refresh failed: ${error}`);
+        Sentry.captureException(refreshError, {
+            tags: {
+                service: "gmail-oauth",
+                operation: "refresh_token",
+            },
+            extra: {
+                status: response.status,
+                errorResponse: error,
+            },
+        });
+
+        throw refreshError;
     }
 
     const data = await response.json();
@@ -169,7 +196,20 @@ export async function getGmailUserInfo(accessToken: string): Promise<GmailUserIn
     if (!response.ok) {
         const error = await response.text();
         logger.error({ error }, "❌ Failed to fetch user info");
-        throw new Error(`Failed to fetch Gmail user info: ${error}`);
+
+        const userInfoError = new Error(`Failed to fetch Gmail user info: ${error}`);
+        Sentry.captureException(userInfoError, {
+            tags: {
+                service: "gmail-oauth",
+                operation: "get_user_info",
+            },
+            extra: {
+                status: response.status,
+                errorResponse: error,
+            },
+        });
+
+        throw userInfoError;
     }
 
     const userInfo: GmailUserInfo = await response.json();
@@ -216,6 +256,18 @@ export async function storeGmailTokens(
 
     if (error) {
         logger.error({ error, agentConfigId }, "❌ Failed to store tokens");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "gmail-oauth",
+                operation: "store_tokens",
+            },
+            extra: {
+                agentConfigId,
+                userEmail: userInfo.email,
+            },
+        });
+
         throw error;
     }
 
@@ -308,6 +360,17 @@ export async function disconnectGmail(agentConfigId: string): Promise<void> {
 
     if (error) {
         logger.error({ error, agentConfigId }, "❌ Failed to disconnect Gmail");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "gmail-oauth",
+                operation: "disconnect",
+            },
+            extra: {
+                agentConfigId,
+            },
+        });
+
         throw error;
     }
 

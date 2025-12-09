@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { AuthenticationError, ValidationError } from "@/lib/errors";
@@ -40,6 +41,19 @@ export async function POST(request: NextRequest) {
                 const errorMessage = error.issues
                     .map((e: z.ZodIssue) => `${e.path.join(".")}: ${e.message}`)
                     .join(", ");
+
+                Sentry.captureException(error, {
+                    tags: {
+                        component: "api",
+                        action: "validate_variations_request",
+                        endpoint: "POST /api/ads/variations/generate",
+                    },
+                    extra: {
+                        validationErrors: error.issues,
+                        requestBody: body,
+                    },
+                });
+
                 throw new ValidationError(errorMessage);
             }
             throw error;
@@ -122,6 +136,18 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "Error in POST /api/ads/variations/generate");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "generate_ad_variations",
+                endpoint: "POST /api/ads/variations/generate",
+            },
+            extra: {
+                errorType:
+                    error instanceof Error ? error.constructor.name : typeof error,
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });

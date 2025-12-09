@@ -5,6 +5,7 @@
  * Handles deliveries, opens, clicks, bounces, and complaints.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -59,6 +60,14 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "❌ Error in email webhook handler");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "process_email_webhook",
+                endpoint: "POST /api/followup/webhooks/email",
+            },
+        });
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

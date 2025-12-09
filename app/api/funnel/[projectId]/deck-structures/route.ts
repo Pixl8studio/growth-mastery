@@ -3,9 +3,11 @@
  * Fetches deck structures for a project (server-side to avoid CORS)
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 export async function GET(
     request: NextRequest,
@@ -51,7 +53,13 @@ export async function GET(
             .order("created_at", { ascending: false });
 
         if (deckError) {
-            console.error("Failed to fetch deck structures:", deckError);
+            logger.error(
+                { error: deckError, action: "fetch_deck_structures" },
+                "Failed to fetch deck structures"
+            );
+            Sentry.captureException(deckError, {
+                tags: { component: "api", action: "fetch_deck_structures" },
+            });
             return NextResponse.json(
                 { error: "Failed to fetch deck structures" },
                 { status: 500 }
@@ -60,7 +68,13 @@ export async function GET(
 
         return NextResponse.json({ deckStructures: deckStructures || [] });
     } catch (error) {
-        console.error("Deck structures API error:", error);
+        logger.error(
+            { error, action: "deck_structures_api" },
+            "Deck structures API error"
+        );
+        Sentry.captureException(error, {
+            tags: { component: "api", action: "deck_structures_api" },
+        });
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

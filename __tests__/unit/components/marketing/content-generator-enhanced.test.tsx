@@ -25,7 +25,6 @@ vi.mock("@/lib/client-logger", () => ({
 }));
 
 // Import mocked modules
-import { useToast } from "@/components/ui/use-toast";
 import { logger } from "@/lib/client-logger";
 
 describe("ContentGeneratorEnhanced", () => {

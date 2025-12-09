@@ -3,6 +3,7 @@
  * Provides comprehensive context for the AI assistant
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -122,6 +123,15 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ context });
     } catch (error) {
         requestLogger.error({ error }, "Failed to load AI assistant context");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "load_context",
+                endpoint: "POST /api/ai-assistant/context",
+            },
+        });
+
         return NextResponse.json({ error: "Failed to load context" }, { status: 500 });
     }
 }

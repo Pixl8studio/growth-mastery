@@ -3,6 +3,7 @@
  * Wrapper around Cloudflare Stream API for video upload and hosting
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { env } from "@/lib/env";
 import { logger } from "@/lib/logger";
 import type {
@@ -90,6 +91,17 @@ export async function generateUploadUrl(metadata?: {
         };
     } catch (error) {
         requestLogger.error({ error }, "Failed to generate upload URL");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "cloudflare",
+                operation: "generate_upload_url",
+            },
+            extra: {
+                metadata,
+            },
+        });
+
         throw new Error(
             `Failed to generate upload URL: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -142,6 +154,17 @@ export async function getVideo(videoId: string): Promise<CloudflareVideo> {
         return data.result;
     } catch (error) {
         requestLogger.error({ error, videoId }, "Failed to fetch video");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "cloudflare",
+                operation: "get_video",
+            },
+            extra: {
+                videoId,
+            },
+        });
+
         throw new Error(
             `Failed to fetch video: ${error instanceof Error ? error.message : "Unknown error"}`
         );
@@ -168,6 +191,17 @@ export async function getVideoStatus(videoId: string): Promise<{
         };
     } catch (error) {
         logger.error({ error, videoId }, "Failed to get video status");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "cloudflare",
+                operation: "get_video_status",
+            },
+            extra: {
+                videoId,
+            },
+        });
+
         throw error;
     }
 }
@@ -243,6 +277,17 @@ export async function deleteVideo(videoId: string): Promise<void> {
         requestLogger.info({ videoId }, "Video deleted successfully");
     } catch (error) {
         requestLogger.error({ error, videoId }, "Failed to delete video");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "cloudflare",
+                operation: "delete_video",
+            },
+            extra: {
+                videoId,
+            },
+        });
+
         throw new Error(
             `Failed to delete video: ${error instanceof Error ? error.message : "Unknown error"}`
         );

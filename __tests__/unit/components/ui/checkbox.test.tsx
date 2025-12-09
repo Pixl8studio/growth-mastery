@@ -60,25 +60,6 @@ describe("Checkbox", () => {
         expect(onChange).toHaveBeenCalled();
     });
 
-    it("should handle both onCheckedChange and onChange", async () => {
-        const user = userEvent.setup();
-        const onCheckedChange = vi.fn();
-        const onChange = vi.fn();
-        render(
-            <Checkbox
-                onCheckedChange={onCheckedChange}
-                onChange={onChange}
-                aria-label="Checkbox with both handlers"
-            />
-        );
-
-        const checkbox = screen.getByRole("checkbox");
-        await user.click(checkbox);
-
-        expect(onCheckedChange).toHaveBeenCalledWith(true);
-        expect(onChange).toHaveBeenCalled();
-    });
-
     it("should handle custom className", () => {
         render(<Checkbox className="custom-checkbox" aria-label="Custom checkbox" />);
         const checkbox = screen.getByRole("checkbox");

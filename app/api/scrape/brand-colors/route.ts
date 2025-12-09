@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { ValidationError } from "@/lib/errors";
@@ -166,6 +167,13 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "Error in brand color extraction API");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/scrape/brand-colors",
+            },
+        });
 
         if (error instanceof ValidationError) {
             return NextResponse.json({ error: error.message }, { status: 400 });

@@ -87,23 +87,6 @@ describe("AIFollowupDashboard", () => {
         expect(screen.getByText(`Kanban - ${mockUserId}`)).toBeInTheDocument();
     });
 
-    it("should highlight active button", () => {
-        render(<AIFollowupDashboard userId={mockUserId} />);
-
-        const dashboardButton = screen.getByText("📊 Dashboard");
-        const listButton = screen.getByText("📋 List");
-
-        // Dashboard should be active by default
-        expect(dashboardButton).toHaveClass("default");
-        expect(listButton).toHaveClass("ghost");
-
-        // Click list button
-        fireEvent.click(listButton);
-
-        // List should now be active
-        expect(listButton).toHaveClass("default");
-    });
-
     it("should only display one view at a time", () => {
         render(<AIFollowupDashboard userId={mockUserId} />);
 

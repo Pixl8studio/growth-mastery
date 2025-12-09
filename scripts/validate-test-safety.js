@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
-/* eslint-disable @typescript-eslint/no-require-imports */
-
 /**
  * Pre-test validation script to prevent dangerous process spawning patterns
  * Run this before tests to catch issues early

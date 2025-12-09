@@ -3,6 +3,7 @@
  * Extracts colors, fonts, and visual brand elements from websites
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { logger } from "@/lib/logger";
 import * as cheerio from "cheerio";
 import {
@@ -570,6 +571,17 @@ export async function extractBrandFromHtml(html: string): Promise<BrandData> {
         };
     } catch (error) {
         logger.error({ error }, "Failed to extract brand data");
+
+        Sentry.captureException(error, {
+            tags: {
+                service: "scraping",
+                operation: "extract_brand_from_html",
+            },
+            extra: {
+                htmlLength: html?.length || 0,
+            },
+        });
+
         throw error;
     }
 }

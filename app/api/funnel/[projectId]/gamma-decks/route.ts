@@ -3,9 +3,11 @@
  * Fetches gamma decks for a project (server-side to avoid CORS)
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth";
+import { logger } from "@/lib/logger";
 
 export async function GET(
     request: NextRequest,
@@ -51,7 +53,13 @@ export async function GET(
             .order("created_at", { ascending: false });
 
         if (gammaError) {
-            console.error("Failed to fetch gamma decks:", gammaError);
+            logger.error(
+                { error: gammaError, action: "fetch_gamma_decks" },
+                "Failed to fetch gamma decks"
+            );
+            Sentry.captureException(gammaError, {
+                tags: { component: "api", action: "fetch_gamma_decks" },
+            });
             return NextResponse.json(
                 { error: "Failed to fetch gamma decks" },
                 { status: 500 }
@@ -60,7 +68,10 @@ export async function GET(
 
         return NextResponse.json({ gammaDecks: gammaDecks || [] });
     } catch (error) {
-        console.error("Gamma decks API error:", error);
+        logger.error({ error, action: "gamma_decks_api" }, "Gamma decks API error");
+        Sentry.captureException(error, {
+            tags: { component: "api", action: "gamma_decks_api" },
+        });
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
@@ -97,7 +108,13 @@ export async function DELETE(
             .eq("user_id", user.id);
 
         if (deleteError) {
-            console.error("Failed to delete gamma deck:", deleteError);
+            logger.error(
+                { error: deleteError, action: "delete_gamma_deck" },
+                "Failed to delete gamma deck"
+            );
+            Sentry.captureException(deleteError, {
+                tags: { component: "api", action: "delete_gamma_deck" },
+            });
             return NextResponse.json(
                 { error: "Failed to delete gamma deck" },
                 { status: 500 }
@@ -106,7 +123,13 @@ export async function DELETE(
 
         return NextResponse.json({ success: true });
     } catch (error) {
-        console.error("Delete gamma deck API error:", error);
+        logger.error(
+            { error, action: "delete_gamma_deck" },
+            "Delete gamma deck API error"
+        );
+        Sentry.captureException(error, {
+            tags: { component: "api", action: "delete_gamma_deck" },
+        });
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }
@@ -145,7 +168,13 @@ export async function PATCH(
             .single();
 
         if (updateError) {
-            console.error("Failed to update gamma deck:", updateError);
+            logger.error(
+                { error: updateError, action: "update_gamma_deck" },
+                "Failed to update gamma deck"
+            );
+            Sentry.captureException(updateError, {
+                tags: { component: "api", action: "update_gamma_deck" },
+            });
             return NextResponse.json(
                 { error: "Failed to update gamma deck" },
                 { status: 500 }
@@ -154,7 +183,13 @@ export async function PATCH(
 
         return NextResponse.json({ gammaDeck: updatedDeck });
     } catch (error) {
-        console.error("Update gamma deck API error:", error);
+        logger.error(
+            { error, action: "update_gamma_deck" },
+            "Update gamma deck API error"
+        );
+        Sentry.captureException(error, {
+            tags: { component: "api", action: "update_gamma_deck" },
+        });
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

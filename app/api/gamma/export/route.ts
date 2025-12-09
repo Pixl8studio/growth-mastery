@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { logger } from "@/lib/logger";
 import { ValidationError } from "@/lib/errors";
 
@@ -35,6 +36,13 @@ export async function POST(req: NextRequest) {
         });
     } catch (error) {
         requestLogger.error({ error }, "Failed to generate export URL");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/gamma/export",
+            },
+        });
 
         if (error instanceof ValidationError) {
             return NextResponse.json({ error: error.message }, { status: 400 });

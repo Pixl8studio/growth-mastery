@@ -7,20 +7,29 @@
  * Supports 5-slide test mode or full deck
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { generateTextWithAI } from "@/lib/ai/client";
 import { ValidationError } from "@/lib/errors";
+import { logger as pinoLogger } from "@/lib/logger";
 import { z } from "zod";
 import fs from "fs";
 import path from "path";
 
-// Use console logging to avoid Pino worker thread issues in API routes
-const log = {
-    info: (message: string, data?: any) => console.log(`[INFO] ${message}`, data || ""),
-    error: (message: string, data?: any) =>
-        console.error(`[ERROR] ${message}`, data || ""),
-};
+// Environment-aware logging: console in dev, Pino in production
+const isDev = process.env.NODE_ENV === "development";
+const log = isDev
+    ? {
+          info: (message: string, data?: any) =>
+              console.log(`[INFO] ${message}`, data || ""),
+          error: (message: string, data?: any) =>
+              console.error(`[ERROR] ${message}`, data || ""),
+      }
+    : {
+          info: (message: string, data?: any) => pinoLogger.info(data || {}, message),
+          error: (message: string, data?: any) => pinoLogger.error(data || {}, message),
+      };
 
 const generateDeckStructureSchema = z.object({
     transcriptId: z.string().uuid("Invalid transcript ID"),
@@ -235,6 +244,9 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         log.error("Failed to generate deck structure", { error });
+        Sentry.captureException(error, {
+            tags: { component: "api", action: "generate_deck_structure" },
+        });
 
         if (error instanceof ValidationError) {
             return NextResponse.json(

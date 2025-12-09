@@ -3,6 +3,7 @@
  * Automatically creates a funnel flow when all required pages are published
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { NextResponse } from "next/server";
@@ -119,6 +120,15 @@ export async function POST(request: Request) {
         return NextResponse.json({ flow: newFlow }, { status: 201 });
     } catch (error) {
         logger.error({ error }, "Failed to create funnel flow");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "create-funnel-flow",
+                endpoint: "POST /api/funnel/flows/create",
+            },
+        });
+
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

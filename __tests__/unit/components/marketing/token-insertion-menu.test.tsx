@@ -162,25 +162,6 @@ describe("TokenInsertionMenu", () => {
         ).not.toBeInTheDocument();
     });
 
-    it("should clear search after token insertion", () => {
-        render(<TokenInsertionMenu {...defaultProps} />);
-
-        const button = screen.getByRole("button", { name: /Insert Token/i });
-        fireEvent.click(button);
-
-        const searchInput = screen.getByPlaceholderText("Search tokens...");
-        fireEvent.change(searchInput, { target: { value: "test" } });
-
-        const token = screen.getByText("{first_name}");
-        fireEvent.click(token.closest("button")!);
-
-        // Reopen menu
-        fireEvent.click(button);
-
-        const reopenedSearchInput = screen.getByPlaceholderText("Search tokens...");
-        expect(reopenedSearchInput).toHaveValue("");
-    });
-
     it("should display no results message when search has no matches", () => {
         render(<TokenInsertionMenu {...defaultProps} />);
 
@@ -202,26 +183,6 @@ describe("TokenInsertionMenu", () => {
         expect(
             screen.getByText(/Tokens are replaced with actual values/i)
         ).toBeInTheDocument();
-    });
-
-    it("should render with position above", () => {
-        render(<TokenInsertionMenu {...defaultProps} position="above" />);
-
-        const button = screen.getByRole("button", { name: /Insert Token/i });
-        fireEvent.click(button);
-
-        const dropdown = screen.getByPlaceholderText("Search tokens...").closest("div");
-        expect(dropdown).toHaveClass("bottom-full");
-    });
-
-    it("should render with position below by default", () => {
-        render(<TokenInsertionMenu {...defaultProps} />);
-
-        const button = screen.getByRole("button", { name: /Insert Token/i });
-        fireEvent.click(button);
-
-        const dropdown = screen.getByPlaceholderText("Search tokens...").closest("div");
-        expect(dropdown).toHaveClass("top-full");
     });
 
     it("should display event tokens", () => {

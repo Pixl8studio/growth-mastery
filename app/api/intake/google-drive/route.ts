@@ -3,6 +3,7 @@
  * Connects to Google Drive and imports documents
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -140,6 +141,14 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "Error in Google Drive intake endpoint");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/intake/google-drive",
+            },
+        });
+
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

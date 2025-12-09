@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { disconnectStripe } from "@/lib/stripe/connect";
@@ -46,6 +47,12 @@ export async function POST(_request: NextRequest) {
         return NextResponse.json({ success: true });
     } catch (error) {
         requestLogger.error({ error }, "Failed to disconnect Stripe");
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/stripe/disconnect",
+            },
+        });
         return NextResponse.json(
             { error: "Failed to disconnect Stripe account" },
             { status: 500 }

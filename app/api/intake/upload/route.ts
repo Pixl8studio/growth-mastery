@@ -3,6 +3,7 @@
  * Accepts PDF, DOCX, TXT, MD files and extracts text content
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -153,6 +154,14 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "Error in upload intake endpoint");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/intake/upload",
+            },
+        });
+
         return NextResponse.json({ error: "Internal server error" }, { status: 500 });
     }
 }

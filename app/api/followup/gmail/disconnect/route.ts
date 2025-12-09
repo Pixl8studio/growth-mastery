@@ -5,6 +5,7 @@
  * Disconnects Gmail and reverts to SendGrid provider.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -57,6 +58,14 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "❌ Gmail disconnect error");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "gmail_disconnect",
+                endpoint: "POST /api/followup/gmail/disconnect",
+            },
+        });
 
         if (error instanceof AuthenticationError || error instanceof ValidationError) {
             return NextResponse.json(

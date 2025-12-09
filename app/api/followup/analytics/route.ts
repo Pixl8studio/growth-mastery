@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { AuthenticationError, ValidationError } from "@/lib/errors";
@@ -77,6 +78,14 @@ export async function GET(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "❌ Error in GET /api/followup/analytics");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                action: "get_analytics",
+                endpoint: "GET /api/followup/analytics",
+            },
+        });
 
         if (error instanceof AuthenticationError) {
             return NextResponse.json({ error: error.message }, { status: 401 });

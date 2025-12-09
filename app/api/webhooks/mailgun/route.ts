@@ -6,6 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { MailgunEmailProvider } from "@/lib/followup/providers/mailgun-provider";
@@ -154,6 +155,13 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: true });
     } catch (error) {
         logger.error({ error }, "❌ Failed to process Mailgun webhook");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/webhooks/mailgun",
+            },
+        });
 
         // Return 200 to prevent Mailgun from retrying
         return NextResponse.json(

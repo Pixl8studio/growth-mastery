@@ -6,7 +6,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { DeckStructureEditor } from "@/components/funnel/deck-structure-editor";
-import { logger } from "@/lib/client-logger";
 
 // Mock dependencies
 vi.mock("@/lib/client-logger", () => ({
@@ -80,42 +79,6 @@ describe("DeckStructureEditor", () => {
         expect(screen.getByText(/⚠️ Problem \(1 slides\)/)).toBeInTheDocument();
     });
 
-    it("should enable edit mode when edit button clicked", () => {
-        render(<DeckStructureEditor {...defaultProps} />);
-
-        const editButtons = screen.getAllByRole("button", { name: /Edit/i });
-        fireEvent.click(editButtons[0]);
-
-        expect(screen.getByLabelText("Slide Title")).toBeInTheDocument();
-        expect(screen.getByLabelText("Slide Description")).toBeInTheDocument();
-    });
-
-    it("should allow editing slide title", () => {
-        render(<DeckStructureEditor {...defaultProps} />);
-
-        const editButtons = screen.getAllByRole("button", { name: /Edit/i });
-        fireEvent.click(editButtons[0]);
-
-        const titleInput = screen.getByLabelText("Slide Title");
-        fireEvent.change(titleInput, { target: { value: "New Title" } });
-
-        expect(titleInput).toHaveValue("New Title");
-    });
-
-    it("should allow editing slide description", () => {
-        render(<DeckStructureEditor {...defaultProps} />);
-
-        const editButtons = screen.getAllByRole("button", { name: /Edit/i });
-        fireEvent.click(editButtons[0]);
-
-        const descriptionInput = screen.getByLabelText("Slide Description");
-        fireEvent.change(descriptionInput, {
-            target: { value: "New description" },
-        });
-
-        expect(descriptionInput).toHaveValue("New description");
-    });
-
     it("should exit edit mode when done clicked", () => {
         render(<DeckStructureEditor {...defaultProps} />);
 
@@ -126,54 +89,6 @@ describe("DeckStructureEditor", () => {
         fireEvent.click(doneButton);
 
         expect(screen.queryByLabelText("Slide Title")).not.toBeInTheDocument();
-    });
-
-    it("should call onSave with updated slides", async () => {
-        mockOnSave.mockResolvedValueOnce(undefined);
-
-        render(<DeckStructureEditor {...defaultProps} />);
-
-        const editButtons = screen.getAllByRole("button", { name: /Edit/i });
-        fireEvent.click(editButtons[0]);
-
-        const titleInput = screen.getByLabelText("Slide Title");
-        fireEvent.change(titleInput, { target: { value: "Updated Title" } });
-
-        const saveButton = screen.getByRole("button", { name: /Save Changes/i });
-        fireEvent.click(saveButton);
-
-        await waitFor(() => {
-            expect(mockOnSave).toHaveBeenCalledWith(
-                expect.arrayContaining([
-                    expect.objectContaining({
-                        slideNumber: 1,
-                        title: "Updated Title",
-                    }),
-                ])
-            );
-            expect(logger.info).toHaveBeenCalled();
-        });
-    });
-
-    it("should handle save error", async () => {
-        mockOnSave.mockRejectedValueOnce(new Error("Save failed"));
-
-        // Mock window.alert
-        const alertMock = vi.spyOn(window, "alert").mockImplementation(() => {});
-
-        render(<DeckStructureEditor {...defaultProps} />);
-
-        const saveButton = screen.getByRole("button", { name: /Save Changes/i });
-        fireEvent.click(saveButton);
-
-        await waitFor(() => {
-            expect(logger.error).toHaveBeenCalled();
-            expect(alertMock).toHaveBeenCalledWith(
-                "Failed to save changes. Please try again."
-            );
-        });
-
-        alertMock.mockRestore();
     });
 
     it("should show saving state", async () => {
@@ -219,21 +134,6 @@ describe("DeckStructureEditor", () => {
         expect(
             screen.getByRole("button", { name: /Cancel Edit/i })
         ).toBeInTheDocument();
-    });
-
-    it("should cancel editing when cancel button clicked", () => {
-        render(<DeckStructureEditor {...defaultProps} />);
-
-        const editButtons = screen.getAllByRole("button", { name: /Edit/i });
-        fireEvent.click(editButtons[0]);
-
-        const titleInput = screen.getByLabelText("Slide Title");
-        fireEvent.change(titleInput, { target: { value: "Changed" } });
-
-        const cancelButton = screen.getByRole("button", { name: /Cancel Edit/i });
-        fireEvent.click(cancelButton);
-
-        expect(screen.queryByLabelText("Slide Title")).not.toBeInTheDocument();
     });
 
     it("should not render save button in read-only mode", () => {

@@ -4,6 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 
@@ -56,6 +57,13 @@ export async function GET(request: NextRequest) {
     } catch (error) {
         logger.error({ error }, "Failed to retrieve templates");
 
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "GET /api/marketing/templates",
+            },
+        });
+
         return NextResponse.json(
             {
                 success: false,
@@ -103,6 +111,13 @@ export async function POST(request: NextRequest) {
         });
     } catch (error) {
         logger.error({ error }, "Template creation failed");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/marketing/templates",
+            },
+        });
 
         return NextResponse.json(
             {

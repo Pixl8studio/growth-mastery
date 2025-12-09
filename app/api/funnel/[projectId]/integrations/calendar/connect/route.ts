@@ -4,9 +4,11 @@
  * Initiates Google Calendar OAuth flow for funnel-level connection.
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { getCalendarAuthUrl } from "@/lib/integrations/calendar";
+import { logger } from "@/lib/logger";
 
 export async function GET(
     request: NextRequest,
@@ -28,7 +30,10 @@ export async function GET(
 
         return NextResponse.json({ url: authUrl });
     } catch (error) {
-        console.error("Calendar connect error:", error);
+        logger.error({ error, action: "calendar_connect" }, "Calendar connect error");
+        Sentry.captureException(error, {
+            tags: { component: "api", action: "calendar_connect" },
+        });
         return NextResponse.json(
             { error: "Failed to initiate calendar connection" },
             { status: 500 }

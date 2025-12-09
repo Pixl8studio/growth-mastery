@@ -300,7 +300,9 @@ describe("ComplianceValidator", () => {
             }),
         });
 
-        const { container } = render(<ComplianceValidator {...defaultProps} />);
+        const { container: _container } = render(
+            <ComplianceValidator {...defaultProps} />
+        );
 
         const runButton = screen.getByText("Run Validation");
         fireEvent.click(runButton);

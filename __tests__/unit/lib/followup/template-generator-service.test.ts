@@ -106,9 +106,9 @@ describe("Template Generator Service", () => {
                 ],
             };
 
-            let callCount = 0;
+            let _callCount = 0;
             mockSupabase.from.mockImplementation((table) => {
-                callCount++;
+                _callCount++;
 
                 if (table === "deck_structures") {
                     return {

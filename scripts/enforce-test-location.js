@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-/* eslint-disable @typescript-eslint/no-require-imports */
+ 
 
 /**
  * Enforce that ALL tests must live in __tests__/ directory

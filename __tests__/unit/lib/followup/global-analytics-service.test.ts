@@ -175,9 +175,9 @@ describe("Global Analytics Service", () => {
                 },
             ];
 
-            let fromCallCount = 0;
+            let _fromCallCount = 0;
             mockSupabase.from.mockImplementation((table) => {
-                fromCallCount++;
+                _fromCallCount++;
 
                 if (table === "followup_prospects") {
                     return {

@@ -69,10 +69,10 @@ describe("Delivery Service", () => {
                 if (table === "followup_deliveries") {
                     // First call: fetch pending deliveries
                     const selectMock = vi.fn();
-                    let callCount = 0;
+                    let _callCount = 0;
 
                     selectMock.mockImplementation((cols: string) => {
-                        callCount++;
+                        _callCount++;
                         if (cols === "*") {
                             // Initial query to fetch pending deliveries
                             return {

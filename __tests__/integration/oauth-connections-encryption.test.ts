@@ -3,7 +3,7 @@
  * Tests database-level encryption using pgcrypto functions
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect } from "vitest";
 import { encryptToken, decryptToken } from "@/lib/crypto/token-encryption";
 
 describe("OAuth Token Encryption", () => {

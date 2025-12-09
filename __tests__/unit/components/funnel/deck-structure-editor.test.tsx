@@ -6,7 +6,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { DeckStructureEditor } from "@/components/funnel/deck-structure-editor";
-import { logger } from "@/lib/client-logger";
 
 // Mock dependencies
 vi.mock("@/lib/client-logger", () => ({

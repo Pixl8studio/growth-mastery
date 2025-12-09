@@ -22,7 +22,7 @@ describe("PATCH /api/intake/rename", () => {
                     .fn()
                     .mockResolvedValue({ data: { user: mockUser }, error: null }),
             },
-            from: vi.fn((table: string) => ({
+            from: vi.fn((_table: string) => ({
                 select: vi.fn().mockReturnThis(),
                 eq: vi.fn().mockReturnThis(),
                 single: vi.fn().mockResolvedValue({

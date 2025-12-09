@@ -44,7 +44,7 @@ vi.mock("@/lib/supabase/server", () => ({
                 error: null,
             })),
         },
-        from: vi.fn((table) => ({
+        from: vi.fn((_table) => ({
             select: vi.fn(() => ({
                 eq: vi.fn(() => ({
                     single: vi.fn(async () => ({
@@ -175,7 +175,7 @@ describe("GET /api/pages/[pageId]/webhook", () => {
         const response = await GET(request, {
             params: Promise.resolve({ pageId: "test-page-id" }),
         });
-        const data = await response.json();
+        const _data = await response.json();
 
         expect(response.status).toBe(404);
     });

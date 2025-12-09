@@ -4,14 +4,13 @@
  */
 
 import { describe, it, expect, beforeEach } from "vitest";
-import { createClient } from "@/lib/supabase/client";
 
 describe("Page Save API Integration", () => {
-    let testProjectId: string;
-    let testUserId: string;
-    let testRegistrationPageId: string;
-    let testWatchPageId: string;
-    let testEnrollmentPageId: string;
+    let _testProjectId: string;
+    let _testUserId: string;
+    let _testRegistrationPageId: string;
+    let _testWatchPageId: string;
+    let _testEnrollmentPageId: string;
 
     beforeEach(async () => {
         // Note: In real integration tests, we'd set up test data

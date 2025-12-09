@@ -7,21 +7,25 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { StoryAngleSelector } from "@/components/marketing/story-angle-selector";
 
+// Create stable mock functions using vi.hoisted
+const { mockToastFn, mockLoggerInfo, mockLoggerError } = vi.hoisted(() => ({
+    mockToastFn: vi.fn(),
+    mockLoggerInfo: vi.fn(),
+    mockLoggerError: vi.fn(),
+}));
+
 // Mock dependencies
-const mockToast = vi.fn();
 vi.mock("@/components/ui/use-toast", () => ({
     useToast: () => ({
-        toast: mockToast,
+        toast: mockToastFn,
     }),
 }));
 
-const mockLogger = {
-    info: vi.fn(),
-    error: vi.fn(),
-};
-
 vi.mock("@/lib/client-logger", () => ({
-    logger: mockLogger,
+    logger: {
+        info: mockLoggerInfo,
+        error: mockLoggerError,
+    },
 }));
 
 describe("StoryAngleSelector", () => {
@@ -54,7 +58,6 @@ describe("StoryAngleSelector", () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        mockToast.mockClear();
     });
 
     it("should render correctly with angles", () => {
@@ -105,7 +108,7 @@ describe("StoryAngleSelector", () => {
         }
 
         expect(mockOnSelectAngle).toHaveBeenCalledWith(mockAngles[0]);
-        expect(mockToast).toHaveBeenCalledWith(
+        expect(mockToastFn).toHaveBeenCalledWith(
             expect.objectContaining({
                 title: "Angle Selected",
                 description: 'Using "Authority Builder" for content generation',
@@ -162,7 +165,7 @@ describe("StoryAngleSelector", () => {
 
         await waitFor(() => {
             expect(mockOnRegenerateAngles).toHaveBeenCalled();
-            expect(mockToast).toHaveBeenCalledWith(
+            expect(mockToastFn).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Angles Regenerated",
                 })
@@ -200,8 +203,8 @@ describe("StoryAngleSelector", () => {
         fireEvent.click(regenerateButton);
 
         await waitFor(() => {
-            expect(mockLogger.error).toHaveBeenCalled();
-            expect(mockToast).toHaveBeenCalledWith(
+            expect(mockLoggerError).toHaveBeenCalled();
+            expect(mockToastFn).toHaveBeenCalledWith(
                 expect.objectContaining({
                     title: "Regeneration Failed",
                     variant: "destructive",

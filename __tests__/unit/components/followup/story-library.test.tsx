@@ -130,7 +130,7 @@ describe("StoryLibrary", () => {
     });
 
     it("should filter stories by objection category", () => {
-        render(
+        const { container } = render(
             <StoryLibrary
                 stories={mockStories}
                 onCreateStory={mockOnCreateStory}
@@ -139,7 +139,8 @@ describe("StoryLibrary", () => {
             />
         );
 
-        const objectionFilter = screen.getAllByRole("combobox")[1];
+        const selects = container.querySelectorAll("select");
+        const objectionFilter = selects[0]; // First select is objection filter
         fireEvent.change(objectionFilter, { target: { value: "price_concern" } });
 
         expect(screen.getByText("Sarah Doubled Revenue")).toBeInTheDocument();
@@ -147,7 +148,7 @@ describe("StoryLibrary", () => {
     });
 
     it("should filter stories by type", () => {
-        render(
+        const { container } = render(
             <StoryLibrary
                 stories={mockStories}
                 onCreateStory={mockOnCreateStory}
@@ -156,7 +157,8 @@ describe("StoryLibrary", () => {
             />
         );
 
-        const typeFilter = screen.getAllByRole("combobox")[2];
+        const selects = container.querySelectorAll("select");
+        const typeFilter = selects[1]; // Second select is type filter
         fireEvent.change(typeFilter, { target: { value: "testimonial" } });
 
         expect(screen.getByText("Sarah Doubled Revenue")).toBeInTheDocument();

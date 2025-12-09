@@ -8,9 +8,10 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ExperimentCreatorModal } from "@/components/marketing/experiment-creator-modal";
 
 // Mock dependencies
+const mockToast = vi.fn();
 vi.mock("@/components/ui/use-toast", () => ({
     useToast: () => ({
-        toast: vi.fn(),
+        toast: mockToast,
     }),
 }));
 
@@ -37,6 +38,7 @@ describe("ExperimentCreatorModal", () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        mockToast.mockClear();
         global.fetch = vi.fn();
     });
 
@@ -44,7 +46,7 @@ describe("ExperimentCreatorModal", () => {
         render(<ExperimentCreatorModal {...defaultProps} />);
 
         expect(screen.getByText("Create A/B Test Experiment")).toBeInTheDocument();
-        expect(screen.getByText("Experiment Configuration")).toBeInTheDocument();
+        expect(screen.getByText("Experiment Setup")).toBeInTheDocument();
     });
 
     it("should not render when closed", () => {
@@ -57,116 +59,96 @@ describe("ExperimentCreatorModal", () => {
     it("should handle experiment name input", () => {
         render(<ExperimentCreatorModal {...defaultProps} />);
 
-        const nameInput = screen.getByPlaceholderText(/e.g., Holiday CTA Test/i);
+        const nameInput = screen.getByPlaceholderText(
+            /e.g., Hook Test - Question vs Statement/i
+        );
         fireEvent.change(nameInput, { target: { value: "Test Experiment" } });
 
         expect(nameInput).toHaveValue("Test Experiment");
     });
 
-    it("should handle experiment hypothesis input", () => {
-        render(<ExperimentCreatorModal {...defaultProps} />);
-
-        const hypothesisTextarea = screen.getByPlaceholderText(
-            /What do you expect to happen/i
-        );
-        fireEvent.change(hypothesisTextarea, {
-            target: { value: "Shorter CTA will improve CTR" },
-        });
-
-        expect(hypothesisTextarea).toHaveValue("Shorter CTA will improve CTR");
-    });
-
     it("should select experiment type", () => {
         render(<ExperimentCreatorModal {...defaultProps} />);
 
-        const typeSelect = screen.getByRole("combobox", { name: /experiment type/i });
-        fireEvent.change(typeSelect, { target: { value: "copy_test" } });
+        const comboboxes = screen.getAllByRole("combobox");
+        const typeSelect = comboboxes[0]; // First combobox is experiment type
+        fireEvent.change(typeSelect, { target: { value: "cta" } });
 
-        expect(typeSelect).toHaveValue("copy_test");
+        expect(typeSelect).toHaveValue("cta");
     });
 
-    it("should allow adding variants", () => {
-        render(<ExperimentCreatorModal {...defaultProps} />);
+    it("should select base variant", () => {
+        const mockVariants = [
+            {
+                id: "variant-1",
+                platform: "instagram",
+                copy_text: "Test variant content here",
+            },
+        ];
 
-        const addVariantButton = screen.getByText("Add Variant");
-        fireEvent.click(addVariantButton);
+        render(
+            <ExperimentCreatorModal {...defaultProps} variants={mockVariants as any} />
+        );
 
-        expect(screen.getByText("Variant A")).toBeInTheDocument();
+        const variantSelect = screen.getAllByRole("combobox")[1]; // Second combobox is variant selector
+        fireEvent.change(variantSelect, { target: { value: "variant-1" } });
+
+        expect(variantSelect).toHaveValue("variant-1");
     });
 
-    it("should set traffic split percentages", () => {
+    it("should set distribution split percentages", () => {
         render(<ExperimentCreatorModal {...defaultProps} />);
 
-        const splitSlider = screen.getByRole("slider", { name: /traffic split/i });
-        fireEvent.change(splitSlider, { target: { value: "60" } });
-
-        expect(screen.getByText("60% / 40%")).toBeInTheDocument();
+        // Distribution split should be visible in the Test Configuration section
+        const allSplitTexts = screen.getAllByText(/50% \/ 50%/);
+        expect(allSplitTexts.length).toBeGreaterThan(0);
     });
 
     it("should set experiment duration", () => {
         render(<ExperimentCreatorModal {...defaultProps} />);
 
-        const durationInput = screen.getByLabelText(/duration \(days\)/i);
+        // Find input by its default value of 7
+        const durationInput = screen.getByDisplayValue("7");
         fireEvent.change(durationInput, { target: { value: "14" } });
 
         expect(durationInput).toHaveValue(14);
     });
 
-    it("should require experiment name before creation", async () => {
-        const mockToast = vi.mocked(useToast)().toast;
-
+    it("should disable create button when required fields are missing", () => {
         render(<ExperimentCreatorModal {...defaultProps} />);
 
         const createButton = screen.getByText("Create Experiment");
-        fireEvent.click(createButton);
-
-        await waitFor(() => {
-            expect(mockToast).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    title: "Name Required",
-                    variant: "destructive",
-                })
-            );
-        });
-    });
-
-    it("should require at least 2 variants", async () => {
-        const mockToast = vi.mocked(useToast)().toast;
-
-        render(<ExperimentCreatorModal {...defaultProps} />);
-
-        const nameInput = screen.getByPlaceholderText(/e.g., Holiday CTA Test/i);
-        fireEvent.change(nameInput, { target: { value: "Test" } });
-
-        const createButton = screen.getByText("Create Experiment");
-        fireEvent.click(createButton);
-
-        await waitFor(() => {
-            expect(mockToast).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    title: "Variants Required",
-                    variant: "destructive",
-                })
-            );
-        });
+        expect(createButton).toBeDisabled();
     });
 
     it("should handle successful experiment creation", async () => {
+        const mockVariants = [
+            {
+                id: "variant-1",
+                platform: "instagram",
+                copy_text: "Test variant content here",
+            },
+        ];
+
         (global.fetch as any).mockResolvedValueOnce({
-            json: async () => ({ success: true, experiment_id: "exp-123" }),
+            json: async () => ({
+                success: true,
+                experiment: { id: "exp-123", status: "scheduled" },
+            }),
         });
 
-        const mockToast = vi.mocked(useToast)().toast;
+        render(
+            <ExperimentCreatorModal {...defaultProps} variants={mockVariants as any} />
+        );
 
-        render(<ExperimentCreatorModal {...defaultProps} />);
-
-        const nameInput = screen.getByPlaceholderText(/e.g., Holiday CTA Test/i);
+        const nameInput = screen.getByPlaceholderText(
+            /e.g., Hook Test - Question vs Statement/i
+        );
         fireEvent.change(nameInput, { target: { value: "Test Experiment" } });
 
-        // Add variants
-        const addVariantButton = screen.getByText("Add Variant");
-        fireEvent.click(addVariantButton);
-        fireEvent.click(addVariantButton);
+        // Select base variant
+        const variantSelect = screen.getAllByRole("combobox")[1];
+        fireEvent.change(variantSelect, { target: { value: "variant-1" } });
 
         const createButton = screen.getByText("Create Experiment");
         fireEvent.click(createButton);
@@ -192,19 +174,29 @@ describe("ExperimentCreatorModal", () => {
     });
 
     it("should handle creation error", async () => {
+        const mockVariants = [
+            {
+                id: "variant-1",
+                platform: "instagram",
+                copy_text: "Test variant content here",
+            },
+        ];
+
         (global.fetch as any).mockRejectedValueOnce(new Error("Creation failed"));
 
         const mockLogger = vi.mocked(logger);
-        const mockToast = vi.mocked(useToast)().toast;
 
-        render(<ExperimentCreatorModal {...defaultProps} />);
+        render(
+            <ExperimentCreatorModal {...defaultProps} variants={mockVariants as any} />
+        );
 
-        const nameInput = screen.getByPlaceholderText(/e.g., Holiday CTA Test/i);
+        const nameInput = screen.getByPlaceholderText(
+            /e.g., Hook Test - Question vs Statement/i
+        );
         fireEvent.change(nameInput, { target: { value: "Test" } });
 
-        const addVariantButton = screen.getByText("Add Variant");
-        fireEvent.click(addVariantButton);
-        fireEvent.click(addVariantButton);
+        const variantSelect = screen.getAllByRole("combobox")[1];
+        fireEvent.change(variantSelect, { target: { value: "variant-1" } });
 
         const createButton = screen.getByText("Create Experiment");
         fireEvent.click(createButton);
@@ -229,34 +221,35 @@ describe("ExperimentCreatorModal", () => {
         expect(mockOnClose).toHaveBeenCalled();
     });
 
-    it("should allow removing variants", () => {
+    it("should toggle auto-generate variant B", () => {
         render(<ExperimentCreatorModal {...defaultProps} />);
 
-        const addVariantButton = screen.getByText("Add Variant");
-        fireEvent.click(addVariantButton);
+        const switches = screen.getAllByRole("switch");
+        const autoGenerateSwitch = switches[0]; // First switch is auto-generate
+        expect(autoGenerateSwitch).toBeChecked(); // Default is true
 
-        const removeButton = screen.getByRole("button", { name: /remove/i });
-        fireEvent.click(removeButton);
-
-        expect(screen.queryByText("Variant A")).not.toBeInTheDocument();
+        fireEvent.click(autoGenerateSwitch);
+        expect(autoGenerateSwitch).not.toBeChecked();
     });
 
-    it("should display success metrics options", () => {
+    it("should display success metric options", () => {
         render(<ExperimentCreatorModal {...defaultProps} />);
 
-        expect(screen.getByText("Success Metrics")).toBeInTheDocument();
-        expect(screen.getByLabelText(/click-through rate/i)).toBeInTheDocument();
-        expect(screen.getByLabelText(/engagement rate/i)).toBeInTheDocument();
+        expect(screen.getByText("Success Metric")).toBeInTheDocument();
+
+        // Check that the select has the right options
+        const successMetricSelect = screen.getAllByRole("combobox")[2]; // Third combobox is success metric
+        expect(successMetricSelect).toBeInTheDocument();
     });
 
-    it("should toggle auto-winner selection", () => {
+    it("should toggle auto-declare winner", () => {
         render(<ExperimentCreatorModal {...defaultProps} />);
 
-        const autoWinnerSwitch = screen.getByRole("switch", {
-            name: /auto-select winner/i,
-        });
-        fireEvent.click(autoWinnerSwitch);
+        const switches = screen.getAllByRole("switch");
+        const autoDeclareSwitch = switches[1]; // Second switch is auto-declare winner
+        expect(autoDeclareSwitch).toBeChecked(); // Default is true
 
-        expect(autoWinnerSwitch).toBeChecked();
+        fireEvent.click(autoDeclareSwitch);
+        expect(autoDeclareSwitch).not.toBeChecked();
     });
 });

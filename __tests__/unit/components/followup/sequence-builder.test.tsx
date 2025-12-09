@@ -407,7 +407,7 @@ describe("SequenceBuilder", () => {
         fireEvent.click(generateButton);
 
         await waitFor(() => {
-            expect(screen.getByText("Initializing...")).toBeInTheDocument();
+            expect(screen.getByText("Generating message 1 of 5...")).toBeInTheDocument();
         });
     });
 });

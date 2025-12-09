@@ -43,7 +43,8 @@ describe("MessagePreview", () => {
 
         // Should use sample data "Sarah" and "75"
         expect(screen.getByText("Hi Sarah!")).toBeInTheDocument();
-        expect(screen.getByText(/75%/)).toBeInTheDocument();
+        // "75%" appears in both email and SMS preview
+        expect(screen.getAllByText(/75%/).length).toBeGreaterThan(0);
     });
 
     it("should display sender name in email header", () => {
@@ -55,13 +56,15 @@ describe("MessagePreview", () => {
             />
         );
 
-        expect(screen.getByText("Jane Smith")).toBeInTheDocument();
+        // Sender name appears in both email and SMS preview
+        expect(screen.getAllByText("Jane Smith").length).toBeGreaterThan(0);
     });
 
     it("should use default sender name when not provided", () => {
         render(<MessagePreview subject="Test" bodyContent="Test content" />);
 
-        expect(screen.getByText("John Smith")).toBeInTheDocument();
+        // Default sender name appears in both email and SMS preview
+        expect(screen.getAllByText("John Smith").length).toBeGreaterThan(0);
     });
 
     it("should show email recipient", () => {

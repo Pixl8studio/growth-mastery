@@ -231,8 +231,6 @@ describe("TestMessageModal", () => {
     });
 
     it("should auto-close modal after successful send", async () => {
-        vi.useFakeTimers();
-
         (global.fetch as any).mockResolvedValue({
             ok: true,
             json: async () => ({ delivery_id: "del-123" }),
@@ -243,18 +241,18 @@ describe("TestMessageModal", () => {
         const sendButton = screen.getByText("Send Test Email");
         fireEvent.click(sendButton);
 
+        // Wait for success state to appear
         await waitFor(() => {
             expect(screen.getByText("Test Message Sent!")).toBeInTheDocument();
         });
 
-        // Run all timers to execute the setTimeout callback
-        await vi.runAllTimersAsync();
-
-        await waitFor(() => {
-            expect(mockProps.onClose).toHaveBeenCalled();
-        });
-
-        vi.useRealTimers();
+        // Wait for the auto-close to be called (2000ms timeout in component)
+        await waitFor(
+            () => {
+                expect(mockProps.onClose).toHaveBeenCalled();
+            },
+            { timeout: 3000 }
+        );
     });
 
     it("should reset sent state when modal is reopened", () => {

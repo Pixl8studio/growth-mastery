@@ -7,10 +7,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ApprovalWorkflowModal } from "@/components/marketing/approval-workflow-modal";
 
+// Create toast mock function that will be shared
+const mockToast = vi.fn();
+
 // Mock dependencies
 vi.mock("@/components/ui/use-toast", () => ({
     useToast: () => ({
-        toast: vi.fn(),
+        toast: mockToast,
     }),
 }));
 
@@ -22,7 +25,6 @@ vi.mock("@/lib/client-logger", () => ({
 }));
 
 // Import mocked modules
-import { useToast } from "@/components/ui/use-toast";
 import { logger } from "@/lib/client-logger";
 
 // Mock child components
@@ -98,7 +100,8 @@ describe("ApprovalWorkflowModal", () => {
 
         render(<ApprovalWorkflowModal {...defaultProps} />);
 
-        const platformSelect = screen.getByRole("combobox", { name: /platform/i });
+        // Get the first select (platform filter) by finding the one with "All Platforms" option
+        const platformSelect = screen.getByDisplayValue("All Platforms").closest("select")!;
         fireEvent.change(platformSelect, { target: { value: "instagram" } });
 
         await waitFor(() => {
@@ -115,7 +118,8 @@ describe("ApprovalWorkflowModal", () => {
 
         render(<ApprovalWorkflowModal {...defaultProps} />);
 
-        const statusSelect = screen.getByRole("combobox", { name: /status/i });
+        // Get the second select (status filter) by finding the one with "Pending Review" option
+        const statusSelect = screen.getByDisplayValue("Pending Review").closest("select")!;
         fireEvent.change(statusSelect, { target: { value: "approved" } });
 
         await waitFor(() => {
@@ -181,27 +185,33 @@ describe("ApprovalWorkflowModal", () => {
             json: async () => ({ success: true, variants: [mockVariant] }),
         });
 
-        const mockToast = vi.mocked(useToast)().toast;
-
         render(<ApprovalWorkflowModal {...defaultProps} />);
 
+        // Wait for variant to load and click Review button
         await waitFor(() => {
-            const reviewButton = screen.getByText("Review");
-            fireEvent.click(reviewButton);
+            expect(screen.getByText("Test content")).toBeInTheDocument();
         });
 
-        // Clicking reject without notes should show toast
+        const reviewButton = screen.getByText("Review");
+        fireEvent.click(reviewButton);
+
+        // Wait for review panel to appear with Reject button
         await waitFor(() => {
-            const rejectButton = screen.getByText("Reject");
-            fireEvent.click(rejectButton);
+            expect(screen.getByText("Reject")).toBeInTheDocument();
         });
 
-        expect(mockToast).toHaveBeenCalledWith(
-            expect.objectContaining({
-                title: "Notes Required",
-                variant: "destructive",
-            })
-        );
+        // Click reject without notes - should show toast
+        const rejectButton = screen.getByText("Reject");
+        fireEvent.click(rejectButton);
+
+        await waitFor(() => {
+            expect(mockToast).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    title: "Notes Required",
+                    variant: "destructive",
+                })
+            );
+        });
     });
 
     it("should close modal when close button clicked", () => {

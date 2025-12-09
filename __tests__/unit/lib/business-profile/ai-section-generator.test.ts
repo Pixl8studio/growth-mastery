@@ -369,7 +369,10 @@ describe("AI Section Generator", () => {
                     limiting_belief: "I'm not good enough",
                     perceived_lack: "Skills and experience",
                     fear_of_failure: "Public embarrassment",
-                    mindset_reframes: ["Failure is learning", "Everyone starts somewhere"],
+                    mindset_reframes: [
+                        "Failure is learning",
+                        "Everyone starts somewhere",
+                    ],
                     micro_action: "Share one piece of content",
                     beginner_success_proof: "New members succeed daily",
                     success_story: "Introvert became confident speaker",
@@ -382,7 +385,10 @@ describe("AI Section Generator", () => {
                     success_story: "Built in 30 days with full-time job",
                     resource_myths: "You don't need a big team",
                 },
-                poll_questions: ["What's your biggest challenge?", "How long have you tried?"],
+                poll_questions: [
+                    "What's your biggest challenge?",
+                    "How long have you tried?",
+                ],
             };
 
             vi.mocked(generateWithAI).mockResolvedValue(mockData);
@@ -401,7 +407,9 @@ describe("AI Section Generator", () => {
             // Verify nested arrays are preserved
             const data = result.data as any;
             expect(Array.isArray(data.vehicle_belief_shift.key_insights)).toBe(true);
-            expect(Array.isArray(data.internal_belief_shift.mindset_reframes)).toBe(true);
+            expect(Array.isArray(data.internal_belief_shift.mindset_reframes)).toBe(
+                true
+            );
             expect(Array.isArray(data.poll_questions)).toBe(true);
         });
 

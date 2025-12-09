@@ -463,13 +463,12 @@ Please provide detailed, specific answers for each question. Format your respons
                                         </p>
                                     </div>
                                 </div>
-                                {showAllSections && (
-                                    isExpanded ? (
+                                {showAllSections &&
+                                    (isExpanded ? (
                                         <ChevronUp className="h-5 w-5 text-muted-foreground" />
                                     ) : (
                                         <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                                    )
-                                )}
+                                    ))}
                             </button>
 
                             {/* Section Content */}

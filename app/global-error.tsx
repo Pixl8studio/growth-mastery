@@ -7,6 +7,16 @@ import { useEffect } from "react";
 export default function GlobalError({ error }: { error: Error & { digest?: string } }) {
     useEffect(() => {
         Sentry.captureException(error);
+
+        // Show the Sentry User Feedback form when an error occurs
+        const feedback = Sentry.getFeedback();
+        if (feedback) {
+            void (async () => {
+                const form = await feedback.createForm();
+                form.appendToDom();
+                form.open();
+            })();
+        }
     }, [error]);
 
     return (

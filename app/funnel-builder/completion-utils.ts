@@ -20,7 +20,8 @@ import {
 
 /**
  * Check if intake has been completed for a project
- * Returns true if at least one intake session exists
+ * Returns true if at least one intake session (vapi transcript) exists
+ * OR if a business profile with meaningful completion exists
  */
 export async function hasCompletedIntake(projectId: string): Promise<boolean> {
     const requestLogger = logger.child({
@@ -39,14 +40,31 @@ export async function hasCompletedIntake(projectId: string): Promise<boolean> {
             return false;
         }
 
-        const { count } = await supabase
-            .from("vapi_transcripts")
-            .select("id", { count: "exact", head: true })
-            .eq("funnel_project_id", projectId)
-            .eq("user_id", user.id);
+        // Check for vapi transcripts and business profiles in parallel
+        const [transcriptsResult, profileResult] = await Promise.all([
+            supabase
+                .from("vapi_transcripts")
+                .select("id", { count: "exact", head: true })
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id),
+            supabase
+                .from("business_profiles")
+                .select("id, completion_status")
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id)
+                .maybeSingle(),
+        ]);
 
-        const hasIntake = (count ?? 0) > 0;
-        requestLogger.info({ hasIntake }, "Intake completion checked");
+        const hasTranscripts = (transcriptsResult.count ?? 0) > 0;
+        const hasBusinessProfile =
+            profileResult.data &&
+            (profileResult.data.completion_status as any)?.overall > 0;
+
+        const hasIntake = hasTranscripts || hasBusinessProfile;
+        requestLogger.info(
+            { hasIntake, hasTranscripts, hasBusinessProfile },
+            "Intake completion checked"
+        );
 
         return hasIntake;
     } catch (error) {
@@ -87,6 +105,7 @@ export async function getStepCompletionStatus(
         // Check all steps in parallel
         const [
             transcripts,
+            businessProfiles,
             offers,
             brandDesigns,
             deckStructures,
@@ -107,6 +126,14 @@ export async function getStepCompletionStatus(
                 .select("id", { count: "exact", head: true })
                 .eq("funnel_project_id", projectId)
                 .eq("user_id", user.id),
+
+            // Step 1 (Alternative): Business Profiles with completion
+            supabase
+                .from("business_profiles")
+                .select("id, completion_status")
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id)
+                .maybeSingle(),
 
             // Step 2: Offers
             supabase
@@ -202,11 +229,18 @@ export async function getStepCompletionStatus(
                 .eq("campaign_type", "paid_ad"),
         ]);
 
+        // Step 1 is completed if we have transcripts OR a business profile with completion > 0
+        const hasTranscripts = (transcripts.count ?? 0) > 0;
+        const hasBusinessProfile =
+            businessProfiles.data &&
+            (businessProfiles.data.completion_status as any)?.overall > 0;
+        const step1Completed = hasTranscripts || hasBusinessProfile;
+
         const completionStatus: StepCompletion[] = [
             {
                 step: 1,
-                isCompleted: (transcripts.count ?? 0) > 0,
-                hasContent: (transcripts.count ?? 0) > 0,
+                isCompleted: step1Completed,
+                hasContent: step1Completed,
             },
             {
                 step: 2,

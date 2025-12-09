@@ -8,6 +8,7 @@ import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { useToast } from "@/components/ui/use-toast";
+import type { BusinessProfile } from "@/types/business-profile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,6 +60,9 @@ export default function Step3BrandDesignPage({
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [transcripts, setTranscripts] = useState<any[]>([]);
+    const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(
+        null
+    );
 
     // Form state
     const [brandName, setBrandName] = useState("");
@@ -109,6 +113,30 @@ export default function Step3BrandDesignPage({
                     .order("created_at", { ascending: false });
 
                 setTranscripts(transcriptsData || []);
+
+                // Load business profile
+                try {
+                    const profileResponse = await fetch(
+                        `/api/context/business-profile?projectId=${projectId}`,
+                        { credentials: "include" }
+                    );
+
+                    if (profileResponse.ok) {
+                        const profileResult = await profileResponse.json();
+                        if (
+                            profileResult.profile &&
+                            profileResult.profile.completion_status?.overall > 0
+                        ) {
+                            setBusinessProfile(profileResult.profile);
+                        }
+                    }
+                } catch (profileError) {
+                    // Non-critical - business profile loading is optional
+                    logger.warn(
+                        { error: profileError },
+                        "Failed to load business profile"
+                    );
+                }
 
                 // Load existing brand design
                 const { data: brandData } = await supabase
@@ -212,12 +240,17 @@ export default function Step3BrandDesignPage({
         }
     };
 
+    // Check if we have any intake data (transcripts or business profile)
+    const hasIntakeData =
+        transcripts.length > 0 ||
+        (businessProfile && (businessProfile.completion_status?.overall ?? 0) > 0);
+
     const handleAIGenerate = async () => {
-        if (!projectId || transcripts.length === 0) {
+        if (!projectId || !hasIntakeData) {
             toast({
                 title: "⚠️ No intake data",
                 description:
-                    "Complete an AI intake call first to generate brand design.",
+                    "Complete your business profile or an AI intake call first to generate brand design.",
                 variant: "destructive",
             });
             return;
@@ -225,13 +258,23 @@ export default function Step3BrandDesignPage({
 
         setIsGenerating(true);
         try {
+            // Build request body - prefer business profile if available, otherwise use transcript
+            const requestBody: {
+                projectId: string;
+                transcriptId?: string;
+                businessProfileId?: string;
+            } = { projectId };
+
+            if (businessProfile && (businessProfile.completion_status?.overall ?? 0) > 0) {
+                requestBody.businessProfileId = businessProfile.id;
+            } else if (transcripts.length > 0) {
+                requestBody.transcriptId = transcripts[0].id;
+            }
+
             const response = await fetch("/api/generate/brand-design", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    projectId,
-                    transcriptId: transcripts[0].id,
-                }),
+                body: JSON.stringify(requestBody),
             });
 
             if (!response.ok) {
@@ -377,11 +420,11 @@ export default function Step3BrandDesignPage({
         >
             <div className="space-y-8">
                 {/* Dependency Warning */}
-                {transcripts.length === 0 && (
+                {!hasIntakeData && (
                     <DependencyWarning
-                        message="You need to complete your AI intake call first so we can understand your business and generate appropriate brand styling."
+                        message="You need to complete your business profile or AI intake call first so we can understand your business and generate appropriate brand styling."
                         requiredStep={1}
-                        requiredStepName="AI Intake Call"
+                        requiredStepName="Intake"
                         projectId={projectId}
                     />
                 )}
@@ -691,12 +734,16 @@ export default function Step3BrandDesignPage({
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                {transcripts.length > 0 ? (
+                                {hasIntakeData ? (
                                     <>
                                         <p className="text-sm text-muted-foreground">
                                             AI will analyze your business, industry, and
-                                            target audience from your intake call to
-                                            generate a cohesive brand identity.
+                                            target audience from your{" "}
+                                            {businessProfile &&
+                                            (businessProfile.completion_status?.overall ?? 0) > 0
+                                                ? "business profile"
+                                                : "intake call"}{" "}
+                                            to generate a cohesive brand identity.
                                         </p>
                                         <Button
                                             onClick={handleAIGenerate}
@@ -719,8 +766,8 @@ export default function Step3BrandDesignPage({
                                     </>
                                 ) : (
                                     <p className="text-sm text-amber-600">
-                                        Complete your AI intake call first to use AI
-                                        generation.
+                                        Complete your business profile or AI intake call
+                                        first to use AI generation.
                                     </p>
                                 )}
                             </CardContent>

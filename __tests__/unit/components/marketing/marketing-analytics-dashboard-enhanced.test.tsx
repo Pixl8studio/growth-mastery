@@ -196,7 +196,7 @@ describe("MarketingAnalyticsDashboardEnhanced", () => {
 
         await waitFor(() => {
             expect(global.fetch).toHaveBeenCalledWith(
-                expect.stringContaining("/api/marketing/analytics/export"),
+                expect.stringContaining("/api/marketing/analytics/export")
             );
         });
     });

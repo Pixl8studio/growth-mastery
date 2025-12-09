@@ -165,11 +165,15 @@ describe("PostVariantCardEnhanced", () => {
         const { container } = render(<PostVariantCardEnhanced {...defaultProps} />);
 
         // Verify the variant copy text is displayed first
-        expect(screen.getByText("This is a test variant with great content")).toBeInTheDocument();
+        expect(
+            screen.getByText("This is a test variant with great content")
+        ).toBeInTheDocument();
 
         // The metadata section with character count should be rendered
         // Character count display is dynamic based on copy_text length (43 chars)
-        const metadataElements = container.querySelectorAll('.text-xs.text-muted-foreground');
+        const metadataElements = container.querySelectorAll(
+            ".text-xs.text-muted-foreground"
+        );
         expect(metadataElements.length).toBeGreaterThan(0);
     });
 
@@ -180,7 +184,9 @@ describe("PostVariantCardEnhanced", () => {
         expect(mockVariant.hashtags).toHaveLength(2);
 
         // The metadata section should exist and render hashtag information
-        const metadataElements = container.querySelectorAll('.text-xs.text-muted-foreground');
+        const metadataElements = container.querySelectorAll(
+            ".text-xs.text-muted-foreground"
+        );
         expect(metadataElements.length).toBeGreaterThan(0);
     });
 

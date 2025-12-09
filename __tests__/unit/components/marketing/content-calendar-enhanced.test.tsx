@@ -146,7 +146,9 @@ describe("ContentCalendarEnhanced", () => {
         }
 
         // Now filter should work (checking that filters exist)
-        const platformSelect = screen.getByDisplayValue("All Platforms").closest("select")!;
+        const platformSelect = screen
+            .getByDisplayValue("All Platforms")
+            .closest("select")!;
         expect(platformSelect).toBeInTheDocument();
     });
 
@@ -165,7 +167,9 @@ describe("ContentCalendarEnhanced", () => {
         });
 
         // Verify status filter select exists
-        const statusSelect = screen.getByDisplayValue("All Statuses").closest("select")!;
+        const statusSelect = screen
+            .getByDisplayValue("All Statuses")
+            .closest("select")!;
         expect(statusSelect).toBeInTheDocument();
     });
 

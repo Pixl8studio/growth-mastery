@@ -168,7 +168,7 @@ describe("IntegrationsSettings", () => {
         fireEvent.click(saveButton);
 
         // Wait a bit for any async operations
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
         // Verify that update was NOT called due to validation failure
         expect(mockUpdate).not.toHaveBeenCalled();
@@ -189,7 +189,7 @@ describe("IntegrationsSettings", () => {
         fireEvent.click(saveButton);
 
         // Wait a bit for any async operations
-        await new Promise(resolve => setTimeout(resolve, 100));
+        await new Promise((resolve) => setTimeout(resolve, 100));
 
         // Verify that update was NOT called due to validation failure
         expect(mockUpdate).not.toHaveBeenCalled();

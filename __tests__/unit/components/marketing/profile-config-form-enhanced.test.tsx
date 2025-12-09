@@ -194,8 +194,7 @@ describe("ProfileConfigFormEnhanced", () => {
         const sampleTextarea = screen.getByPlaceholderText(/Paste 3-5 existing/);
         fireEvent.change(sampleTextarea, {
             target: {
-                value:
-                    "This is my first sample post with enough content to pass the validation check\n\nThis is my second sample post with enough content to pass the validation check\n\nThis is my third sample post with enough content to pass the validation check",
+                value: "This is my first sample post with enough content to pass the validation check\n\nThis is my second sample post with enough content to pass the validation check\n\nThis is my third sample post with enough content to pass the validation check",
             },
         });
 

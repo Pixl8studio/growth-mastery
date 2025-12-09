@@ -16,6 +16,8 @@ import {
     ChevronLeft,
     Save,
     Sparkles,
+    Eye,
+    EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
@@ -79,6 +81,7 @@ export function GptPasteMode({
     const [expandedSections, setExpandedSections] = useState<Set<SectionId>>(
         new Set(["section1"])
     );
+    const [showAllSections, setShowAllSections] = useState(false);
 
     // Initialize section data from profile
     const initializeSectionData = useCallback((prof: Partial<BusinessProfile>) => {
@@ -388,11 +391,36 @@ Please provide detailed, specific answers for each question. Format your respons
                 </ol>
             </Card>
 
+            {/* View Toggle */}
+            <div className="flex items-center justify-end">
+                <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAllSections(!showAllSections)}
+                    className="text-muted-foreground"
+                >
+                    {showAllSections ? (
+                        <>
+                            <EyeOff className="mr-2 h-4 w-4" />
+                            Show Current Only
+                        </>
+                    ) : (
+                        <>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Show All Sections
+                        </>
+                    )}
+                </Button>
+            </div>
+
             {/* Sections */}
             <div className="space-y-4">
-                {SECTION_ORDER.map((sectionId) => {
+                {SECTION_ORDER.filter(
+                    (sectionId) => showAllSections || sectionId === currentSection
+                ).map((sectionId) => {
                     const sectionDef = SECTION_DEFINITIONS[sectionId];
-                    const isExpanded = expandedSections.has(sectionId);
+                    const isExpanded =
+                        expandedSections.has(sectionId) || sectionId === currentSection;
                     const isCurrent = sectionId === currentSection;
                     const hasData = Object.values(sectionData[sectionId]).some(
                         (v) => v !== null && v !== undefined && v !== ""
@@ -435,10 +463,12 @@ Please provide detailed, specific answers for each question. Format your respons
                                         </p>
                                     </div>
                                 </div>
-                                {isExpanded ? (
-                                    <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                                ) : (
-                                    <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                                {showAllSections && (
+                                    isExpanded ? (
+                                        <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                                    ) : (
+                                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                                    )
                                 )}
                             </button>
 

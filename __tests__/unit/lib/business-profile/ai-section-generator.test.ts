@@ -351,4 +351,152 @@ describe("AI Section Generator", () => {
             expect(prompt).toContain("3. ");
         });
     });
+
+    describe("parseGptPasteResponse - Section 4 normalization", () => {
+        it("should normalize Section 4 belief shift objects with nested content", async () => {
+            const mockData = {
+                vehicle_belief_shift: {
+                    outdated_model: "Old approach",
+                    model_flaws: "It doesn't work anymore",
+                    proof_data: "Statistics show 90% failure rate",
+                    new_model: "New innovative approach",
+                    key_insights: ["First insight", "Second insight", "Third insight"],
+                    quick_win: "Get your first result in 24 hours",
+                    myths_to_bust: "You need years of experience",
+                    success_story: "Client went from 0 to hero",
+                },
+                internal_belief_shift: {
+                    limiting_belief: "I'm not good enough",
+                    perceived_lack: "Skills and experience",
+                    fear_of_failure: "Public embarrassment",
+                    mindset_reframes: ["Failure is learning", "Everyone starts somewhere"],
+                    micro_action: "Share one piece of content",
+                    beginner_success_proof: "New members succeed daily",
+                    success_story: "Introvert became confident speaker",
+                },
+                external_belief_shift: {
+                    external_obstacles: "No time, no money",
+                    success_evidence: "Single parents succeed",
+                    tools_shortcuts: "Automation tools",
+                    fastest_path: "Focus on one thing",
+                    success_story: "Built in 30 days with full-time job",
+                    resource_myths: "You don't need a big team",
+                },
+                poll_questions: ["What's your biggest challenge?", "How long have you tried?"],
+            };
+
+            vi.mocked(generateWithAI).mockResolvedValue(mockData);
+
+            const result = await parseGptPasteResponse(
+                "section4",
+                "Complex multi-level paste content with 1. a) b) c) formatting"
+            );
+
+            expect(result.success).toBe(true);
+            expect(result.data).toHaveProperty("vehicle_belief_shift");
+            expect(result.data).toHaveProperty("internal_belief_shift");
+            expect(result.data).toHaveProperty("external_belief_shift");
+            expect(result.data).toHaveProperty("poll_questions");
+
+            // Verify nested arrays are preserved
+            const data = result.data as any;
+            expect(Array.isArray(data.vehicle_belief_shift.key_insights)).toBe(true);
+            expect(Array.isArray(data.internal_belief_shift.mindset_reframes)).toBe(true);
+            expect(Array.isArray(data.poll_questions)).toBe(true);
+        });
+
+        it("should convert poll_questions string to array", async () => {
+            const mockData = {
+                poll_questions: "What's your biggest challenge?",
+            };
+
+            vi.mocked(generateWithAI).mockResolvedValue(mockData);
+
+            const result = await parseGptPasteResponse("section4", "Content");
+
+            expect(result.success).toBe(true);
+            const data = result.data as any;
+            expect(Array.isArray(data.poll_questions)).toBe(true);
+            expect(data.poll_questions).toContain("What's your biggest challenge?");
+        });
+    });
+
+    describe("parseGptPasteResponse - Section 5 normalization", () => {
+        it("should normalize objections array properly", async () => {
+            const mockData = {
+                call_to_action: "Book a call now",
+                incentive: "50% discount for first 10 signups",
+                pricing_disclosure: "masterclass",
+                path_options: "Single path",
+                top_objections: [
+                    { objection: "Too expensive", response: "ROI is guaranteed" },
+                    { objection: "No time", response: "Just 2 hours per week" },
+                ],
+            };
+
+            vi.mocked(generateWithAI).mockResolvedValue(mockData);
+
+            const result = await parseGptPasteResponse("section5", "CTA content");
+
+            expect(result.success).toBe(true);
+            const data = result.data as any;
+            expect(Array.isArray(data.top_objections)).toBe(true);
+            expect(data.top_objections[0]).toHaveProperty("objection");
+            expect(data.top_objections[0]).toHaveProperty("response");
+        });
+
+        it("should handle objections as string array and convert to objects", async () => {
+            const mockData = {
+                call_to_action: "Book a call",
+                top_objections: ["Too expensive", "No time", "Need to think about it"],
+            };
+
+            vi.mocked(generateWithAI).mockResolvedValue(mockData);
+
+            const result = await parseGptPasteResponse("section5", "CTA content");
+
+            expect(result.success).toBe(true);
+            const data = result.data as any;
+            expect(Array.isArray(data.top_objections)).toBe(true);
+            expect(data.top_objections[0]).toHaveProperty("objection", "Too expensive");
+            expect(data.top_objections[0]).toHaveProperty("response", "");
+        });
+    });
+
+    describe("parseGptPasteResponse - Section 3 normalization", () => {
+        it("should normalize pricing object with string values", async () => {
+            const mockData = {
+                offer_name: "Premium Course",
+                pricing: {
+                    regular: "$5,000",
+                    webinar: "$3,000",
+                },
+            };
+
+            vi.mocked(generateWithAI).mockResolvedValue(mockData);
+
+            const result = await parseGptPasteResponse("section3", "Offer content");
+
+            expect(result.success).toBe(true);
+            const data = result.data as any;
+            expect(data.pricing.regular).toBe(5000);
+            expect(data.pricing.webinar).toBe(3000);
+        });
+
+        it("should handle pricing as a single string", async () => {
+            const mockData = {
+                offer_name: "Premium Course",
+                pricing: "Regular: $5,000, Webinar: $3,000",
+            };
+
+            vi.mocked(generateWithAI).mockResolvedValue(mockData);
+
+            const result = await parseGptPasteResponse("section3", "Offer content");
+
+            expect(result.success).toBe(true);
+            const data = result.data as any;
+            expect(data.pricing).toHaveProperty("regular");
+            expect(data.pricing).toHaveProperty("webinar");
+        });
+    });
 });

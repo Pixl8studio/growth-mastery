@@ -160,7 +160,8 @@ async function sendEmailDelivery(
                 .eq("id", deliveryId)
                 .single();
 
-            const agentConfigId = (deliveryData?.followup_queues as any)?.agent_config_id;
+            const agentConfigId = (deliveryData?.followup_queues as any)
+                ?.agent_config_id;
             const emailProvider = await getEmailProvider(agentConfigId);
 
             span.setAttribute("provider", emailProvider.name);
@@ -187,20 +188,26 @@ async function sendEmailDelivery(
             });
 
             if (!result.success) {
-                logger.error({ error: result.error, deliveryId }, "❌ Email send failed");
+                logger.error(
+                    { error: result.error, deliveryId },
+                    "❌ Email send failed"
+                );
 
-                Sentry.captureException(new Error(result.error || "Email send failed"), {
-                    tags: {
-                        service: "delivery",
-                        operation: "send_email",
-                        provider: emailProvider.name,
-                    },
-                    extra: {
-                        deliveryId,
-                        prospectId: prospect.id,
-                        prospectEmail: prospect.email,
-                    },
-                });
+                Sentry.captureException(
+                    new Error(result.error || "Email send failed"),
+                    {
+                        tags: {
+                            service: "delivery",
+                            operation: "send_email",
+                            provider: emailProvider.name,
+                        },
+                        extra: {
+                            deliveryId,
+                            prospectId: prospect.id,
+                            prospectEmail: prospect.email,
+                        },
+                    }
+                );
 
                 await supabase
                     .from("followup_deliveries")

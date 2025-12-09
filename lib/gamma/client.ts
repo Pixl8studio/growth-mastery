@@ -68,7 +68,7 @@ export async function generateDeck(
             },
             extra: {
                 theme: request.theme,
-                hasContent: !!request.content,
+                hasText: !!request.text,
             },
         });
 

@@ -226,7 +226,8 @@ export async function POST(request: NextRequest) {
                 endpoint: "POST /api/ads/campaigns/create",
             },
             extra: {
-                errorType: error instanceof Error ? error.constructor.name : typeof error,
+                errorType:
+                    error instanceof Error ? error.constructor.name : typeof error,
             },
         });
 

@@ -14,6 +14,30 @@ import { getProfileByProject } from "@/lib/business-profile/service";
 import type { SectionId, BusinessProfile } from "@/types/business-profile";
 import * as Sentry from "@sentry/nextjs";
 
+/**
+ * Truncate content for retry attempts to reduce complexity for AI parsing.
+ * Keeps the most important content (beginning and end) while removing middle.
+ */
+function truncateForRetry(content: string, attempt: number): string {
+    // Calculate how much to keep based on attempt number
+    // Attempt 2: keep 85%, Attempt 3: keep 70%
+    const keepRatio = 1 - (attempt - 1) * 0.15;
+    const maxLength = Math.floor(content.length * keepRatio);
+
+    if (content.length <= maxLength) {
+        return content;
+    }
+
+    // Keep more from the beginning (where structure is usually defined)
+    const headLength = Math.floor(maxLength * 0.7);
+    const tailLength = maxLength - headLength;
+
+    const head = content.slice(0, headLength);
+    const tail = content.slice(-tailLength);
+
+    return `${head}\n\n[Content truncated for processing...]\n\n${tail}`;
+}
+
 export async function POST(request: NextRequest) {
     try {
         const supabase = await createClient();
@@ -95,32 +119,105 @@ export async function POST(request: NextRequest) {
             "Parsing GPT paste response"
         );
 
-        // Parse the pasted content with timeout protection
+        // Parse the pasted content with retry logic and timeout protection
         const PARSE_TIMEOUT_MS = 60000; // 60 seconds
-        let result: Awaited<ReturnType<typeof parseGptPasteResponse>>;
+        const MAX_ATTEMPTS = 3;
+        let result: Awaited<ReturnType<typeof parseGptPasteResponse>> | null =
+            null;
+        let lastError: Error | null = null;
 
-        try {
-            const parsePromise = parseGptPasteResponse(
-                sectionId as SectionId,
-                pastedContent,
-                profileData
-            );
+        for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+            try {
+                // On retry attempts, truncate content slightly to help AI process
+                const contentToUse =
+                    attempt > 1
+                        ? truncateForRetry(pastedContent, attempt)
+                        : pastedContent;
 
-            const timeoutPromise = new Promise<never>((_, reject) => {
-                setTimeout(() => {
-                    reject(
-                        new Error(
-                            "Request timed out. Please try again with shorter content or try a different section."
-                        )
+                const parsePromise = parseGptPasteResponse(
+                    sectionId as SectionId,
+                    contentToUse,
+                    profileData
+                );
+
+                const timeoutPromise = new Promise<never>((_, reject) => {
+                    setTimeout(() => {
+                        reject(
+                            new Error(
+                                "Request timed out. Please try again with shorter content or try a different section."
+                            )
+                        );
+                    }, PARSE_TIMEOUT_MS);
+                });
+
+                const parseResult = await Promise.race([
+                    parsePromise,
+                    timeoutPromise,
+                ]);
+
+                if (parseResult.success) {
+                    result = parseResult;
+                    break;
+                }
+
+                // If parsing returned unsuccessfully, store error and retry
+                lastError = new Error(
+                    parseResult.error || "Failed to parse response"
+                );
+
+                if (attempt < MAX_ATTEMPTS) {
+                    logger.info(
+                        {
+                            attempt,
+                            error: lastError.message,
+                            sectionId,
+                            willRetry: true,
+                        },
+                        "Parse attempt failed, retrying with truncated content"
                     );
-                }, PARSE_TIMEOUT_MS);
-            });
+                    // Exponential backoff
+                    await new Promise((resolve) =>
+                        setTimeout(resolve, 1000 * Math.pow(2, attempt - 1))
+                    );
+                }
+            } catch (parseError) {
+                lastError =
+                    parseError instanceof Error
+                        ? parseError
+                        : new Error("Unknown error");
 
-            result = await Promise.race([parsePromise, timeoutPromise]);
-        } catch (parseError) {
-            // Provide user-friendly error messages for common failures
+                // Don't retry on certain errors
+                const errorMessage = lastError.message;
+                if (
+                    errorMessage.includes("API key") ||
+                    errorMessage.includes("authentication") ||
+                    errorMessage.includes("configuration")
+                ) {
+                    break; // No point retrying config errors
+                }
+
+                if (attempt < MAX_ATTEMPTS) {
+                    logger.info(
+                        {
+                            attempt,
+                            error: errorMessage,
+                            sectionId,
+                            willRetry: true,
+                        },
+                        "Parse threw error, retrying"
+                    );
+                    await new Promise((resolve) =>
+                        setTimeout(resolve, 1000 * Math.pow(2, attempt - 1))
+                    );
+                }
+            }
+        }
+
+        // Handle final result
+        if (!result || !result.success) {
+            // Provide user-friendly error message
             const errorMessage =
-                parseError instanceof Error ? parseError.message : "Unknown error";
+                lastError?.message || "Failed to parse GPT response";
 
             if (
                 errorMessage.includes("timeout") ||
@@ -149,14 +246,9 @@ export async function POST(request: NextRequest) {
                 );
             }
 
-            throw parseError;
-        }
-
-        if (!result.success) {
-            // Provide user-friendly error message
-            const errorMessage = result.error || "Failed to parse GPT response";
             throw new Error(
-                errorMessage.includes("AI generation failed")
+                errorMessage.includes("AI generation failed") ||
+                    errorMessage.includes("Unable to parse")
                     ? "Unable to process your content. Please ensure your pasted text is formatted clearly and try again."
                     : errorMessage
             );

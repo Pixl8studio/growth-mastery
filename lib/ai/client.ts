@@ -14,6 +14,7 @@ import type {
     ImageGenerationOptions,
     GeneratedImage,
 } from "./types";
+import { parseJSONWithRecovery } from "./json-recovery";
 
 let openaiInstance: OpenAI | null = null;
 
@@ -103,7 +104,8 @@ export async function generateWithAI<T>(
                             response.usage?.completion_tokens ?? 0
                         );
 
-                        return JSON.parse(content) as T;
+                        // Use robust JSON parsing with recovery
+                        return parseJSONWithRecovery<T>(content);
                     },
                     {
                         maxAttempts: 3,

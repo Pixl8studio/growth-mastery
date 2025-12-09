@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
- 
-
 /**
  * Enforce that ALL tests must live in __tests__/ directory
  * Fails if any test files are found outside __tests__/

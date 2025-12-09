@@ -1,7 +1,5 @@
 #!/usr/bin/env node
 
- 
-
 /**
  * Pre-test validation script to prevent dangerous process spawning patterns
  * Run this before tests to catch issues early

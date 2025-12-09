@@ -265,7 +265,10 @@ export default function Step3BrandDesignPage({
                 businessProfileId?: string;
             } = { projectId };
 
-            if (businessProfile && (businessProfile.completion_status?.overall ?? 0) > 0) {
+            if (
+                businessProfile &&
+                (businessProfile.completion_status?.overall ?? 0) > 0
+            ) {
                 requestBody.businessProfileId = businessProfile.id;
             } else if (transcripts.length > 0) {
                 requestBody.transcriptId = transcripts[0].id;
@@ -740,7 +743,8 @@ export default function Step3BrandDesignPage({
                                             AI will analyze your business, industry, and
                                             target audience from your{" "}
                                             {businessProfile &&
-                                            (businessProfile.completion_status?.overall ?? 0) > 0
+                                            (businessProfile.completion_status
+                                                ?.overall ?? 0) > 0
                                                 ? "business profile"
                                                 : "intake call"}{" "}
                                             to generate a cohesive brand identity.

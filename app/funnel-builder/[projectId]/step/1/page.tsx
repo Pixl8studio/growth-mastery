@@ -500,8 +500,11 @@ export default function Step1Page({
                     />
                 )}
 
-                {/* Business Profile Progress */}
-                {businessProfile && businessProfile.completion_status && (
+                {/* Business Profile Progress - Hidden when guided methods (wizard/gpt_paste) are active since they have built-in progress */}
+                {businessProfile &&
+                    businessProfile.completion_status &&
+                    selectedMethod !== "wizard" &&
+                    selectedMethod !== "gpt_paste" && (
                     <Card className="p-6">
                         <h3 className="mb-4 text-lg font-semibold text-foreground">
                             Business Profile Progress

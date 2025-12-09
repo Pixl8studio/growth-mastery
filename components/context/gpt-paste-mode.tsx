@@ -242,12 +242,27 @@ Please provide detailed, specific answers for each question. Format your respons
                 });
             }
         } catch (error) {
+            const errorMessage =
+                error instanceof Error ? error.message : "Failed to parse GPT response.";
+
+            // Provide contextual error titles
+            let errorTitle = "Parse Failed";
+            if (errorMessage.includes("timeout") || errorMessage.includes("too long")) {
+                errorTitle = "Request Timed Out";
+            } else if (errorMessage.includes("busy") || errorMessage.includes("rate")) {
+                errorTitle = "Service Busy";
+            } else if (errorMessage.includes("configuration") || errorMessage.includes("contact support")) {
+                errorTitle = "Service Error";
+            }
+
+            logger.error(
+                { error: errorMessage, sectionId },
+                "Failed to parse GPT paste response"
+            );
+
             toast({
-                title: "Parse Failed",
-                description:
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to parse GPT response.",
+                title: errorTitle,
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {

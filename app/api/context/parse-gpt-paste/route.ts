@@ -95,15 +95,71 @@ export async function POST(request: NextRequest) {
             "Parsing GPT paste response"
         );
 
-        // Parse the pasted content
-        const result = await parseGptPasteResponse(
-            sectionId as SectionId,
-            pastedContent,
-            profileData
-        );
+        // Parse the pasted content with timeout protection
+        const PARSE_TIMEOUT_MS = 60000; // 60 seconds
+        let result: Awaited<ReturnType<typeof parseGptPasteResponse>>;
+
+        try {
+            const parsePromise = parseGptPasteResponse(
+                sectionId as SectionId,
+                pastedContent,
+                profileData
+            );
+
+            const timeoutPromise = new Promise<never>((_, reject) => {
+                setTimeout(() => {
+                    reject(
+                        new Error(
+                            "Request timed out. Please try again with shorter content or try a different section."
+                        )
+                    );
+                }, PARSE_TIMEOUT_MS);
+            });
+
+            result = await Promise.race([parsePromise, timeoutPromise]);
+        } catch (parseError) {
+            // Provide user-friendly error messages for common failures
+            const errorMessage =
+                parseError instanceof Error ? parseError.message : "Unknown error";
+
+            if (
+                errorMessage.includes("timeout") ||
+                errorMessage.includes("timed out")
+            ) {
+                throw new Error(
+                    "The AI is taking too long to process your content. Please try again or paste shorter content."
+                );
+            }
+
+            if (
+                errorMessage.includes("rate limit") ||
+                errorMessage.includes("429")
+            ) {
+                throw new Error(
+                    "AI service is temporarily busy. Please wait a moment and try again."
+                );
+            }
+
+            if (
+                errorMessage.includes("API key") ||
+                errorMessage.includes("authentication")
+            ) {
+                throw new Error(
+                    "AI service configuration error. Please contact support."
+                );
+            }
+
+            throw parseError;
+        }
 
         if (!result.success) {
-            throw new Error(result.error || "Failed to parse GPT response");
+            // Provide user-friendly error message
+            const errorMessage = result.error || "Failed to parse GPT response";
+            throw new Error(
+                errorMessage.includes("AI generation failed")
+                    ? "Unable to process your content. Please ensure your pasted text is formatted clearly and try again."
+                    : errorMessage
+            );
         }
 
         logger.info(

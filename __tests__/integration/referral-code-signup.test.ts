@@ -3,7 +3,7 @@
  * Tests the complete signup flow with referral codes
  */
 
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect } from "vitest";
 
 describe("Referral Code System", () => {
     const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";

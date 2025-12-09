@@ -90,7 +90,10 @@ export async function generateWithAI<T>(
                             "OpenAI generation successful"
                         );
 
-                        span.setAttribute("tokens_used", response.usage?.total_tokens ?? 0);
+                        span.setAttribute(
+                            "tokens_used",
+                            response.usage?.total_tokens ?? 0
+                        );
                         span.setAttribute(
                             "prompt_tokens",
                             response.usage?.prompt_tokens ?? 0
@@ -183,7 +186,10 @@ export async function generateTextWithAI(
                             "OpenAI text generation successful"
                         );
 
-                        span.setAttribute("tokens_used", response.usage?.total_tokens ?? 0);
+                        span.setAttribute(
+                            "tokens_used",
+                            response.usage?.total_tokens ?? 0
+                        );
                         span.setAttribute(
                             "prompt_tokens",
                             response.usage?.prompt_tokens ?? 0
@@ -278,7 +284,10 @@ export async function generateImageWithAI(
 
                         requestLogger.info(
                             {
-                                revisedPrompt: imageData.revised_prompt?.substring(0, 100),
+                                revisedPrompt: imageData.revised_prompt?.substring(
+                                    0,
+                                    100
+                                ),
                             },
                             "DALL-E image generation successful"
                         );

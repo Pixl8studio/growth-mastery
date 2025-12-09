@@ -78,7 +78,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
             tags: {
                 component: "api",
                 action: "get_message",
-                endpoint: "GET /api/followup/sequences/[sequenceId]/messages/[messageId]",
+                endpoint:
+                    "GET /api/followup/sequences/[sequenceId]/messages/[messageId]",
             },
         });
 
@@ -229,7 +230,8 @@ export async function PUT(request: NextRequest, context: RouteContext) {
             tags: {
                 component: "api",
                 action: "update_message",
-                endpoint: "PUT /api/followup/sequences/[sequenceId]/messages/[messageId]",
+                endpoint:
+                    "PUT /api/followup/sequences/[sequenceId]/messages/[messageId]",
             },
         });
 
@@ -324,7 +326,8 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
             tags: {
                 component: "api",
                 action: "delete_message",
-                endpoint: "DELETE /api/followup/sequences/[sequenceId]/messages/[messageId]",
+                endpoint:
+                    "DELETE /api/followup/sequences/[sequenceId]/messages/[messageId]",
             },
         });
 

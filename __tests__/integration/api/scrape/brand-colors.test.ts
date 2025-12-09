@@ -35,7 +35,7 @@ describe("Brand Colors API Route", () => {
             });
 
             const response = await POST(request as any);
-            const data = await response.json();
+            const _data = await response.json();
 
             expect(response.status).toBeGreaterThanOrEqual(400);
         });

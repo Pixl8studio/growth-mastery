@@ -144,7 +144,8 @@ export async function POST(request: NextRequest) {
                 endpoint: "POST /api/ads/variations/generate",
             },
             extra: {
-                errorType: error instanceof Error ? error.constructor.name : typeof error,
+                errorType:
+                    error instanceof Error ? error.constructor.name : typeof error,
             },
         });
 

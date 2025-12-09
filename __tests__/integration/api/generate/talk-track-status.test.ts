@@ -359,7 +359,7 @@ describe("GET /api/generate/talk-track/status/[jobId]", () => {
     it("should return 404 when job belongs to different user", async () => {
         const { createClient } = await import("@/lib/supabase/server");
 
-        const mockJob = {
+        const _mockJob = {
             id: mockJobId,
             user_id: "different-user-456",
             status: "processing",

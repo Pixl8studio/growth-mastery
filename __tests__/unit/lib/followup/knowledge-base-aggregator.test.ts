@@ -107,9 +107,9 @@ describe("Knowledge Base Aggregator", () => {
                 cta_text: ["Join now", "Get started"],
             };
 
-            let callCount = 0;
+            let _callCount = 0;
             mockSupabase.from.mockImplementation((table) => {
-                callCount++;
+                _callCount++;
 
                 if (table === "vapi_transcripts") {
                     return {

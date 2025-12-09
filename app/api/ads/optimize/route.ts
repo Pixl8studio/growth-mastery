@@ -108,7 +108,8 @@ export async function POST(request: NextRequest) {
                 endpoint: "POST /api/ads/optimize",
             },
             extra: {
-                errorType: error instanceof Error ? error.constructor.name : typeof error,
+                errorType:
+                    error instanceof Error ? error.constructor.name : typeof error,
             },
         });
 
@@ -172,7 +173,8 @@ export async function GET(request: NextRequest) {
                 endpoint: "GET /api/ads/optimize",
             },
             extra: {
-                errorType: error instanceof Error ? error.constructor.name : typeof error,
+                errorType:
+                    error instanceof Error ? error.constructor.name : typeof error,
             },
         });
 

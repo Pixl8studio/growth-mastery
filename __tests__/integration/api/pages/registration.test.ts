@@ -30,7 +30,7 @@ vi.mock("@/lib/auth", () => ({
 // Mock Supabase client
 vi.mock("@/lib/supabase/server", () => ({
     createClient: vi.fn(async () => ({
-        from: vi.fn((table) => ({
+        from: vi.fn((_table) => ({
             select: vi.fn(() => ({
                 eq: vi.fn(() => ({
                     neq: vi.fn(() => ({

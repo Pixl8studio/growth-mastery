@@ -102,7 +102,7 @@ describe("ChatInput", () => {
             const user = userEvent.setup();
             render(<ChatInput onSendMessage={onSendMessage} isProcessing={false} />);
 
-            const textarea = screen.getByPlaceholderText("Ask GrowthMastery.ai...");
+            const _textarea = screen.getByPlaceholderText("Ask GrowthMastery.ai...");
             await user.keyboard("{Enter}");
 
             expect(onSendMessage).not.toHaveBeenCalled();
@@ -139,7 +139,7 @@ describe("ChatInput", () => {
 
         it("should not call onSendMessage when processing", async () => {
             const onSendMessage = vi.fn();
-            const user = userEvent.setup();
+            const _user = userEvent.setup();
             render(<ChatInput onSendMessage={onSendMessage} isProcessing={true} />);
 
             // Try to find and click send button (it should be disabled)

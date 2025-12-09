@@ -127,7 +127,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
                 endpoint: "GET /api/ads/metrics/[campaignId]",
             },
             extra: {
-                errorType: error instanceof Error ? error.constructor.name : typeof error,
+                errorType:
+                    error instanceof Error ? error.constructor.name : typeof error,
             },
         });
 

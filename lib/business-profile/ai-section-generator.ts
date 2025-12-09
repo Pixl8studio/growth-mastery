@@ -576,14 +576,20 @@ function normalizeSection4Data(data: Record<string, unknown>): Record<string, un
                 // Ensure nested fields are strings, not objects
                 const obj = value as Record<string, unknown>;
                 for (const [key, val] of Object.entries(obj)) {
-                    if (typeof val === "object" && val !== null && !Array.isArray(val)) {
+                    if (
+                        typeof val === "object" &&
+                        val !== null &&
+                        !Array.isArray(val)
+                    ) {
                         // Convert object to string representation
                         obj[key] = JSON.stringify(val);
                     }
                     // Ensure array fields contain only strings
                     if (Array.isArray(val)) {
                         obj[key] = val.map((item) =>
-                            typeof item === "object" ? JSON.stringify(item) : String(item)
+                            typeof item === "object"
+                                ? JSON.stringify(item)
+                                : String(item)
                         );
                     }
                 }
@@ -617,7 +623,9 @@ function normalizeSection5Data(data: Record<string, unknown>): Record<string, un
         if (typeof normalized.top_objections === "string") {
             // Try to parse if it's a string
             try {
-                normalized.top_objections = JSON.parse(normalized.top_objections as string);
+                normalized.top_objections = JSON.parse(
+                    normalized.top_objections as string
+                );
             } catch {
                 // If can't parse, wrap it
                 normalized.top_objections = [
@@ -657,9 +665,7 @@ function normalizeSection3Data(data: Record<string, unknown>): Record<string, un
     if (normalized.pricing) {
         if (typeof normalized.pricing === "string") {
             // Try to extract numbers from string
-            const priceMatch = (normalized.pricing as string).match(
-                /\$?([\d,]+)/g
-            );
+            const priceMatch = (normalized.pricing as string).match(/\$?([\d,]+)/g);
             if (priceMatch && priceMatch.length >= 1) {
                 const prices = priceMatch.map((p) =>
                     parseInt(p.replace(/[$,]/g, ""), 10)
@@ -671,20 +677,29 @@ function normalizeSection3Data(data: Record<string, unknown>): Record<string, un
             } else {
                 normalized.pricing = { regular: null, webinar: null };
             }
-        } else if (typeof normalized.pricing === "object" && normalized.pricing !== null) {
+        } else if (
+            typeof normalized.pricing === "object" &&
+            normalized.pricing !== null
+        ) {
             const pricingObj = normalized.pricing as Record<string, unknown>;
             normalized.pricing = {
                 regular:
                     typeof pricingObj.regular === "number"
                         ? pricingObj.regular
                         : pricingObj.regular
-                          ? parseInt(String(pricingObj.regular).replace(/[$,]/g, ""), 10)
+                          ? parseInt(
+                                String(pricingObj.regular).replace(/[$,]/g, ""),
+                                10
+                            )
                           : null,
                 webinar:
                     typeof pricingObj.webinar === "number"
                         ? pricingObj.webinar
                         : pricingObj.webinar
-                          ? parseInt(String(pricingObj.webinar).replace(/[$,]/g, ""), 10)
+                          ? parseInt(
+                                String(pricingObj.webinar).replace(/[$,]/g, ""),
+                                10
+                            )
                           : null,
             };
         }

@@ -25,6 +25,7 @@ import { PasteIntake } from "@/components/intake/paste-intake";
 import { UploadIntake } from "@/components/intake/upload-intake";
 import { ScrapeIntake } from "@/components/intake/scrape-intake";
 import { IntakeDataViewer } from "@/components/intake/intake-data-viewer";
+import { IntakeCompletionCard } from "@/components/intake/intake-completion-card";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
@@ -106,6 +107,8 @@ export default function Step1Page({
     const [isRenaming, setIsRenaming] = useState(false);
     const [selectedSession, setSelectedSession] = useState<IntakeSession | null>(null);
     const [isViewerOpen, setIsViewerOpen] = useState(false);
+    const [recentlyCompletedSession, setRecentlyCompletedSession] =
+        useState<IntakeSession | null>(null);
 
     // Load completion status
     const { completedSteps, refreshCompletion } = useStepCompletion(projectId);
@@ -245,14 +248,56 @@ export default function Step1Page({
         (businessProfile?.completion_status?.overall ?? 0) > 0 ||
         intakeSessions.length > 0;
 
-    const handleIntakeComplete = () => {
+    const handleIntakeComplete = async () => {
         setSelectedMethod(null);
+
+        // Load sessions and get the most recently completed one
+        try {
+            const supabase = createClient();
+            const { data: sessions, error } = await supabase
+                .from("vapi_transcripts")
+                .select(
+                    "id, call_id, transcript_text, call_duration, call_status, created_at, extracted_data, brand_data, intake_method, session_name, file_urls, scraped_url, metadata"
+                )
+                .eq("funnel_project_id", projectId)
+                .order("created_at", { ascending: false })
+                .limit(1);
+
+            if (!error && sessions && sessions.length > 0) {
+                const latestSession = sessions[0] as IntakeSession;
+                setRecentlyCompletedSession(latestSession);
+                logger.info(
+                    { sessionId: latestSession.id },
+                    "Intake completed, showing completion card"
+                );
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to fetch latest intake session");
+        }
+
+        // Refresh all data
         loadIntakeSessions();
         loadBusinessProfile();
         refreshCompletion();
     };
 
-    const handleWizardComplete = () => {
+    const handleWizardComplete = async () => {
+        setSelectedMethod(null);
+
+        // For wizard/GPT paste, create a simulated session for the completion card
+        // This provides consistent UX across all intake methods
+        const simulatedSession: IntakeSession = {
+            id: `wizard-${Date.now()}`,
+            call_id: "",
+            transcript_text: "Business profile completed via guided wizard",
+            call_duration: 0,
+            call_status: "completed",
+            created_at: new Date().toISOString(),
+            intake_method: "wizard",
+        };
+
+        setRecentlyCompletedSession(simulatedSession);
+
         loadBusinessProfile();
         refreshCompletion();
         toast({
@@ -440,6 +485,19 @@ export default function Step1Page({
                             />
                         )}
                     </div>
+                )}
+
+                {/* Intake Completion Card - Shows after successful intake */}
+                {recentlyCompletedSession && (
+                    <IntakeCompletionCard
+                        session={recentlyCompletedSession}
+                        projectId={projectId}
+                        onViewDetails={() => {
+                            setSelectedSession(recentlyCompletedSession);
+                            setIsViewerOpen(true);
+                        }}
+                        onDismiss={() => setRecentlyCompletedSession(null)}
+                    />
                 )}
 
                 {/* Business Profile Progress */}

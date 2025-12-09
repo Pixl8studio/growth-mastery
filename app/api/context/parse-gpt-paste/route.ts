@@ -103,7 +103,25 @@ export async function POST(request: NextRequest) {
         );
 
         if (!result.success) {
-            throw new Error(result.error || "Failed to parse GPT response");
+            // Provide user-friendly error messages
+            let userMessage = result.error || "Failed to parse GPT response";
+
+            // Map technical errors to user-friendly messages
+            if (userMessage.includes("JSON")) {
+                userMessage =
+                    "The pasted content couldn't be parsed. Please ensure you've copied the complete GPT response and try again.";
+            } else if (
+                userMessage.includes("rate limit") ||
+                userMessage.includes("429")
+            ) {
+                userMessage =
+                    "We're experiencing high demand. Please wait a moment and try again.";
+            } else if (userMessage.includes("timeout")) {
+                userMessage =
+                    "The request took too long. Please try with a shorter response or try again later.";
+            }
+
+            throw new Error(userMessage);
         }
 
         logger.info(
@@ -141,12 +159,27 @@ export async function POST(request: NextRequest) {
             extra: {},
         });
 
+        // Provide user-friendly error message
+        let errorMessage =
+            error instanceof Error ? error.message : "Failed to parse GPT response";
+
+        // Map common errors to user-friendly messages
+        if (
+            errorMessage.includes("ECONNREFUSED") ||
+            errorMessage.includes("ETIMEDOUT") ||
+            errorMessage.includes("network")
+        ) {
+            errorMessage =
+                "Unable to connect to the AI service. Please check your internet connection and try again.";
+        } else if (errorMessage.includes("content too long")) {
+            errorMessage =
+                "The pasted content is too long. Please try splitting it into smaller sections.";
+        }
+
         return NextResponse.json(
             {
-                error:
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to parse GPT response",
+                error: errorMessage,
+                retryable: !errorMessage.includes("too long"),
             },
             { status: 500 }
         );

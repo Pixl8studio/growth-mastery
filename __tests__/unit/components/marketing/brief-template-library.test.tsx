@@ -153,7 +153,9 @@ describe("BriefTemplateLibrary", () => {
 
         // Find "Launch Campaign" template card and click its "Use Template" button
         const launchCampaignHeading = screen.getByText("Launch Campaign");
-        const templateCard = launchCampaignHeading.closest('[class*="rounded-lg"]') as HTMLElement;
+        const templateCard = launchCampaignHeading.closest(
+            '[class*="rounded-lg"]'
+        ) as HTMLElement;
         const useTemplateButton = within(templateCard).getByText("Use Template");
         fireEvent.click(useTemplateButton);
 

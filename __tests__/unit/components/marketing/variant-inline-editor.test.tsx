@@ -392,9 +392,10 @@ describe("VariantInlineEditor", () => {
 
         // Find the X button - it's in the header, has specific classes and contains an X icon
         const buttons = screen.getAllByRole("button");
-        const closeButton = buttons.find((btn) =>
-            btn.className.includes("text-muted-foreground") &&
-            btn.querySelector("svg.lucide-x")
+        const closeButton = buttons.find(
+            (btn) =>
+                btn.className.includes("text-muted-foreground") &&
+                btn.querySelector("svg.lucide-x")
         );
 
         expect(closeButton).toBeDefined();

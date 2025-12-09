@@ -215,7 +215,8 @@ describe("ProspectList", () => {
             // After filtering, the test still shows both prospects (mock doesn't filter)
             // But we can verify the filter button was clicked by checking it's active
             const activeButton = buttons.find(
-                (el) => el.tagName === "BUTTON" && el.className.includes("bg-primary/50")
+                (el) =>
+                    el.tagName === "BUTTON" && el.className.includes("bg-primary/50")
             );
             expect(activeButton).toBeTruthy();
         });

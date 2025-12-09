@@ -101,7 +101,9 @@ describe("ApprovalWorkflowModal", () => {
         render(<ApprovalWorkflowModal {...defaultProps} />);
 
         // Get the first select (platform filter) by finding the one with "All Platforms" option
-        const platformSelect = screen.getByDisplayValue("All Platforms").closest("select")!;
+        const platformSelect = screen
+            .getByDisplayValue("All Platforms")
+            .closest("select")!;
         fireEvent.change(platformSelect, { target: { value: "instagram" } });
 
         await waitFor(() => {
@@ -119,7 +121,9 @@ describe("ApprovalWorkflowModal", () => {
         render(<ApprovalWorkflowModal {...defaultProps} />);
 
         // Get the second select (status filter) by finding the one with "Pending Review" option
-        const statusSelect = screen.getByDisplayValue("Pending Review").closest("select")!;
+        const statusSelect = screen
+            .getByDisplayValue("Pending Review")
+            .closest("select")!;
         fireEvent.change(statusSelect, { target: { value: "approved" } });
 
         await waitFor(() => {

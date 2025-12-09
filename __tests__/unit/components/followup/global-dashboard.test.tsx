@@ -130,7 +130,9 @@ describe("GlobalDashboard", () => {
         await waitFor(() => {
             expect(screen.getByText("Performance by Funnel")).toBeInTheDocument();
             // "Main Webinar Funnel" appears in both funnel section and recent activity
-            expect(screen.getAllByText("Main Webinar Funnel").length).toBeGreaterThan(0);
+            expect(screen.getAllByText("Main Webinar Funnel").length).toBeGreaterThan(
+                0
+            );
             expect(screen.getByText("Secondary Funnel")).toBeInTheDocument();
             expect(screen.getByText("150 prospects")).toBeInTheDocument();
         });

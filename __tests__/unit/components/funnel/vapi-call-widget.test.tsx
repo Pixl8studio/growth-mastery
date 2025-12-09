@@ -114,7 +114,9 @@ describe("VapiCallWidget", () => {
         render(<VapiCallWidget {...mockProps} />);
 
         await waitFor(() => {
-            expect(screen.getByRole("button", { name: /Start Call/i })).toBeInTheDocument();
+            expect(
+                screen.getByRole("button", { name: /Start Call/i })
+            ).toBeInTheDocument();
         });
 
         const startButton = screen.getByRole("button", { name: /Start Call/i });
@@ -134,16 +136,16 @@ describe("VapiCallWidget", () => {
         render(<VapiCallWidget {...mockProps} />);
 
         await waitFor(() => {
-            expect(screen.getByRole("button", { name: /Start Call/i })).toBeInTheDocument();
+            expect(
+                screen.getByRole("button", { name: /Start Call/i })
+            ).toBeInTheDocument();
         });
 
         const startButton = screen.getByRole("button", { name: /Start Call/i });
         fireEvent.click(startButton);
 
         await waitFor(() => {
-            expect(
-                screen.getByText(/Connecting to AI assistant/i)
-            ).toBeInTheDocument();
+            expect(screen.getByText(/Connecting to AI assistant/i)).toBeInTheDocument();
         });
     });
 
@@ -153,7 +155,9 @@ describe("VapiCallWidget", () => {
         render(<VapiCallWidget {...mockProps} />);
 
         await waitFor(() => {
-            expect(screen.getByRole("button", { name: /Start Call/i })).toBeInTheDocument();
+            expect(
+                screen.getByRole("button", { name: /Start Call/i })
+            ).toBeInTheDocument();
         });
 
         const startButton = screen.getByRole("button", { name: /Start Call/i });
@@ -250,7 +254,9 @@ describe("VapiCallWidget", () => {
         }
 
         await waitFor(() => {
-            expect(screen.getByRole("button", { name: /End Call/i })).toBeInTheDocument();
+            expect(
+                screen.getByRole("button", { name: /End Call/i })
+            ).toBeInTheDocument();
         });
 
         const endButton = screen.getByRole("button", { name: /End Call/i });

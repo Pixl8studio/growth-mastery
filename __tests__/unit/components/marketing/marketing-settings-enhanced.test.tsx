@@ -114,7 +114,7 @@ describe("MarketingSettingsEnhanced", () => {
 
         await waitFor(() => {
             expect(global.fetch).toHaveBeenCalledWith(
-                expect.stringContaining("/integrations/"),
+                expect.stringContaining("/integrations/")
             );
         });
     });

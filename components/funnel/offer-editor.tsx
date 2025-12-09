@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { logger } from "@/lib/client-logger";
 
 interface OfferData {
     name: string;
@@ -119,7 +120,8 @@ export function OfferEditor({
                 purpose: offer.purpose,
                 pathway: offer.pathway,
             });
-        } catch (_error) {
+        } catch (error) {
+            logger.error({ error }, "Failed to save offer");
             alert("Failed to save offer. Please try again.");
         } finally {
             setSaving(false);

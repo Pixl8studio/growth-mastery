@@ -3,6 +3,7 @@
  * Manage webhook configuration for individual pages
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -100,6 +101,14 @@ export async function GET(
                 { status: error.statusCode }
             );
         }
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "GET /api/pages/[pageId]/webhook",
+            },
+            extra: { pageId: params.pageId },
+        });
 
         return NextResponse.json(
             { error: "Failed to retrieve webhook configuration" },
@@ -226,6 +235,14 @@ export async function PUT(
             );
         }
 
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "PUT /api/pages/[pageId]/webhook",
+            },
+            extra: { pageId: params.pageId },
+        });
+
         return NextResponse.json(
             { error: "Failed to update webhook configuration" },
             { status: 500 }
@@ -351,6 +368,14 @@ export async function POST(
                 { status: error.statusCode }
             );
         }
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/pages/[pageId]/webhook",
+            },
+            extra: { pageId: params.pageId },
+        });
 
         return NextResponse.json({ error: "Failed to test webhook" }, { status: 500 });
     }

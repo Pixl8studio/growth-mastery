@@ -3,6 +3,7 @@
  * Generates 3 AI-powered rewrite options for a specific field
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUserWithProfile } from "@/lib/auth";
 import { generateTextWithAI } from "@/lib/ai/client";
@@ -112,6 +113,15 @@ Provide ONLY the rewritten content, no explanations or quotes.`;
     } catch (error) {
         const { pageId } = await params;
         logger.error({ error, pageId }, "Field rewrite generation failed");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/pages/enrollment/[pageId]/rewrite-field",
+            },
+            extra: { pageId },
+        });
+
         return NextResponse.json(
             { error: "Failed to generate rewrites" },
             { status: 500 }

@@ -4,6 +4,7 @@
  * GET - Get current domain verification status from Mailgun
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -101,6 +102,13 @@ export async function GET(
         });
     } catch (error) {
         logger.error({ error }, "❌ Failed to get email domain status");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "GET /api/email-domains/[domainId]/status",
+            },
+        });
 
         return NextResponse.json(
             { success: false, error: "Failed to get email domain status" },

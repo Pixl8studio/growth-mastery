@@ -3,6 +3,7 @@
  * Uses enrollment framework-aware prompts for targeted regeneration
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserWithProfile } from "@/lib/auth";
 import { NextRequest, NextResponse } from "next/server";
@@ -375,6 +376,14 @@ INSTRUCTIONS:
         });
     } catch (error) {
         requestLogger.error({ error }, "Error regenerating enrollment field");
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "api",
+                endpoint: "POST /api/pages/enrollment/[pageId]/regenerate-field",
+            },
+        });
+
         return NextResponse.json(
             {
                 error:

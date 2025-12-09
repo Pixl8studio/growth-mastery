@@ -78,7 +78,10 @@ export function ProjectCard({ project }: ProjectCardProps) {
 
                     <div className="flex items-center justify-between text-sm">
                         <span className="text-muted-foreground">Last updated</span>
-                        <span className="font-medium text-foreground">
+                        <span
+                            className="font-medium text-foreground"
+                            suppressHydrationWarning
+                        >
                             {formatDate(project.updated_at)}
                         </span>
                     </div>

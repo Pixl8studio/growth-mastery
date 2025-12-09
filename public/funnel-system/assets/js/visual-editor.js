@@ -373,6 +373,9 @@ class VisualEditor {
         // Guard against null/undefined e.target (can happen when element is removed from DOM)
         if (!e.target) return;
 
+        // Guard against non-Element nodes (like text nodes) that don't have classList
+        if (!e.target.classList) return;
+
         // Skip if this is an icon element (for icon picker)
         if (e.target.classList.contains('feature-icon') ||
             e.target.classList.contains('screen-icon') ||
@@ -2652,6 +2655,12 @@ class VisualEditor {
         const tempDiv = document.createElement("div");
         tempDiv.innerHTML = blockHTML;
         const newBlock = tempDiv.firstElementChild;
+
+        // Guard against invalid block template producing no element
+        if (!newBlock) {
+            console.error("Failed to create block:", blockType);
+            return;
+        }
 
         const container = document.querySelector(".page-container") || document.body;
 

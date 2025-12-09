@@ -3,12 +3,13 @@
 import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import { Sparkles, DollarSign, Trash2, Pencil } from "lucide-react";
+import { Sparkles, DollarSign, Trash2, Pencil, User } from "lucide-react";
 import { OfferEditor } from "@/components/funnel/offer-editor";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { useToast } from "@/components/ui/use-toast";
+import type { BusinessProfile } from "@/types/business-profile";
 
 interface Offer {
     id: string;
@@ -47,6 +48,12 @@ export default function Step2Page({
     const [editingName, setEditingName] = useState("");
     const [transcripts, setTranscripts] = useState<any[]>([]);
     const [selectedTranscript, setSelectedTranscript] = useState("");
+    const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(
+        null
+    );
+    const [selectedSource, setSelectedSource] = useState<"transcript" | "profile" | "">(
+        ""
+    );
     const [alternatives, setAlternatives] = useState<any[]>([]);
     const [loadingAlternatives, setLoadingAlternatives] = useState(false);
 
@@ -110,12 +117,44 @@ export default function Step2Page({
                 if (transcriptError) throw transcriptError;
                 setTranscripts(transcriptData || []);
 
-                if (
-                    transcriptData &&
-                    transcriptData.length > 0 &&
-                    !selectedTranscript
-                ) {
-                    setSelectedTranscript(transcriptData[0].id);
+                // Load business profile
+                let loadedProfile: BusinessProfile | null = null;
+                try {
+                    const profileResponse = await fetch(
+                        `/api/context/business-profile?projectId=${projectId}`,
+                        { credentials: "include" }
+                    );
+
+                    if (profileResponse.ok) {
+                        const profileResult = await profileResponse.json();
+                        if (
+                            profileResult.profile &&
+                            profileResult.profile.completion_status?.overall > 0
+                        ) {
+                            loadedProfile = profileResult.profile;
+                            setBusinessProfile(loadedProfile);
+                        }
+                    }
+                } catch (profileError) {
+                    // Non-critical - business profile loading is optional
+                    logger.warn(
+                        { error: profileError },
+                        "Failed to load business profile"
+                    );
+                }
+
+                // Auto-select first available source (prefer business profile if complete, then transcripts)
+                if (!selectedSource) {
+                    const hasCompleteProfile =
+                        loadedProfile &&
+                        (loadedProfile.completion_status?.overall ?? 0) >= 50;
+
+                    if (hasCompleteProfile) {
+                        setSelectedSource("profile");
+                    } else if (transcriptData && transcriptData.length > 0) {
+                        setSelectedSource("transcript");
+                        setSelectedTranscript(transcriptData[0].id);
+                    }
                 }
             } catch (error) {
                 logger.error({ error }, "Failed to load offers");
@@ -123,7 +162,7 @@ export default function Step2Page({
         };
 
         loadOffers();
-    }, [projectId, selectedTranscript]);
+    }, [projectId, selectedTranscript, selectedSource]);
 
     const handleGenerateOffer = async () => {
         setIsGenerating(true);
@@ -132,10 +171,25 @@ export default function Step2Page({
         try {
             setGenerationProgress(30);
 
+            // Build request body based on selected source
+            const requestBody: {
+                projectId: string;
+                transcriptId?: string;
+                businessProfileId?: string;
+            } = {
+                projectId,
+            };
+
+            if (selectedSource === "profile" && businessProfile) {
+                requestBody.businessProfileId = businessProfile.id;
+            } else if (selectedSource === "transcript" && selectedTranscript) {
+                requestBody.transcriptId = selectedTranscript;
+            }
+
             const response = await fetch("/api/generate/offer", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ projectId, transcriptId: selectedTranscript }),
+                body: JSON.stringify(requestBody),
             });
 
             setGenerationProgress(80);
@@ -279,6 +333,12 @@ export default function Step2Page({
     };
 
     const hasCompletedOffer = offers.length > 0;
+    const hasIntakeData =
+        transcripts.length > 0 ||
+        (businessProfile && (businessProfile.completion_status?.overall ?? 0) > 0);
+    const canGenerateOffer =
+        (selectedSource === "profile" && businessProfile) ||
+        (selectedSource === "transcript" && selectedTranscript);
 
     const formatDate = (dateString: string) => {
         const date = new Date(dateString);
@@ -330,7 +390,7 @@ export default function Step2Page({
         >
             <div className="space-y-8">
                 {/* Dependency Warning */}
-                {transcripts.length === 0 && (
+                {!hasIntakeData && (
                     <DependencyWarning
                         message="You need to complete your intake session first so AI can understand your business and create a compelling offer."
                         requiredStep={1}
@@ -344,62 +404,151 @@ export default function Step2Page({
                     <div className="rounded-lg border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-8">
                         <div className="mx-auto mb-6 max-w-md">
                             <label className="mb-2 block text-sm font-medium text-foreground">
-                                Select Intake Session
+                                Select Data Source
                             </label>
                             <p className="mb-4 text-sm text-muted-foreground">
-                                AI intelligently analyzes your intake session to define
-                                your business offers to be used to build the rest of
-                                your funnel and marketing launch.
+                                AI intelligently analyzes your business context to
+                                define your business offers to be used to build the rest
+                                of your funnel and marketing launch.
                             </p>
-                            <select
-                                value={selectedTranscript}
-                                onChange={(e) => setSelectedTranscript(e.target.value)}
-                                disabled={transcripts.length === 0}
-                                className="w-full rounded-lg border border-border px-4 py-3 focus:border-green-500 focus:ring-2 focus:ring-green-500 disabled:cursor-not-allowed disabled:bg-muted"
-                            >
-                                {transcripts.length === 0 ? (
-                                    <option value="">
-                                        No intake sessions available
-                                    </option>
-                                ) : (
-                                    <>
-                                        <option value="">
-                                            Select an intake session...
-                                        </option>
-                                        {transcripts.map((transcript: any) => (
-                                            <option
-                                                key={transcript.id}
-                                                value={transcript.id}
-                                            >
-                                                {transcript.session_name ||
-                                                    `${getMethodLabel(transcript.intake_method || "voice")} - ${formatDate(transcript.created_at)}`}
-                                            </option>
-                                        ))}
-                                    </>
-                                )}
-                            </select>
 
-                            {transcripts.length === 0 && (
-                                <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-600">
-                                    💡 Complete Step 1 first to create intake sessions
-                                </p>
-                            )}
+                            {/* Source Selection */}
+                            <div className="space-y-3">
+                                {/* Business Profile Option */}
+                                {businessProfile &&
+                                    (businessProfile.completion_status?.overall ?? 0) >
+                                        0 && (
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedSource("profile");
+                                                setSelectedTranscript("");
+                                            }}
+                                            className={`flex w-full items-center gap-3 rounded-lg border p-4 text-left transition-all ${
+                                                selectedSource === "profile"
+                                                    ? "border-green-500 bg-green-50 ring-2 ring-green-500"
+                                                    : "border-border bg-card hover:border-green-300"
+                                            }`}
+                                        >
+                                            <div
+                                                className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                                                    selectedSource === "profile"
+                                                        ? "bg-green-500 text-white"
+                                                        : "bg-muted text-muted-foreground"
+                                                }`}
+                                            >
+                                                <User className="h-5 w-5" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <div className="font-medium text-foreground">
+                                                    Business Profile
+                                                </div>
+                                                <div className="text-sm text-muted-foreground">
+                                                    {
+                                                        businessProfile
+                                                            .completion_status?.overall
+                                                    }
+                                                    % complete -{" "}
+                                                    {businessProfile.source === "wizard"
+                                                        ? "Guided Wizard"
+                                                        : businessProfile.source ===
+                                                            "gpt_paste"
+                                                          ? "GPT Import"
+                                                          : "Voice Call"}
+                                                </div>
+                                            </div>
+                                            {selectedSource === "profile" && (
+                                                <div className="text-green-600">✓</div>
+                                            )}
+                                        </button>
+                                    )}
+
+                                {/* Transcript Options */}
+                                {transcripts.length > 0 && (
+                                    <div className="space-y-2">
+                                        {businessProfile &&
+                                            (businessProfile.completion_status
+                                                ?.overall ?? 0) > 0 && (
+                                                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider pt-2">
+                                                    Or select a legacy intake session
+                                                </div>
+                                            )}
+                                        {transcripts.map((transcript: any) => (
+                                            <button
+                                                key={transcript.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedSource("transcript");
+                                                    setSelectedTranscript(
+                                                        transcript.id
+                                                    );
+                                                }}
+                                                className={`flex w-full items-center gap-3 rounded-lg border p-4 text-left transition-all ${
+                                                    selectedSource === "transcript" &&
+                                                    selectedTranscript === transcript.id
+                                                        ? "border-green-500 bg-green-50 ring-2 ring-green-500"
+                                                        : "border-border bg-card hover:border-green-300"
+                                                }`}
+                                            >
+                                                <div
+                                                    className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                                                        selectedSource ===
+                                                            "transcript" &&
+                                                        selectedTranscript ===
+                                                            transcript.id
+                                                            ? "bg-green-500 text-white"
+                                                            : "bg-muted text-muted-foreground"
+                                                    }`}
+                                                >
+                                                    <Sparkles className="h-5 w-5" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="font-medium text-foreground">
+                                                        {transcript.session_name ||
+                                                            `${getMethodLabel(transcript.intake_method || "voice")}`}
+                                                    </div>
+                                                    <div className="text-sm text-muted-foreground">
+                                                        {formatDate(
+                                                            transcript.created_at
+                                                        )}
+                                                    </div>
+                                                </div>
+                                                {selectedSource === "transcript" &&
+                                                    selectedTranscript ===
+                                                        transcript.id && (
+                                                        <div className="text-green-600">
+                                                            ✓
+                                                        </div>
+                                                    )}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* No data available */}
+                                {!hasIntakeData && (
+                                    <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-600">
+                                        💡 Complete Step 1 first to create intake
+                                        sessions
+                                    </p>
+                                )}
+                            </div>
                         </div>
 
                         <div className="text-center">
                             <button
                                 onClick={handleGenerateOffer}
-                                disabled={!selectedTranscript}
+                                disabled={!canGenerateOffer}
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
-                                    selectedTranscript
+                                    canGenerateOffer
                                         ? "bg-primary text-primary-foreground hover:bg-primary/90"
                                         : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                 }`}
                             >
                                 <Sparkles className="h-6 w-6" />
-                                {selectedTranscript
+                                {canGenerateOffer
                                     ? "Generate Offer"
-                                    : "Select Session First"}
+                                    : "Select Data Source First"}
                             </button>
 
                             <div className="mt-4 space-y-1 text-sm text-muted-foreground">

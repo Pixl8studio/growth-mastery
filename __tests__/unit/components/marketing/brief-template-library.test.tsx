@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { BriefTemplateLibrary } from "@/components/marketing/brief-template-library";
 
 // Mock dependencies
@@ -118,7 +118,8 @@ describe("BriefTemplateLibrary", () => {
             expect(screen.getByText("Launch Campaign")).toBeInTheDocument();
         });
 
-        const defaultButton = screen.getByText("Default");
+        // Use getByRole to find the button specifically, not the badge
+        const defaultButton = screen.getByRole("button", { name: "Default" });
         fireEvent.click(defaultButton);
 
         await waitFor(() => {
@@ -147,9 +148,14 @@ describe("BriefTemplateLibrary", () => {
         render(<BriefTemplateLibrary {...defaultProps} />);
 
         await waitFor(() => {
-            const useTemplateButton = screen.getAllByText("Use Template")[0];
-            fireEvent.click(useTemplateButton);
+            expect(screen.getByText("Launch Campaign")).toBeInTheDocument();
         });
+
+        // Find "Launch Campaign" template card and click its "Use Template" button
+        const launchCampaignHeading = screen.getByText("Launch Campaign");
+        const templateCard = launchCampaignHeading.closest('[class*="rounded-lg"]') as HTMLElement;
+        const useTemplateButton = within(templateCard).getByText("Use Template");
+        fireEvent.click(useTemplateButton);
 
         expect(mockOnSelectTemplate).toHaveBeenCalledWith(mockTemplates[0]);
     });

@@ -7,10 +7,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ComplianceValidator } from "@/components/marketing/compliance-validator";
 
+// Create toast mock function that will be shared
+const mockToast = vi.fn();
+
 // Mock dependencies
 vi.mock("@/components/ui/use-toast", () => ({
     useToast: () => ({
-        toast: vi.fn(),
+        toast: mockToast,
     }),
 }));
 
@@ -22,7 +25,6 @@ vi.mock("@/lib/client-logger", () => ({
 }));
 
 // Import mocked modules
-import { useToast } from "@/components/ui/use-toast";
 import { logger } from "@/lib/client-logger";
 
 describe("ComplianceValidator", () => {
@@ -226,7 +228,6 @@ describe("ComplianceValidator", () => {
         (global.fetch as any).mockRejectedValueOnce(new Error("Validation failed"));
 
         const mockLogger = vi.mocked(logger);
-        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ComplianceValidator {...defaultProps} />);
 
@@ -245,8 +246,6 @@ describe("ComplianceValidator", () => {
     });
 
     it("should handle missing variant ID and content", async () => {
-        const mockToast = vi.mocked(useToast)().toast;
-
         render(
             <ComplianceValidator
                 onValidationComplete={mockOnValidationComplete}

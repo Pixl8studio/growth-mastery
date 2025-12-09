@@ -7,10 +7,13 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ProfileConfigForm } from "@/components/marketing/profile-config-form";
 
+// Create stable mocks
+const mockToast = vi.fn();
+
 // Mock dependencies
 vi.mock("@/components/ui/use-toast", () => ({
     useToast: () => ({
-        toast: vi.fn(),
+        toast: mockToast,
     }),
 }));
 
@@ -127,7 +130,10 @@ describe("ProfileConfigForm", () => {
             /Paste 3-5 of your existing/
         );
         fireEvent.change(sampleTextarea, {
-            target: { value: "Sample post 1\n\nSample post 2\n\nSample post 3" },
+            target: {
+                value:
+                    "This is my first sample post with enough content to pass the validation check\n\nThis is my second sample post with enough content to pass the validation check\n\nThis is my third sample post with enough content to pass the validation check",
+            },
         });
 
         const calibrateButton = screen.getByText("Calibrate Voice");
@@ -148,8 +154,6 @@ describe("ProfileConfigForm", () => {
             ...mockProfile,
             echo_mode_config: { ...mockProfile.echo_mode_config, enabled: true },
         };
-
-        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ProfileConfigForm {...defaultProps} profile={echoEnabledProfile} />);
 
@@ -189,8 +193,6 @@ describe("ProfileConfigForm", () => {
         (global.fetch as any).mockResolvedValueOnce({
             json: async () => ({ success: true }),
         });
-
-        const mockToast = vi.mocked(useToast)().toast;
 
         render(<ProfileConfigForm {...defaultProps} />);
 

@@ -46,38 +46,49 @@ describe("OfferEditor", () => {
     it("should display features", () => {
         render(<OfferEditor {...defaultProps} />);
 
-        expect(screen.getByText("Feature 1")).toBeInTheDocument();
-        expect(screen.getByText("Feature 2")).toBeInTheDocument();
+        // Switch to Features & Bonuses tab
+        const featuresTab = screen.getByRole("button", { name: /Features & Bonuses/i });
+        fireEvent.click(featuresTab);
+
+        expect(screen.getByDisplayValue("Feature 1")).toBeInTheDocument();
+        expect(screen.getByDisplayValue("Feature 2")).toBeInTheDocument();
     });
 
     it("should display bonuses", () => {
         render(<OfferEditor {...defaultProps} />);
 
-        expect(screen.getByText("Bonus 1")).toBeInTheDocument();
+        // Switch to Features & Bonuses tab
+        const featuresTab = screen.getByRole("button", { name: /Features & Bonuses/i });
+        fireEvent.click(featuresTab);
+
+        expect(screen.getByDisplayValue("Bonus 1")).toBeInTheDocument();
     });
 
     it("should allow adding features", () => {
         render(<OfferEditor {...defaultProps} />);
 
+        // Switch to Features & Bonuses tab
+        const featuresTab = screen.getByRole("button", { name: /Features & Bonuses/i });
+        fireEvent.click(featuresTab);
+
         const addButton = screen.getByRole("button", { name: /Add.*[Ff]eature/i });
         fireEvent.click(addButton);
 
-        expect(screen.getByText("New feature")).toBeInTheDocument();
+        expect(screen.getByDisplayValue("New feature")).toBeInTheDocument();
     });
 
     it("should allow removing features", () => {
         render(<OfferEditor {...defaultProps} />);
 
-        const removeButtons = screen.getAllByRole("button");
-        const featureRemoveButton = removeButtons.find((btn) =>
-            btn.closest("div")?.textContent?.includes("Feature 1")
-        );
+        // Switch to Features & Bonuses tab
+        const featuresTab = screen.getByRole("button", { name: /Features & Bonuses/i });
+        fireEvent.click(featuresTab);
 
-        if (featureRemoveButton) {
-            fireEvent.click(featureRemoveButton);
-        }
+        const removeButtons = screen.getAllByRole("button", { name: /Remove/i });
+        // Click the first remove button (for Feature 1)
+        fireEvent.click(removeButtons[0]);
 
-        expect(screen.queryByText("Feature 1")).not.toBeInTheDocument();
+        expect(screen.queryByDisplayValue("Feature 1")).not.toBeInTheDocument();
     });
 
     it("should call onSave when save button clicked", async () => {
@@ -107,8 +118,13 @@ describe("OfferEditor", () => {
 
         render(<OfferEditor initialOffer={offerWithMaxFeatures} onSave={mockOnSave} />);
 
-        const addButton = screen.getByRole("button", { name: /Add.*[Ff]eature/i });
-        expect(addButton).toBeDisabled();
+        // Switch to Features & Bonuses tab
+        const featuresTab = screen.getByRole("button", { name: /Features & Bonuses/i });
+        fireEvent.click(featuresTab);
+
+        // Button should not be present when at max
+        const addButton = screen.queryByRole("button", { name: /Add.*[Ff]eature/i });
+        expect(addButton).not.toBeInTheDocument();
     });
 
     it("should enforce max bonuses limit", () => {
@@ -119,7 +135,12 @@ describe("OfferEditor", () => {
 
         render(<OfferEditor initialOffer={offerWithMaxBonuses} onSave={mockOnSave} />);
 
-        const addButton = screen.getByRole("button", { name: /Add.*[Bb]onus/i });
-        expect(addButton).toBeDisabled();
+        // Switch to Features & Bonuses tab
+        const featuresTab = screen.getByRole("button", { name: /Features & Bonuses/i });
+        fireEvent.click(featuresTab);
+
+        // Button should not be present when at max
+        const addButton = screen.queryByRole("button", { name: /Add.*[Bb]onus/i });
+        expect(addButton).not.toBeInTheDocument();
     });
 });

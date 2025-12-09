@@ -61,7 +61,7 @@ describe("Accordion", () => {
     });
 
     it("should handle custom className on AccordionItem", () => {
-        render(
+        const { container } = render(
             <Accordion type="single" collapsible>
                 <AccordionItem value="item-1" className="custom-item">
                     <AccordionTrigger>Section 1</AccordionTrigger>
@@ -69,10 +69,10 @@ describe("Accordion", () => {
                 </AccordionItem>
             </Accordion>
         );
-        const item = screen
-            .getByText("Section 1")
-            .closest("[data-radix-collection-item]");
-        expect(item?.className).toContain("custom-item");
+        // AccordionItem applies className to the item wrapper
+        // Look for element with both border-b and custom-item classes
+        const item = container.querySelector(".border-b.custom-item");
+        expect(item).toBeInTheDocument();
     });
 
     it("should handle custom className on AccordionTrigger", () => {
@@ -91,7 +91,7 @@ describe("Accordion", () => {
     });
 
     it("should handle custom className on AccordionContent", () => {
-        render(
+        const { container } = render(
             <Accordion type="single" defaultValue="item-1">
                 <AccordionItem value="item-1">
                     <AccordionTrigger>Section 1</AccordionTrigger>
@@ -101,8 +101,11 @@ describe("Accordion", () => {
                 </AccordionItem>
             </Accordion>
         );
-        const contentWrapper = screen.getByText("Content 1").parentElement;
-        expect(contentWrapper?.className).toContain("custom-content");
+        // AccordionContent wraps children in a div with className
+        // The custom class is on the inner wrapper div
+        const contentWrapper = container.querySelector(".custom-content");
+        expect(contentWrapper).toBeInTheDocument();
+        expect(contentWrapper?.textContent).toBe("Content 1");
     });
 
     it("should render with default expanded state", () => {

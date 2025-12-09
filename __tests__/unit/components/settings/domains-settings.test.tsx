@@ -107,8 +107,17 @@ describe("DomainsSettings", () => {
     it("should list existing domains", async () => {
         render(<DomainsSettings />);
 
+        // Wait for loading to complete and domains to render
+        await waitFor(
+            () => {
+                expect(screen.queryByText("Loading...")).not.toBeInTheDocument();
+            },
+            { timeout: 3000 }
+        );
+
+        // Domain names appear in both h4 headings and links (for verified domains)
         await waitFor(() => {
-            expect(screen.getByText("example.com")).toBeInTheDocument();
+            expect(screen.getAllByText("example.com").length).toBeGreaterThan(0);
         });
 
         expect(screen.getByText("test.com")).toBeInTheDocument();

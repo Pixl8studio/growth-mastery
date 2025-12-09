@@ -47,15 +47,16 @@ describe("Business Context", () => {
                         return {
                             select: vi.fn().mockReturnThis(),
                             eq: vi.fn().mockReturnThis(),
-                            order: vi.fn().mockReturnThis(),
-                            single: vi.fn().mockResolvedValue({
-                                data: {
-                                    id: "project-123",
-                                    name: "Test Project",
-                                    slug: "test",
-                                    status: "active",
-                                    current_step: 3,
-                                },
+                            order: vi.fn().mockResolvedValue({
+                                data: [
+                                    {
+                                        id: "project-123",
+                                        name: "Test Project",
+                                        slug: "test",
+                                        status: "active",
+                                        current_step: 3,
+                                    },
+                                ],
                                 error: null,
                             }),
                         };
@@ -73,20 +74,27 @@ describe("Business Context", () => {
                         };
                     }
                     if (table === "contacts") {
-                        return {
-                            select: vi
-                                .fn()
-                                .mockResolvedValue({ count: 100, error: null }),
+                        // Query: .select().eq() - both chainable
+                        const mockResult = { count: 100, error: null };
+                        const chain: any = {
+                            select: vi.fn().mockReturnThis(),
+                            eq: vi.fn().mockReturnThis(),
+                            then: (resolve: any) => resolve(mockResult),
                         };
+                        return chain;
                     }
                     if (table === "payment_transactions") {
-                        return {
-                            select: vi.fn().mockReturnThis(),
-                            eq: vi.fn().mockResolvedValue({
-                                data: [{ amount: 997 }, { amount: 1997 }],
-                                error: null,
-                            }),
+                        // Query calls .eq() twice, so we need chainable object that's also awaitable
+                        const mockResult = {
+                            data: [{ amount: 997 }, { amount: 1997 }],
+                            error: null,
                         };
+                        const chain: any = {
+                            select: vi.fn().mockReturnThis(),
+                            eq: vi.fn().mockReturnThis(),
+                            then: (resolve: any) => resolve(mockResult),
+                        };
+                        return chain;
                     }
                     return { select: vi.fn().mockReturnThis() };
                 }),

@@ -11,16 +11,20 @@ import {
     estimateTokens,
 } from "@/lib/ai/client";
 
+// Mock OpenAI methods that will be used by the client
+const mockChatCompletionsCreate = vi.fn();
+const mockImagesGenerate = vi.fn();
+
 // Mock dependencies
 vi.mock("openai", () => ({
     default: vi.fn().mockImplementation(() => ({
         chat: {
             completions: {
-                create: vi.fn(),
+                create: mockChatCompletionsCreate,
             },
         },
         images: {
-            generate: vi.fn(),
+            generate: mockImagesGenerate,
         },
     })),
 }));
@@ -76,13 +80,7 @@ describe("AI Client", () => {
                 },
             };
 
-            const OpenAI = (await import("openai")).default;
-            const mockOpenAI = new OpenAI({ apiKey: "test" });
-            (mockOpenAI.chat.completions.create as any).mockResolvedValue(mockResponse);
-
-            vi.doMock("openai", () => ({
-                default: vi.fn(() => mockOpenAI),
-            }));
+            mockChatCompletionsCreate.mockResolvedValue(mockResponse);
 
             const messages = [{ role: "user" as const, content: "Test prompt" }];
             const result = await generateWithAI<{ result: string }>(messages);
@@ -95,9 +93,7 @@ describe("AI Client", () => {
                 choices: [{ message: { content: null } }],
             };
 
-            const OpenAI = (await import("openai")).default;
-            const mockOpenAI = new OpenAI({ apiKey: "test" });
-            (mockOpenAI.chat.completions.create as any).mockResolvedValue(mockResponse);
+            mockChatCompletionsCreate.mockResolvedValue(mockResponse);
 
             const messages = [{ role: "user" as const, content: "Test" }];
 
@@ -124,9 +120,7 @@ describe("AI Client", () => {
                 },
             };
 
-            const OpenAI = (await import("openai")).default;
-            const mockOpenAI = new OpenAI({ apiKey: "test" });
-            (mockOpenAI.chat.completions.create as any).mockResolvedValue(mockResponse);
+            mockChatCompletionsCreate.mockResolvedValue(mockResponse);
 
             const messages = [{ role: "user" as const, content: "Write a story" }];
             const result = await generateTextWithAI(messages);
@@ -146,9 +140,7 @@ describe("AI Client", () => {
                 ],
             };
 
-            const OpenAI = (await import("openai")).default;
-            const mockOpenAI = new OpenAI({ apiKey: "test" });
-            (mockOpenAI.images.generate as any).mockResolvedValue(mockResponse);
+            mockImagesGenerate.mockResolvedValue(mockResponse);
 
             const result = await generateImageWithAI("A beautiful landscape");
 
@@ -167,9 +159,7 @@ describe("AI Client", () => {
                 ],
             };
 
-            const OpenAI = (await import("openai")).default;
-            const mockOpenAI = new OpenAI({ apiKey: "test" });
-            (mockOpenAI.images.generate as any).mockResolvedValue(mockResponse);
+            mockImagesGenerate.mockResolvedValue(mockResponse);
 
             const result = await generateImageWithAI("Test prompt", {
                 size: "1792x1024",
@@ -185,9 +175,7 @@ describe("AI Client", () => {
                 data: [],
             };
 
-            const OpenAI = (await import("openai")).default;
-            const mockOpenAI = new OpenAI({ apiKey: "test" });
-            (mockOpenAI.images.generate as any).mockResolvedValue(mockResponse);
+            mockImagesGenerate.mockResolvedValue(mockResponse);
 
             await expect(generateImageWithAI("Test")).rejects.toThrow(
                 "No image returned"

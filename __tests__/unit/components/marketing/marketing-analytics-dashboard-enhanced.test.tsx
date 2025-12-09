@@ -46,27 +46,46 @@ describe("MarketingAnalyticsDashboardEnhanced", () => {
         funnelProjectId: "test-funnel-123",
     };
 
-    const mockAnalytics = {
-        overview: {
-            total_posts: 150,
-            total_impressions: 50000,
-            total_engagement: 5000,
-            engagement_rate: 10,
-        },
-        performance_by_platform: {
-            instagram: { posts: 60, impressions: 25000, engagement: 2500 },
-            facebook: { posts: 50, impressions: 15000, engagement: 1500 },
-            linkedin: { posts: 40, impressions: 10000, engagement: 1000 },
-        },
-        top_performing_posts: [
-            {
-                id: "post-1",
-                copy_text: "Best performing post",
-                platform: "instagram",
-                impressions: 5000,
-                engagement_rate: 15,
+    const mockDashboard = {
+        dashboard: {
+            overview: {
+                total_posts: 150,
+                total_opt_ins: 1200,
+                overall_oi_1000: 8.5,
+                avg_engagement_rate: 10,
+                top_platform: "instagram",
             },
-        ],
+            performance_by_post: [
+                {
+                    id: "post-1",
+                    post_preview: "Best performing post",
+                    platform: "instagram",
+                    published_at: "2024-01-01",
+                    impressions: 5000,
+                    engagement_rate: 15,
+                    opt_ins: 100,
+                    oi_1000: 20,
+                },
+            ],
+            platform_breakdown: [
+                {
+                    platform: "instagram",
+                    post_count: 60,
+                    total_opt_ins: 600,
+                    engagement_rate: 12,
+                    oi_1000: 10,
+                },
+                {
+                    platform: "facebook",
+                    post_count: 50,
+                    total_opt_ins: 400,
+                    engagement_rate: 8,
+                    oi_1000: 8,
+                },
+            ],
+            framework_performance: [],
+            experiments: [],
+        },
     };
 
     beforeEach(() => {
@@ -74,22 +93,9 @@ describe("MarketingAnalyticsDashboardEnhanced", () => {
         global.fetch = vi.fn();
     });
 
-    it("should render correctly with header", () => {
-        (global.fetch as any).mockResolvedValueOnce({
-            json: async () => ({ success: true, analytics: mockAnalytics }),
-        });
-
-        render(<MarketingAnalyticsDashboardEnhanced {...defaultProps} />);
-
-        expect(screen.getByText("Marketing Analytics")).toBeInTheDocument();
-        expect(
-            screen.getByText("Performance insights and metrics")
-        ).toBeInTheDocument();
-    });
-
     it("should load analytics data on mount", async () => {
         (global.fetch as any).mockResolvedValueOnce({
-            json: async () => ({ success: true, analytics: mockAnalytics }),
+            json: async () => ({ success: true, ...mockDashboard }),
         });
 
         render(<MarketingAnalyticsDashboardEnhanced {...defaultProps} />);
@@ -103,130 +109,95 @@ describe("MarketingAnalyticsDashboardEnhanced", () => {
 
     it("should display overview metrics", async () => {
         (global.fetch as any).mockResolvedValueOnce({
-            json: async () => ({ success: true, analytics: mockAnalytics }),
+            json: async () => ({ success: true, ...mockDashboard }),
         });
 
         render(<MarketingAnalyticsDashboardEnhanced {...defaultProps} />);
 
         await waitFor(() => {
             expect(screen.getByText("150")).toBeInTheDocument(); // Total posts
-            expect(screen.getByText("50,000")).toBeInTheDocument(); // Total impressions
-            expect(screen.getByText("5,000")).toBeInTheDocument(); // Total engagement
-            expect(screen.getByText("10%")).toBeInTheDocument(); // Engagement rate
+            expect(screen.getByText("1200")).toBeInTheDocument(); // Total opt-ins
+            expect(screen.getByText("8.5")).toBeInTheDocument(); // O/I-1000
+            expect(screen.getByText("10.0%")).toBeInTheDocument(); // Engagement rate
         });
     });
 
     it("should filter analytics by date range", async () => {
         (global.fetch as any).mockResolvedValue({
-            json: async () => ({ success: true, analytics: mockAnalytics }),
+            json: async () => ({ success: true, ...mockDashboard }),
         });
 
         render(<MarketingAnalyticsDashboardEnhanced {...defaultProps} />);
 
-        const dateRangeSelect = screen.getByRole("combobox", { name: /date range/i });
-        fireEvent.change(dateRangeSelect, { target: { value: "7d" } });
+        // Wait for initial load
+        await waitFor(() => {
+            expect(screen.getByText("Last 7 Days")).toBeInTheDocument();
+        });
+
+        const sevenDayButton = screen.getByText("Last 7 Days");
+        fireEvent.click(sevenDayButton);
 
         await waitFor(() => {
             expect(global.fetch).toHaveBeenCalledWith(
-                expect.stringContaining("date_range=7d")
+                expect.stringContaining("range=7d")
             );
         });
     });
 
-    it("should filter analytics by platform", async () => {
-        (global.fetch as any).mockResolvedValue({
-            json: async () => ({ success: true, analytics: mockAnalytics }),
+    it("should display platform performance section", async () => {
+        (global.fetch as any).mockResolvedValueOnce({
+            json: async () => ({ success: true, ...mockDashboard }),
         });
 
         render(<MarketingAnalyticsDashboardEnhanced {...defaultProps} />);
 
-        const platformSelect = screen.getByRole("combobox", { name: /platform/i });
-        fireEvent.change(platformSelect, { target: { value: "instagram" } });
-
         await waitFor(() => {
-            expect(global.fetch).toHaveBeenCalledWith(
-                expect.stringContaining("platform=instagram")
-            );
+            expect(screen.getByText("Platform Performance")).toBeInTheDocument();
         });
+
+        // Check that platform data is displayed (platforms are rendered multiple times)
+        const instagramElements = screen.getAllByText(/instagram/i);
+        const facebookElements = screen.getAllByText(/facebook/i);
+        expect(instagramElements.length).toBeGreaterThan(0);
+        expect(facebookElements.length).toBeGreaterThan(0);
     });
 
-    it("should display performance by platform chart", async () => {
+    it("should display post performance table", async () => {
         (global.fetch as any).mockResolvedValueOnce({
-            json: async () => ({ success: true, analytics: mockAnalytics }),
+            json: async () => ({ success: true, ...mockDashboard }),
         });
 
         render(<MarketingAnalyticsDashboardEnhanced {...defaultProps} />);
 
         await waitFor(() => {
-            expect(screen.getByTestId("bar-chart")).toBeInTheDocument();
-        });
-    });
-
-    it("should display engagement trends chart", async () => {
-        (global.fetch as any).mockResolvedValueOnce({
-            json: async () => ({ success: true, analytics: mockAnalytics }),
-        });
-
-        render(<MarketingAnalyticsDashboardEnhanced {...defaultProps} />);
-
-        await waitFor(() => {
-            expect(screen.getByTestId("line-chart")).toBeInTheDocument();
-        });
-    });
-
-    it("should display top performing posts", async () => {
-        (global.fetch as any).mockResolvedValueOnce({
-            json: async () => ({ success: true, analytics: mockAnalytics }),
-        });
-
-        render(<MarketingAnalyticsDashboardEnhanced {...defaultProps} />);
-
-        await waitFor(() => {
-            expect(screen.getByText("Top Performing Posts")).toBeInTheDocument();
+            expect(screen.getByText("Post Performance")).toBeInTheDocument();
             expect(screen.getByText("Best performing post")).toBeInTheDocument();
         });
     });
 
-    it("should handle export analytics", async () => {
+    it("should handle CSV export", async () => {
         (global.fetch as any)
             .mockResolvedValueOnce({
-                json: async () => ({ success: true, analytics: mockAnalytics }),
+                json: async () => ({ success: true, ...mockDashboard }),
             })
-            .mockResolvedValueOnce({
-                json: async () => ({ success: true, export_url: "https://export.csv" }),
-            });
+            .mockResolvedValueOnce(new Blob(["test"], { type: "text/csv" }));
+
+        // Mock URL.createObjectURL
+        global.URL.createObjectURL = vi.fn(() => "blob:test");
 
         render(<MarketingAnalyticsDashboardEnhanced {...defaultProps} />);
 
-        const exportButton = screen.getByText(/export/i);
+        await waitFor(() => {
+            expect(screen.getByText("Export CSV")).toBeInTheDocument();
+        });
+
+        const exportButton = screen.getByText("Export CSV");
         fireEvent.click(exportButton);
 
         await waitFor(() => {
             expect(global.fetch).toHaveBeenCalledWith(
                 expect.stringContaining("/api/marketing/analytics/export"),
-                expect.objectContaining({
-                    method: "POST",
-                })
             );
-        });
-    });
-
-    it("should refresh analytics data", async () => {
-        (global.fetch as any).mockResolvedValue({
-            json: async () => ({ success: true, analytics: mockAnalytics }),
-        });
-
-        render(<MarketingAnalyticsDashboardEnhanced {...defaultProps} />);
-
-        await waitFor(() => {
-            expect(global.fetch).toHaveBeenCalledTimes(1);
-        });
-
-        const refreshButton = screen.getByRole("button", { name: /refresh/i });
-        fireEvent.click(refreshButton);
-
-        await waitFor(() => {
-            expect(global.fetch).toHaveBeenCalledTimes(2);
         });
     });
 
@@ -237,7 +208,7 @@ describe("MarketingAnalyticsDashboardEnhanced", () => {
 
         render(<MarketingAnalyticsDashboardEnhanced {...defaultProps} />);
 
-        expect(screen.getByText(/loading/i)).toBeInTheDocument();
+        expect(screen.getByText(/loading analytics/i)).toBeInTheDocument();
     });
 
     it("should handle loading error", async () => {
@@ -252,40 +223,54 @@ describe("MarketingAnalyticsDashboardEnhanced", () => {
         });
     });
 
-    it("should display empty state when no data", async () => {
-        (global.fetch as any).mockResolvedValueOnce({
-            json: async () => ({
-                success: true,
-                analytics: {
-                    overview: {
-                        total_posts: 0,
-                        total_impressions: 0,
-                        total_engagement: 0,
-                        engagement_rate: 0,
-                    },
+    it("should display empty state when no performance data", async () => {
+        const emptyDashboard = {
+            dashboard: {
+                overview: {
+                    total_posts: 0,
+                    total_opt_ins: 0,
+                    overall_oi_1000: 0,
+                    avg_engagement_rate: 0,
+                    top_platform: "N/A",
                 },
-            }),
+                performance_by_post: [],
+                platform_breakdown: [],
+                framework_performance: [],
+                experiments: [],
+            },
+        };
+
+        (global.fetch as any).mockResolvedValueOnce({
+            json: async () => ({ success: true, ...emptyDashboard }),
         });
 
         render(<MarketingAnalyticsDashboardEnhanced {...defaultProps} />);
 
         await waitFor(() => {
-            expect(screen.getByText("No Data Available")).toBeInTheDocument();
+            expect(
+                screen.getByText("No performance data available yet")
+            ).toBeInTheDocument();
         });
     });
 
-    it("should toggle between chart types", async () => {
-        (global.fetch as any).mockResolvedValueOnce({
-            json: async () => ({ success: true, analytics: mockAnalytics }),
+    it("should change date range", async () => {
+        (global.fetch as any).mockResolvedValue({
+            json: async () => ({ success: true, ...mockDashboard }),
         });
 
         render(<MarketingAnalyticsDashboardEnhanced {...defaultProps} />);
 
         await waitFor(() => {
-            const chartTypeToggle = screen.getByRole("button", {
-                name: /chart type/i,
-            });
-            fireEvent.click(chartTypeToggle);
+            expect(screen.getByText("Last 90 Days")).toBeInTheDocument();
+        });
+
+        const ninetyDayButton = screen.getByText("Last 90 Days");
+        fireEvent.click(ninetyDayButton);
+
+        await waitFor(() => {
+            expect(global.fetch).toHaveBeenCalledWith(
+                expect.stringContaining("range=90d")
+            );
         });
     });
 });

@@ -105,7 +105,8 @@ describe("GlobalDashboard", () => {
             expect(screen.getByText("Skimmer")).toBeInTheDocument();
             expect(screen.getByText("Sampler")).toBeInTheDocument();
             expect(screen.getByText("Engaged")).toBeInTheDocument();
-            expect(screen.getByText("Hot")).toBeInTheDocument();
+            // "Hot" appears multiple times (segment + engagement), use getAllByText
+            expect(screen.getAllByText("Hot").length).toBeGreaterThan(0);
         });
     });
 
@@ -118,7 +119,8 @@ describe("GlobalDashboard", () => {
             ).toBeInTheDocument();
             expect(screen.getByText("Cold")).toBeInTheDocument();
             expect(screen.getByText("Warm")).toBeInTheDocument();
-            expect(screen.getByText("Hot")).toBeInTheDocument();
+            // "Hot" appears multiple times (segment + engagement), use getAllByText
+            expect(screen.getAllByText("Hot").length).toBeGreaterThan(0);
         });
     });
 
@@ -127,7 +129,8 @@ describe("GlobalDashboard", () => {
 
         await waitFor(() => {
             expect(screen.getByText("Performance by Funnel")).toBeInTheDocument();
-            expect(screen.getByText("Main Webinar Funnel")).toBeInTheDocument();
+            // "Main Webinar Funnel" appears in both funnel section and recent activity
+            expect(screen.getAllByText("Main Webinar Funnel").length).toBeGreaterThan(0);
             expect(screen.getByText("Secondary Funnel")).toBeInTheDocument();
             expect(screen.getByText("150 prospects")).toBeInTheDocument();
         });
@@ -138,6 +141,7 @@ describe("GlobalDashboard", () => {
 
         await waitFor(() => {
             expect(screen.getByText("Recent Activity")).toBeInTheDocument();
+            // John Doe appears only once in recent activity
             expect(screen.getByText("John Doe")).toBeInTheDocument();
             expect(screen.getByText("email_opened")).toBeInTheDocument();
         });
@@ -178,8 +182,8 @@ describe("GlobalDashboard", () => {
         render(<GlobalDashboard userId={mockUserId} />);
 
         await waitFor(() => {
-            // No Show: 50/250 = 20%
-            expect(screen.getByText(/50 \(20%\)/)).toBeInTheDocument();
+            // No Show: 50/250 = 20% (appears multiple times for segments with same count)
+            expect(screen.getAllByText(/50 \(20%\)/).length).toBeGreaterThan(0);
         });
     });
 

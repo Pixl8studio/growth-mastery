@@ -5,11 +5,12 @@ import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
 import { DeckStructureEditor } from "@/components/funnel/deck-structure-editor";
-import { Sparkles, FileText, Trash2, Pencil, Download, Copy } from "lucide-react";
+import { Sparkles, FileText, Trash2, Pencil, Download, Copy, User } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { useIsMobile } from "@/lib/mobile-utils.client";
+import type { BusinessProfile } from "@/types/business-profile";
 
 interface DeckStructure {
     id: string;
@@ -58,6 +59,12 @@ export default function Step3Page({
     const [presentationType, setPresentationType] = useState<
         "webinar" | "vsl" | "sales_page"
     >("webinar");
+    const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(
+        null
+    );
+    const [selectedSource, setSelectedSource] = useState<"transcript" | "profile" | "">(
+        ""
+    );
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
@@ -106,7 +113,7 @@ export default function Step3Page({
     }, [projectId]);
 
     useEffect(() => {
-        const loadTranscripts = async () => {
+        const loadTranscriptsAndProfile = async () => {
             if (!projectId) return;
 
             try {
@@ -120,20 +127,52 @@ export default function Step3Page({
                 if (transcriptError) throw transcriptError;
                 setTranscripts(transcriptData || []);
 
-                if (
-                    transcriptData &&
-                    transcriptData.length > 0 &&
-                    !selectedTranscript
-                ) {
-                    setSelectedTranscript(transcriptData[0].id);
+                // Load business profile
+                let loadedProfile: BusinessProfile | null = null;
+                try {
+                    const profileResponse = await fetch(
+                        `/api/context/business-profile?projectId=${projectId}`,
+                        { credentials: "include" }
+                    );
+
+                    if (profileResponse.ok) {
+                        const profileResult = await profileResponse.json();
+                        if (
+                            profileResult.profile &&
+                            profileResult.profile.completion_status?.overall > 0
+                        ) {
+                            loadedProfile = profileResult.profile;
+                            setBusinessProfile(loadedProfile);
+                        }
+                    }
+                } catch (profileError) {
+                    // Non-critical - business profile loading is optional
+                    logger.warn(
+                        { error: profileError },
+                        "Failed to load business profile"
+                    );
+                }
+
+                // Auto-select first available source (prefer business profile if complete, then transcripts)
+                if (!selectedSource) {
+                    const hasCompleteProfile =
+                        loadedProfile &&
+                        (loadedProfile.completion_status?.overall ?? 0) >= 50;
+
+                    if (hasCompleteProfile) {
+                        setSelectedSource("profile");
+                    } else if (transcriptData && transcriptData.length > 0) {
+                        setSelectedSource("transcript");
+                        setSelectedTranscript(transcriptData[0].id);
+                    }
                 }
             } catch (error) {
-                logger.error({ error }, "Failed to load transcripts");
+                logger.error({ error }, "Failed to load transcripts and profile");
             }
         };
 
-        loadTranscripts();
-    }, [projectId, selectedTranscript]);
+        loadTranscriptsAndProfile();
+    }, [projectId, selectedTranscript, selectedSource]);
 
     useEffect(() => {
         const loadDeckStructures = async () => {
@@ -173,8 +212,12 @@ export default function Step3Page({
     }, [projectId]);
 
     const handleGenerateDeck = async () => {
-        if (!selectedTranscript) {
-            alert("Please select an intake call first");
+        const canGenerate =
+            (selectedSource === "profile" && businessProfile) ||
+            (selectedSource === "transcript" && selectedTranscript);
+
+        if (!canGenerate) {
+            alert("Please select a data source first");
             return;
         }
 
@@ -194,15 +237,29 @@ export default function Step3Page({
                 }
             }, 3000);
 
+            // Build request body based on selected source
+            const requestBody: {
+                projectId: string;
+                transcriptId?: string;
+                businessProfileId?: string;
+                slideCount: string;
+                presentationType: string;
+            } = {
+                projectId,
+                slideCount,
+                presentationType,
+            };
+
+            if (selectedSource === "profile" && businessProfile) {
+                requestBody.businessProfileId = businessProfile.id;
+            } else if (selectedSource === "transcript" && selectedTranscript) {
+                requestBody.transcriptId = selectedTranscript;
+            }
+
             const response = await fetch("/api/generate/deck-structure", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    projectId,
-                    transcriptId: selectedTranscript,
-                    slideCount,
-                    presentationType,
-                }),
+                body: JSON.stringify(requestBody),
             });
 
             clearInterval(progressInterval);
@@ -381,6 +438,39 @@ export default function Step3Page({
     };
 
     const hasCompletedDeck = deckStructures.some((d) => d.status === "completed");
+    const hasIntakeData =
+        transcripts.length > 0 ||
+        (businessProfile && (businessProfile.completion_status?.overall ?? 0) > 0);
+    const canGenerateDeck =
+        (selectedSource === "profile" && businessProfile) ||
+        (selectedSource === "transcript" && selectedTranscript);
+
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString);
+        return date.toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+        });
+    };
+
+    const getMethodLabel = (method: string) => {
+        switch (method) {
+            case "voice":
+                return "Voice Call";
+            case "upload":
+                return "Document Upload";
+            case "paste":
+                return "Pasted Content";
+            case "scrape":
+                return "Web Scraping";
+            case "google_drive":
+                return "Google Drive";
+            default:
+                return "Unknown";
+        }
+    };
 
     if (!projectId) {
         return (
@@ -405,11 +495,11 @@ export default function Step3Page({
         >
             <div className="space-y-8">
                 {/* Dependency Warning */}
-                {transcripts.length === 0 && (
+                {!hasIntakeData && (
                     <DependencyWarning
-                        message="You need to complete your AI intake call first to generate a presentation structure."
+                        message="You need to complete your business profile or AI intake call first to generate a presentation structure."
                         requiredStep={1}
-                        requiredStepName="AI Intake Call"
+                        requiredStepName="Intake"
                         projectId={projectId}
                     />
                 )}
@@ -469,64 +559,141 @@ export default function Step3Page({
 
                             <div>
                                 <label className="mb-2 block text-sm font-medium text-foreground">
-                                    Select Intake Session
+                                    Select Data Source
                                 </label>
-                                <select
-                                    value={selectedTranscript}
-                                    onChange={(e) =>
-                                        setSelectedTranscript(e.target.value)
-                                    }
-                                    disabled={transcripts.length === 0}
-                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-primary focus:ring-2 focus:ring-primary disabled:cursor-not-allowed disabled:bg-muted"
-                                >
-                                    {transcripts.length === 0 ? (
-                                        <option value="">
-                                            No intake sessions available
-                                        </option>
-                                    ) : (
-                                        <>
-                                            <option value="">
-                                                Select an intake session...
-                                            </option>
-                                            {transcripts.map((transcript) => {
-                                                const methodIcons: Record<
-                                                    string,
-                                                    string
-                                                > = {
-                                                    voice: "📞",
-                                                    upload: "📄",
-                                                    paste: "📝",
-                                                    scrape: "🌐",
-                                                    google_drive: "☁️",
-                                                };
-                                                const icon =
-                                                    methodIcons[
-                                                        transcript.intake_method ||
-                                                            "voice"
-                                                    ] || "📞";
-                                                const displayName =
-                                                    transcript.session_name ||
-                                                    `${transcript.intake_method === "voice" ? "Call" : "Session"} from ${new Date(transcript.created_at).toLocaleDateString()}`;
+                                <p className="mb-4 text-sm text-muted-foreground">
+                                    AI analyzes your business context to create a
+                                    personalized presentation structure.
+                                </p>
 
-                                                return (
-                                                    <option
-                                                        key={transcript.id}
-                                                        value={transcript.id}
+                                {/* Source Selection */}
+                                <div className="space-y-3">
+                                    {/* Business Profile Option */}
+                                    {businessProfile &&
+                                        (businessProfile.completion_status?.overall ??
+                                            0) > 0 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setSelectedSource("profile");
+                                                    setSelectedTranscript("");
+                                                }}
+                                                className={`flex w-full items-center gap-3 rounded-lg border p-4 text-left transition-all ${
+                                                    selectedSource === "profile"
+                                                        ? "border-primary bg-primary/5 ring-2 ring-primary"
+                                                        : "border-border bg-card hover:border-primary/40"
+                                                }`}
+                                            >
+                                                <div
+                                                    className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                                                        selectedSource === "profile"
+                                                            ? "bg-primary text-white"
+                                                            : "bg-muted text-muted-foreground"
+                                                    }`}
+                                                >
+                                                    <User className="h-5 w-5" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="font-medium text-foreground">
+                                                        Business Profile
+                                                    </div>
+                                                    <div className="text-sm text-muted-foreground">
+                                                        {
+                                                            businessProfile
+                                                                .completion_status
+                                                                ?.overall
+                                                        }
+                                                        % complete -{" "}
+                                                        {businessProfile.source ===
+                                                        "wizard"
+                                                            ? "Guided Wizard"
+                                                            : businessProfile.source ===
+                                                                "gpt_paste"
+                                                              ? "GPT Import"
+                                                              : "Voice Call"}
+                                                    </div>
+                                                </div>
+                                                {selectedSource === "profile" && (
+                                                    <div className="text-primary">
+                                                        ✓
+                                                    </div>
+                                                )}
+                                            </button>
+                                        )}
+
+                                    {/* Transcript Options */}
+                                    {transcripts.length > 0 && (
+                                        <div className="space-y-2">
+                                            {businessProfile &&
+                                                (businessProfile.completion_status
+                                                    ?.overall ?? 0) > 0 && (
+                                                    <div className="pt-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                                                        Or select a legacy intake
+                                                        session
+                                                    </div>
+                                                )}
+                                            {transcripts.map((transcript) => (
+                                                <button
+                                                    key={transcript.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedSource("transcript");
+                                                        setSelectedTranscript(
+                                                            transcript.id
+                                                        );
+                                                    }}
+                                                    className={`flex w-full items-center gap-3 rounded-lg border p-4 text-left transition-all ${
+                                                        selectedSource ===
+                                                            "transcript" &&
+                                                        selectedTranscript ===
+                                                            transcript.id
+                                                            ? "border-primary bg-primary/5 ring-2 ring-primary"
+                                                            : "border-border bg-card hover:border-primary/40"
+                                                    }`}
+                                                >
+                                                    <div
+                                                        className={`flex h-10 w-10 items-center justify-center rounded-full ${
+                                                            selectedSource ===
+                                                                "transcript" &&
+                                                            selectedTranscript ===
+                                                                transcript.id
+                                                                ? "bg-primary text-white"
+                                                                : "bg-muted text-muted-foreground"
+                                                        }`}
                                                     >
-                                                        {icon} {displayName}
-                                                    </option>
-                                                );
-                                            })}
-                                        </>
+                                                        <Sparkles className="h-5 w-5" />
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="font-medium text-foreground">
+                                                            {transcript.session_name ||
+                                                                `${getMethodLabel(transcript.intake_method || "voice")}`}
+                                                        </div>
+                                                        <div className="text-sm text-muted-foreground">
+                                                            {formatDate(
+                                                                transcript.created_at
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    {selectedSource === "transcript" &&
+                                                        selectedTranscript ===
+                                                            transcript.id && (
+                                                            <div className="text-primary">
+                                                                ✓
+                                                            </div>
+                                                        )}
+                                                </button>
+                                            ))}
+                                        </div>
                                     )}
-                                </select>
 
-                                {transcripts.length === 0 && (
-                                    <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-600">
-                                        💡 Complete Step 1 first to create intake
-                                        sessions
-                                    </p>
-                                )}
+                                    {/* No data available */}
+                                    {!hasIntakeData && (
+                                        <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-600">
+                                            💡 Complete Step 1 first to create intake
+                                            sessions
+                                        </p>
+                                    )}
+                                </div>
                             </div>
 
                             <div>
@@ -572,16 +739,16 @@ export default function Step3Page({
                         <div className="text-center">
                             <button
                                 onClick={handleGenerateDeck}
-                                disabled={!selectedTranscript}
+                                disabled={!canGenerateDeck}
                                 className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
-                                    selectedTranscript
+                                    canGenerateDeck
                                         ? "bg-primary text-white hover:bg-primary/90 shadow-md"
                                         : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                 }`}
                             >
                                 <Sparkles className="h-6 w-6" />
-                                {!selectedTranscript
-                                    ? "Select Session First"
+                                {!canGenerateDeck
+                                    ? "Select Data Source First"
                                     : "Generate Deck Structure"}
                             </button>
 

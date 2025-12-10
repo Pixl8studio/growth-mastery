@@ -128,7 +128,7 @@ export interface GeneratedImage {
     revisedPrompt?: string;
 }
 
-// Brand design types
+// Brand design types - Basic color palette
 export interface BrandDesignGeneration {
     primary_color: string;
     secondary_color: string;
@@ -157,3 +157,181 @@ export interface BrandDesignGeneration {
     };
     rationale: string;
 }
+
+// ============================================
+// Comprehensive Brand Guidelines Types
+// ============================================
+
+// Visual Identity Section
+export interface BrandFonts {
+    primary_font: string;
+    secondary_font: string;
+    font_sizes: {
+        h1: string;
+        h2: string;
+        h3: string;
+        body: string;
+        small: string;
+    };
+    font_weights: {
+        heading: string;
+        body: string;
+        accent: string;
+    };
+}
+
+export interface SizingHierarchy {
+    spacing: {
+        xs: string;
+        sm: string;
+        md: string;
+        lg: string;
+        xl: string;
+    };
+    border_radius: {
+        none: string;
+        sm: string;
+        md: string;
+        lg: string;
+        full: string;
+    };
+}
+
+export interface DesignPreferences {
+    imagery_style: string;
+    icon_style: "outline" | "solid" | "duotone" | "hand-drawn";
+    layout_preferences: string[];
+    visual_density: "spacious" | "balanced" | "compact";
+}
+
+// Brand Voice & Tone Section
+export interface ToneSpectrum {
+    name: string;
+    low_end: string;
+    high_end: string;
+    position: number; // 1-10 scale
+    description: string;
+}
+
+export interface BrandVoice {
+    personality_descriptors: string[];
+    archetypes: {
+        primary: string;
+        secondary: string;
+        description: string;
+    };
+    tone_spectrums: ToneSpectrum[];
+    writing_guidelines: {
+        do: string[];
+        dont: string[];
+    };
+    word_lists: {
+        power_words: string[];
+        words_to_avoid: string[];
+        industry_terms: string[];
+    };
+}
+
+// Messaging Framework Section
+export interface ValueProposition {
+    headline: string;
+    description: string;
+    supporting_points: string[];
+}
+
+export interface CustomerJourneyMessage {
+    stage: "awareness" | "consideration" | "decision" | "retention" | "advocacy";
+    primary_message: string;
+    emotional_trigger: string;
+    call_to_action: string;
+}
+
+export interface MessagingFramework {
+    positioning_statement: string;
+    tagline: string;
+    elevator_pitch: string;
+    value_propositions: ValueProposition[];
+    customer_journey_messages: CustomerJourneyMessage[];
+    key_differentiators: string[];
+}
+
+// Brand Application Section
+export interface BrandApplication {
+    logo_usage: {
+        clear_space: string;
+        minimum_size: string;
+        placement_guidelines: string[];
+        background_rules: string[];
+    };
+    photography_style: {
+        style: string;
+        subjects: string[];
+        color_treatment: string;
+        composition_notes: string[];
+    };
+    illustration_style: {
+        style: string;
+        line_weight: string;
+        color_usage: string;
+        character_notes: string;
+    };
+    icon_style: {
+        style: string;
+        stroke_weight: string;
+        corner_style: string;
+        fill_style: string;
+    };
+    dos_and_donts: {
+        dos: string[];
+        donts: string[];
+    };
+}
+
+// Comprehensive Brand Guidelines Generation (all four sections)
+export interface ComprehensiveBrandGuidelines {
+    // Visual Identity (existing + extended)
+    primary_color: string;
+    secondary_color: string;
+    accent_color: string;
+    background_color: string;
+    text_color: string;
+    design_style: BrandDesignGeneration["design_style"];
+    personality_traits: BrandDesignGeneration["personality_traits"];
+    fonts: BrandFonts;
+    sizing_hierarchy: SizingHierarchy;
+    design_preferences: DesignPreferences;
+    // Brand Voice & Tone
+    brand_voice: BrandVoice;
+    // Messaging Framework
+    messaging_framework: MessagingFramework;
+    // Brand Application
+    brand_application: BrandApplication;
+    // Generation metadata
+    rationale: string;
+}
+
+// Wizard questionnaire types
+export interface BrandWizardStep {
+    id: string;
+    title: string;
+    description: string;
+    questions: BrandWizardQuestion[];
+}
+
+export interface BrandWizardQuestion {
+    id: string;
+    type: "single_choice" | "multiple_choice" | "text" | "slider" | "color_picker";
+    question: string;
+    description?: string;
+    options?: { value: string; label: string; description?: string }[];
+    min?: number;
+    max?: number;
+    required?: boolean;
+}
+
+export interface BrandWizardResponses {
+    [questionId: string]: string | string[] | number;
+}
+
+// Input method type
+export type BrandInputMethod = "wizard" | "website" | "manual";

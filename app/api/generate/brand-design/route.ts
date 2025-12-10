@@ -1,6 +1,7 @@
 /**
  * Brand Design Generation API
  * Generates brand colors and personality with AI from VAPI transcript or business profile
+ * Supports both basic brand design and comprehensive brand guidelines
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -8,8 +9,14 @@ import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { generateWithAI } from "@/lib/ai/client";
-import { createBrandDesignPrompt } from "@/lib/ai/prompts";
-import type { BrandDesignGeneration } from "@/lib/ai/types";
+import {
+    createBrandDesignPrompt,
+    createComprehensiveBrandGuidelinesPrompt,
+} from "@/lib/ai/prompts";
+import type {
+    BrandDesignGeneration,
+    ComprehensiveBrandGuidelines,
+} from "@/lib/ai/types";
 import type { TranscriptData } from "@/lib/ai/types";
 import { ValidationError } from "@/lib/errors";
 import { z } from "zod";
@@ -20,6 +27,9 @@ const generateBrandDesignSchema = z
         projectId: z.string().uuid("Invalid project ID"),
         transcriptId: z.string().uuid("Invalid transcript ID").optional(),
         businessProfileId: z.string().uuid("Invalid business profile ID").optional(),
+        comprehensive: z.boolean().optional().default(false),
+        inputMethod: z.enum(["wizard", "website", "manual"]).optional(),
+        wizardResponses: z.record(z.string(), z.unknown()).optional(),
     })
     .refine((data) => data.transcriptId || data.businessProfileId, {
         message: "Either transcriptId or businessProfileId is required",
@@ -129,15 +139,30 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { transcriptId, businessProfileId, projectId } = validationResult.data;
+        const {
+            transcriptId,
+            businessProfileId,
+            projectId,
+            comprehensive,
+            inputMethod,
+            wizardResponses,
+        } = validationResult.data;
 
         requestLogger.info(
-            { userId: user.id, transcriptId, businessProfileId, projectId },
+            {
+                userId: user.id,
+                transcriptId,
+                businessProfileId,
+                projectId,
+                comprehensive,
+                inputMethod,
+            },
             "Generating brand design"
         );
 
         // Get data from either transcript or business profile
         let transcriptData: TranscriptData;
+        let generationSource: string | undefined;
 
         if (businessProfileId) {
             // Load business profile
@@ -156,6 +181,7 @@ export async function POST(request: NextRequest) {
             transcriptData = businessProfileToTranscriptData(
                 profile as BusinessProfile
             );
+            generationSource = "business_profile";
 
             requestLogger.info(
                 { userId: user.id, businessProfileId, profileSource: profile.source },
@@ -178,6 +204,7 @@ export async function POST(request: NextRequest) {
                 transcript_text: transcript.transcript_text,
                 extracted_data: transcript.extracted_data,
             };
+            generationSource = "transcript";
 
             requestLogger.info(
                 { userId: user.id, transcriptId },
@@ -189,7 +216,85 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Generate brand design with AI
+        // Generate comprehensive or basic brand design with AI
+        if (comprehensive) {
+            // Generate comprehensive brand guidelines
+            const generatedGuidelines =
+                await generateWithAI<ComprehensiveBrandGuidelines>(
+                    createComprehensiveBrandGuidelinesPrompt(
+                        transcriptData,
+                        wizardResponses
+                    )
+                );
+
+            requestLogger.info(
+                {
+                    userId: user.id,
+                    designStyle: generatedGuidelines.design_style,
+                    primaryColor: generatedGuidelines.primary_color,
+                    hasVoice: !!generatedGuidelines.brand_voice,
+                    hasMessaging: !!generatedGuidelines.messaging_framework,
+                },
+                "Comprehensive brand guidelines generated successfully"
+            );
+
+            // Save comprehensive brand design to database
+            const { data: savedDesign, error: saveError } = await supabase
+                .from("brand_designs")
+                .upsert(
+                    {
+                        funnel_project_id: projectId,
+                        user_id: user.id,
+                        primary_color: generatedGuidelines.primary_color,
+                        secondary_color: generatedGuidelines.secondary_color,
+                        accent_color: generatedGuidelines.accent_color,
+                        background_color: generatedGuidelines.background_color,
+                        text_color: generatedGuidelines.text_color,
+                        design_style: generatedGuidelines.design_style,
+                        personality_traits: generatedGuidelines.personality_traits,
+                        fonts: generatedGuidelines.fonts,
+                        sizing_hierarchy: generatedGuidelines.sizing_hierarchy,
+                        design_preferences: generatedGuidelines.design_preferences,
+                        brand_voice: generatedGuidelines.brand_voice,
+                        messaging_framework: generatedGuidelines.messaging_framework,
+                        brand_application: generatedGuidelines.brand_application,
+                        is_ai_generated: true,
+                        input_method: inputMethod || "wizard",
+                        generation_source: generationSource,
+                        questionnaire_responses: wizardResponses || {},
+                        last_regenerated_at: new Date().toISOString(),
+                    },
+                    {
+                        onConflict: "funnel_project_id",
+                    }
+                )
+                .select()
+                .single();
+
+            if (saveError || !savedDesign) {
+                requestLogger.error(
+                    { error: saveError },
+                    "Failed to save comprehensive brand guidelines to database"
+                );
+                throw new Error(
+                    "Failed to save comprehensive brand guidelines to database"
+                );
+            }
+
+            requestLogger.info(
+                { userId: user.id, brandDesignId: savedDesign.id, projectId },
+                "Comprehensive brand guidelines saved to database successfully"
+            );
+
+            return NextResponse.json({
+                success: true,
+                comprehensive: true,
+                ...savedDesign,
+                rationale: generatedGuidelines.rationale,
+            });
+        }
+
+        // Generate basic brand design (original behavior)
         const generatedDesign = await generateWithAI<BrandDesignGeneration>(
             createBrandDesignPrompt(transcriptData)
         );
@@ -218,6 +323,8 @@ export async function POST(request: NextRequest) {
                     design_style: generatedDesign.design_style,
                     personality_traits: generatedDesign.personality_traits,
                     is_ai_generated: true,
+                    input_method: inputMethod || "manual",
+                    generation_source: generationSource,
                 },
                 {
                     onConflict: "funnel_project_id",
@@ -241,6 +348,7 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
+            comprehensive: false,
             ...savedDesign,
             rationale: generatedDesign.rationale,
         });

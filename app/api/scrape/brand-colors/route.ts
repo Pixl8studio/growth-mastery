@@ -142,8 +142,10 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Extract brand data
-        const brandData = await extractBrandFromHtml(fetchResult.html);
+        // Extract brand data, passing the URL for resolving external CSS files
+        const brandData = await extractBrandFromHtml(fetchResult.html, {
+            baseUrl: url,
+        });
 
         logger.info(
             {

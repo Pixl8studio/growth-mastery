@@ -457,7 +457,82 @@ Return ONLY a JSON object:
 }
 
 /**
- * 8. Generate follow-up sequence messages from deck and offer context
+ * 8. Generate brand design from transcript/business profile
+ */
+export function createBrandDesignPrompt(
+    transcriptData: TranscriptData
+): OpenAI.Chat.Completions.ChatCompletionMessageParam[] {
+    return [
+        {
+            role: "system",
+            content: `You are an expert brand designer who creates cohesive visual identities based on business context.
+
+Your task is to generate a complete brand color palette and personality that reflects the business's values, target audience, and industry positioning.
+
+COLOR PSYCHOLOGY PRINCIPLES:
+- Blue: Trust, stability, professionalism (finance, healthcare, tech)
+- Green: Growth, nature, health, wealth (wellness, finance, sustainability)
+- Purple: Luxury, creativity, wisdom (coaching, premium services)
+- Orange: Energy, enthusiasm, warmth (fitness, youth, food)
+- Red: Passion, urgency, power (sales, entertainment, food)
+- Yellow: Optimism, clarity, warmth (education, children, creativity)
+- Pink: Compassion, nurturing, femininity (wellness, beauty, relationships)
+- Black: Sophistication, luxury, authority (high-end brands)
+- White: Purity, simplicity, cleanliness (minimalist, modern brands)
+
+DESIGN STYLE GUIDE:
+- modern: Clean lines, bold colors, minimalist approach
+- classic: Timeless, traditional, refined aesthetics
+- minimal: Simple, whitespace-focused, understated
+- bold: Strong contrasts, impactful, attention-grabbing
+- vibrant: Colorful, energetic, dynamic
+- elegant: Sophisticated, luxurious, refined
+- playful: Fun, approachable, creative
+- professional: Corporate, trustworthy, polished
+
+Generate colors in HEX format (#RRGGBB). Ensure:
+1. Primary and secondary colors complement each other
+2. Accent color provides good contrast for CTAs
+3. Background and text colors ensure readability (WCAG AA compliance)
+4. Colors match the business personality and target audience`,
+        },
+        {
+            role: "user",
+            content: `Based on this business information, create a cohesive brand design:
+
+BUSINESS CONTEXT:
+${transcriptData.transcript_text}
+
+${transcriptData.extracted_data ? `KEY INFO:\n${JSON.stringify(transcriptData.extracted_data, null, 2)}` : ""}
+
+Return ONLY a JSON object with this exact structure:
+{
+  "primary_color": "#XXXXXX (main brand color - used for headings, buttons, key elements)",
+  "secondary_color": "#XXXXXX (complementary color - used for accents, hover states)",
+  "accent_color": "#XXXXXX (call-to-action color - must stand out against primary/secondary)",
+  "background_color": "#XXXXXX (page background - usually light, ensures readability)",
+  "text_color": "#XXXXXX (body text - must contrast with background for readability)",
+  "design_style": "modern | classic | minimal | bold | vibrant | elegant | playful | professional",
+  "personality_traits": {
+    "tone": "professional | friendly | authoritative | conversational | inspirational",
+    "mood": "confident | calm | energetic | serious | optimistic",
+    "energy": "dynamic | stable | bold | subtle | vibrant",
+    "values": ["3-5 brand values that define this business"]
+  },
+  "rationale": "Brief explanation of why these colors and style fit this business (2-3 sentences)"
+}
+
+CRITICAL:
+- All colors must be valid 6-digit HEX codes starting with #
+- Ensure sufficient contrast between text and background
+- Match colors to the business's industry and target audience
+- The accent color should work well for CTA buttons`,
+        },
+    ];
+}
+
+/**
+ * 9. Generate follow-up sequence messages from deck and offer context
  */
 export interface DeckContext {
     title: string;

@@ -127,3 +127,33 @@ export interface GeneratedImage {
     url: string;
     revisedPrompt?: string;
 }
+
+// Brand design types
+export interface BrandDesignGeneration {
+    primary_color: string;
+    secondary_color: string;
+    accent_color: string;
+    background_color: string;
+    text_color: string;
+    design_style:
+        | "modern"
+        | "classic"
+        | "minimal"
+        | "bold"
+        | "vibrant"
+        | "elegant"
+        | "playful"
+        | "professional";
+    personality_traits: {
+        tone:
+            | "professional"
+            | "friendly"
+            | "authoritative"
+            | "conversational"
+            | "inspirational";
+        mood: "confident" | "calm" | "energetic" | "serious" | "optimistic";
+        energy: "dynamic" | "stable" | "bold" | "subtle" | "vibrant";
+        values: string[];
+    };
+    rationale: string;
+}

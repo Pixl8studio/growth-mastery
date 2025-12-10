@@ -16,6 +16,7 @@ import { logger as pinoLogger } from "@/lib/logger";
 import { z } from "zod";
 import fs from "fs";
 import path from "path";
+import type { BusinessProfile } from "@/types/business-profile";
 
 // Environment-aware logging: console in dev, Pino in production
 const isDev = process.env.NODE_ENV === "development";
@@ -31,15 +32,105 @@ const log = isDev
           error: (message: string, data?: any) => pinoLogger.error(data || {}, message),
       };
 
-const generateDeckStructureSchema = z.object({
-    transcriptId: z.string().uuid("Invalid transcript ID"),
-    projectId: z.string().uuid("Invalid project ID"),
-    slideCount: z.enum(["5", "55"]).optional().default("55"),
-    presentationType: z
-        .enum(["webinar", "vsl", "sales_page"])
-        .optional()
-        .default("webinar"),
-});
+const generateDeckStructureSchema = z
+    .object({
+        transcriptId: z.string().uuid("Invalid transcript ID").optional(),
+        businessProfileId: z.string().uuid("Invalid business profile ID").optional(),
+        projectId: z.string().uuid("Invalid project ID"),
+        slideCount: z.enum(["5", "55"]).optional().default("55"),
+        presentationType: z
+            .enum(["webinar", "vsl", "sales_page"])
+            .optional()
+            .default("webinar"),
+    })
+    .refine((data) => data.transcriptId || data.businessProfileId, {
+        message: "Either transcriptId or businessProfileId is required",
+    });
+
+/**
+ * Convert business profile to transcript text format for AI generation
+ */
+function businessProfileToTranscriptText(profile: BusinessProfile): string {
+    const sections: string[] = [];
+
+    // Section 1: Ideal Customer & Problem
+    if (profile.ideal_customer || profile.transformation || profile.perceived_problem) {
+        sections.push(`## Ideal Customer & Core Problem`);
+        if (profile.ideal_customer)
+            sections.push(`Ideal Customer: ${profile.ideal_customer}`);
+        if (profile.transformation)
+            sections.push(`Transformation: ${profile.transformation}`);
+        if (profile.perceived_problem)
+            sections.push(`Perceived Problem: ${profile.perceived_problem}`);
+        if (profile.root_cause) sections.push(`Root Cause: ${profile.root_cause}`);
+        if (profile.daily_pain_points)
+            sections.push(`Daily Pain Points: ${profile.daily_pain_points}`);
+        if (profile.secret_desires)
+            sections.push(`Secret Desires: ${profile.secret_desires}`);
+        if (profile.common_mistakes)
+            sections.push(`Common Mistakes: ${profile.common_mistakes}`);
+    }
+
+    // Section 2: Story & Method
+    if (profile.struggle_story || profile.signature_method) {
+        sections.push(`\n## Your Story & Signature Method`);
+        if (profile.struggle_story)
+            sections.push(`Struggle Story: ${profile.struggle_story}`);
+        if (profile.breakthrough_moment)
+            sections.push(`Breakthrough Moment: ${profile.breakthrough_moment}`);
+        if (profile.life_now) sections.push(`Life Now: ${profile.life_now}`);
+        if (profile.credibility_experience)
+            sections.push(`Credibility: ${profile.credibility_experience}`);
+        if (profile.signature_method)
+            sections.push(`Signature Method: ${profile.signature_method}`);
+    }
+
+    // Section 3: Offer & Proof
+    if (profile.offer_name || profile.deliverables) {
+        sections.push(`\n## Your Offer & Proof`);
+        if (profile.offer_name) sections.push(`Offer Name: ${profile.offer_name}`);
+        if (profile.offer_type) sections.push(`Offer Type: ${profile.offer_type}`);
+        if (profile.deliverables)
+            sections.push(`Deliverables: ${profile.deliverables}`);
+        if (profile.delivery_process)
+            sections.push(`Delivery Process: ${profile.delivery_process}`);
+        if (profile.problem_solved)
+            sections.push(`Problem Solved: ${profile.problem_solved}`);
+        if (profile.promise_outcome)
+            sections.push(`Promise/Outcome: ${profile.promise_outcome}`);
+        if (profile.guarantee) sections.push(`Guarantee: ${profile.guarantee}`);
+        if (profile.testimonials)
+            sections.push(`Testimonials: ${profile.testimonials}`);
+        if (profile.bonuses) sections.push(`Bonuses: ${profile.bonuses}`);
+    }
+
+    // Section 4: CTA & Objections
+    if (profile.call_to_action || profile.top_objections?.length) {
+        sections.push(`\n## Call to Action & Objections`);
+        if (profile.call_to_action)
+            sections.push(`Call to Action: ${profile.call_to_action}`);
+        if (profile.incentive) sections.push(`Incentive: ${profile.incentive}`);
+        if (profile.top_objections?.length) {
+            sections.push(`Top Objections:`);
+            profile.top_objections.forEach((obj, i) => {
+                sections.push(
+                    `  ${i + 1}. ${obj.objection} - Response: ${obj.response}`
+                );
+            });
+        }
+    }
+
+    // Section 5: Pricing
+    if (profile.pricing?.regular || profile.pricing?.webinar) {
+        sections.push(`\n## Pricing`);
+        if (profile.pricing.regular)
+            sections.push(`Regular Price: $${profile.pricing.regular}`);
+        if (profile.pricing.webinar)
+            sections.push(`Webinar Special: $${profile.pricing.webinar}`);
+    }
+
+    return sections.join("\n");
+}
 
 interface SlideChunk {
     startSlide: number;
@@ -71,29 +162,74 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { transcriptId, projectId, slideCount, presentationType } =
-            validationResult.data;
+        const {
+            transcriptId,
+            businessProfileId,
+            projectId,
+            slideCount,
+            presentationType,
+        } = validationResult.data;
         const isTestMode = slideCount === "5";
 
         log.info("Generating presentation structure", {
             userId: user.id,
             transcriptId,
+            businessProfileId,
             projectId,
             slideCount,
             presentationType,
             isTestMode,
         });
 
-        // Get transcript
-        const { data: transcript, error: transcriptError } = await supabase
-            .from("vapi_transcripts")
-            .select("*")
-            .eq("id", transcriptId)
-            .eq("user_id", user.id)
-            .single();
+        // Get context text from either transcript or business profile
+        let contextText: string;
 
-        if (transcriptError || !transcript) {
-            throw new ValidationError("Transcript not found");
+        if (businessProfileId) {
+            // Load business profile
+            const { data: profile, error: profileError } = await supabase
+                .from("business_profiles")
+                .select("*")
+                .eq("id", businessProfileId)
+                .eq("user_id", user.id)
+                .single();
+
+            if (profileError || !profile) {
+                throw new ValidationError("Business profile not found");
+            }
+
+            // Convert business profile to transcript text format
+            contextText = businessProfileToTranscriptText(profile as BusinessProfile);
+
+            log.info("Using business profile for deck generation", {
+                userId: user.id,
+                businessProfileId,
+                profileSource: profile.source,
+                contextLength: contextText.length,
+            });
+        } else if (transcriptId) {
+            // Get transcript
+            const { data: transcript, error: transcriptError } = await supabase
+                .from("vapi_transcripts")
+                .select("*")
+                .eq("id", transcriptId)
+                .eq("user_id", user.id)
+                .single();
+
+            if (transcriptError || !transcript) {
+                throw new ValidationError("Transcript not found");
+            }
+
+            contextText = transcript.transcript_text;
+
+            log.info("Using transcript for deck generation", {
+                userId: user.id,
+                transcriptId,
+                contextLength: contextText.length,
+            });
+        } else {
+            throw new ValidationError(
+                "Either transcriptId or businessProfileId is required"
+            );
         }
 
         // Load framework template based on presentation type
@@ -137,10 +273,7 @@ export async function POST(request: NextRequest) {
             // Test mode: Generate first 5 slides only
             log.info("Generating 5-slide test deck");
             const testChunk = extractTestSlides(frameworkContent);
-            generatedSlides = await generateSlideChunk(
-                transcript.transcript_text,
-                testChunk
-            );
+            generatedSlides = await generateSlideChunk(contextText, testChunk);
         } else {
             // Full mode: Generate all 55 slides in chunks
             log.info("Generating full 55-slide deck");
@@ -157,10 +290,7 @@ export async function POST(request: NextRequest) {
                 });
 
                 try {
-                    const chunkSlides = await generateSlideChunk(
-                        transcript.transcript_text,
-                        chunk
-                    );
+                    const chunkSlides = await generateSlideChunk(contextText, chunk);
                     allSlides.push(...chunkSlides);
 
                     log.info("✅ Chunk completed", {
@@ -341,7 +471,7 @@ function splitFrameworkIntoChunks(frameworkContent: string): SlideChunk[] {
  * Generate slides for a chunk using AI
  */
 async function generateSlideChunk(
-    transcript: string,
+    contextText: string,
     chunk: SlideChunk
 ): Promise<any[]> {
     const chunkContent = chunk.slides.join("\n");
@@ -351,12 +481,12 @@ async function generateSlideChunk(
 FRAMEWORK TEMPLATE SECTION FOR THESE SLIDES:
 ${chunkContent}
 
-TRANSCRIPT TO EXTRACT CLIENT INFORMATION FROM:
-${transcript}
+BUSINESS CONTEXT TO EXTRACT CLIENT INFORMATION FROM:
+${contextText}
 
 CRITICAL INSTRUCTIONS:
 1. Follow the Magnetic Masterclass Framework structure EXACTLY - every slide, every section, every purpose
-2. Extract the client's specific details from the transcript to populate each slide:
+2. Extract the client's specific details from the business context to populate each slide:
    - Personal story and transformation journey
    - Business model, target audience, pain points
    - Solutions they provide, outcomes they deliver
@@ -364,7 +494,7 @@ CRITICAL INSTRUCTIONS:
    - Credibility markers, results, testimonials
 3. Use the framework's Content Strategy, Focus Areas, and Purpose for each slide
 4. Match the psychological progression exactly as outlined in the framework
-5. Maintain the client's authentic voice and terminology from the transcript
+5. Maintain the client's authentic voice and terminology from the context
 6. Create compelling, conversion-focused content using their real story
 
 OUTPUT FORMAT:

@@ -39,6 +39,7 @@ import { StoryLibrary } from "@/components/followup/story-library";
 import { AnalyticsDashboard } from "@/components/followup/analytics-dashboard";
 import { SenderSetupTab } from "@/components/followup/sender-setup-tab";
 import { TestMessageModal } from "@/components/followup/test-message-modal";
+import { ComingSoonOverlay } from "@/components/ui/coming-soon-overlay";
 
 export default function Step11Page({
     params,
@@ -984,342 +985,362 @@ Approach:
         <StepLayout
             stepTitle="AI Follow-Up Engine"
             stepDescription="Automate post-webinar engagement with AI-powered sequences"
-            currentStep={11}
+            currentStep={12}
             projectId={projectId}
             completedSteps={completedSteps}
             nextLabel="Continue to Marketing"
         >
-            <div className="space-y-6">
-                {/* Enable/Disable Section */}
-                <Card className="p-6 bg-gradient-to-r from-purple-50 to-primary/5">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Sparkles className="h-6 w-6 text-purple-500" />
-                            <div>
-                                <h3 className="text-lg font-semibold">
-                                    Enable AI Follow-Up
-                                </h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Automatically nurture prospects with personalized,
-                                    AI-powered sequences
-                                </p>
+            <ComingSoonOverlay
+                featureName="AI Follow-Up Engine"
+                description="The AI Follow-Up Engine is currently in development. Soon you'll be able to automate post-webinar engagement with personalized, AI-powered sequences."
+            >
+                <div className="space-y-6">
+                    {/* Enable/Disable Section */}
+                    <Card className="p-6 bg-gradient-to-r from-purple-50 to-primary/5">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <Sparkles className="h-6 w-6 text-purple-500" />
+                                <div>
+                                    <h3 className="text-lg font-semibold">
+                                        Enable AI Follow-Up
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Automatically nurture prospects with
+                                        personalized, AI-powered sequences
+                                    </p>
+                                </div>
                             </div>
+                            <Switch
+                                checked={followupEnabled}
+                                onCheckedChange={handleEnableFollowup}
+                                disabled={generatingBrandVoice}
+                            />
                         </div>
-                        <Switch
-                            checked={followupEnabled}
-                            onCheckedChange={handleEnableFollowup}
-                            disabled={generatingBrandVoice}
-                        />
-                    </div>
 
-                    {generatingBrandVoice && (
-                        <div className="mt-4 flex items-center gap-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                            <Loader2 className="h-5 w-5 text-purple-600 animate-spin" />
-                            <div>
-                                <p className="text-sm font-medium text-purple-900">
-                                    Setting up your AI Follow-Up Engine...
-                                </p>
-                                <p className="text-xs text-purple-700 mt-1">
-                                    Analyzing your intake data and offer to create
-                                    personalized brand voice guidelines
-                                </p>
+                        {generatingBrandVoice && (
+                            <div className="mt-4 flex items-center gap-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                                <Loader2 className="h-5 w-5 text-purple-600 animate-spin" />
+                                <div>
+                                    <p className="text-sm font-medium text-purple-900">
+                                        Setting up your AI Follow-Up Engine...
+                                    </p>
+                                    <p className="text-xs text-purple-700 mt-1">
+                                        Analyzing your intake data and offer to create
+                                        personalized brand voice guidelines
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-                    )}
+                        )}
+
+                        {followupEnabled && (
+                            <>
+                                <div className="mt-6 grid grid-cols-4 gap-4 text-sm">
+                                    <div className="text-center p-3 bg-card rounded-lg">
+                                        <div className="text-2xl font-bold text-purple-600">
+                                            {sequences.length}
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                            Sequences
+                                        </div>
+                                    </div>
+                                    <div className="text-center p-3 bg-card rounded-lg">
+                                        <div className="text-2xl font-bold text-primary">
+                                            {messages.length}
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                            Templates
+                                        </div>
+                                    </div>
+                                    <div className="text-center p-3 bg-card rounded-lg">
+                                        <div className="text-2xl font-bold text-orange-600">
+                                            {queuedCount}
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                            Queued
+                                        </div>
+                                    </div>
+                                    <div className="text-center p-3 bg-card rounded-lg">
+                                        <div className="text-sm font-bold text-primary">
+                                            {nextScheduledTime || "None"}
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                            Next Send
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Test Message Button */}
+                                {agentConfig?.id && (
+                                    <div className="mt-4 flex justify-end">
+                                        <Button
+                                            onClick={() => setTestModalOpen(true)}
+                                            variant="outline"
+                                            size="sm"
+                                            className="gap-2"
+                                        >
+                                            <MessageSquare className="h-4 w-4" />
+                                            Test Message to Self
+                                        </Button>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </Card>
 
                     {followupEnabled && (
                         <>
-                            <div className="mt-6 grid grid-cols-4 gap-4 text-sm">
-                                <div className="text-center p-3 bg-card rounded-lg">
-                                    <div className="text-2xl font-bold text-purple-600">
-                                        {sequences.length}
-                                    </div>
-                                    <div className="text-muted-foreground">
+                            <Tabs
+                                value={activeTab}
+                                onValueChange={setActiveTab}
+                                className="w-full"
+                            >
+                                <TabsList className="grid w-full grid-cols-7">
+                                    <TabsTrigger value="sender">
+                                        <Mail className="h-4 w-4 mr-2" />
+                                        Sender
+                                    </TabsTrigger>
+                                    <TabsTrigger value="agent">
+                                        <Sparkles className="h-4 w-4 mr-2" />
+                                        Agent
+                                    </TabsTrigger>
+                                    <TabsTrigger value="sequences">
+                                        <Target className="h-4 w-4 mr-2" />
                                         Sequences
-                                    </div>
-                                </div>
-                                <div className="text-center p-3 bg-card rounded-lg">
-                                    <div className="text-2xl font-bold text-primary">
-                                        {messages.length}
-                                    </div>
-                                    <div className="text-muted-foreground">
-                                        Templates
-                                    </div>
-                                </div>
-                                <div className="text-center p-3 bg-card rounded-lg">
-                                    <div className="text-2xl font-bold text-orange-600">
-                                        {queuedCount}
-                                    </div>
-                                    <div className="text-muted-foreground">Queued</div>
-                                </div>
-                                <div className="text-center p-3 bg-card rounded-lg">
-                                    <div className="text-sm font-bold text-primary">
-                                        {nextScheduledTime || "None"}
-                                    </div>
-                                    <div className="text-muted-foreground">
-                                        Next Send
-                                    </div>
-                                </div>
-                            </div>
+                                    </TabsTrigger>
+                                    <TabsTrigger value="messages">
+                                        <MessageSquare className="h-4 w-4 mr-2" />
+                                        Messages
+                                    </TabsTrigger>
+                                    <TabsTrigger value="stories">
+                                        <BookOpen className="h-4 w-4 mr-2" />
+                                        Stories
+                                    </TabsTrigger>
+                                    <TabsTrigger value="analytics">
+                                        <BarChart3 className="h-4 w-4 mr-2" />
+                                        Analytics
+                                    </TabsTrigger>
+                                    <TabsTrigger value="settings">
+                                        <Settings className="h-4 w-4 mr-2" />
+                                        Settings
+                                    </TabsTrigger>
+                                </TabsList>
 
-                            {/* Test Message Button */}
-                            {agentConfig?.id && (
-                                <div className="mt-4 flex justify-end">
-                                    <Button
-                                        onClick={() => setTestModalOpen(true)}
-                                        variant="outline"
-                                        size="sm"
-                                        className="gap-2"
-                                    >
-                                        <MessageSquare className="h-4 w-4" />
-                                        Test Message to Self
-                                    </Button>
-                                </div>
-                            )}
+                                {/* Sender Setup Tab */}
+                                <TabsContent value="sender" className="mt-6">
+                                    <SenderSetupTab
+                                        agentConfigId={agentConfig?.id}
+                                        currentSenderName={agentConfig?.sender_name}
+                                        currentSenderEmail={agentConfig?.sender_email}
+                                        currentSMSSenderId={agentConfig?.sms_sender_id}
+                                        emailProviderType={
+                                            agentConfig?.email_provider_type
+                                        }
+                                        gmailUserEmail={agentConfig?.gmail_user_email}
+                                        onUpdate={async () => {
+                                            // Reload data after sender updates
+                                            if (!projectId) return;
+                                            const configRes = await fetch(
+                                                `/api/followup/agent-configs?funnel_project_id=${projectId}`
+                                            );
+                                            if (configRes.ok) {
+                                                const configData =
+                                                    await configRes.json();
+                                                if (
+                                                    configData.configs &&
+                                                    configData.configs.length > 0
+                                                ) {
+                                                    setAgentConfig(
+                                                        configData.configs[0]
+                                                    );
+                                                }
+                                            }
+                                        }}
+                                    />
+                                </TabsContent>
+
+                                {/* Agent Configuration Tab */}
+                                <TabsContent value="agent" className="mt-6">
+                                    <AgentConfigForm
+                                        config={agentConfig}
+                                        onSave={handleSaveAgentConfig}
+                                        funnelProjectId={projectId}
+                                    />
+                                </TabsContent>
+
+                                {/* Sequences Tab */}
+                                <TabsContent value="sequences" className="mt-6">
+                                    <SequenceBuilder
+                                        sequences={sequences}
+                                        onCreateSequence={handleCreateSequence}
+                                        onUpdateSequence={handleUpdateSequence}
+                                        onDeleteSequence={handleDeleteSequence}
+                                        onSelectSequence={handleSelectSequence}
+                                        onReloadSequences={reloadSequences}
+                                        funnelProjectId={projectId}
+                                        offerId={offer?.id}
+                                    />
+
+                                    {sequences.length > 0 && (
+                                        <Card className="mt-4 p-4 bg-primary/5 border-primary/20">
+                                            <p className="text-sm text-primary">
+                                                💡 <strong>Tip:</strong> Click "View
+                                                Messages" on any sequence or go to the
+                                                Messages tab to view and edit all
+                                                message templates.
+                                            </p>
+                                        </Card>
+                                    )}
+                                </TabsContent>
+
+                                {/* Messages Tab */}
+                                <TabsContent value="messages" className="mt-6">
+                                    <MessageTemplateEditor
+                                        sequenceId={
+                                            selectedSequenceId || sequences[0]?.id || ""
+                                        }
+                                        messages={messages}
+                                        sequences={sequences}
+                                        onCreateMessage={handleCreateMessage}
+                                        onUpdateMessage={handleUpdateMessage}
+                                        onDeleteMessage={handleDeleteMessage}
+                                    />
+                                </TabsContent>
+
+                                {/* Stories Tab */}
+                                <TabsContent value="stories" className="mt-6">
+                                    <StoryLibrary
+                                        stories={stories}
+                                        onCreateStory={handleCreateStory}
+                                        onUpdateStory={handleUpdateStory}
+                                        onDeleteStory={handleDeleteStory}
+                                    />
+                                </TabsContent>
+
+                                {/* Analytics Tab */}
+                                <TabsContent value="analytics" className="mt-6">
+                                    <AnalyticsDashboard data={analytics} />
+                                </TabsContent>
+
+                                {/* Settings Tab */}
+                                <TabsContent value="settings" className="mt-6">
+                                    <div className="space-y-4">
+                                        <Card className="p-6">
+                                            <h3 className="text-lg font-semibold mb-4">
+                                                Follow-Up Settings
+                                            </h3>
+                                            <div className="space-y-4">
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <div className="font-medium">
+                                                            Email Follow-Up
+                                                        </div>
+                                                        <div className="text-sm text-muted-foreground">
+                                                            Automated email sequences
+                                                        </div>
+                                                    </div>
+                                                    <Switch defaultChecked={true} />
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                    <div>
+                                                        <div className="font-medium">
+                                                            SMS Follow-Up
+                                                        </div>
+                                                        <div className="text-sm text-muted-foreground">
+                                                            High-intent SMS messages
+                                                        </div>
+                                                    </div>
+                                                    <Switch defaultChecked={false} />
+                                                </div>
+                                                <div className="pt-4 border-t">
+                                                    <h4 className="font-medium mb-3">
+                                                        Compliance & Limits
+                                                    </h4>
+                                                    <div className="space-y-2 text-sm">
+                                                        <div className="flex justify-between">
+                                                            <span className="text-muted-foreground">
+                                                                CAN-SPAM Compliance:
+                                                            </span>
+                                                            <span className="font-medium text-green-600">
+                                                                ✓ Enabled
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-muted-foreground">
+                                                                Daily Email Limit:
+                                                            </span>
+                                                            <span className="font-medium">
+                                                                500
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-muted-foreground">
+                                                                Daily SMS Limit:
+                                                            </span>
+                                                            <span className="font-medium">
+                                                                100
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between">
+                                                            <span className="text-muted-foreground">
+                                                                Opt-out Link:
+                                                            </span>
+                                                            <span className="font-medium text-green-600">
+                                                                ✓ Auto-included
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </Card>
+
+                                        <Card className="p-6 bg-gradient-to-r from-green-50 to-primary/5">
+                                            <h3 className="text-lg font-semibold mb-4">
+                                                System Features
+                                            </h3>
+                                            <div className="grid grid-cols-2 gap-3 text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <Users className="h-4 w-4 text-purple-600" />
+                                                    <span>
+                                                        5-Segment Auto-Categorization
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Sparkles className="h-4 w-4 text-primary" />
+                                                    <span>
+                                                        15+ Personalization Tokens
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <BookOpen className="h-4 w-4 text-green-600" />
+                                                    <span>AI Story Selection</span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Mail className="h-4 w-4 text-orange-600" />
+                                                    <span>
+                                                        Multi-Channel (Email + SMS)
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <BarChart3 className="h-4 w-4 text-purple-600" />
+                                                    <span>
+                                                        Intent Scoring & Tracking
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Target className="h-4 w-4 text-red-600" />
+                                                    <span>
+                                                        A/B Testing Infrastructure
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </Card>
+                                    </div>
+                                </TabsContent>
+                            </Tabs>
                         </>
                     )}
-                </Card>
-
-                {followupEnabled && (
-                    <>
-                        <Tabs
-                            value={activeTab}
-                            onValueChange={setActiveTab}
-                            className="w-full"
-                        >
-                            <TabsList className="grid w-full grid-cols-7">
-                                <TabsTrigger value="sender">
-                                    <Mail className="h-4 w-4 mr-2" />
-                                    Sender
-                                </TabsTrigger>
-                                <TabsTrigger value="agent">
-                                    <Sparkles className="h-4 w-4 mr-2" />
-                                    Agent
-                                </TabsTrigger>
-                                <TabsTrigger value="sequences">
-                                    <Target className="h-4 w-4 mr-2" />
-                                    Sequences
-                                </TabsTrigger>
-                                <TabsTrigger value="messages">
-                                    <MessageSquare className="h-4 w-4 mr-2" />
-                                    Messages
-                                </TabsTrigger>
-                                <TabsTrigger value="stories">
-                                    <BookOpen className="h-4 w-4 mr-2" />
-                                    Stories
-                                </TabsTrigger>
-                                <TabsTrigger value="analytics">
-                                    <BarChart3 className="h-4 w-4 mr-2" />
-                                    Analytics
-                                </TabsTrigger>
-                                <TabsTrigger value="settings">
-                                    <Settings className="h-4 w-4 mr-2" />
-                                    Settings
-                                </TabsTrigger>
-                            </TabsList>
-
-                            {/* Sender Setup Tab */}
-                            <TabsContent value="sender" className="mt-6">
-                                <SenderSetupTab
-                                    agentConfigId={agentConfig?.id}
-                                    currentSenderName={agentConfig?.sender_name}
-                                    currentSenderEmail={agentConfig?.sender_email}
-                                    currentSMSSenderId={agentConfig?.sms_sender_id}
-                                    emailProviderType={agentConfig?.email_provider_type}
-                                    gmailUserEmail={agentConfig?.gmail_user_email}
-                                    onUpdate={async () => {
-                                        // Reload data after sender updates
-                                        if (!projectId) return;
-                                        const configRes = await fetch(
-                                            `/api/followup/agent-configs?funnel_project_id=${projectId}`
-                                        );
-                                        if (configRes.ok) {
-                                            const configData = await configRes.json();
-                                            if (
-                                                configData.configs &&
-                                                configData.configs.length > 0
-                                            ) {
-                                                setAgentConfig(configData.configs[0]);
-                                            }
-                                        }
-                                    }}
-                                />
-                            </TabsContent>
-
-                            {/* Agent Configuration Tab */}
-                            <TabsContent value="agent" className="mt-6">
-                                <AgentConfigForm
-                                    config={agentConfig}
-                                    onSave={handleSaveAgentConfig}
-                                    funnelProjectId={projectId}
-                                />
-                            </TabsContent>
-
-                            {/* Sequences Tab */}
-                            <TabsContent value="sequences" className="mt-6">
-                                <SequenceBuilder
-                                    sequences={sequences}
-                                    onCreateSequence={handleCreateSequence}
-                                    onUpdateSequence={handleUpdateSequence}
-                                    onDeleteSequence={handleDeleteSequence}
-                                    onSelectSequence={handleSelectSequence}
-                                    onReloadSequences={reloadSequences}
-                                    funnelProjectId={projectId}
-                                    offerId={offer?.id}
-                                />
-
-                                {sequences.length > 0 && (
-                                    <Card className="mt-4 p-4 bg-primary/5 border-primary/20">
-                                        <p className="text-sm text-primary">
-                                            💡 <strong>Tip:</strong> Click "View
-                                            Messages" on any sequence or go to the
-                                            Messages tab to view and edit all message
-                                            templates.
-                                        </p>
-                                    </Card>
-                                )}
-                            </TabsContent>
-
-                            {/* Messages Tab */}
-                            <TabsContent value="messages" className="mt-6">
-                                <MessageTemplateEditor
-                                    sequenceId={
-                                        selectedSequenceId || sequences[0]?.id || ""
-                                    }
-                                    messages={messages}
-                                    sequences={sequences}
-                                    onCreateMessage={handleCreateMessage}
-                                    onUpdateMessage={handleUpdateMessage}
-                                    onDeleteMessage={handleDeleteMessage}
-                                />
-                            </TabsContent>
-
-                            {/* Stories Tab */}
-                            <TabsContent value="stories" className="mt-6">
-                                <StoryLibrary
-                                    stories={stories}
-                                    onCreateStory={handleCreateStory}
-                                    onUpdateStory={handleUpdateStory}
-                                    onDeleteStory={handleDeleteStory}
-                                />
-                            </TabsContent>
-
-                            {/* Analytics Tab */}
-                            <TabsContent value="analytics" className="mt-6">
-                                <AnalyticsDashboard data={analytics} />
-                            </TabsContent>
-
-                            {/* Settings Tab */}
-                            <TabsContent value="settings" className="mt-6">
-                                <div className="space-y-4">
-                                    <Card className="p-6">
-                                        <h3 className="text-lg font-semibold mb-4">
-                                            Follow-Up Settings
-                                        </h3>
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <div className="font-medium">
-                                                        Email Follow-Up
-                                                    </div>
-                                                    <div className="text-sm text-muted-foreground">
-                                                        Automated email sequences
-                                                    </div>
-                                                </div>
-                                                <Switch defaultChecked={true} />
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <div className="font-medium">
-                                                        SMS Follow-Up
-                                                    </div>
-                                                    <div className="text-sm text-muted-foreground">
-                                                        High-intent SMS messages
-                                                    </div>
-                                                </div>
-                                                <Switch defaultChecked={false} />
-                                            </div>
-                                            <div className="pt-4 border-t">
-                                                <h4 className="font-medium mb-3">
-                                                    Compliance & Limits
-                                                </h4>
-                                                <div className="space-y-2 text-sm">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">
-                                                            CAN-SPAM Compliance:
-                                                        </span>
-                                                        <span className="font-medium text-green-600">
-                                                            ✓ Enabled
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">
-                                                            Daily Email Limit:
-                                                        </span>
-                                                        <span className="font-medium">
-                                                            500
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">
-                                                            Daily SMS Limit:
-                                                        </span>
-                                                        <span className="font-medium">
-                                                            100
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">
-                                                            Opt-out Link:
-                                                        </span>
-                                                        <span className="font-medium text-green-600">
-                                                            ✓ Auto-included
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </Card>
-
-                                    <Card className="p-6 bg-gradient-to-r from-green-50 to-primary/5">
-                                        <h3 className="text-lg font-semibold mb-4">
-                                            System Features
-                                        </h3>
-                                        <div className="grid grid-cols-2 gap-3 text-sm">
-                                            <div className="flex items-center gap-2">
-                                                <Users className="h-4 w-4 text-purple-600" />
-                                                <span>
-                                                    5-Segment Auto-Categorization
-                                                </span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Sparkles className="h-4 w-4 text-primary" />
-                                                <span>15+ Personalization Tokens</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <BookOpen className="h-4 w-4 text-green-600" />
-                                                <span>AI Story Selection</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Mail className="h-4 w-4 text-orange-600" />
-                                                <span>Multi-Channel (Email + SMS)</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <BarChart3 className="h-4 w-4 text-purple-600" />
-                                                <span>Intent Scoring & Tracking</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Target className="h-4 w-4 text-red-600" />
-                                                <span>A/B Testing Infrastructure</span>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                </div>
-                            </TabsContent>
-                        </Tabs>
-                    </>
-                )}
-            </div>
+                </div>
+            </ComingSoonOverlay>
 
             {/* Test Message Modal */}
             {agentConfig?.id && (

@@ -20,6 +20,10 @@ import {
     getMasterStepById,
     getFirstIncompleteSubStep,
 } from "@/app/funnel-builder/master-steps-config";
+import { ComingSoonBadge } from "@/components/ui/coming-soon-overlay";
+
+// Traffic Agent steps (12, 13, 14) are coming soon
+const COMING_SOON_STEPS = [12, 13, 14];
 
 interface MasterSectionCardProps {
     masterStepId: number;
@@ -206,7 +210,52 @@ export function MasterSectionCard({
                     <div className="mt-4 pt-4 border-t border-border space-y-2">
                         {subStepDetails.map((step) => {
                             const isCompleted = completedSubSteps.includes(step.number);
+                            const isComingSoon = COMING_SOON_STEPS.includes(
+                                step.number
+                            );
                             const stepHref = `/funnel-builder/${projectId}/step/${step.number}`;
+
+                            const stepContent = (
+                                <div className="flex items-start gap-3">
+                                    {isCompleted ? (
+                                        <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-green-500 mt-0.5">
+                                            <Check className="h-3 w-3 text-white" />
+                                        </div>
+                                    ) : (
+                                        <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground mt-0.5">
+                                            {step.number}
+                                        </div>
+                                    )}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <h4 className="text-sm font-medium text-foreground">
+                                                {step.title}
+                                            </h4>
+                                            {isComingSoon && (
+                                                <ComingSoonBadge size="sm" />
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-muted-foreground">
+                                            {step.description}
+                                        </p>
+                                    </div>
+                                    {!isComingSoon && (
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
+                                    )}
+                                </div>
+                            );
+
+                            // Coming soon steps are not clickable
+                            if (isComingSoon) {
+                                return (
+                                    <div
+                                        key={step.number}
+                                        className="block rounded-md border border-border bg-card/50 p-3 opacity-70 cursor-not-allowed"
+                                    >
+                                        {stepContent}
+                                    </div>
+                                );
+                            }
 
                             return (
                                 <Link
@@ -214,26 +263,7 @@ export function MasterSectionCard({
                                     href={stepHref}
                                     className="block rounded-md border border-border bg-card p-3 transition-all hover:border-primary/50 hover:bg-primary/5"
                                 >
-                                    <div className="flex items-start gap-3">
-                                        {isCompleted ? (
-                                            <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-green-500 mt-0.5">
-                                                <Check className="h-3 w-3 text-white" />
-                                            </div>
-                                        ) : (
-                                            <div className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-muted-foreground mt-0.5">
-                                                {step.number}
-                                            </div>
-                                        )}
-                                        <div className="flex-1 min-w-0">
-                                            <h4 className="text-sm font-medium text-foreground mb-0.5">
-                                                {step.title}
-                                            </h4>
-                                            <p className="text-xs text-muted-foreground">
-                                                {step.description}
-                                            </p>
-                                        </div>
-                                        <ChevronRight className="h-4 w-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                                    </div>
+                                    {stepContent}
                                 </Link>
                             );
                         })}

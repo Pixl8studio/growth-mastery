@@ -33,6 +33,8 @@ interface ColorInfo {
     frequency: number;
     weight: number; // Weighted by element importance
     contexts: string[]; // Where the color appears (button, header, etc.)
+    isBrandVariable?: boolean; // True if from a CSS variable with brand-related name
+    brandRole?: "primary" | "secondary" | "accent"; // Explicit role from CSS variable name
 }
 
 /**
@@ -341,7 +343,18 @@ function extractColorsFromCss(css: string, colorMap: Map<string, ColorInfo>): vo
             const existing = colorMap.get(color);
             // CSS variables for primary/brand colors get higher weight
             const isPrimaryVar = /primary|brand|main/i.test(varName);
-            const weight = isPrimaryVar ? 8 : 4;
+            const isSecondaryVar = /secondary/i.test(varName);
+            const isAccentVar = /accent/i.test(varName);
+            const isBrandVariable = isPrimaryVar || isSecondaryVar || isAccentVar;
+
+            // Determine explicit brand role from variable name
+            let brandRole: "primary" | "secondary" | "accent" | undefined;
+            if (isPrimaryVar) brandRole = "primary";
+            else if (isSecondaryVar) brandRole = "secondary";
+            else if (isAccentVar) brandRole = "accent";
+
+            // Brand variables get significantly higher weight to ensure they're prioritized
+            const weight = isBrandVariable ? 25 : 4;
 
             if (existing) {
                 existing.frequency++;
@@ -349,12 +362,22 @@ function extractColorsFromCss(css: string, colorMap: Map<string, ColorInfo>): vo
                 if (!existing.contexts.includes("css-variable")) {
                     existing.contexts.push("css-variable");
                 }
+                // Mark as brand variable if this CSS variable is brand-related
+                if (isBrandVariable) {
+                    existing.isBrandVariable = true;
+                    // Only set brand role if not already set (first occurrence takes precedence)
+                    if (!existing.brandRole && brandRole) {
+                        existing.brandRole = brandRole;
+                    }
+                }
             } else {
                 colorMap.set(color, {
                     color,
                     frequency: 1,
                     weight,
                     contexts: ["css-variable"],
+                    isBrandVariable,
+                    brandRole,
                 });
             }
         }
@@ -575,45 +598,96 @@ async function fetchAndExtractExternalCss(
 }
 
 /**
+ * Calculate color saturation (0-1) from hex
+ */
+function getColorSaturation(hex: string): number {
+    const r = parseInt(hex.slice(1, 3), 16) / 255;
+    const g = parseInt(hex.slice(3, 5), 16) / 255;
+    const b = parseInt(hex.slice(5, 7), 16) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const l = (max + min) / 2;
+
+    if (max === min) return 0;
+
+    const d = max - min;
+    return l > 0.5 ? d / (2 - max - min) : d / (max + min);
+}
+
+/**
  * Select brand colors from extracted colors
+ * Priority: 1) Explicit brand CSS variables, 2) High-saturation weighted colors, 3) Defaults
  */
 function selectBrandColors(colors: ColorInfo[]): BrandData["colors"] {
-    // Filter out grayscale and extreme shades
+    // Step 1: Look for explicitly defined brand colors from CSS variables
+    const brandVariables = colors.filter(
+        (c) => c.isBrandVariable && !isGrayscale(c.color) && !isExtremeShade(c.color)
+    );
+
+    // Extract colors by their explicit brand role
+    const explicitPrimary = brandVariables.find((c) => c.brandRole === "primary");
+    const explicitSecondary = brandVariables.find((c) => c.brandRole === "secondary");
+    const explicitAccent = brandVariables.find((c) => c.brandRole === "accent");
+
+    // Step 2: Filter all colors for vibrant, saturated colors
     const vibrantColors = colors.filter(
         (c) => !isGrayscale(c.color) && !isExtremeShade(c.color)
     );
 
-    // Sort by weighted score (frequency * weight)
-    const sorted = vibrantColors.sort(
-        (a, b) => b.weight * b.frequency - a.weight * a.frequency
-    );
+    // Sort by weighted score, with saturation as a tiebreaker
+    // Higher saturation colors are typically more "branded"
+    const sorted = vibrantColors.sort((a, b) => {
+        const scoreA = a.weight * a.frequency;
+        const scoreB = b.weight * b.frequency;
+        if (scoreA !== scoreB) return scoreB - scoreA;
+        // Use saturation as tiebreaker (more saturated = more likely brand color)
+        return getColorSaturation(b.color) - getColorSaturation(a.color);
+    });
 
-    // Find primary (most prominent vibrant color)
-    const primary = sorted[0]?.color || DEFAULT_BRAND_COLORS.PRIMARY;
+    // Step 3: Select primary - explicit brand variable takes absolute priority
+    let primary = DEFAULT_BRAND_COLORS.PRIMARY;
+    if (explicitPrimary) {
+        primary = explicitPrimary.color;
+    } else if (sorted.length > 0) {
+        primary = sorted[0].color;
+    }
 
-    // Find secondary (different from primary)
+    // Step 4: Select secondary - explicit brand variable takes priority
     let secondary = DEFAULT_BRAND_COLORS.SECONDARY;
-    for (const color of sorted.slice(1)) {
-        if (colorDistance(primary, color.color) > 50) {
-            secondary = color.color;
-            break;
+    if (explicitSecondary) {
+        secondary = explicitSecondary.color;
+    } else {
+        // Find from weighted colors, must be distinct from primary
+        for (const color of sorted) {
+            if (color.color !== primary && colorDistance(primary, color.color) > 50) {
+                secondary = color.color;
+                break;
+            }
         }
     }
 
-    // Find accent (high contrast with primary)
+    // Step 5: Select accent - explicit brand variable takes priority
     let accent = DEFAULT_BRAND_COLORS.ACCENT;
-    for (const color of sorted) {
-        if (
-            colorDistance(primary, color.color) > 100 &&
-            colorDistance(secondary, color.color) > 50
-        ) {
-            accent = color.color;
-            break;
+    if (explicitAccent) {
+        accent = explicitAccent.color;
+    } else {
+        // Find high contrast color distinct from both primary and secondary
+        for (const color of sorted) {
+            if (
+                color.color !== primary &&
+                color.color !== secondary &&
+                colorDistance(primary, color.color) > 100 &&
+                colorDistance(secondary, color.color) > 50
+            ) {
+                accent = color.color;
+                break;
+            }
         }
     }
 
-    // Find background and text colors from all colors (including grayscale)
-    const allSorted = colors.sort(
+    // Step 6: Find background and text colors from all colors (including grayscale)
+    const allSorted = [...colors].sort(
         (a, b) => b.weight * b.frequency - a.weight * a.frequency
     );
 

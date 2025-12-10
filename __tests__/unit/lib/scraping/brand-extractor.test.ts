@@ -408,10 +408,94 @@ describe("extractBrandFromHtml", () => {
 
         const result = await extractBrandFromHtml(html);
 
-        // Should extract one of the vibrant CSS variable colors as primary
-        // (not the near-white bg-color)
-        const extractedColors = ["#E11D48", "#7C3AED", "#F59E0B"];
-        expect(extractedColors).toContain(result.colors.primary);
+        // Explicit --primary CSS variable should be selected as primary
+        expect(result.colors.primary).toBe("#E11D48");
+        // Explicit --secondary CSS variable should be selected as secondary
+        expect(result.colors.secondary).toBe("#7C3AED");
+        // Explicit --accent-color CSS variable should be selected as accent
+        expect(result.colors.accent).toBe("#F59E0B");
+    });
+
+    it("should prioritize explicit brand CSS variables over high-frequency colors", async () => {
+        const html = `
+            <html>
+                <head>
+                    <style>
+                        :root {
+                            --primary-color: #FF5733;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <a style="color: #3B82F6">Link 1</a>
+                    <a style="color: #3B82F6">Link 2</a>
+                    <a style="color: #3B82F6">Link 3</a>
+                    <a style="color: #3B82F6">Link 4</a>
+                    <a style="color: #3B82F6">Link 5</a>
+                    <p>Content</p>
+                </body>
+            </html>
+        `;
+
+        const result = await extractBrandFromHtml(html);
+
+        // Even though #3B82F6 appears 5 times with high weight (links),
+        // the explicit --primary-color CSS variable should win
+        expect(result.colors.primary).toBe("#FF5733");
+    });
+
+    it("should prioritize explicit brand CSS variable even with many framework colors", async () => {
+        const html = `
+            <html>
+                <head>
+                    <style>
+                        :root {
+                            --brand-primary: #DC2626;
+                            --brand-secondary: #059669;
+                        }
+                        /* Simulating framework utility classes */
+                        .bg-blue-500 { background-color: #3B82F6; }
+                        .bg-blue-600 { background-color: #2563EB; }
+                        .bg-blue-700 { background-color: #1D4ED8; }
+                        .text-gray-500 { color: #6B7280; }
+                        .text-gray-600 { color: #4B5563; }
+                        .border-gray-300 { border-color: #D1D5DB; }
+                    </style>
+                </head>
+                <body>
+                    <button style="background-color: #3B82F6">Button</button>
+                    <div style="background-color: #2563EB">Card</div>
+                    <p>Content</p>
+                </body>
+            </html>
+        `;
+
+        const result = await extractBrandFromHtml(html);
+
+        // Explicit brand CSS variables should be selected despite many other colors
+        expect(result.colors.primary).toBe("#DC2626");
+        expect(result.colors.secondary).toBe("#059669");
+    });
+
+    it("should detect accent from CSS variable with accent in name", async () => {
+        const html = `
+            <html>
+                <head>
+                    <style>
+                        :root {
+                            --accent: #F59E0B;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <button style="background-color: #3B82F6">Button</button>
+                </body>
+            </html>
+        `;
+
+        const result = await extractBrandFromHtml(html);
+
+        expect(result.colors.accent).toBe("#F59E0B");
     });
 });
 

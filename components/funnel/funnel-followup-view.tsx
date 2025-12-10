@@ -12,6 +12,7 @@ import { logger } from "@/lib/client-logger";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Mail, TrendingUp, DollarSign } from "lucide-react";
 import { ProspectList } from "@/components/followup/prospect-list";
+import { ComingSoonOverlay } from "@/components/ui/coming-soon-overlay";
 
 interface FollowupStats {
     total_prospects: number;
@@ -89,79 +90,90 @@ export function FunnelFollowupView({ projectId }: FunnelFollowupViewProps) {
     }
 
     return (
-        <div className="space-y-6">
-            {/* Stats Cards */}
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Total Prospects
-                        </CardTitle>
-                        <Users className="h-4 w-4 text-primary" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">
-                            {stats.total_prospects}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                            Active in sequence
-                        </p>
-                    </CardContent>
-                </Card>
+        <ComingSoonOverlay
+            featureName="AI Follow-Up"
+            description="The AI Follow-Up system is currently in development. Soon you'll be able to track prospects and automate post-webinar engagement."
+        >
+            <div className="space-y-6">
+                {/* Stats Cards */}
+                <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">
+                                Total Prospects
+                            </CardTitle>
+                            <Users className="h-4 w-4 text-primary" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">
+                                {stats.total_prospects}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Active in sequence
+                            </p>
+                        </CardContent>
+                    </Card>
 
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Total Touches
-                        </CardTitle>
-                        <Mail className="h-4 w-4 text-purple-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{stats.total_touches}</div>
-                        <p className="text-xs text-muted-foreground">Messages sent</p>
-                    </CardContent>
-                </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">
+                                Total Touches
+                            </CardTitle>
+                            <Mail className="h-4 w-4 text-purple-600" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">
+                                {stats.total_touches}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Messages sent
+                            </p>
+                        </CardContent>
+                    </Card>
 
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Conversion Rate
-                        </CardTitle>
-                        <TrendingUp className="h-4 w-4 text-green-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">
-                            {stats.conversion_rate.toFixed(1)}%
-                        </div>
-                        <p className="text-xs text-muted-foreground">From followup</p>
-                    </CardContent>
-                </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">
+                                Conversion Rate
+                            </CardTitle>
+                            <TrendingUp className="h-4 w-4 text-green-600" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">
+                                {stats.conversion_rate.toFixed(1)}%
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                From followup
+                            </p>
+                        </CardContent>
+                    </Card>
 
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">
-                            Revenue Generated
-                        </CardTitle>
-                        <DollarSign className="h-4 w-4 text-emerald-600" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">
-                            ${stats.revenue_generated.toLocaleString()}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                            Total from followup
-                        </p>
-                    </CardContent>
-                </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium">
+                                Revenue Generated
+                            </CardTitle>
+                            <DollarSign className="h-4 w-4 text-emerald-600" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-2xl font-bold">
+                                ${stats.revenue_generated.toLocaleString()}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Total from followup
+                            </p>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Prospects List */}
+                <div className="rounded-lg border border-border bg-card p-6">
+                    <h3 className="mb-4 text-lg font-semibold text-foreground">
+                        Prospects
+                    </h3>
+                    <ProspectList funnelProjectId={projectId} />
+                </div>
             </div>
-
-            {/* Prospects List */}
-            <div className="rounded-lg border border-border bg-card p-6">
-                <h3 className="mb-4 text-lg font-semibold text-foreground">
-                    Prospects
-                </h3>
-                <ProspectList funnelProjectId={projectId} />
-            </div>
-        </div>
+        </ComingSoonOverlay>
     );
 }

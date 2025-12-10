@@ -37,6 +37,7 @@ import { TrendExplorer } from "@/components/marketing/trend-explorer";
 import { MarketingSettings } from "@/components/marketing/marketing-settings";
 import { ApprovalWorkflowModal } from "@/components/marketing/approval-workflow-modal";
 import { ExperimentCreatorModal } from "@/components/marketing/experiment-creator-modal";
+import { ComingSoonOverlay } from "@/components/ui/coming-soon-overlay";
 
 export default function Step12Page({
     params,
@@ -263,197 +264,207 @@ export default function Step12Page({
         <StepLayout
             stepTitle="Marketing Content Engine"
             stepDescription="AI-powered social content generation with Echo Mode voice mirroring"
-            currentStep={12}
+            currentStep={13}
             projectId={projectId}
             completedSteps={completedSteps}
             nextLabel="Continue to Ads Manager"
         >
-            <div className="space-y-6">
-                {/* Enable/Disable Section */}
-                <Card className="p-6 bg-gradient-to-r from-primary/5 to-purple-50">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Share2 className="h-6 w-6 text-primary-foreground0" />
-                            <div>
-                                <h3 className="text-lg font-semibold">
-                                    Enable Marketing Content Engine
-                                </h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Generate platform-optimized content in your
-                                    authentic founder voice
-                                </p>
+            <ComingSoonOverlay
+                featureName="Marketing Content Engine"
+                description="The Marketing Content Engine is currently in development. Soon you'll be able to generate platform-optimized content in your authentic founder voice."
+            >
+                <div className="space-y-6">
+                    {/* Enable/Disable Section */}
+                    <Card className="p-6 bg-gradient-to-r from-primary/5 to-purple-50">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                <Share2 className="h-6 w-6 text-primary-foreground0" />
+                                <div>
+                                    <h3 className="text-lg font-semibold">
+                                        Enable Marketing Content Engine
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Generate platform-optimized content in your
+                                        authentic founder voice
+                                    </p>
+                                </div>
                             </div>
+                            <Switch
+                                checked={marketingEnabled}
+                                onCheckedChange={handleEnableMarketing}
+                            />
                         </div>
-                        <Switch
-                            checked={marketingEnabled}
-                            onCheckedChange={handleEnableMarketing}
-                        />
-                    </div>
 
-                    {marketingEnabled && (
-                        <>
-                            <div className="mt-6 grid grid-cols-5 gap-4 text-sm">
-                                <div className="text-center p-3 bg-card rounded-lg">
-                                    <div className="text-2xl font-bold text-primary">
-                                        {stats.postsThisMonth}
-                                    </div>
-                                    <div className="text-muted-foreground">
-                                        Posts This Month
-                                    </div>
-                                </div>
-                                <div className="text-center p-3 bg-card rounded-lg">
-                                    <div className="text-2xl font-bold text-green-600">
-                                        {stats.totalOptIns}
-                                    </div>
-                                    <div className="text-muted-foreground">
-                                        Total Opt-ins
-                                    </div>
-                                    {stats.overallOI1000 > 0 && (
-                                        <div className="text-xs text-muted-foreground mt-1">
-                                            {stats.overallOI1000.toFixed(1)} O/I-1000
+                        {marketingEnabled && (
+                            <>
+                                <div className="mt-6 grid grid-cols-5 gap-4 text-sm">
+                                    <div className="text-center p-3 bg-card rounded-lg">
+                                        <div className="text-2xl font-bold text-primary">
+                                            {stats.postsThisMonth}
                                         </div>
-                                    )}
+                                        <div className="text-muted-foreground">
+                                            Posts This Month
+                                        </div>
+                                    </div>
+                                    <div className="text-center p-3 bg-card rounded-lg">
+                                        <div className="text-2xl font-bold text-green-600">
+                                            {stats.totalOptIns}
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                            Total Opt-ins
+                                        </div>
+                                        {stats.overallOI1000 > 0 && (
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                                {stats.overallOI1000.toFixed(1)}{" "}
+                                                O/I-1000
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="text-center p-3 bg-card rounded-lg">
+                                        <div className="text-2xl font-bold text-purple-600">
+                                            {stats.scheduledPosts}
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                            Scheduled
+                                        </div>
+                                    </div>
+                                    <div className="text-center p-3 bg-card rounded-lg">
+                                        <div className="text-2xl font-bold text-orange-600">
+                                            {stats.activeExperiments}
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                            Active Tests
+                                        </div>
+                                    </div>
+                                    <div
+                                        className="text-center p-3 bg-card rounded-lg cursor-pointer hover:bg-yellow-50 transition-smooth"
+                                        onClick={() => setShowApprovalModal(true)}
+                                    >
+                                        <div className="text-2xl font-bold text-yellow-600">
+                                            {stats.pendingApprovals}
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                            Pending
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="text-center p-3 bg-card rounded-lg">
-                                    <div className="text-2xl font-bold text-purple-600">
-                                        {stats.scheduledPosts}
-                                    </div>
-                                    <div className="text-muted-foreground">
-                                        Scheduled
-                                    </div>
-                                </div>
-                                <div className="text-center p-3 bg-card rounded-lg">
-                                    <div className="text-2xl font-bold text-orange-600">
-                                        {stats.activeExperiments}
-                                    </div>
-                                    <div className="text-muted-foreground">
-                                        Active Tests
-                                    </div>
-                                </div>
-                                <div
-                                    className="text-center p-3 bg-card rounded-lg cursor-pointer hover:bg-yellow-50 transition-smooth"
-                                    onClick={() => setShowApprovalModal(true)}
-                                >
-                                    <div className="text-2xl font-bold text-yellow-600">
-                                        {stats.pendingApprovals}
-                                    </div>
-                                    <div className="text-muted-foreground">Pending</div>
-                                </div>
-                            </div>
 
-                            {/* Quick Action Buttons */}
-                            <div className="mt-4 flex justify-end gap-3">
-                                <Button
-                                    onClick={() => setShowApprovalModal(true)}
-                                    variant="outline"
-                                    size="sm"
-                                >
-                                    Review Approvals
-                                </Button>
-                                <Button
-                                    onClick={() => setShowExperimentModal(true)}
-                                    variant="outline"
-                                    size="sm"
-                                >
-                                    Create A/B Test
-                                </Button>
-                            </div>
-                        </>
-                    )}
-                </Card>
+                                {/* Quick Action Buttons */}
+                                <div className="mt-4 flex justify-end gap-3">
+                                    <Button
+                                        onClick={() => setShowApprovalModal(true)}
+                                        variant="outline"
+                                        size="sm"
+                                    >
+                                        Review Approvals
+                                    </Button>
+                                    <Button
+                                        onClick={() => setShowExperimentModal(true)}
+                                        variant="outline"
+                                        size="sm"
+                                    >
+                                        Create A/B Test
+                                    </Button>
+                                </div>
+                            </>
+                        )}
+                    </Card>
 
-                {marketingEnabled && profile && (
-                    <Tabs
-                        value={activeTab}
-                        onValueChange={setActiveTab}
-                        className="w-full"
-                    >
-                        <TabsList className="grid w-full grid-cols-6">
-                            <TabsTrigger value="profile">
-                                <Sparkles className="h-4 w-4 mr-2" />
-                                Profile
-                            </TabsTrigger>
-                            <TabsTrigger value="generate">
-                                <Lightbulb className="h-4 w-4 mr-2" />
-                                Generate
-                            </TabsTrigger>
-                            <TabsTrigger value="calendar">
-                                <Calendar className="h-4 w-4 mr-2" />
-                                Calendar
-                            </TabsTrigger>
-                            <TabsTrigger value="analytics">
-                                <BarChart3 className="h-4 w-4 mr-2" />
-                                Analytics
-                            </TabsTrigger>
-                            <TabsTrigger value="trends">
-                                <TrendingUp className="h-4 w-4 mr-2" />
-                                Trends
-                            </TabsTrigger>
-                            <TabsTrigger value="settings">
-                                <Settings className="h-4 w-4 mr-2" />
-                                Settings
-                            </TabsTrigger>
-                        </TabsList>
+                    {marketingEnabled && profile && (
+                        <Tabs
+                            value={activeTab}
+                            onValueChange={setActiveTab}
+                            className="w-full"
+                        >
+                            <TabsList className="grid w-full grid-cols-6">
+                                <TabsTrigger value="profile">
+                                    <Sparkles className="h-4 w-4 mr-2" />
+                                    Profile
+                                </TabsTrigger>
+                                <TabsTrigger value="generate">
+                                    <Lightbulb className="h-4 w-4 mr-2" />
+                                    Generate
+                                </TabsTrigger>
+                                <TabsTrigger value="calendar">
+                                    <Calendar className="h-4 w-4 mr-2" />
+                                    Calendar
+                                </TabsTrigger>
+                                <TabsTrigger value="analytics">
+                                    <BarChart3 className="h-4 w-4 mr-2" />
+                                    Analytics
+                                </TabsTrigger>
+                                <TabsTrigger value="trends">
+                                    <TrendingUp className="h-4 w-4 mr-2" />
+                                    Trends
+                                </TabsTrigger>
+                                <TabsTrigger value="settings">
+                                    <Settings className="h-4 w-4 mr-2" />
+                                    Settings
+                                </TabsTrigger>
+                            </TabsList>
 
-                        {/* Profile Tab */}
-                        <TabsContent value="profile" className="mt-6">
-                            <ProfileConfigForm
-                                profile={profile}
-                                onUpdate={async () => {
-                                    // Reload profile
-                                    const res = await fetch(
-                                        `/api/marketing/profiles?funnel_project_id=${projectId}`
-                                    );
-                                    if (res.ok) {
-                                        const data = await res.json();
-                                        if (data.profiles?.[0]) {
-                                            setProfile(data.profiles[0]);
+                            {/* Profile Tab */}
+                            <TabsContent value="profile" className="mt-6">
+                                <ProfileConfigForm
+                                    profile={profile}
+                                    onUpdate={async () => {
+                                        // Reload profile
+                                        const res = await fetch(
+                                            `/api/marketing/profiles?funnel_project_id=${projectId}`
+                                        );
+                                        if (res.ok) {
+                                            const data = await res.json();
+                                            if (data.profiles?.[0]) {
+                                                setProfile(data.profiles[0]);
+                                            }
                                         }
-                                    }
-                                }}
-                            />
-                        </TabsContent>
+                                    }}
+                                />
+                            </TabsContent>
 
-                        {/* Generate Tab */}
-                        <TabsContent value="generate" className="mt-6">
-                            <ContentGenerator
-                                profileId={profile.id}
-                                funnelProjectId={projectId}
-                                onContentGenerated={() => loadStats()}
-                            />
-                        </TabsContent>
+                            {/* Generate Tab */}
+                            <TabsContent value="generate" className="mt-6">
+                                <ContentGenerator
+                                    profileId={profile.id}
+                                    funnelProjectId={projectId}
+                                    onContentGenerated={() => loadStats()}
+                                />
+                            </TabsContent>
 
-                        {/* Calendar Tab */}
-                        <TabsContent value="calendar" className="mt-6">
-                            <ContentCalendar
-                                funnelProjectId={projectId}
-                                onUpdate={() => loadStats()}
-                            />
-                        </TabsContent>
+                            {/* Calendar Tab */}
+                            <TabsContent value="calendar" className="mt-6">
+                                <ContentCalendar
+                                    funnelProjectId={projectId}
+                                    onUpdate={() => loadStats()}
+                                />
+                            </TabsContent>
 
-                        {/* Analytics Tab */}
-                        <TabsContent value="analytics" className="mt-6">
-                            <MarketingAnalyticsDashboard funnelProjectId={projectId} />
-                        </TabsContent>
+                            {/* Analytics Tab */}
+                            <TabsContent value="analytics" className="mt-6">
+                                <MarketingAnalyticsDashboard
+                                    funnelProjectId={projectId}
+                                />
+                            </TabsContent>
 
-                        {/* Trends Tab */}
-                        <TabsContent value="trends" className="mt-6">
-                            <TrendExplorer
-                                profileId={profile.id}
-                                funnelProjectId={projectId}
-                            />
-                        </TabsContent>
+                            {/* Trends Tab */}
+                            <TabsContent value="trends" className="mt-6">
+                                <TrendExplorer
+                                    profileId={profile.id}
+                                    funnelProjectId={projectId}
+                                />
+                            </TabsContent>
 
-                        {/* Settings Tab */}
-                        <TabsContent value="settings" className="mt-6">
-                            <MarketingSettings
-                                funnelProjectId={projectId}
-                                profileId={profile.id}
-                            />
-                        </TabsContent>
-                    </Tabs>
-                )}
-            </div>
+                            {/* Settings Tab */}
+                            <TabsContent value="settings" className="mt-6">
+                                <MarketingSettings
+                                    funnelProjectId={projectId}
+                                    profileId={profile.id}
+                                />
+                            </TabsContent>
+                        </Tabs>
+                    )}
+                </div>
+            </ComingSoonOverlay>
 
             {/* Approval Workflow Modal */}
             {marketingEnabled && (

@@ -26,6 +26,10 @@ import {
     getMasterStepById,
     MASTER_STEPS,
 } from "@/app/funnel-builder/master-steps-config";
+import { ComingSoonBadge } from "@/components/ui/coming-soon-overlay";
+
+// Traffic Agent steps (12, 13, 14) are coming soon
+const COMING_SOON_STEPS = [12, 13, 14];
 
 interface HorizontalMasterStepsProps {
     projectId: string;
@@ -226,7 +230,54 @@ export function HorizontalMasterSteps({
                                         const isCompleted = completedSubSteps.includes(
                                             step.number
                                         );
+                                        const isComingSoon = COMING_SOON_STEPS.includes(
+                                            step.number
+                                        );
                                         const stepHref = `/funnel-builder/${projectId}/step/${step.number}`;
+
+                                        const cardContent = (
+                                            <div className="flex items-start gap-3">
+                                                {/* Step Number/Check */}
+                                                {isCompleted ? (
+                                                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-green-500">
+                                                        <Check className="h-4 w-4 text-white" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
+                                                        {step.number}
+                                                    </div>
+                                                )}
+
+                                                {/* Step Info */}
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2 mb-1">
+                                                        <h5 className="text-sm font-medium text-foreground leading-tight">
+                                                            {step.title}
+                                                        </h5>
+                                                        {isComingSoon ? (
+                                                            <ComingSoonBadge size="sm" />
+                                                        ) : (
+                                                            <ChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                                        )}
+                                                    </div>
+                                                    <p className="text-xs text-muted-foreground leading-snug">
+                                                        {step.description}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        );
+
+                                        // Coming soon steps are not clickable
+                                        if (isComingSoon) {
+                                            return (
+                                                <div
+                                                    key={step.number}
+                                                    className="block rounded-md border border-border bg-card/50 p-4 opacity-70 cursor-not-allowed"
+                                                >
+                                                    {cardContent}
+                                                </div>
+                                            );
+                                        }
 
                                         return (
                                             <Link
@@ -234,31 +285,7 @@ export function HorizontalMasterSteps({
                                                 href={stepHref}
                                                 className="block rounded-md border border-border bg-card p-4 transition-all hover:border-primary hover:bg-primary/5 hover:shadow-md"
                                             >
-                                                <div className="flex items-start gap-3">
-                                                    {/* Step Number/Check */}
-                                                    {isCompleted ? (
-                                                        <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-green-500">
-                                                            <Check className="h-4 w-4 text-white" />
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
-                                                            {step.number}
-                                                        </div>
-                                                    )}
-
-                                                    {/* Step Info */}
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-center gap-2 mb-1">
-                                                            <h5 className="text-sm font-medium text-foreground leading-tight">
-                                                                {step.title}
-                                                            </h5>
-                                                            <ChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-                                                        </div>
-                                                        <p className="text-xs text-muted-foreground leading-snug">
-                                                            {step.description}
-                                                        </p>
-                                                    </div>
-                                                </div>
+                                                {cardContent}
                                             </Link>
                                         );
                                     })}

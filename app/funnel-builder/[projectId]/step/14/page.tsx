@@ -29,6 +29,7 @@ import { MetaAccountSelector } from "@/components/ads/meta-account-selector";
 import { AdVariationsReview } from "@/components/ads/ad-variations-review";
 import { AudienceBuilder } from "@/components/ads/audience-builder";
 import { CampaignDeployer } from "@/components/ads/campaign-deployer";
+import { ComingSoonOverlay } from "@/components/ui/coming-soon-overlay";
 
 type WizardSubStep = "connect" | "variations" | "audience" | "deploy";
 
@@ -310,370 +311,392 @@ export default function Step14Page({
             stepTitle="Self-Optimizing Ads Manager"
             stepDescription="Generate Meta/Instagram ads and launch campaigns with AI optimization"
         >
-            <div className="space-y-8">
-                {/* Progress Indicator */}
-                <div className="grid grid-cols-4 gap-4">
-                    {[
-                        { key: "connect", label: "Connect & Setup", icon: Target },
-                        { key: "variations", label: "Ad Variations", icon: Sparkles },
-                        { key: "audience", label: "Audience & Budget", icon: Users },
-                        { key: "deploy", label: "Deploy", icon: CheckCircle },
-                    ].map((step, index) => {
-                        const isActive = currentSubStep === step.key;
-                        const isCompleted =
-                            (step.key === "connect" &&
-                                metaConnected &&
-                                selectedAdAccount) ||
-                            (step.key === "variations" &&
-                                selectedVariations.length > 0) ||
-                            (step.key === "audience" && audienceConfig) ||
-                            (step.key === "deploy" && deployed);
+            <ComingSoonOverlay
+                featureName="Ads Manager"
+                description="The Ads Manager is currently in development. Soon you'll be able to generate Meta/Instagram ads and launch campaigns with AI-powered optimization."
+            >
+                <div className="space-y-8">
+                    {/* Progress Indicator */}
+                    <div className="grid grid-cols-4 gap-4">
+                        {[
+                            { key: "connect", label: "Connect & Setup", icon: Target },
+                            {
+                                key: "variations",
+                                label: "Ad Variations",
+                                icon: Sparkles,
+                            },
+                            {
+                                key: "audience",
+                                label: "Audience & Budget",
+                                icon: Users,
+                            },
+                            { key: "deploy", label: "Deploy", icon: CheckCircle },
+                        ].map((step, index) => {
+                            const isActive = currentSubStep === step.key;
+                            const isCompleted =
+                                (step.key === "connect" &&
+                                    metaConnected &&
+                                    selectedAdAccount) ||
+                                (step.key === "variations" &&
+                                    selectedVariations.length > 0) ||
+                                (step.key === "audience" && audienceConfig) ||
+                                (step.key === "deploy" && deployed);
 
-                        const Icon = step.icon;
+                            const Icon = step.icon;
 
-                        return (
-                            <div
-                                key={step.key}
-                                className={`flex flex-col items-center rounded-lg border p-4 ${
-                                    isActive
-                                        ? "border-primary bg-primary/5"
-                                        : isCompleted
-                                          ? "border-green-500 bg-green-50"
-                                          : "border-border bg-card"
-                                }`}
-                            >
-                                <Icon
-                                    className={`mb-2 h-6 w-6 ${
+                            return (
+                                <div
+                                    key={step.key}
+                                    className={`flex flex-col items-center rounded-lg border p-4 ${
                                         isActive
-                                            ? "text-primary"
+                                            ? "border-primary bg-primary/5"
                                             : isCompleted
-                                              ? "text-green-600"
-                                              : "text-muted-foreground"
+                                              ? "border-green-500 bg-green-50"
+                                              : "border-border bg-card"
                                     }`}
-                                />
-                                <span className="text-center text-sm font-medium">
-                                    {step.label}
-                                </span>
-                            </div>
-                        );
-                    })}
-                </div>
-
-                {/* Sub-Step 1: Connect Meta & Setup */}
-                {currentSubStep === "connect" && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Connect Your Meta Ad Account</CardTitle>
-                            <CardDescription>
-                                Select the Meta Ad Account you want to use for this
-                                campaign
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {!metaConnected ? (
-                                <>
-                                    <div className="rounded-lg border border-orange-200 bg-orange-50 p-6">
-                                        <div className="flex items-start gap-4">
-                                            <AlertCircle className="h-6 w-6 text-orange-600" />
-                                            <div className="flex-1">
-                                                <h3 className="font-semibold text-orange-900">
-                                                    Facebook/Meta Not Connected
-                                                </h3>
-                                                <p className="mt-2 text-sm text-orange-800">
-                                                    To launch real ad campaigns, you
-                                                    need to connect your Facebook
-                                                    account first. This will give us
-                                                    access to your Meta Ad Accounts.
-                                                </p>
-                                                <Button
-                                                    onClick={handleConnectMeta}
-                                                    className="mt-4"
-                                                    variant="default"
-                                                >
-                                                    Connect Facebook
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Preview/Explore Mode */}
-                                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-6">
-                                        <div className="flex items-start gap-4">
-                                            <Sparkles className="h-6 w-6 text-primary" />
-                                            <div className="flex-1">
-                                                <h3 className="font-semibold text-primary">
-                                                    Preview the Ads Manager
-                                                </h3>
-                                                <p className="mt-2 text-sm text-muted-foreground">
-                                                    Want to see how the Ads Manager
-                                                    works before connecting? Click below
-                                                    to explore the wizard and see
-                                                    example ad variations.
-                                                </p>
-                                                <Button
-                                                    onClick={() =>
-                                                        setCurrentSubStep("variations")
-                                                    }
-                                                    className="mt-4"
-                                                    variant="outline"
-                                                >
-                                                    Explore Ads Manager
-                                                    <ArrowRight className="h-4 w-4 ml-2" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </>
-                            ) : (
-                                <>
-                                    <MetaAccountSelector
-                                        projectId={projectId}
-                                        onSelectAccount={handleSelectAdAccount}
-                                        selectedAccount={selectedAdAccount}
+                                >
+                                    <Icon
+                                        className={`mb-2 h-6 w-6 ${
+                                            isActive
+                                                ? "text-primary"
+                                                : isCompleted
+                                                  ? "text-green-600"
+                                                  : "text-muted-foreground"
+                                        }`}
                                     />
+                                    <span className="text-center text-sm font-medium">
+                                        {step.label}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
 
-                                    {selectedAdAccount && (
-                                        <div className="flex justify-end">
+                    {/* Sub-Step 1: Connect Meta & Setup */}
+                    {currentSubStep === "connect" && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Connect Your Meta Ad Account</CardTitle>
+                                <CardDescription>
+                                    Select the Meta Ad Account you want to use for this
+                                    campaign
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {!metaConnected ? (
+                                    <>
+                                        <div className="rounded-lg border border-orange-200 bg-orange-50 p-6">
+                                            <div className="flex items-start gap-4">
+                                                <AlertCircle className="h-6 w-6 text-orange-600" />
+                                                <div className="flex-1">
+                                                    <h3 className="font-semibold text-orange-900">
+                                                        Facebook/Meta Not Connected
+                                                    </h3>
+                                                    <p className="mt-2 text-sm text-orange-800">
+                                                        To launch real ad campaigns, you
+                                                        need to connect your Facebook
+                                                        account first. This will give us
+                                                        access to your Meta Ad Accounts.
+                                                    </p>
+                                                    <Button
+                                                        onClick={handleConnectMeta}
+                                                        className="mt-4"
+                                                        variant="default"
+                                                    >
+                                                        Connect Facebook
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Preview/Explore Mode */}
+                                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-6">
+                                            <div className="flex items-start gap-4">
+                                                <Sparkles className="h-6 w-6 text-primary" />
+                                                <div className="flex-1">
+                                                    <h3 className="font-semibold text-primary">
+                                                        Preview the Ads Manager
+                                                    </h3>
+                                                    <p className="mt-2 text-sm text-muted-foreground">
+                                                        Want to see how the Ads Manager
+                                                        works before connecting? Click
+                                                        below to explore the wizard and
+                                                        see example ad variations.
+                                                    </p>
+                                                    <Button
+                                                        onClick={() =>
+                                                            setCurrentSubStep(
+                                                                "variations"
+                                                            )
+                                                        }
+                                                        className="mt-4"
+                                                        variant="outline"
+                                                    >
+                                                        Explore Ads Manager
+                                                        <ArrowRight className="h-4 w-4 ml-2" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <>
+                                        <MetaAccountSelector
+                                            projectId={projectId}
+                                            onSelectAccount={handleSelectAdAccount}
+                                            selectedAccount={selectedAdAccount}
+                                        />
+
+                                        {selectedAdAccount && (
+                                            <div className="flex justify-end">
+                                                <Button
+                                                    onClick={handleContinueToVariations}
+                                                    className="gap-2"
+                                                >
+                                                    Generate Ads
+                                                    <ArrowRight className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Sub-Step 2: Review Generated Ad Variations */}
+                    {currentSubStep === "variations" && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Review Generated Ad Variations</CardTitle>
+                                <CardDescription>
+                                    Select 2-3 variations to test. We've generated 5
+                                    using proven frameworks
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {!metaConnected && adVariations.length === 0 && (
+                                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 mb-4">
+                                        <p className="text-sm text-muted-foreground">
+                                            <strong className="text-primary">
+                                                Preview Mode:
+                                            </strong>{" "}
+                                            Connect Facebook to generate real ads from
+                                            your funnel data. For now, click "Continue"
+                                            to explore the interface.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {generatingAds ? (
+                                    <div className="flex flex-col items-center justify-center py-12">
+                                        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                                        <p className="text-muted-foreground">
+                                            Generating ad variations using AI...
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {adVariations.length > 0 ? (
+                                            <AdVariationsReview
+                                                variations={adVariations}
+                                                selectedVariations={selectedVariations}
+                                                onSelectVariations={
+                                                    handleSelectVariations
+                                                }
+                                            />
+                                        ) : (
+                                            <div className="text-center py-12 text-muted-foreground">
+                                                <p className="mb-4">
+                                                    Ad variations will appear here after
+                                                    generation
+                                                </p>
+                                                <p className="text-sm">
+                                                    Connect Facebook and select an ad
+                                                    account to generate 5 AI-powered ad
+                                                    variations
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-between">
                                             <Button
-                                                onClick={handleContinueToVariations}
+                                                onClick={() =>
+                                                    setCurrentSubStep("connect")
+                                                }
+                                                variant="outline"
+                                            >
+                                                Back
+                                            </Button>
+                                            <Button
+                                                onClick={handleContinueToAudience}
                                                 className="gap-2"
                                             >
-                                                Generate Ads
+                                                Continue to Audience
                                                 <ArrowRight className="h-4 w-4" />
                                             </Button>
                                         </div>
-                                    )}
-                                </>
-                            )}
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Sub-Step 2: Review Generated Ad Variations */}
-                {currentSubStep === "variations" && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Review Generated Ad Variations</CardTitle>
-                            <CardDescription>
-                                Select 2-3 variations to test. We've generated 5 using
-                                proven frameworks
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {!metaConnected && adVariations.length === 0 && (
-                                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 mb-4">
-                                    <p className="text-sm text-muted-foreground">
-                                        <strong className="text-primary">
-                                            Preview Mode:
-                                        </strong>{" "}
-                                        Connect Facebook to generate real ads from your
-                                        funnel data. For now, click "Continue" to
-                                        explore the interface.
-                                    </p>
-                                </div>
-                            )}
-
-                            {generatingAds ? (
-                                <div className="flex flex-col items-center justify-center py-12">
-                                    <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-                                    <p className="text-muted-foreground">
-                                        Generating ad variations using AI...
-                                    </p>
-                                </div>
-                            ) : (
-                                <>
-                                    {adVariations.length > 0 ? (
-                                        <AdVariationsReview
-                                            variations={adVariations}
-                                            selectedVariations={selectedVariations}
-                                            onSelectVariations={handleSelectVariations}
-                                        />
-                                    ) : (
-                                        <div className="text-center py-12 text-muted-foreground">
-                                            <p className="mb-4">
-                                                Ad variations will appear here after
-                                                generation
-                                            </p>
-                                            <p className="text-sm">
-                                                Connect Facebook and select an ad
-                                                account to generate 5 AI-powered ad
-                                                variations
-                                            </p>
-                                        </div>
-                                    )}
-
-                                    <div className="flex justify-between">
-                                        <Button
-                                            onClick={() => setCurrentSubStep("connect")}
-                                            variant="outline"
-                                        >
-                                            Back
-                                        </Button>
-                                        <Button
-                                            onClick={handleContinueToAudience}
-                                            className="gap-2"
-                                        >
-                                            Continue to Audience
-                                            <ArrowRight className="h-4 w-4" />
-                                        </Button>
-                                    </div>
-                                </>
-                            )}
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Sub-Step 3: Audience & Budget */}
-                {currentSubStep === "audience" && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Target Audience & Budget</CardTitle>
-                            <CardDescription>
-                                Define who will see your ads and how much to spend daily
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {!metaConnected && (
-                                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
-                                    <p className="text-sm text-muted-foreground">
-                                        <strong className="text-primary">
-                                            Preview Mode:
-                                        </strong>{" "}
-                                        This is how you'll configure your target
-                                        audience and daily budget. Connect Facebook to
-                                        save real settings.
-                                    </p>
-                                </div>
-                            )}
-
-                            <AudienceBuilder
-                                projectId={projectId}
-                                onConfigured={handleAudienceConfigured}
-                                initialBudget={dailyBudget}
-                            />
-
-                            <div className="flex justify-between">
-                                <Button
-                                    onClick={() => setCurrentSubStep("variations")}
-                                    variant="outline"
-                                >
-                                    Back
-                                </Button>
-                                <Button
-                                    onClick={handleContinueToDeploy}
-                                    className="gap-2"
-                                >
-                                    Review & Deploy
-                                    <ArrowRight className="h-4 w-4" />
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
-
-                {/* Sub-Step 4: Deploy & Activate */}
-                {currentSubStep === "deploy" && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Deploy Your Campaign</CardTitle>
-                            <CardDescription>
-                                Review and launch your ads to start generating leads
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            {!metaConnected && (
-                                <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
-                                    <div className="flex items-start gap-3">
-                                        <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
-                                        <div>
-                                            <p className="text-sm font-semibold text-orange-900">
-                                                Connect Facebook to Deploy
-                                            </p>
-                                            <p className="text-sm text-orange-800 mt-1">
-                                                You're in preview mode. Connect your
-                                                Facebook account to launch real
-                                                campaigns on Meta/Instagram.
-                                            </p>
-                                            <Button
-                                                onClick={handleConnectMeta}
-                                                className="mt-3"
-                                                size="sm"
-                                            >
-                                                Connect Now
-                                            </Button>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            <CampaignDeployer
-                                adAccountId={selectedAdAccount || "preview-mode"}
-                                variations={adVariations.filter((v) =>
-                                    selectedVariations.includes(v.id)
+                                    </>
                                 )}
-                                audienceConfig={
-                                    audienceConfig || {
-                                        type: "interest",
-                                        description: "Preview audience",
-                                    }
-                                }
-                                dailyBudget={dailyBudget}
-                                onDeploy={handleDeployCampaign}
-                                deploying={deploying}
-                                deployed={deployed}
-                            />
+                            </CardContent>
+                        </Card>
+                    )}
 
-                            {!deployed && (
+                    {/* Sub-Step 3: Audience & Budget */}
+                    {currentSubStep === "audience" && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Target Audience & Budget</CardTitle>
+                                <CardDescription>
+                                    Define who will see your ads and how much to spend
+                                    daily
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {!metaConnected && (
+                                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                                        <p className="text-sm text-muted-foreground">
+                                            <strong className="text-primary">
+                                                Preview Mode:
+                                            </strong>{" "}
+                                            This is how you'll configure your target
+                                            audience and daily budget. Connect Facebook
+                                            to save real settings.
+                                        </p>
+                                    </div>
+                                )}
+
+                                <AudienceBuilder
+                                    projectId={projectId}
+                                    onConfigured={handleAudienceConfigured}
+                                    initialBudget={dailyBudget}
+                                />
+
                                 <div className="flex justify-between">
                                     <Button
-                                        onClick={() => setCurrentSubStep("audience")}
+                                        onClick={() => setCurrentSubStep("variations")}
                                         variant="outline"
-                                        disabled={deploying}
                                     >
                                         Back
                                     </Button>
                                     <Button
-                                        onClick={handleDeployCampaign}
+                                        onClick={handleContinueToDeploy}
                                         className="gap-2"
-                                        disabled={deploying || !metaConnected}
                                     >
-                                        {deploying ? (
-                                            <>
-                                                <Loader2 className="h-4 w-4 animate-spin" />
-                                                Creating Campaign...
-                                            </>
-                                        ) : !metaConnected ? (
-                                            <>
-                                                <Target className="h-4 w-4" />
-                                                Connect to Launch
-                                            </>
-                                        ) : (
-                                            <>
-                                                <Target className="h-4 w-4" />
-                                                Launch Campaign
-                                            </>
-                                        )}
+                                        Review & Deploy
+                                        <ArrowRight className="h-4 w-4" />
                                     </Button>
                                 </div>
-                            )}
+                            </CardContent>
+                        </Card>
+                    )}
 
-                            {deployed && (
-                                <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center">
-                                    <CheckCircle className="mx-auto h-12 w-12 text-green-600 mb-4" />
-                                    <h3 className="text-xl font-bold text-green-900 mb-2">
-                                        Campaign Successfully Launched! 🎉
-                                    </h3>
-                                    <p className="text-green-800 mb-4">
-                                        Your ads are now running on Meta/Instagram. Your
-                                        complete funnel is ready! Track performance from
-                                        the main dashboard.
-                                    </p>
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
-                )}
-            </div>
+                    {/* Sub-Step 4: Deploy & Activate */}
+                    {currentSubStep === "deploy" && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Deploy Your Campaign</CardTitle>
+                                <CardDescription>
+                                    Review and launch your ads to start generating leads
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {!metaConnected && (
+                                    <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+                                        <div className="flex items-start gap-3">
+                                            <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-orange-900">
+                                                    Connect Facebook to Deploy
+                                                </p>
+                                                <p className="text-sm text-orange-800 mt-1">
+                                                    You're in preview mode. Connect your
+                                                    Facebook account to launch real
+                                                    campaigns on Meta/Instagram.
+                                                </p>
+                                                <Button
+                                                    onClick={handleConnectMeta}
+                                                    className="mt-3"
+                                                    size="sm"
+                                                >
+                                                    Connect Now
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <CampaignDeployer
+                                    adAccountId={selectedAdAccount || "preview-mode"}
+                                    variations={adVariations.filter((v) =>
+                                        selectedVariations.includes(v.id)
+                                    )}
+                                    audienceConfig={
+                                        audienceConfig || {
+                                            type: "interest",
+                                            description: "Preview audience",
+                                        }
+                                    }
+                                    dailyBudget={dailyBudget}
+                                    onDeploy={handleDeployCampaign}
+                                    deploying={deploying}
+                                    deployed={deployed}
+                                />
+
+                                {!deployed && (
+                                    <div className="flex justify-between">
+                                        <Button
+                                            onClick={() =>
+                                                setCurrentSubStep("audience")
+                                            }
+                                            variant="outline"
+                                            disabled={deploying}
+                                        >
+                                            Back
+                                        </Button>
+                                        <Button
+                                            onClick={handleDeployCampaign}
+                                            className="gap-2"
+                                            disabled={deploying || !metaConnected}
+                                        >
+                                            {deploying ? (
+                                                <>
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    Creating Campaign...
+                                                </>
+                                            ) : !metaConnected ? (
+                                                <>
+                                                    <Target className="h-4 w-4" />
+                                                    Connect to Launch
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Target className="h-4 w-4" />
+                                                    Launch Campaign
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
+                                )}
+
+                                {deployed && (
+                                    <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center">
+                                        <CheckCircle className="mx-auto h-12 w-12 text-green-600 mb-4" />
+                                        <h3 className="text-xl font-bold text-green-900 mb-2">
+                                            Campaign Successfully Launched! 🎉
+                                        </h3>
+                                        <p className="text-green-800 mb-4">
+                                            Your ads are now running on Meta/Instagram.
+                                            Your complete funnel is ready! Track
+                                            performance from the main dashboard.
+                                        </p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+                </div>
+            </ComingSoonOverlay>
         </StepLayout>
     );
 }

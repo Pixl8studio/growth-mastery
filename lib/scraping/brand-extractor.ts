@@ -16,6 +16,16 @@ import {
 } from "./constants";
 
 /**
+ * Timeout for fetching external CSS files (5 seconds)
+ */
+const CSS_FETCH_TIMEOUT_MS = 5000;
+
+/**
+ * Maximum number of external CSS files to fetch
+ */
+const MAX_EXTERNAL_CSS_FILES = 10;
+
+/**
  * Color information with frequency and context
  */
 interface ColorInfo {
@@ -148,6 +158,207 @@ function normalizeColor(color: string): string | null {
     };
 
     return namedColors[trimmed] || null;
+}
+
+/**
+ * Resolve a relative URL to an absolute URL
+ */
+function resolveUrl(relativeUrl: string, baseUrl: string): string | null {
+    try {
+        // Handle protocol-relative URLs (//example.com/style.css)
+        if (relativeUrl.startsWith("//")) {
+            const base = new URL(baseUrl);
+            return `${base.protocol}${relativeUrl}`;
+        }
+
+        // Handle absolute URLs
+        if (relativeUrl.startsWith("http://") || relativeUrl.startsWith("https://")) {
+            return relativeUrl;
+        }
+
+        // Resolve relative URLs
+        return new URL(relativeUrl, baseUrl).href;
+    } catch {
+        logger.debug({ relativeUrl, baseUrl }, "Failed to resolve URL");
+        return null;
+    }
+}
+
+/**
+ * Extract external CSS URLs from HTML
+ */
+function extractCssUrls($: cheerio.CheerioAPI, baseUrl: string): string[] {
+    const cssUrls: string[] = [];
+
+    // Find all <link rel="stylesheet"> tags
+    $('link[rel="stylesheet"], link[rel="preload"][as="style"]').each((_, el) => {
+        const href = $(el).attr("href");
+        if (href) {
+            const resolvedUrl = resolveUrl(href, baseUrl);
+            if (resolvedUrl && !cssUrls.includes(resolvedUrl)) {
+                cssUrls.push(resolvedUrl);
+            }
+        }
+    });
+
+    // Find @import statements in inline styles
+    $("style").each((_, el) => {
+        const css = $(el).html() || "";
+        const importRegex =
+            /@import\s+(?:url\(['"]?([^'")\s]+)['"]?\)|['"]([^'"]+)['"])/gi;
+        let match;
+        while ((match = importRegex.exec(css)) !== null) {
+            const importUrl = match[1] || match[2];
+            if (importUrl) {
+                const resolvedUrl = resolveUrl(importUrl, baseUrl);
+                if (resolvedUrl && !cssUrls.includes(resolvedUrl)) {
+                    cssUrls.push(resolvedUrl);
+                }
+            }
+        }
+    });
+
+    return cssUrls.slice(0, MAX_EXTERNAL_CSS_FILES);
+}
+
+/**
+ * Fetch an external CSS file with timeout and error handling
+ * Returns null if the fetch fails (CORS, timeout, etc.)
+ */
+async function fetchExternalCss(url: string): Promise<string | null> {
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), CSS_FETCH_TIMEOUT_MS);
+
+        const response = await fetch(url, {
+            headers: {
+                Accept: "text/css,*/*;q=0.1",
+                "User-Agent":
+                    "Mozilla/5.0 (compatible; GrowthMastery/1.0; +https://growthmastery.ai)",
+            },
+            signal: controller.signal,
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            logger.debug(
+                { url, status: response.status },
+                "Failed to fetch external CSS (non-OK status)"
+            );
+            return null;
+        }
+
+        const css = await response.text();
+        logger.debug({ url, length: css.length }, "Fetched external CSS");
+        return css;
+    } catch (error) {
+        // Expected failures: CORS, timeout, network errors
+        // These are gracefully handled by returning null
+        logger.debug(
+            { url, error: error instanceof Error ? error.message : String(error) },
+            "Failed to fetch external CSS (expected in some cases due to CORS)"
+        );
+        return null;
+    }
+}
+
+/**
+ * Extract CSS variables (custom properties) from CSS text
+ */
+function extractCssVariables(css: string): Map<string, string> {
+    const variables = new Map<string, string>();
+
+    // Match CSS custom property definitions: --name: value;
+    const varRegex = /--([\w-]+)\s*:\s*([^;}\n]+)/gi;
+    let match;
+
+    while ((match = varRegex.exec(css)) !== null) {
+        const name = match[1].toLowerCase();
+        const value = match[2].trim();
+
+        // Only store color-related variables
+        const colorKeywords = [
+            "color",
+            "bg",
+            "background",
+            "primary",
+            "secondary",
+            "accent",
+            "brand",
+        ];
+        const isColorVariable = colorKeywords.some((keyword) => name.includes(keyword));
+
+        // Or if the value looks like a color
+        const isColorValue =
+            value.startsWith("#") ||
+            value.startsWith("rgb") ||
+            value.startsWith("hsl") ||
+            /^(red|blue|green|yellow|purple|orange|pink|gray|grey|white|black)$/i.test(
+                value
+            );
+
+        if (isColorVariable || isColorValue) {
+            variables.set(`--${name}`, value);
+        }
+    }
+
+    return variables;
+}
+
+/**
+ * Extract colors from CSS text (for both inline styles and external CSS)
+ */
+function extractColorsFromCss(css: string, colorMap: Map<string, ColorInfo>): void {
+    // Extract standard color properties
+    const colorRegex =
+        /(background-color|color|border-color|fill|stroke):\s*([^;}]+)/gi;
+    let match;
+
+    while ((match = colorRegex.exec(css)) !== null) {
+        const color = normalizeColor(match[2]);
+        if (color) {
+            const existing = colorMap.get(color);
+            if (existing) {
+                existing.frequency++;
+                existing.weight += 2;
+            } else {
+                colorMap.set(color, {
+                    color,
+                    frequency: 1,
+                    weight: 2,
+                    contexts: ["css"],
+                });
+            }
+        }
+    }
+
+    // Extract CSS variables that contain color values
+    const cssVariables = extractCssVariables(css);
+    for (const [varName, varValue] of cssVariables) {
+        const color = normalizeColor(varValue);
+        if (color) {
+            const existing = colorMap.get(color);
+            // CSS variables for primary/brand colors get higher weight
+            const isPrimaryVar = /primary|brand|main/i.test(varName);
+            const weight = isPrimaryVar ? 8 : 4;
+
+            if (existing) {
+                existing.frequency++;
+                existing.weight += weight;
+                if (!existing.contexts.includes("css-variable")) {
+                    existing.contexts.push("css-variable");
+                }
+            } else {
+                colorMap.set(color, {
+                    color,
+                    frequency: 1,
+                    weight,
+                    contexts: ["css-variable"],
+                });
+            }
+        }
+    }
 }
 
 /**
@@ -307,35 +518,60 @@ function extractColors($: cheerio.CheerioAPI): ColorInfo[] {
         }
     });
 
-    // Extract from style tags
+    // Extract from style tags using shared function
     $("style").each((_, el) => {
         const css = $(el).html() || "";
-
-        // Simple CSS color extraction (not perfect, but good enough)
-        const colorRegex =
-            /(background-color|color|border-color|fill|stroke):\s*([^;}]+)/gi;
-        let match;
-
-        while ((match = colorRegex.exec(css)) !== null) {
-            const color = normalizeColor(match[2]);
-            if (color) {
-                const existing = colorMap.get(color);
-                if (existing) {
-                    existing.frequency++;
-                    existing.weight += 2;
-                } else {
-                    colorMap.set(color, {
-                        color,
-                        frequency: 1,
-                        weight: 2,
-                        contexts: ["css"],
-                    });
-                }
-            }
-        }
+        extractColorsFromCss(css, colorMap);
     });
 
     return Array.from(colorMap.values());
+}
+
+/**
+ * Fetch and extract colors from external CSS files
+ * Returns the CSS content that was successfully fetched for further processing
+ */
+async function fetchAndExtractExternalCss(
+    $: cheerio.CheerioAPI,
+    baseUrl: string,
+    colorMap: Map<string, ColorInfo>
+): Promise<{ fetchedCount: number; failedCount: number; cssContent: string[] }> {
+    const cssUrls = extractCssUrls($, baseUrl);
+
+    if (cssUrls.length === 0) {
+        return { fetchedCount: 0, failedCount: 0, cssContent: [] };
+    }
+
+    logger.info({ cssUrls: cssUrls.length }, "Found external CSS files to fetch");
+
+    // Fetch all CSS files in parallel
+    const results = await Promise.all(
+        cssUrls.map(async (url) => {
+            const css = await fetchExternalCss(url);
+            return { url, css };
+        })
+    );
+
+    let fetchedCount = 0;
+    let failedCount = 0;
+    const cssContent: string[] = [];
+
+    for (const result of results) {
+        if (result.css) {
+            fetchedCount++;
+            cssContent.push(result.css);
+            extractColorsFromCss(result.css, colorMap);
+        } else {
+            failedCount++;
+        }
+    }
+
+    logger.info(
+        { fetchedCount, failedCount, totalColors: colorMap.size },
+        "External CSS extraction complete"
+    );
+
+    return { fetchedCount, failedCount, cssContent };
 }
 
 /**
@@ -414,12 +650,30 @@ function selectBrandColors(colors: ColorInfo[]): BrandData["colors"] {
 }
 
 /**
- * Extract font information from HTML
- * Takes a CheerioAPI instance to avoid multiple parses
+ * Extract font information from HTML and optional external CSS
+ * @param $ - CheerioAPI instance
+ * @param externalCss - Optional array of external CSS content
  */
-function extractFonts($: cheerio.CheerioAPI): BrandData["fonts"] {
+function extractFonts(
+    $: cheerio.CheerioAPI,
+    externalCss: string[] = []
+): BrandData["fonts"] {
     const fontFamilies = new Set<string>();
     const fontWeights = new Set<string>();
+
+    // Helper to extract fonts from CSS text
+    const extractFromCss = (css: string) => {
+        const fontRegex = /font-family:\s*([^;}]+)/gi;
+        let match;
+        while ((match = fontRegex.exec(css)) !== null) {
+            fontFamilies.add(match[1].trim());
+        }
+
+        const weightRegex = /font-weight:\s*([^;}]+)/gi;
+        while ((match = weightRegex.exec(css)) !== null) {
+            fontWeights.add(match[1].trim());
+        }
+    };
 
     // Extract from inline styles
     $("[style]").each((_, el) => {
@@ -439,18 +693,13 @@ function extractFonts($: cheerio.CheerioAPI): BrandData["fonts"] {
     // Extract from style tags
     $("style").each((_, el) => {
         const css = $(el).html() || "";
-
-        const fontRegex = /font-family:\s*([^;}]+)/gi;
-        let match;
-        while ((match = fontRegex.exec(css)) !== null) {
-            fontFamilies.add(match[1].trim());
-        }
-
-        const weightRegex = /font-weight:\s*([^;}]+)/gi;
-        while ((match = weightRegex.exec(css)) !== null) {
-            fontWeights.add(match[1].trim());
-        }
+        extractFromCss(css);
     });
+
+    // Extract from external CSS files
+    for (const css of externalCss) {
+        extractFromCss(css);
+    }
 
     // Parse most common font
     const fonts = Array.from(fontFamilies);
@@ -465,9 +714,11 @@ function extractFonts($: cheerio.CheerioAPI): BrandData["fonts"] {
 }
 
 /**
- * Detect if gradients are used in the HTML
+ * Detect if gradients are used in the HTML and external CSS
+ * @param $ - CheerioAPI instance
+ * @param externalCss - Optional array of external CSS content
  */
-function detectGradients($: cheerio.CheerioAPI): boolean {
+function detectGradients($: cheerio.CheerioAPI, externalCss: string[] = []): boolean {
     let hasGradients = false;
 
     // Check inline styles
@@ -490,15 +741,42 @@ function detectGradients($: cheerio.CheerioAPI): boolean {
         });
     }
 
+    // Check external CSS files
+    if (!hasGradients) {
+        for (const css of externalCss) {
+            if (/linear-gradient|radial-gradient|conic-gradient/i.test(css)) {
+                hasGradients = true;
+                break;
+            }
+        }
+    }
+
     return hasGradients;
 }
 
 /**
- * Extract brand data from HTML
+ * Options for brand extraction
  */
-export async function extractBrandFromHtml(html: string): Promise<BrandData> {
+export interface BrandExtractionOptions {
+    /** Base URL for resolving relative CSS file paths */
+    baseUrl?: string;
+    /** Whether to fetch external CSS files (default: true if baseUrl provided) */
+    fetchExternalCss?: boolean;
+}
+
+/**
+ * Extract brand data from HTML
+ * @param html - The HTML content to extract brand data from
+ * @param options - Optional configuration for extraction
+ */
+export async function extractBrandFromHtml(
+    html: string,
+    options: BrandExtractionOptions = {}
+): Promise<BrandData> {
     try {
-        logger.info("Extracting brand data from HTML");
+        const { baseUrl, fetchExternalCss = !!baseUrl } = options;
+
+        logger.info({ baseUrl, fetchExternalCss }, "Extracting brand data from HTML");
 
         // Handle empty HTML
         if (!html || html.trim().length === 0) {
@@ -531,23 +809,51 @@ export async function extractBrandFromHtml(html: string): Promise<BrandData> {
         // Parse HTML once for better performance
         const $ = cheerio.load(html);
 
-        // Extract data using the parsed DOM
+        // Extract colors from inline styles and embedded <style> tags
         const colors = extractColors($);
-        const selectedColors = selectBrandColors(colors);
-        const fonts = extractFonts($);
-        const hasGradients = detectGradients($);
+        const colorMap = new Map<string, ColorInfo>(colors.map((c) => [c.color, c]));
+
+        // Fetch and extract colors from external CSS files if baseUrl is provided
+        let externalCssStats = {
+            fetchedCount: 0,
+            failedCount: 0,
+            cssContent: [] as string[],
+        };
+        if (fetchExternalCss && baseUrl) {
+            externalCssStats = await fetchAndExtractExternalCss($, baseUrl, colorMap);
+        }
+
+        // Convert map back to array for selection
+        const allColors = Array.from(colorMap.values());
+        const selectedColors = selectBrandColors(allColors);
+
+        // Extract fonts from both inline and external CSS
+        const fonts = extractFonts($, externalCssStats.cssContent);
+
+        // Detect gradients from both inline and external CSS
+        const hasGradients = detectGradients($, externalCssStats.cssContent);
 
         // Calculate confidence based on data quality
-        const colorConfidence = Math.min(
+        // Boost confidence if we successfully fetched external CSS
+        const baseColorConfidence = Math.min(
             100,
-            (colors.length / COLOR_CONFIDENCE_THRESHOLD) * 100
+            (allColors.length / COLOR_CONFIDENCE_THRESHOLD) * 100
         );
+        // Add confidence bonus for successfully fetched external CSS
+        const externalCssBonus =
+            externalCssStats.fetchedCount > 0
+                ? Math.min(20, externalCssStats.fetchedCount * 5)
+                : 0;
+        const colorConfidence = Math.min(100, baseColorConfidence + externalCssBonus);
+
         const fontConfidence = fonts.primary ? FONT_CONFIDENCE_BASE + 30 : 20;
         const overallConfidence = (colorConfidence + fontConfidence) / 2;
 
         logger.info(
             {
-                colorsFound: colors.length,
+                colorsFound: allColors.length,
+                externalCssFetched: externalCssStats.fetchedCount,
+                externalCssFailed: externalCssStats.failedCount,
                 colorConfidence,
                 fontConfidence,
                 overallConfidence,

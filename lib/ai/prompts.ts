@@ -532,6 +532,279 @@ CRITICAL:
 }
 
 /**
+ * 8b. Generate comprehensive brand guidelines from transcript/business profile
+ * Includes: Visual Identity, Brand Voice & Tone, Messaging Framework, Brand Application
+ */
+export function createComprehensiveBrandGuidelinesPrompt(
+    transcriptData: TranscriptData,
+    wizardResponses?: Record<string, unknown>
+): OpenAI.Chat.Completions.ChatCompletionMessageParam[] {
+    const wizardContext = wizardResponses
+        ? `\n\nUSER PREFERENCES FROM WIZARD:\n${JSON.stringify(wizardResponses, null, 2)}`
+        : "";
+
+    return [
+        {
+            role: "system",
+            content: `You are a world-class brand strategist who creates comprehensive brand guidelines for businesses. You combine deep understanding of brand psychology, visual design, copywriting, and marketing strategy.
+
+Your task is to generate a COMPLETE brand guidelines document with four major sections:
+
+## SECTION 1: VISUAL IDENTITY
+- Color palette (primary, secondary, accent, background, text)
+- Typography (fonts, sizes, weights)
+- Spacing and sizing hierarchy
+- Design preferences and visual style
+
+## SECTION 2: BRAND VOICE & TONE
+- Personality descriptors (5-7 adjectives that define the brand)
+- Brand archetypes (primary and secondary)
+- Tone spectrums (4 key spectrums with position on 1-10 scale):
+  1. Formal ←→ Casual
+  2. Serious ←→ Playful
+  3. Authoritative ←→ Approachable
+  4. Reserved ←→ Enthusiastic
+- Writing guidelines (do's and don'ts)
+- Word lists (power words, words to avoid, industry terms)
+
+## SECTION 3: MESSAGING FRAMEWORK
+- Positioning statement (one powerful sentence)
+- Tagline (memorable 3-7 word phrase)
+- Elevator pitch (30-second explanation)
+- Value propositions (3 key benefits with supporting points)
+- Customer journey messages (awareness, consideration, decision stages)
+- Key differentiators (what sets them apart)
+
+## SECTION 4: BRAND APPLICATION
+- Logo usage guidelines
+- Photography style
+- Illustration style
+- Icon style
+- Do's and don'ts for brand application
+
+COLOR PSYCHOLOGY GUIDE:
+- Blue: Trust, stability, professionalism
+- Green: Growth, health, wealth, sustainability
+- Purple: Luxury, creativity, wisdom
+- Orange: Energy, enthusiasm, warmth
+- Red: Passion, urgency, power
+- Yellow: Optimism, clarity, warmth
+- Pink: Compassion, nurturing, connection
+- Black: Sophistication, luxury, authority
+- Teal: Balance, calm, sophistication
+
+BRAND ARCHETYPE REFERENCE:
+- The Hero: Brave, determined, inspiring (Nike, FedEx)
+- The Sage: Wise, knowledgeable, trusted (Google, PBS)
+- The Caregiver: Nurturing, compassionate, protective (Johnson & Johnson)
+- The Creator: Innovative, artistic, visionary (Apple, Adobe)
+- The Ruler: Authoritative, refined, leading (Mercedes, Rolex)
+- The Magician: Transformative, visionary, charismatic (Disney, Tesla)
+- The Lover: Passionate, sensual, appreciative (Victoria's Secret, Godiva)
+- The Jester: Fun, playful, irreverent (Old Spice, Dollar Shave Club)
+- The Everyman: Relatable, authentic, humble (IKEA, Target)
+- The Rebel: Disruptive, bold, liberating (Harley-Davidson, Virgin)
+- The Explorer: Adventurous, independent, pioneering (Jeep, REI)
+- The Innocent: Pure, optimistic, simple (Coca-Cola, Dove)
+
+Generate guidelines that feel cohesive—every element should work together to tell the same brand story.`,
+        },
+        {
+            role: "user",
+            content: `Create comprehensive brand guidelines based on this business information:
+
+BUSINESS CONTEXT:
+${transcriptData.transcript_text}
+
+${transcriptData.extracted_data ? `KEY INFO:\n${JSON.stringify(transcriptData.extracted_data, null, 2)}` : ""}${wizardContext}
+
+Return ONLY a JSON object with this EXACT structure:
+{
+  "primary_color": "#XXXXXX",
+  "secondary_color": "#XXXXXX",
+  "accent_color": "#XXXXXX",
+  "background_color": "#XXXXXX",
+  "text_color": "#XXXXXX",
+  "design_style": "modern | classic | minimal | bold | vibrant | elegant | playful | professional",
+  "personality_traits": {
+    "tone": "professional | friendly | authoritative | conversational | inspirational",
+    "mood": "confident | calm | energetic | serious | optimistic",
+    "energy": "dynamic | stable | bold | subtle | vibrant",
+    "values": ["value1", "value2", "value3", "value4", "value5"]
+  },
+  "fonts": {
+    "primary_font": "Font name for headings (e.g., Inter, Playfair Display)",
+    "secondary_font": "Font name for body text (e.g., Open Sans, Lato)",
+    "font_sizes": {
+      "h1": "3rem",
+      "h2": "2.25rem",
+      "h3": "1.5rem",
+      "body": "1rem",
+      "small": "0.875rem"
+    },
+    "font_weights": {
+      "heading": "700",
+      "body": "400",
+      "accent": "600"
+    }
+  },
+  "sizing_hierarchy": {
+    "spacing": {
+      "xs": "0.25rem",
+      "sm": "0.5rem",
+      "md": "1rem",
+      "lg": "1.5rem",
+      "xl": "2rem"
+    },
+    "border_radius": {
+      "none": "0",
+      "sm": "0.25rem",
+      "md": "0.5rem",
+      "lg": "1rem",
+      "full": "9999px"
+    }
+  },
+  "design_preferences": {
+    "imagery_style": "Description of preferred imagery (e.g., authentic photography, abstract illustrations)",
+    "icon_style": "outline | solid | duotone | hand-drawn",
+    "layout_preferences": ["preference1", "preference2", "preference3"],
+    "visual_density": "spacious | balanced | compact"
+  },
+  "brand_voice": {
+    "personality_descriptors": ["descriptor1", "descriptor2", "descriptor3", "descriptor4", "descriptor5"],
+    "archetypes": {
+      "primary": "Primary archetype name",
+      "secondary": "Secondary archetype name",
+      "description": "How these archetypes manifest in the brand"
+    },
+    "tone_spectrums": [
+      {
+        "name": "Formality",
+        "low_end": "Formal",
+        "high_end": "Casual",
+        "position": 6,
+        "description": "Where this brand sits on the spectrum and why"
+      },
+      {
+        "name": "Seriousness",
+        "low_end": "Serious",
+        "high_end": "Playful",
+        "position": 4,
+        "description": "Description of tone choice"
+      },
+      {
+        "name": "Authority",
+        "low_end": "Authoritative",
+        "high_end": "Approachable",
+        "position": 5,
+        "description": "Description of authority balance"
+      },
+      {
+        "name": "Energy",
+        "low_end": "Reserved",
+        "high_end": "Enthusiastic",
+        "position": 7,
+        "description": "Description of energy level"
+      }
+    ],
+    "writing_guidelines": {
+      "do": ["guideline1", "guideline2", "guideline3", "guideline4", "guideline5"],
+      "dont": ["guideline1", "guideline2", "guideline3", "guideline4", "guideline5"]
+    },
+    "word_lists": {
+      "power_words": ["word1", "word2", "word3", "word4", "word5", "word6", "word7", "word8"],
+      "words_to_avoid": ["word1", "word2", "word3", "word4", "word5"],
+      "industry_terms": ["term1", "term2", "term3", "term4", "term5"]
+    }
+  },
+  "messaging_framework": {
+    "positioning_statement": "For [target audience] who [need/want], [brand] is the [category] that [key benefit] because [reason to believe].",
+    "tagline": "Memorable 3-7 word tagline",
+    "elevator_pitch": "30-second explanation of what you do, who you help, and why it matters (2-3 sentences)",
+    "value_propositions": [
+      {
+        "headline": "Value prop 1 headline",
+        "description": "Explanation of this value proposition",
+        "supporting_points": ["point1", "point2", "point3"]
+      },
+      {
+        "headline": "Value prop 2 headline",
+        "description": "Explanation of this value proposition",
+        "supporting_points": ["point1", "point2", "point3"]
+      },
+      {
+        "headline": "Value prop 3 headline",
+        "description": "Explanation of this value proposition",
+        "supporting_points": ["point1", "point2", "point3"]
+      }
+    ],
+    "customer_journey_messages": [
+      {
+        "stage": "awareness",
+        "primary_message": "What to say when they first discover you",
+        "emotional_trigger": "The emotion to evoke",
+        "call_to_action": "What to invite them to do"
+      },
+      {
+        "stage": "consideration",
+        "primary_message": "What to say when they're evaluating options",
+        "emotional_trigger": "The emotion to evoke",
+        "call_to_action": "What to invite them to do"
+      },
+      {
+        "stage": "decision",
+        "primary_message": "What to say when they're ready to commit",
+        "emotional_trigger": "The emotion to evoke",
+        "call_to_action": "What to invite them to do"
+      }
+    ],
+    "key_differentiators": ["differentiator1", "differentiator2", "differentiator3"]
+  },
+  "brand_application": {
+    "logo_usage": {
+      "clear_space": "Minimum clear space around logo (e.g., equal to height of logo mark)",
+      "minimum_size": "Minimum size for legibility (e.g., 32px height)",
+      "placement_guidelines": ["guideline1", "guideline2", "guideline3"],
+      "background_rules": ["rule1", "rule2", "rule3"]
+    },
+    "photography_style": {
+      "style": "Overall photography style description",
+      "subjects": ["subject1", "subject2", "subject3"],
+      "color_treatment": "How to treat colors in photos",
+      "composition_notes": ["note1", "note2", "note3"]
+    },
+    "illustration_style": {
+      "style": "Overall illustration style",
+      "line_weight": "Thin | Medium | Bold",
+      "color_usage": "How colors should be applied",
+      "character_notes": "Notes about any character illustrations"
+    },
+    "icon_style": {
+      "style": "Consistent icon style description",
+      "stroke_weight": "1px | 1.5px | 2px",
+      "corner_style": "Rounded | Sharp | Mixed",
+      "fill_style": "Outline | Solid | Duotone"
+    },
+    "dos_and_donts": {
+      "dos": ["do1", "do2", "do3", "do4", "do5"],
+      "donts": ["dont1", "dont2", "dont3", "dont4", "dont5"]
+    }
+  },
+  "rationale": "Brief explanation of why these guidelines fit this business (2-3 sentences)"
+}
+
+CRITICAL REQUIREMENTS:
+- All colors must be valid 6-digit HEX codes starting with #
+- Ensure sufficient contrast between text and background colors
+- All tone spectrum positions must be integers from 1-10
+- Value propositions and journey messages should be specific to this business
+- Writing guidelines should be actionable and specific
+- Everything should feel cohesive and aligned to the same brand story`,
+        },
+    ];
+}
+
+/**
  * 9. Generate follow-up sequence messages from deck and offer context
  */
 export interface DeckContext {

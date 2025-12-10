@@ -245,7 +245,13 @@ export async function POST(request: NextRequest) {
             rationale: generatedDesign.rationale,
         });
     } catch (error) {
-        requestLogger.error({ error }, "Failed to generate brand design");
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorStack = error instanceof Error ? error.stack : undefined;
+
+        requestLogger.error(
+            { err: errorMessage, stack: errorStack },
+            "Failed to generate brand design"
+        );
 
         Sentry.captureException(error, {
             tags: {

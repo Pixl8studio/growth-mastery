@@ -26,7 +26,6 @@ import { UploadIntake } from "@/components/intake/upload-intake";
 import { ScrapeIntake } from "@/components/intake/scrape-intake";
 import { IntakeDataViewer } from "@/components/intake/intake-data-viewer";
 import { IntakeCompletionCard } from "@/components/intake/intake-completion-card";
-import { YourIntakeSessions } from "@/components/intake/your-intake-sessions";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
@@ -570,21 +569,6 @@ export default function Step1Page({
                         </Card>
                     )}
 
-                {/* Your Intake Sessions - Summary Cards (placed directly after Business Profile Progress) */}
-                <YourIntakeSessions
-                    sessions={intakeSessions}
-                    businessProfile={businessProfile}
-                    onSessionClick={(session) => {
-                        setSelectedSession(session as IntakeSession);
-                        setIsViewerOpen(true);
-                    }}
-                    onSectionClick={(sectionId) => {
-                        // Navigate to wizard mode with the selected section
-                        setSelectedMethod("wizard");
-                        // Scroll to top to show the wizard
-                        window.scrollTo({ top: 0, behavior: "smooth" });
-                    }}
-                />
 
                 {/* Legacy Intake Sessions List */}
                 {intakeSessions.length > 0 && (

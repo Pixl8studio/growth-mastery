@@ -311,11 +311,13 @@ export default function Step3BrandDesignPage({
                 body: JSON.stringify(requestBody),
             });
 
-            if (!response.ok) {
-                throw new Error("Generation failed");
-            }
-
             const data = await response.json();
+
+            if (!response.ok) {
+                const errorMessage =
+                    data.error || "Generation failed. Please try again.";
+                throw new Error(errorMessage);
+            }
             setBrandDesign(data);
 
             // Update form state
@@ -340,10 +342,17 @@ export default function Step3BrandDesignPage({
 
             logger.info({ projectId }, "Comprehensive brand guidelines generated");
         } catch (error) {
-            logger.error({ error }, "Failed to generate brand guidelines");
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "Could not generate brand guidelines. Please try again.";
+            logger.error(
+                { error, errorMessage },
+                "Failed to generate brand guidelines"
+            );
             toast({
                 title: "Generation failed",
-                description: "Could not generate brand guidelines. Please try again.",
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {
@@ -438,13 +447,22 @@ export default function Step3BrandDesignPage({
                         }
                     );
 
+                    const guidelinesData = await guidelinesResponse.json();
+
                     if (guidelinesResponse.ok) {
-                        const guidelinesData = await guidelinesResponse.json();
                         setBrandDesign(guidelinesData);
                         toast({
                             title: "Brand guidelines complete",
                             description:
                                 "Full brand guidelines have been generated from your website!",
+                        });
+                    } else {
+                        toast({
+                            title: "Partial success",
+                            description:
+                                guidelinesData.error ||
+                                "Colors extracted, but full guidelines generation failed. You can try again later.",
+                            variant: "destructive",
                         });
                     }
                 }
@@ -519,7 +537,9 @@ export default function Step3BrandDesignPage({
                         onComplete={handleWizardComplete}
                         onCancel={() => setShowWizard(false)}
                         isGenerating={isGenerating}
-                        initialAudienceDescription={businessProfile?.ideal_customer || undefined}
+                        initialAudienceDescription={
+                            businessProfile?.ideal_customer || undefined
+                        }
                     />
                 ) : (
                     <>

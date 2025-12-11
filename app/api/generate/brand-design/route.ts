@@ -18,7 +18,7 @@ import type {
     ComprehensiveBrandGuidelines,
 } from "@/lib/ai/types";
 import type { TranscriptData } from "@/lib/ai/types";
-import { ValidationError } from "@/lib/errors";
+import { ValidationError, AIGenerationError, DatabaseError } from "@/lib/errors";
 import { z } from "zod";
 import type { BusinessProfile } from "@/types/business-profile";
 
@@ -219,13 +219,60 @@ export async function POST(request: NextRequest) {
         // Generate comprehensive or basic brand design with AI
         if (comprehensive) {
             // Generate comprehensive brand guidelines
-            const generatedGuidelines =
-                await generateWithAI<ComprehensiveBrandGuidelines>(
-                    createComprehensiveBrandGuidelinesPrompt(
-                        transcriptData,
-                        wizardResponses
-                    )
+            let generatedGuidelines: ComprehensiveBrandGuidelines;
+            try {
+                generatedGuidelines =
+                    await generateWithAI<ComprehensiveBrandGuidelines>(
+                        createComprehensiveBrandGuidelinesPrompt(
+                            transcriptData,
+                            wizardResponses
+                        )
+                    );
+            } catch (aiError) {
+                const errorMessage =
+                    aiError instanceof Error ? aiError.message : "Unknown AI error";
+                requestLogger.error(
+                    { error: aiError, userId: user.id, projectId },
+                    "AI generation failed for comprehensive brand guidelines"
                 );
+
+                // Determine if error is retryable
+                const isRateLimitError =
+                    errorMessage.includes("rate limit") || errorMessage.includes("429");
+                const isParseError =
+                    errorMessage.includes("parse") || errorMessage.includes("JSON");
+
+                throw new AIGenerationError(
+                    isRateLimitError
+                        ? "AI service is temporarily busy. Please wait a moment and try again."
+                        : isParseError
+                          ? "AI returned an invalid response. Please try again."
+                          : "Failed to generate brand guidelines. Please try again.",
+                    {
+                        retryable: true,
+                        errorCode: isRateLimitError
+                            ? "RATE_LIMIT"
+                            : isParseError
+                              ? "PARSE_ERROR"
+                              : "AI_GENERATION_FAILED",
+                    }
+                );
+            }
+
+            // Validate required fields from AI response
+            if (
+                !generatedGuidelines.primary_color ||
+                !generatedGuidelines.design_style
+            ) {
+                requestLogger.error(
+                    { generatedGuidelines, userId: user.id },
+                    "AI response missing required fields"
+                );
+                throw new AIGenerationError(
+                    "AI generated incomplete brand guidelines. Please try again.",
+                    { retryable: true, errorCode: "INCOMPLETE_RESPONSE" }
+                );
+            }
 
             requestLogger.info(
                 {
@@ -273,11 +320,12 @@ export async function POST(request: NextRequest) {
 
             if (saveError || !savedDesign) {
                 requestLogger.error(
-                    { error: saveError },
+                    { error: saveError, projectId, userId: user.id },
                     "Failed to save comprehensive brand guidelines to database"
                 );
-                throw new Error(
-                    "Failed to save comprehensive brand guidelines to database"
+                throw new DatabaseError(
+                    "Failed to save brand guidelines. Please try again.",
+                    "upsert_brand_design"
                 );
             }
 
@@ -295,9 +343,52 @@ export async function POST(request: NextRequest) {
         }
 
         // Generate basic brand design (original behavior)
-        const generatedDesign = await generateWithAI<BrandDesignGeneration>(
-            createBrandDesignPrompt(transcriptData)
-        );
+        let generatedDesign: BrandDesignGeneration;
+        try {
+            generatedDesign = await generateWithAI<BrandDesignGeneration>(
+                createBrandDesignPrompt(transcriptData)
+            );
+        } catch (aiError) {
+            const errorMessage =
+                aiError instanceof Error ? aiError.message : "Unknown AI error";
+            requestLogger.error(
+                { error: aiError, userId: user.id, projectId },
+                "AI generation failed for basic brand design"
+            );
+
+            const isRateLimitError =
+                errorMessage.includes("rate limit") || errorMessage.includes("429");
+            const isParseError =
+                errorMessage.includes("parse") || errorMessage.includes("JSON");
+
+            throw new AIGenerationError(
+                isRateLimitError
+                    ? "AI service is temporarily busy. Please wait a moment and try again."
+                    : isParseError
+                      ? "AI returned an invalid response. Please try again."
+                      : "Failed to generate brand design. Please try again.",
+                {
+                    retryable: true,
+                    errorCode: isRateLimitError
+                        ? "RATE_LIMIT"
+                        : isParseError
+                          ? "PARSE_ERROR"
+                          : "AI_GENERATION_FAILED",
+                }
+            );
+        }
+
+        // Validate required fields
+        if (!generatedDesign.primary_color || !generatedDesign.design_style) {
+            requestLogger.error(
+                { generatedDesign, userId: user.id },
+                "AI response missing required fields"
+            );
+            throw new AIGenerationError(
+                "AI generated incomplete brand design. Please try again.",
+                { retryable: true, errorCode: "INCOMPLETE_RESPONSE" }
+            );
+        }
 
         requestLogger.info(
             {
@@ -335,10 +426,13 @@ export async function POST(request: NextRequest) {
 
         if (saveError || !savedDesign) {
             requestLogger.error(
-                { error: saveError },
+                { error: saveError, projectId, userId: user.id },
                 "Failed to save brand design to database"
             );
-            throw new Error("Failed to save brand design to database");
+            throw new DatabaseError(
+                "Failed to save brand design. Please try again.",
+                "upsert_brand_design"
+            );
         }
 
         requestLogger.info(
@@ -361,8 +455,13 @@ export async function POST(request: NextRequest) {
                 action: "generate-brand-design",
                 endpoint: "POST /api/generate/brand-design",
             },
+            extra: {
+                errorType: error instanceof Error ? error.constructor.name : "Unknown",
+                errorMessage: error instanceof Error ? error.message : String(error),
+            },
         });
 
+        // Handle ValidationError
         if (error instanceof ValidationError) {
             return NextResponse.json(
                 { error: error.message },
@@ -370,8 +469,39 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Handle AIGenerationError with detailed response
+        if (error instanceof AIGenerationError) {
+            return NextResponse.json(
+                {
+                    error: error.message,
+                    code: error.errorCode,
+                    retryable: error.retryable,
+                },
+                { status: 500 }
+            );
+        }
+
+        // Handle DatabaseError
+        if (error instanceof DatabaseError) {
+            return NextResponse.json(
+                {
+                    error: error.message,
+                    code: "DATABASE_ERROR",
+                    retryable: true,
+                },
+                { status: 500 }
+            );
+        }
+
+        // Handle any other errors with a meaningful message
+        const errorMessage =
+            error instanceof Error ? error.message : "An unexpected error occurred";
         return NextResponse.json(
-            { error: "Failed to generate brand design" },
+            {
+                error: "Failed to generate brand design. Please try again.",
+                details: errorMessage,
+                retryable: true,
+            },
             { status: 500 }
         );
     }

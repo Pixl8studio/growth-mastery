@@ -569,7 +569,6 @@ export default function Step1Page({
                         </Card>
                     )}
 
-
                 {/* Legacy Intake Sessions List */}
                 {intakeSessions.length > 0 && (
                     <Card className="p-6">

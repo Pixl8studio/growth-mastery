@@ -227,10 +227,9 @@ export function BrandWizard({
                     responses.personality_traits.length >= 2
                 );
             case "audience":
-                const hasAgeRange =
-                    Array.isArray(responses.audience_age_ranges)
-                        ? responses.audience_age_ranges.length > 0
-                        : !!responses.audience_age_range;
+                const hasAgeRange = Array.isArray(responses.audience_age_ranges)
+                    ? responses.audience_age_ranges.length > 0
+                    : !!responses.audience_age_range;
                 return responses.audience_description && hasAgeRange;
             case "visual":
                 return responses.design_style && responses.color_mood;

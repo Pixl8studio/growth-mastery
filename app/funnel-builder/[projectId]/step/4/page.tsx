@@ -266,7 +266,32 @@ export default function Step3Page({
             setGenerationProgress(100);
 
             if (!response.ok) {
-                throw new Error("Failed to generate deck structure");
+                // Read the actual error response from the API
+                let errorMessage = "Failed to generate deck structure";
+                try {
+                    const errorData = await response.json();
+                    if (errorData.error) {
+                        errorMessage = errorData.error;
+                    }
+                    if (errorData.details) {
+                        // Include validation details if available
+                        const details = Array.isArray(errorData.details)
+                            ? errorData.details.map((d: any) => d.message).join(", ")
+                            : JSON.stringify(errorData.details);
+                        errorMessage = `${errorMessage}: ${details}`;
+                    }
+                    logger.error(
+                        { error: errorData, statusCode: response.status },
+                        "API error generating deck structure"
+                    );
+                } catch {
+                    // If we can't parse the response, log the status
+                    logger.error(
+                        { statusCode: response.status },
+                        "Failed to generate deck structure (non-JSON response)"
+                    );
+                }
+                throw new Error(errorMessage);
             }
 
             const result = await response.json();
@@ -291,10 +316,12 @@ export default function Step3Page({
                 setGenerationProgress(0);
             }, 1000);
         } catch (error) {
-            logger.error({ error }, "Failed to generate deck structure");
+            const errorMessage =
+                error instanceof Error ? error.message : "Unknown error occurred";
+            logger.error({ error, errorMessage }, "Failed to generate deck structure");
             setIsGenerating(false);
             setGenerationProgress(0);
-            alert("Failed to generate deck structure. Please try again.");
+            alert(`Failed to generate deck structure: ${errorMessage}`);
         }
     };
 

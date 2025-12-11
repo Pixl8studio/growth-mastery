@@ -30,10 +30,11 @@ describe("config", () => {
         });
 
         it("should have correct deck structure", () => {
-            expect(FUNNEL_CONFIG.deckStructure.totalSlides).toBe(55);
-            expect(FUNNEL_CONFIG.deckStructure.sections).toContain("hook");
-            expect(FUNNEL_CONFIG.deckStructure.sections).toContain("problem");
-            expect(FUNNEL_CONFIG.deckStructure.sections).toContain("solution");
+            // 60-slide webinar framework with 15-30-15 structure
+            expect(FUNNEL_CONFIG.deckStructure.totalSlides).toBe(60);
+            expect(FUNNEL_CONFIG.deckStructure.sections).toContain("connect");
+            expect(FUNNEL_CONFIG.deckStructure.sections).toContain("teach");
+            expect(FUNNEL_CONFIG.deckStructure.sections).toContain("invite");
         });
 
         it("should have video engagement milestones", () => {

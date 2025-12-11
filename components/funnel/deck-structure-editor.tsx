@@ -67,7 +67,12 @@ export function DeckStructureEditor({
         {} as Record<string, Slide[]>
     );
 
+    // Section names for 15-30-15 webinar framework
     const sectionNames: Record<string, string> = {
+        connect: "🤝 Connect (Slides 1-15)",
+        teach: "📚 Teach (Slides 16-45)",
+        invite: "🎯 Invite (Slides 46-60)",
+        // Legacy section names for backward compatibility
         hook: "🎣 Hook",
         problem: "⚠️ Problem",
         agitate: "🔥 Agitate",
@@ -78,6 +83,10 @@ export function DeckStructureEditor({
     };
 
     const sectionOrder = [
+        "connect",
+        "teach",
+        "invite",
+        // Legacy sections for backward compatibility
         "hook",
         "problem",
         "agitate",

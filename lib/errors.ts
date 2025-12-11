@@ -57,3 +57,26 @@ export class InternalServerError extends AppError {
         super(message, 500, false);
     }
 }
+
+export class AIGenerationError extends AppError {
+    public readonly retryable: boolean;
+    public readonly errorCode: string;
+
+    constructor(
+        message: string,
+        options: { retryable?: boolean; errorCode?: string } = {}
+    ) {
+        super(message, 500);
+        this.retryable = options.retryable ?? true;
+        this.errorCode = options.errorCode ?? "AI_GENERATION_FAILED";
+    }
+}
+
+export class DatabaseError extends AppError {
+    public readonly operation: string;
+
+    constructor(message: string, operation: string) {
+        super(message, 500);
+        this.operation = operation;
+    }
+}

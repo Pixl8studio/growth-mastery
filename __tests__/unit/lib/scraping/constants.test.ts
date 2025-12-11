@@ -86,7 +86,7 @@ describe("Scraping Constants", () => {
 
     describe("Retry Configuration Constants", () => {
         it("exports DEFAULT_MAX_RETRIES", () => {
-            expect(DEFAULT_MAX_RETRIES).toBe(3);
+            expect(DEFAULT_MAX_RETRIES).toBe(2);
             expect(typeof DEFAULT_MAX_RETRIES).toBe("number");
         });
 
@@ -95,11 +95,11 @@ describe("Scraping Constants", () => {
         });
 
         it("exports DEFAULT_MAX_DELAY_MS", () => {
-            expect(DEFAULT_MAX_DELAY_MS).toBe(10000);
+            expect(DEFAULT_MAX_DELAY_MS).toBe(5000);
         });
 
         it("exports DEFAULT_TIMEOUT_MS", () => {
-            expect(DEFAULT_TIMEOUT_MS).toBe(30000);
+            expect(DEFAULT_TIMEOUT_MS).toBe(15000);
         });
 
         it("maintains logical delay relationships", () => {

@@ -4,6 +4,12 @@
  */
 
 import { logger } from "@/lib/logger";
+import {
+    DEFAULT_MAX_RETRIES,
+    DEFAULT_INITIAL_DELAY_MS,
+    DEFAULT_MAX_DELAY_MS,
+    DEFAULT_TIMEOUT_MS,
+} from "./constants";
 
 /**
  * Configuration for fetch with retry logic
@@ -101,10 +107,10 @@ export async function fetchWithRetry(
     config: FetchConfig = {}
 ): Promise<FetchResult> {
     const {
-        maxRetries = 3,
-        initialDelayMs = 1000,
-        maxDelayMs = 10000,
-        timeoutMs = 30000,
+        maxRetries = DEFAULT_MAX_RETRIES,
+        initialDelayMs = DEFAULT_INITIAL_DELAY_MS,
+        maxDelayMs = DEFAULT_MAX_DELAY_MS,
+        timeoutMs = DEFAULT_TIMEOUT_MS,
         userAgent,
     } = config;
 

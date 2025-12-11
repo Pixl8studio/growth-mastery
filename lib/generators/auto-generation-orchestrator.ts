@@ -960,7 +960,30 @@ async function generateDeckStructure(
     );
 
     if (!response.ok) {
-        throw new Error("Failed to generate deck structure");
+        // Read the actual error response from the API
+        let errorMessage = "Failed to generate deck structure";
+        try {
+            const errorData = await response.json();
+            if (errorData.error) {
+                errorMessage = errorData.error;
+            }
+            if (errorData.details) {
+                const details = Array.isArray(errorData.details)
+                    ? errorData.details.map((d: any) => d.message).join(", ")
+                    : JSON.stringify(errorData.details);
+                errorMessage = `${errorMessage}: ${details}`;
+            }
+            logger.error(
+                { error: errorData, statusCode: response.status },
+                "API error generating deck structure"
+            );
+        } catch {
+            logger.error(
+                { statusCode: response.status },
+                "Failed to generate deck structure (non-JSON response)"
+            );
+        }
+        throw new Error(errorMessage);
     }
 
     const { deckStructure } = await response.json();

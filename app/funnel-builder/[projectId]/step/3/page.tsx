@@ -378,11 +378,13 @@ export default function Step3BrandDesignPage({
                 body: JSON.stringify({ url: scrapedUrl }),
             });
 
-            if (!response.ok) {
-                throw new Error("Scraping failed");
-            }
-
             const data = await response.json();
+
+            if (!response.ok) {
+                const errorMessage =
+                    data.error || "Failed to extract brand colors. Please try again.";
+                throw new Error(errorMessage);
+            }
 
             const hasValidColors =
                 data.colors && data.confidence && data.confidence.colors > 0;
@@ -475,10 +477,17 @@ export default function Step3BrandDesignPage({
                 });
             }
         } catch (error) {
-            logger.error({ error, url: scrapedUrl }, "Failed to scrape colors");
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "Could not extract brand from URL. Please try again.";
+            logger.error(
+                { error, errorMessage, url: scrapedUrl },
+                "Failed to scrape colors"
+            );
             toast({
                 title: "Extraction failed",
-                description: "Could not extract brand from URL. Please try again.",
+                description: errorMessage,
                 variant: "destructive",
             });
         } finally {

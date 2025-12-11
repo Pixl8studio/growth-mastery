@@ -227,23 +227,18 @@ export default function Step3BrandDesignPage({
                 input_method: "manual" as BrandInputMethod,
             };
 
-            if (brandDesign) {
-                const { error } = await supabase
-                    .from("brand_designs")
-                    .update(brandData)
-                    .eq("id", brandDesign.id);
+            // Use upsert to handle both insert and update cases
+            // This works with the unique constraint on funnel_project_id
+            const { data, error } = await supabase
+                .from("brand_designs")
+                .upsert(brandData, {
+                    onConflict: "funnel_project_id",
+                })
+                .select()
+                .single();
 
-                if (error) throw error;
-            } else {
-                const { data, error } = await supabase
-                    .from("brand_designs")
-                    .insert(brandData)
-                    .select()
-                    .single();
-
-                if (error) throw error;
-                setBrandDesign(data);
-            }
+            if (error) throw error;
+            setBrandDesign(data);
 
             toast({
                 title: "Brand design saved",

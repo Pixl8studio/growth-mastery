@@ -434,8 +434,8 @@ export default function Step1Page({
             completedSteps={completedSteps}
             nextDisabled={!hasCompletedContext}
             nextLabel={hasCompletedContext ? "Define Offer" : "Complete Context First"}
-            stepTitle="Context"
-            stepDescription="Build your business profile through AI-assisted questions, voice call, or your own GPT"
+            stepTitle="Define Context"
+            stepDescription="Build your business profile through AI-assisted questions or voice call"
         >
             <div className="space-y-8">
                 {/* Context Method Selector or Active Method Interface */}
@@ -767,7 +767,7 @@ export default function Step1Page({
                     </p>
                     <ul className="space-y-1 text-sm text-muted-foreground">
                         <li>• Generate your complete offer definition</li>
-                        <li>• Create your 55-slide presentation structure</li>
+                        <li>• Create your 60-slide presentation structure</li>
                         <li>• Build high-converting landing pages</li>
                         <li>• Craft personalized follow-up sequences</li>
                     </ul>

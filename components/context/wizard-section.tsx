@@ -1,16 +1,24 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { WizardQuestion } from "./wizard-question";
-import { Sparkles, Loader2, ChevronRight, ChevronLeft, Save } from "lucide-react";
-import { cn } from "@/lib/utils";
+import {
+    Sparkles,
+    Loader2,
+    ChevronRight,
+    ChevronLeft,
+    Save,
+    Check,
+    Cloud,
+} from "lucide-react";
 import type { SectionId, SectionData, BusinessProfile } from "@/types/business-profile";
 import { SECTION_DEFINITIONS } from "@/types/business-profile";
 import { useToast } from "@/components/ui/use-toast";
+import { logger } from "@/lib/client-logger";
 
 interface WizardSectionProps {
     sectionId: SectionId;
@@ -22,6 +30,8 @@ interface WizardSectionProps {
     isLastSection?: boolean;
     projectId: string;
 }
+
+const AUTOSAVE_DELAY = 2000; // 2 seconds debounce
 
 export function WizardSection({
     sectionId,
@@ -35,6 +45,7 @@ export function WizardSection({
 }: WizardSectionProps) {
     const { toast } = useToast();
     const sectionDef = SECTION_DEFINITIONS[sectionId];
+    const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     // Get context field name
     const contextKey = `${sectionId}_context` as keyof BusinessProfile;
@@ -58,6 +69,9 @@ export function WizardSection({
     );
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isAutosaving, setIsAutosaving] = useState(false);
+    const [lastSaved, setLastSaved] = useState<Date | null>(null);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [hasGenerated, setHasGenerated] = useState(
         sectionDef.fields.some(
             (f) =>
@@ -67,11 +81,63 @@ export function WizardSection({
         )
     );
 
-    // Handle field change
+    // Autosave effect
+    useEffect(() => {
+        if (!hasUnsavedChanges || isGenerating) return;
+
+        // Clear existing timeout
+        if (autosaveTimeoutRef.current) {
+            clearTimeout(autosaveTimeoutRef.current);
+        }
+
+        // Set new timeout for autosave
+        autosaveTimeoutRef.current = setTimeout(async () => {
+            await performAutosave();
+        }, AUTOSAVE_DELAY);
+
+        return () => {
+            if (autosaveTimeoutRef.current) {
+                clearTimeout(autosaveTimeoutRef.current);
+            }
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sectionData, context, hasUnsavedChanges]);
+
+    // Perform autosave
+    const performAutosave = async () => {
+        if (isGenerating || isSaving) return;
+
+        setIsAutosaving(true);
+        try {
+            const dataToSave = {
+                ...sectionData,
+                [contextKey]: context,
+            };
+
+            await onSave(dataToSave as SectionData, aiGeneratedFields);
+            setLastSaved(new Date());
+            setHasUnsavedChanges(false);
+            logger.info({ sectionId }, "Autosaved section");
+        } catch (error) {
+            logger.error({ error, sectionId }, "Autosave failed");
+            // Don't show toast for autosave failures to avoid UI noise
+        } finally {
+            setIsAutosaving(false);
+        }
+    };
+
+    // Handle field change with autosave trigger
     const handleFieldChange = useCallback((key: string, value: unknown) => {
         setSectionData((prev) => ({ ...prev, [key]: value }));
         // If user edits, remove from AI generated
         setAiGeneratedFields((prev) => prev.filter((f) => f !== key));
+        setHasUnsavedChanges(true);
+    }, []);
+
+    // Handle context change with autosave trigger
+    const handleContextChange = useCallback((value: string) => {
+        setContext(value);
+        setHasUnsavedChanges(true);
     }, []);
 
     // Generate section answers
@@ -112,6 +178,7 @@ export function WizardSection({
                 // Track AI generated fields
                 setAiGeneratedFields(result.generatedFields || []);
                 setHasGenerated(true);
+                setHasUnsavedChanges(true);
 
                 toast({
                     title: "Section Generated!",
@@ -132,8 +199,77 @@ export function WizardSection({
         }
     };
 
-    // Save section data
+    // Regenerate a single field
+    const handleRegenerateField = async (fieldKey: string) => {
+        if (!context.trim()) {
+            toast({
+                title: "Context Required",
+                description:
+                    "Please provide some context about this section before regenerating.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        try {
+            const response = await fetch("/api/context/generate-section", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    projectId,
+                    sectionId,
+                    context,
+                    existingData: profile,
+                    fieldToRegenerate: fieldKey,
+                }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "Failed to regenerate field");
+            }
+
+            if (result.data && result.data[fieldKey] !== undefined) {
+                // Update only the specific field
+                setSectionData((prev) => ({
+                    ...prev,
+                    [fieldKey]: result.data[fieldKey],
+                }));
+                // Mark as AI generated
+                setAiGeneratedFields((prev) => {
+                    if (!prev.includes(fieldKey)) {
+                        return [...prev, fieldKey];
+                    }
+                    return prev;
+                });
+                setHasUnsavedChanges(true);
+
+                toast({
+                    title: "Field Regenerated",
+                    description: "The field has been regenerated with new content.",
+                });
+            }
+        } catch (error) {
+            toast({
+                title: "Regeneration Failed",
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to regenerate field.",
+                variant: "destructive",
+            });
+            throw error;
+        }
+    };
+
+    // Save section data (manual save)
     const handleSave = async () => {
+        // Cancel any pending autosave
+        if (autosaveTimeoutRef.current) {
+            clearTimeout(autosaveTimeoutRef.current);
+        }
+
         setIsSaving(true);
 
         try {
@@ -144,6 +280,8 @@ export function WizardSection({
             };
 
             await onSave(dataToSave as SectionData, aiGeneratedFields);
+            setLastSaved(new Date());
+            setHasUnsavedChanges(false);
 
             toast({
                 title: "Section Saved",
@@ -169,14 +307,48 @@ export function WizardSection({
         }
     };
 
+    // Format last saved time
+    const formatLastSaved = () => {
+        if (!lastSaved) return null;
+        const now = new Date();
+        const diff = Math.floor((now.getTime() - lastSaved.getTime()) / 1000);
+        if (diff < 60) return "just now";
+        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+        return lastSaved.toLocaleTimeString([], {
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
+
     return (
         <div className="space-y-6">
             {/* Section Header */}
-            <div className="border-b pb-4">
-                <h2 className="text-2xl font-bold text-foreground">
-                    {sectionDef.title}
-                </h2>
-                <p className="mt-1 text-muted-foreground">{sectionDef.description}</p>
+            <div className="flex items-center justify-between border-b pb-4">
+                <div>
+                    <h2 className="text-2xl font-bold text-foreground">
+                        {sectionDef.title}
+                    </h2>
+                    <p className="mt-1 text-muted-foreground">{sectionDef.description}</p>
+                </div>
+                {/* Autosave indicator */}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    {isAutosaving ? (
+                        <>
+                            <Cloud className="h-4 w-4 animate-pulse" />
+                            <span>Saving...</span>
+                        </>
+                    ) : lastSaved ? (
+                        <>
+                            <Check className="h-4 w-4 text-green-500" />
+                            <span>Saved {formatLastSaved()}</span>
+                        </>
+                    ) : hasUnsavedChanges ? (
+                        <>
+                            <Cloud className="h-4 w-4" />
+                            <span>Unsaved changes</span>
+                        </>
+                    ) : null}
+                </div>
             </div>
 
             {/* Context Input */}
@@ -194,7 +366,7 @@ export function WizardSection({
                     <Textarea
                         id="context"
                         value={context}
-                        onChange={(e) => setContext(e.target.value)}
+                        onChange={(e) => handleContextChange(e.target.value)}
                         placeholder="Type your thoughts here... Be as detailed as you'd like. The more context you provide, the better the AI can help."
                         className="min-h-[150px] resize-y text-base"
                         disabled={isGenerating}
@@ -230,7 +402,8 @@ export function WizardSection({
                                 Generated Answers
                             </h3>
                             <p className="text-sm text-muted-foreground">
-                                Review and edit your answers below
+                                Review and edit your answers below. Click the refresh icon on
+                                any field to regenerate just that answer.
                             </p>
                         </div>
                         <Button
@@ -244,7 +417,7 @@ export function WizardSection({
                             ) : (
                                 <Sparkles className="mr-2 h-4 w-4" />
                             )}
-                            Regenerate
+                            Regenerate All
                         </Button>
                     </div>
 
@@ -265,6 +438,7 @@ export function WizardSection({
                                 }
                                 value={sectionData[field.key]}
                                 onChange={handleFieldChange}
+                                onRegenerate={handleRegenerateField}
                                 isAiGenerated={aiGeneratedFields.includes(field.key)}
                                 subfields={
                                     "subfields" in field
@@ -294,7 +468,11 @@ export function WizardSection({
                 </div>
 
                 <div className="flex gap-3">
-                    <Button variant="outline" onClick={handleSave} disabled={isSaving}>
+                    <Button
+                        variant="outline"
+                        onClick={handleSave}
+                        disabled={isSaving || isAutosaving}
+                    >
                         {isSaving ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                         ) : (

@@ -184,7 +184,7 @@ export default function CreateFunnelPage() {
                             <li className="flex items-start">
                                 <span className="mr-2 font-bold text-primary">1.</span>
                                 <div>
-                                    <strong>Business Definition</strong> - Share your
+                                    <strong>Business Profile</strong> - Share your
                                     business info, define your offer with the 7 P's
                                     framework, and design your brand identity
                                 </div>
@@ -193,7 +193,7 @@ export default function CreateFunnelPage() {
                                 <span className="mr-2 font-bold text-primary">2.</span>
                                 <div>
                                     <strong>Presentation Materials</strong> - Create
-                                    your 55-slide presentation structure, generate it
+                                    your 60-slide presentation structure, generate it
                                     with Gamma AI, craft your talk track, and upload
                                     your pitch video
                                 </div>

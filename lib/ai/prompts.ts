@@ -8,7 +8,8 @@ import type { TranscriptData } from "./types";
 import { FUNNEL_CONFIG } from "@/lib/config";
 
 /**
- * 1. Generate 55-slide promo deck structure from VAPI transcript
+ * 1. Generate 60-slide promo deck structure from VAPI transcript
+ * Uses the 15-30-15 structure: Connect (1-15), Teach (16-45), Invite (46-60)
  */
 export function createDeckStructurePrompt(
     transcriptData: TranscriptData

@@ -55,7 +55,7 @@ export default function Step3Page({
     const [selectedDeck, setSelectedDeck] = useState<DeckStructure | null>(null);
     const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
     const [editingDeckName, setEditingDeckName] = useState("");
-    const [slideCount, setSlideCount] = useState<"5" | "55">("55");
+    const [slideCount, setSlideCount] = useState<"5" | "60">("60");
     const [presentationType, setPresentationType] = useState<
         "webinar" | "vsl" | "sales_page"
     >("webinar");
@@ -193,7 +193,7 @@ export default function Step3Page({
                     title: deck.metadata?.title || "Untitled Presentation",
                     slideCount: Array.isArray(deck.slides)
                         ? deck.slides.length
-                        : deck.total_slides || 55,
+                        : deck.total_slides || 60,
                     status: "completed" as const,
                     slides: deck.slides || [],
                     version: 1,
@@ -273,7 +273,7 @@ export default function Step3Page({
             const newDeck: DeckStructure = {
                 id: result.deckStructure.id,
                 title: result.deckStructure.title || "Presentation Structure",
-                slideCount: result.deckStructure.slides?.length || 55,
+                slideCount: result.deckStructure.slides?.length || 60,
                 status: "completed",
                 slides: result.deckStructure.slides || [],
                 version: 1,
@@ -378,7 +378,7 @@ export default function Step3Page({
                     title: d.metadata?.title || "Untitled Presentation",
                     slideCount: Array.isArray(d.slides)
                         ? d.slides.length
-                        : d.total_slides || 55,
+                        : d.total_slides || 60,
                     status: "completed" as const,
                     slides: d.slides || [],
                     version: 1,
@@ -523,7 +523,7 @@ export default function Step3Page({
                                     >
                                         <div className="font-semibold">Webinar</div>
                                         <div className="text-xs text-muted-foreground">
-                                            Full 55-slide framework
+                                            Full 60-slide framework
                                         </div>
                                     </button>
                                     <button
@@ -715,14 +715,14 @@ export default function Step3Page({
                                         </div>
                                     </button>
                                     <button
-                                        onClick={() => setSlideCount("55")}
+                                        onClick={() => setSlideCount("60")}
                                         className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
-                                            slideCount === "55"
+                                            slideCount === "60"
                                                 ? "border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20"
                                                 : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5"
                                         }`}
                                     >
-                                        <div className="font-semibold">55 Slides</div>
+                                        <div className="font-semibold">60 Slides</div>
                                         <div className="text-xs text-muted-foreground">
                                             Full Deck (~3-5 min)
                                         </div>
@@ -731,7 +731,7 @@ export default function Step3Page({
                                 <p className="mt-2 text-xs text-muted-foreground">
                                     {slideCount === "5"
                                         ? "🚀 Quick test with first 5 slides from the framework"
-                                        : "📊 Complete Magnetic Masterclass Framework (recommended)"}
+                                        : "📊 Complete 60-Slide Webinar Framework (recommended)"}
                                 </p>
                             </div>
                         </div>
@@ -1035,7 +1035,7 @@ export default function Step3Page({
                                                             deck.slides
                                                         )
                                                             ? deck.slides.length
-                                                            : deck.total_slides || 55,
+                                                            : deck.total_slides || 60,
                                                         status: "completed" as const,
                                                         slides: deck.slides || [],
                                                         version: 1,

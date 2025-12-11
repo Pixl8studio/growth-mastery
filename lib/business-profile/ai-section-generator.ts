@@ -70,6 +70,86 @@ export async function generateSectionAnswers(
 }
 
 /**
+ * Generate a single field answer based on user context
+ */
+export async function generateSingleFieldAnswer(
+    sectionId: SectionId,
+    fieldKey: string,
+    userContext: string,
+    existingProfile?: Partial<BusinessProfile>
+): Promise<{
+    success: boolean;
+    data?: Record<string, unknown>;
+    generatedFields?: string[];
+    error?: string;
+}> {
+    const sectionDef = SECTION_DEFINITIONS[sectionId];
+    const fieldDef = sectionDef.fields.find((f) => f.key === fieldKey);
+
+    if (!fieldDef) {
+        return {
+            success: false,
+            error: `Field ${fieldKey} not found in section ${sectionId}`,
+        };
+    }
+
+    logger.info(
+        { sectionId, fieldKey, contextLength: userContext.length },
+        "Regenerating single field"
+    );
+
+    try {
+        const previousContext = buildPreviousSectionsContext(existingProfile);
+
+        const systemPrompt = `You are an expert business strategist. Generate a focused, specific answer for a single question based on the user's context. Be direct and practical. Output must be valid JSON.`;
+
+        let fieldTypeInstruction = "";
+        if (fieldDef.type === "pricing") {
+            fieldTypeInstruction = `Return as JSON object: {"${fieldKey}": {"regular": number, "webinar": number}}`;
+        } else if (fieldDef.type === "objections") {
+            fieldTypeInstruction = `Return as JSON object: {"${fieldKey}": [{"objection": "string", "response": "string"}, ...]}`;
+        } else if (fieldDef.type === "array") {
+            fieldTypeInstruction = `Return as JSON object: {"${fieldKey}": ["string", "string", ...]}`;
+        } else if (fieldDef.type === "belief_shift" && "subfields" in fieldDef) {
+            const subfieldList = fieldDef.subfields.map((sf) => sf.label).join(", ");
+            fieldTypeInstruction = `Return as JSON object: {"${fieldKey}": {${fieldDef.subfields.map((sf) => `"${sf.key}": "string or array"`).join(", ")}}}. Subfields needed: ${subfieldList}`;
+        } else {
+            fieldTypeInstruction = `Return as JSON object: {"${fieldKey}": "string answer"}`;
+        }
+
+        const userPrompt = `Based on this context about the business:
+
+"${userContext}"
+${previousContext}
+
+Generate a detailed answer for this specific question:
+${fieldDef.label}
+
+${fieldTypeInstruction}`;
+
+        const result = await generateWithAI<Record<string, unknown>>(
+            [
+                { role: "system", content: systemPrompt },
+                { role: "user", content: userPrompt },
+            ],
+            { maxTokens: 1500, temperature: 0.7 }
+        );
+
+        return {
+            success: true,
+            data: result,
+            generatedFields: [fieldKey],
+        };
+    } catch (error) {
+        logger.error({ error, sectionId, fieldKey }, "Failed to regenerate field");
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+        };
+    }
+}
+
+/**
  * Build context from previous sections for AI prompts
  */
 function buildPreviousSectionsContext(profile?: Partial<BusinessProfile>): string {

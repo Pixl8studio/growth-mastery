@@ -1,7 +1,7 @@
 "use client";
 
 import { Card } from "@/components/ui/card";
-import { Wand2, Phone, MessageSquare } from "lucide-react";
+import { Wand2, Phone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { ContextMethod } from "@/types/business-profile";
 
@@ -15,7 +15,9 @@ interface MethodOption {
     title: string;
     description: string;
     icon: React.ComponentType<{ className?: string }>;
-    color: string;
+    gradientFrom: string;
+    gradientTo: string;
+    glowColor: string;
     recommended?: boolean;
     comingSoon?: boolean;
 }
@@ -23,29 +25,25 @@ interface MethodOption {
 const METHODS: MethodOption[] = [
     {
         id: "wizard",
-        title: "Build Together Step-by-Step",
+        title: "AI-Assisted Questions",
         description:
-            "Answer questions section by section with AI assistance to generate your content",
+            "Answer questions section by section with AI assistance to generate your content. Our smart wizard guides you through each step.",
         icon: Wand2,
-        color: "purple",
+        gradientFrom: "from-purple-500",
+        gradientTo: "to-pink-500",
+        glowColor: "shadow-purple-500/50",
         recommended: true,
     },
     {
         id: "voice",
-        title: "Complete a Voice Call",
+        title: "Voice Call",
         description:
-            "Have a natural 15-20 minute conversation with our AI assistant who will guide you through all the questions",
+            "Have a natural 15-20 minute conversation with our AI assistant who will guide you through all the questions.",
         icon: Phone,
-        color: "blue",
+        gradientFrom: "from-blue-500",
+        gradientTo: "to-cyan-500",
+        glowColor: "shadow-blue-500/50",
         comingSoon: true,
-    },
-    {
-        id: "gpt_paste",
-        title: "I Already Have a Trained GPT",
-        description:
-            "Copy prompts for each section, get answers from your GPT, and paste them back",
-        icon: MessageSquare,
-        color: "green",
     },
 ];
 
@@ -57,15 +55,15 @@ export function ContextMethodSelector({
         <div className="space-y-6">
             <div className="text-center">
                 <h3 className="text-xl font-semibold text-foreground">
-                    How would you like to provide your business context?
+                    How would you like to build your business profile?
                 </h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                    Choose the method that works best for you. All paths lead to the
-                    same comprehensive business profile.
+                    Choose the method that works best for you. Both paths create the same
+                    comprehensive business profile.
                 </p>
             </div>
 
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 {METHODS.map((method) => {
                     const Icon = method.icon;
                     const isSelected = selectedMethod === method.id;
@@ -74,44 +72,61 @@ export function ContextMethodSelector({
                     return (
                         <Card
                             key={method.id}
-                            className={cn("relative p-6 transition-all", {
-                                "border-2 border-primary bg-primary/5": isSelected,
-                                "hover:border-primary/50 hover:shadow-lg cursor-pointer":
-                                    !isSelected && !isDisabled,
-                                "opacity-60 cursor-not-allowed": isDisabled,
-                            })}
+                            className={cn(
+                                "relative overflow-hidden p-6 transition-all duration-300",
+                                {
+                                    "border-2 border-primary ring-2 ring-primary/20":
+                                        isSelected,
+                                    "hover:scale-[1.02] hover:shadow-xl cursor-pointer":
+                                        !isSelected && !isDisabled,
+                                    "opacity-60 cursor-not-allowed": isDisabled,
+                                }
+                            )}
                             onClick={() => !isDisabled && onSelectMethod(method.id)}
                         >
+                            {/* Glowing background gradient */}
+                            <div
+                                className={cn(
+                                    "absolute inset-0 opacity-0 transition-opacity duration-300",
+                                    "bg-gradient-to-br",
+                                    method.gradientFrom,
+                                    method.gradientTo,
+                                    {
+                                        "opacity-5 group-hover:opacity-10":
+                                            !isSelected && !isDisabled,
+                                        "opacity-10": isSelected,
+                                    }
+                                )}
+                            />
+
                             {method.recommended && (
-                                <span className="absolute -top-2 right-4 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
+                                <span className="absolute -top-2 right-4 z-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 px-3 py-1 text-xs font-semibold text-white shadow-lg shadow-purple-500/30">
                                     Recommended
                                 </span>
                             )}
                             {method.comingSoon && (
-                                <span className="absolute -top-2 right-4 rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold text-white">
+                                <span className="absolute -top-2 right-4 z-10 rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-3 py-1 text-xs font-semibold text-white shadow-lg shadow-amber-500/30">
                                     Coming Soon
                                 </span>
                             )}
 
-                            <div className="flex flex-col items-center text-center">
+                            <div className="relative flex flex-col items-center text-center">
+                                {/* Icon with glowing gradient background */}
                                 <div
                                     className={cn(
-                                        "mb-4 flex h-14 w-14 items-center justify-center rounded-full",
+                                        "mb-4 flex h-16 w-16 items-center justify-center rounded-full",
+                                        "bg-gradient-to-br shadow-lg transition-all duration-300",
+                                        method.gradientFrom,
+                                        method.gradientTo,
+                                        method.glowColor,
                                         {
-                                            "bg-purple-100": method.color === "purple",
-                                            "bg-blue-100": method.color === "blue",
-                                            "bg-green-100": method.color === "green",
+                                            "shadow-xl scale-110": isSelected,
+                                            "hover:shadow-xl hover:scale-105":
+                                                !isSelected && !isDisabled,
                                         }
                                     )}
                                 >
-                                    <Icon
-                                        className={cn("h-7 w-7", {
-                                            "text-purple-600":
-                                                method.color === "purple",
-                                            "text-blue-600": method.color === "blue",
-                                            "text-green-600": method.color === "green",
-                                        })}
-                                    />
+                                    <Icon className="h-8 w-8 text-white" />
                                 </div>
 
                                 <h4 className="mb-2 text-lg font-semibold text-foreground">
@@ -120,11 +135,25 @@ export function ContextMethodSelector({
                                 <p className="text-sm text-muted-foreground">
                                     {method.description}
                                 </p>
+
+                                {/* Selection indicator */}
+                                {isSelected && (
+                                    <div className="mt-4 flex items-center gap-2 text-sm font-medium text-primary">
+                                        <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+                                        Selected
+                                    </div>
+                                )}
                             </div>
                         </Card>
                     );
                 })}
             </div>
+
+            {/* Note about GPT paste mode - accessible via wizard */}
+            <p className="text-center text-xs text-muted-foreground">
+                Already have content from a trained GPT? The AI-Assisted Questions wizard
+                supports pasting and importing your existing content.
+            </p>
         </div>
     );
 }

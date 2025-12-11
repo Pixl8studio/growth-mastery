@@ -10,7 +10,10 @@ import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { AuthenticationError, ValidationError } from "@/lib/errors";
-import { generateSectionAnswers } from "@/lib/business-profile/ai-section-generator";
+import {
+    generateSectionAnswers,
+    generateSingleFieldAnswer,
+} from "@/lib/business-profile/ai-section-generator";
 import { getProfileByProject } from "@/lib/business-profile/service";
 import type { SectionId, BusinessProfile } from "@/types/business-profile";
 
@@ -28,7 +31,7 @@ export async function POST(request: NextRequest) {
         }
 
         const body = await request.json();
-        const { projectId, sectionId, context, existingData } = body;
+        const { projectId, sectionId, context, existingData, fieldToRegenerate } = body;
 
         if (!projectId) {
             throw new ValidationError("projectId is required");
@@ -77,6 +80,47 @@ export async function POST(request: NextRequest) {
             if (profileResult.success && profileResult.profile) {
                 profileData = profileResult.profile;
             }
+        }
+
+        // Check if regenerating a single field
+        if (fieldToRegenerate) {
+            logger.info(
+                {
+                    userId: user.id,
+                    projectId,
+                    sectionId,
+                    fieldToRegenerate,
+                    contextLength: context.length,
+                },
+                "Regenerating single field"
+            );
+
+            const result = await generateSingleFieldAnswer(
+                sectionId as SectionId,
+                fieldToRegenerate,
+                context,
+                profileData
+            );
+
+            if (!result.success) {
+                throw new Error(result.error || "Failed to regenerate field");
+            }
+
+            logger.info(
+                {
+                    userId: user.id,
+                    projectId,
+                    sectionId,
+                    fieldToRegenerate,
+                },
+                "Field regenerated successfully"
+            );
+
+            return NextResponse.json({
+                success: true,
+                data: result.data,
+                generatedFields: result.generatedFields,
+            });
         }
 
         logger.info(

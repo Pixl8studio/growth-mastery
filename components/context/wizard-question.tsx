@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { Bot, X, Plus, Trash2 } from "lucide-react";
+import { Bot, X, Plus, Trash2, RefreshCw, Loader2 } from "lucide-react";
 import type { Objection, Pricing } from "@/types/business-profile";
 
 interface WizardQuestionProps {
@@ -15,6 +15,7 @@ interface WizardQuestionProps {
     type: "text" | "textarea" | "pricing" | "objections" | "array" | "belief_shift";
     value: unknown;
     onChange: (key: string, value: unknown) => void;
+    onRegenerate?: (fieldKey: string) => Promise<void>;
     isAiGenerated?: boolean;
     subfields?: Array<{ key: string; label: string }>;
     disabled?: boolean;
@@ -26,16 +27,29 @@ export function WizardQuestion({
     type,
     value,
     onChange,
+    onRegenerate,
     isAiGenerated = false,
     subfields,
     disabled = false,
 }: WizardQuestionProps) {
+    const [isRegenerating, setIsRegenerating] = useState(false);
+
     const handleChange = useCallback(
         (newValue: unknown) => {
             onChange(fieldKey, newValue);
         },
         [fieldKey, onChange]
     );
+
+    const handleRegenerate = async () => {
+        if (!onRegenerate) return;
+        setIsRegenerating(true);
+        try {
+            await onRegenerate(fieldKey);
+        } finally {
+            setIsRegenerating(false);
+        }
+    };
 
     // Render based on field type
     if (type === "pricing") {
@@ -44,7 +58,9 @@ export function WizardQuestion({
                 label={label}
                 value={value as Pricing}
                 onChange={handleChange}
+                onRegenerate={onRegenerate ? handleRegenerate : undefined}
                 isAiGenerated={isAiGenerated}
+                isRegenerating={isRegenerating}
                 disabled={disabled}
             />
         );
@@ -56,7 +72,9 @@ export function WizardQuestion({
                 label={label}
                 value={value as Objection[]}
                 onChange={handleChange}
+                onRegenerate={onRegenerate ? handleRegenerate : undefined}
                 isAiGenerated={isAiGenerated}
+                isRegenerating={isRegenerating}
                 disabled={disabled}
             />
         );
@@ -68,7 +86,9 @@ export function WizardQuestion({
                 label={label}
                 value={value as string[]}
                 onChange={handleChange}
+                onRegenerate={onRegenerate ? handleRegenerate : undefined}
                 isAiGenerated={isAiGenerated}
+                isRegenerating={isRegenerating}
                 disabled={disabled}
             />
         );
@@ -81,7 +101,9 @@ export function WizardQuestion({
                 value={value as Record<string, unknown>}
                 onChange={handleChange}
                 subfields={subfields}
+                onRegenerate={onRegenerate ? handleRegenerate : undefined}
                 isAiGenerated={isAiGenerated}
+                isRegenerating={isRegenerating}
                 disabled={disabled}
             />
         );
@@ -97,12 +119,30 @@ export function WizardQuestion({
                 >
                     {label}
                 </Label>
-                {isAiGenerated && (
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Bot className="h-3 w-3" />
-                        AI Generated – edit freely
-                    </span>
-                )}
+                <div className="flex items-center gap-2">
+                    {isAiGenerated && (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Bot className="h-3 w-3" />
+                            AI Generated
+                        </span>
+                    )}
+                    {onRegenerate && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={handleRegenerate}
+                            disabled={disabled || isRegenerating}
+                            className="h-6 px-2 text-xs text-muted-foreground hover:text-primary"
+                            title="Regenerate this field"
+                        >
+                            {isRegenerating ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                                <RefreshCw className="h-3 w-3" />
+                            )}
+                        </Button>
+                    )}
+                </div>
             </div>
             {type === "textarea" ? (
                 <Textarea
@@ -113,7 +153,7 @@ export function WizardQuestion({
                     className={cn("min-h-[100px] resize-y", {
                         "border-primary/30 bg-primary/5": isAiGenerated,
                     })}
-                    disabled={disabled}
+                    disabled={disabled || isRegenerating}
                 />
             ) : (
                 <Input
@@ -124,7 +164,7 @@ export function WizardQuestion({
                     className={cn({
                         "border-primary/30 bg-primary/5": isAiGenerated,
                     })}
-                    disabled={disabled}
+                    disabled={disabled || isRegenerating}
                 />
             )}
         </div>
@@ -136,13 +176,17 @@ function PricingField({
     label,
     value,
     onChange,
+    onRegenerate,
     isAiGenerated,
+    isRegenerating,
     disabled,
 }: {
     label: string;
     value: Pricing;
     onChange: (value: Pricing) => void;
+    onRegenerate?: () => Promise<void>;
     isAiGenerated: boolean;
+    isRegenerating: boolean;
     disabled: boolean;
 }) {
     const pricing = value || { regular: null, webinar: null };
@@ -151,12 +195,30 @@ function PricingField({
         <div className="space-y-2">
             <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium text-foreground">{label}</Label>
-                {isAiGenerated && (
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Bot className="h-3 w-3" />
-                        AI Generated
-                    </span>
-                )}
+                <div className="flex items-center gap-2">
+                    {isAiGenerated && (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Bot className="h-3 w-3" />
+                            AI Generated
+                        </span>
+                    )}
+                    {onRegenerate && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={onRegenerate}
+                            disabled={disabled || isRegenerating}
+                            className="h-6 px-2 text-xs text-muted-foreground hover:text-primary"
+                            title="Regenerate this field"
+                        >
+                            {isRegenerating ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                                <RefreshCw className="h-3 w-3" />
+                            )}
+                        </Button>
+                    )}
+                </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
@@ -182,7 +244,7 @@ function PricingField({
                             className={cn("pl-7", {
                                 "border-primary/30 bg-primary/5": isAiGenerated,
                             })}
-                            disabled={disabled}
+                            disabled={disabled || isRegenerating}
                         />
                     </div>
                 </div>
@@ -209,7 +271,7 @@ function PricingField({
                             className={cn("pl-7", {
                                 "border-primary/30 bg-primary/5": isAiGenerated,
                             })}
-                            disabled={disabled}
+                            disabled={disabled || isRegenerating}
                         />
                     </div>
                 </div>
@@ -223,13 +285,17 @@ function ObjectionsField({
     label,
     value,
     onChange,
+    onRegenerate,
     isAiGenerated,
+    isRegenerating,
     disabled,
 }: {
     label: string;
     value: Objection[];
     onChange: (value: Objection[]) => void;
+    onRegenerate?: () => Promise<void>;
     isAiGenerated: boolean;
+    isRegenerating: boolean;
     disabled: boolean;
 }) {
     const objections = value || [];
@@ -256,12 +322,30 @@ function ObjectionsField({
         <div className="space-y-3">
             <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium text-foreground">{label}</Label>
-                {isAiGenerated && (
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Bot className="h-3 w-3" />
-                        AI Generated
-                    </span>
-                )}
+                <div className="flex items-center gap-2">
+                    {isAiGenerated && (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Bot className="h-3 w-3" />
+                            AI Generated
+                        </span>
+                    )}
+                    {onRegenerate && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={onRegenerate}
+                            disabled={disabled || isRegenerating}
+                            className="h-6 px-2 text-xs text-muted-foreground hover:text-primary"
+                            title="Regenerate this field"
+                        >
+                            {isRegenerating ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                                <RefreshCw className="h-3 w-3" />
+                            )}
+                        </Button>
+                    )}
+                </div>
             </div>
 
             <div className="space-y-4">
@@ -280,7 +364,7 @@ function ObjectionsField({
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => removeObjection(index)}
-                                disabled={disabled}
+                                disabled={disabled || isRegenerating}
                                 className="h-6 w-6 p-0 text-destructive hover:text-destructive"
                             >
                                 <Trash2 className="h-4 w-4" />
@@ -301,7 +385,7 @@ function ObjectionsField({
                                         )
                                     }
                                     placeholder="What objection do they raise?"
-                                    disabled={disabled}
+                                    disabled={disabled || isRegenerating}
                                 />
                             </div>
                             <div className="space-y-1">
@@ -319,7 +403,7 @@ function ObjectionsField({
                                     }
                                     placeholder="How do you address this objection?"
                                     className="min-h-[80px]"
-                                    disabled={disabled}
+                                    disabled={disabled || isRegenerating}
                                 />
                             </div>
                         </div>
@@ -331,7 +415,7 @@ function ObjectionsField({
                 variant="outline"
                 size="sm"
                 onClick={addObjection}
-                disabled={disabled}
+                disabled={disabled || isRegenerating}
                 className="w-full"
             >
                 <Plus className="mr-2 h-4 w-4" />
@@ -346,13 +430,17 @@ function ArrayField({
     label,
     value,
     onChange,
+    onRegenerate,
     isAiGenerated,
+    isRegenerating,
     disabled,
 }: {
     label: string;
     value: string[];
     onChange: (value: string[]) => void;
+    onRegenerate?: () => Promise<void>;
     isAiGenerated: boolean;
+    isRegenerating: boolean;
     disabled: boolean;
 }) {
     const items = value || [];
@@ -375,12 +463,30 @@ function ArrayField({
         <div className="space-y-3">
             <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium text-foreground">{label}</Label>
-                {isAiGenerated && (
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Bot className="h-3 w-3" />
-                        AI Generated
-                    </span>
-                )}
+                <div className="flex items-center gap-2">
+                    {isAiGenerated && (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Bot className="h-3 w-3" />
+                            AI Generated
+                        </span>
+                    )}
+                    {onRegenerate && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={onRegenerate}
+                            disabled={disabled || isRegenerating}
+                            className="h-6 px-2 text-xs text-muted-foreground hover:text-primary"
+                            title="Regenerate this field"
+                        >
+                            {isRegenerating ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                                <RefreshCw className="h-3 w-3" />
+                            )}
+                        </Button>
+                    )}
+                </div>
             </div>
 
             <div className="space-y-2">
@@ -393,13 +499,13 @@ function ArrayField({
                             className={cn({
                                 "border-primary/30 bg-primary/5": isAiGenerated,
                             })}
-                            disabled={disabled}
+                            disabled={disabled || isRegenerating}
                         />
                         <Button
                             variant="ghost"
                             size="icon"
                             onClick={() => removeItem(index)}
-                            disabled={disabled}
+                            disabled={disabled || isRegenerating}
                             className="h-9 w-9 text-destructive hover:text-destructive"
                         >
                             <X className="h-4 w-4" />
@@ -412,7 +518,7 @@ function ArrayField({
                 variant="outline"
                 size="sm"
                 onClick={addItem}
-                disabled={disabled}
+                disabled={disabled || isRegenerating}
                 className="w-full"
             >
                 <Plus className="mr-2 h-4 w-4" />
@@ -428,14 +534,18 @@ function BeliefShiftField({
     value,
     onChange,
     subfields,
+    onRegenerate,
     isAiGenerated,
+    isRegenerating,
     disabled,
 }: {
     label: string;
     value: Record<string, unknown>;
     onChange: (value: Record<string, unknown>) => void;
     subfields: Array<{ key: string; label: string }>;
+    onRegenerate?: () => Promise<void>;
     isAiGenerated: boolean;
+    isRegenerating: boolean;
     disabled: boolean;
 }) {
     const data = value || {};
@@ -450,12 +560,30 @@ function BeliefShiftField({
                 <Label className="text-base font-semibold text-foreground">
                     {label}
                 </Label>
-                {isAiGenerated && (
-                    <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                        <Bot className="h-3 w-3" />
-                        AI Generated
-                    </span>
-                )}
+                <div className="flex items-center gap-2">
+                    {isAiGenerated && (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                            <Bot className="h-3 w-3" />
+                            AI Generated
+                        </span>
+                    )}
+                    {onRegenerate && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={onRegenerate}
+                            disabled={disabled || isRegenerating}
+                            className="h-6 px-2 text-xs text-muted-foreground hover:text-primary"
+                            title="Regenerate this field"
+                        >
+                            {isRegenerating ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                                <RefreshCw className="h-3 w-3" />
+                            )}
+                        </Button>
+                    )}
+                </div>
             </div>
 
             <div
@@ -477,7 +605,8 @@ function BeliefShiftField({
                                 value={(subValue as string[]) || []}
                                 onChange={(v) => handleSubfieldChange(subfield.key, v)}
                                 isAiGenerated={false}
-                                disabled={disabled}
+                                isRegenerating={false}
+                                disabled={disabled || isRegenerating}
                             />
                         );
                     }
@@ -494,7 +623,7 @@ function BeliefShiftField({
                                 }
                                 placeholder={`Enter ${subfield.label.toLowerCase()}...`}
                                 className="min-h-[80px]"
-                                disabled={disabled}
+                                disabled={disabled || isRegenerating}
                             />
                         </div>
                     );

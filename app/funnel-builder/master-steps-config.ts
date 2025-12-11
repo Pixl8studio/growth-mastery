@@ -14,7 +14,7 @@ export interface MasterStepConfig {
 export const MASTER_STEPS: MasterStepConfig[] = [
     {
         id: 1,
-        title: "Business Definition",
+        title: "Business Profile",
         description: "Define your business, offer, and brand identity",
         icon: "building",
         subSteps: [1, 2, 3],

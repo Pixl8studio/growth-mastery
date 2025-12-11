@@ -388,6 +388,70 @@ export function createTestMessage(overrides: Partial<TestMessage> = {}): TestMes
 }
 
 // ============================================================================
+// Brand Design Fixtures
+// ============================================================================
+
+export interface TestBrandDesign {
+    id: string;
+    funnel_project_id: string;
+    user_id: string;
+    brand_name: string | null;
+    primary_color: string;
+    secondary_color: string | null;
+    accent_color: string | null;
+    background_color: string;
+    text_color: string;
+    scraped_url: string | null;
+    design_style: string | null;
+    personality_traits: {
+        tone?: string;
+        mood?: string;
+        energy?: string;
+        values?: string[];
+    };
+    is_ai_generated: boolean;
+    input_method: "manual" | "wizard" | "website";
+    brand_voice?: {
+        primary_tone?: string;
+        secondary_tone?: string;
+    };
+    messaging_framework?: {
+        value_proposition?: string;
+    };
+    created_at: string;
+    updated_at: string;
+}
+
+export function createTestBrandDesign(
+    overrides: Partial<TestBrandDesign> = {}
+): TestBrandDesign {
+    return {
+        id: overrides.id ?? generateUUID(),
+        funnel_project_id: overrides.funnel_project_id ?? generateUUID(),
+        user_id: overrides.user_id ?? generateUUID(),
+        brand_name: overrides.brand_name ?? "Test Brand",
+        primary_color: overrides.primary_color ?? "#3b82f6",
+        secondary_color: overrides.secondary_color ?? "#8b5cf6",
+        accent_color: overrides.accent_color ?? "#ec4899",
+        background_color: overrides.background_color ?? "#ffffff",
+        text_color: overrides.text_color ?? "#1f2937",
+        scraped_url: overrides.scraped_url ?? null,
+        design_style: overrides.design_style ?? "modern",
+        personality_traits: overrides.personality_traits ?? {
+            tone: "professional",
+            mood: "confident",
+            energy: "dynamic",
+        },
+        is_ai_generated: overrides.is_ai_generated ?? false,
+        input_method: overrides.input_method ?? "manual",
+        brand_voice: overrides.brand_voice,
+        messaging_framework: overrides.messaging_framework,
+        created_at: overrides.created_at ?? new Date().toISOString(),
+        updated_at: overrides.updated_at ?? new Date().toISOString(),
+    };
+}
+
+// ============================================================================
 // Reset helper for test isolation
 // ============================================================================
 

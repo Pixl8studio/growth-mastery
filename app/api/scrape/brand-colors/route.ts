@@ -156,17 +156,24 @@ export async function POST(request: NextRequest) {
             baseUrl: url,
         });
 
+        // Check if extraction returned defaults (confidence 0 means extraction failed)
+        const extractionFailed =
+            brandData.confidence.colors === 0 && brandData.confidence.overall === 0;
+
         logger.info(
             {
                 url,
                 confidence: brandData.confidence,
                 colors: brandData.colors,
+                extractionFailed,
             },
             "Brand extraction complete"
         );
 
-        // Cache the result
-        await setCache(cacheKey, brandData);
+        // Only cache successful extractions
+        if (!extractionFailed) {
+            await setCache(cacheKey, brandData);
+        }
 
         return NextResponse.json({
             success: true,
@@ -175,6 +182,8 @@ export async function POST(request: NextRequest) {
             style: brandData.style,
             confidence: brandData.confidence,
             url,
+            // Let the frontend know if we returned defaults due to extraction issues
+            usedDefaults: extractionFailed,
         });
     } catch (error) {
         logger.error({ error }, "Error in brand color extraction API");

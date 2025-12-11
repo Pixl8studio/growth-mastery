@@ -387,7 +387,10 @@ export default function Step3BrandDesignPage({
             const hasValidColors =
                 data.colors && data.confidence && data.confidence.colors > 0;
 
-            if (hasValidColors) {
+            // Check if the API returned defaults due to extraction issues
+            const usedDefaults = data.usedDefaults === true;
+
+            if (hasValidColors && !usedDefaults) {
                 setPrimaryColor(data.colors.primary || primaryColor);
                 setSecondaryColor(data.colors.secondary || secondaryColor);
                 setAccentColor(data.colors.accent || accentColor);
@@ -466,12 +469,18 @@ export default function Step3BrandDesignPage({
                         });
                     }
                 }
+            } else if (usedDefaults) {
+                // API returned defaults because extraction failed silently
+                toast({
+                    title: "Extraction encountered issues",
+                    description:
+                        "We had trouble extracting colors from this website. Default colors have been applied - feel free to customize them manually.",
+                });
             } else {
                 toast({
                     title: "No colors found",
                     description:
-                        "Could not extract brand colors from the website. The site may use external stylesheets.",
-                    variant: "destructive",
+                        "Could not extract brand colors from the website. The site may use external stylesheets or have limited styling.",
                 });
             }
         } catch (error) {

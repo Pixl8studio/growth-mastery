@@ -27,6 +27,37 @@ const CSS_FETCH_TIMEOUT_MS = 3000;
 const MAX_EXTERNAL_CSS_FILES = 10;
 
 /**
+ * Maximum time allowed for the entire brand extraction operation (30 seconds)
+ * This prevents the function from hanging on complex HTML
+ */
+const EXTRACTION_TIMEOUT_MS = 30000;
+
+/**
+ * Creates a timeout wrapper for an async operation
+ */
+async function withTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number,
+    errorMessage: string
+): Promise<T> {
+    let timeoutId: NodeJS.Timeout;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+            reject(new Error(errorMessage));
+        }, timeoutMs);
+    });
+
+    try {
+        const result = await Promise.race([promise, timeoutPromise]);
+        clearTimeout(timeoutId!);
+        return result;
+    } catch (error) {
+        clearTimeout(timeoutId!);
+        throw error;
+    }
+}
+
+/**
  * Color information with frequency and context
  */
 interface ColorInfo {
@@ -492,7 +523,8 @@ function extractColors($: cheerio.CheerioAPI): ColorInfo[] {
     // Extract from inline styles
     $("[style]").each((_, el) => {
         const style = $(el).attr("style") || "";
-        const tagName = el.tagName.toLowerCase();
+        // Defensive check: tagName might be undefined for certain node types
+        const tagName = (el.tagName || el.name || "div").toLowerCase();
         const weight = weights[tagName] || 1;
 
         // Extract background-color
@@ -840,6 +872,151 @@ export interface BrandExtractionOptions {
 }
 
 /**
+ * Default brand data returned when extraction fails
+ */
+function getDefaultBrandData(): BrandData {
+    return {
+        colors: {
+            primary: DEFAULT_BRAND_COLORS.PRIMARY,
+            secondary: DEFAULT_BRAND_COLORS.SECONDARY,
+            accent: DEFAULT_BRAND_COLORS.ACCENT,
+            background: DEFAULT_BRAND_COLORS.BACKGROUND,
+            text: DEFAULT_BRAND_COLORS.TEXT,
+        },
+        fonts: {
+            primary: undefined,
+            secondary: undefined,
+            weights: [],
+        },
+        style: {
+            borderRadius: "8px",
+            shadows: false,
+            gradients: false,
+        },
+        confidence: {
+            colors: 0,
+            fonts: 0,
+            overall: 0,
+        },
+    };
+}
+
+/**
+ * Internal implementation of brand extraction
+ * Separated to allow timeout wrapping
+ */
+async function extractBrandFromHtmlInternal(
+    html: string,
+    options: BrandExtractionOptions
+): Promise<BrandData> {
+    const { baseUrl, fetchExternalCss = !!baseUrl } = options;
+
+    logger.info(
+        { baseUrl, fetchExternalCss, htmlLength: html.length },
+        "Extracting brand data from HTML"
+    );
+
+    // Parse HTML once for better performance
+    // cheerio.load can handle malformed HTML gracefully
+    const $ = cheerio.load(html, {
+        // Disable XML mode to handle HTML more leniently
+        xml: false,
+    });
+
+    // Extract colors from inline styles and embedded <style> tags
+    // Wrap in try-catch to handle potential parsing errors
+    let colors: ColorInfo[] = [];
+    try {
+        colors = extractColors($);
+    } catch (colorError) {
+        logger.warn(
+            { error: colorError },
+            "Failed to extract colors from inline styles, continuing with empty colors"
+        );
+    }
+
+    const colorMap = new Map<string, ColorInfo>(colors.map((c) => [c.color, c]));
+
+    // Fetch and extract colors from external CSS files if baseUrl is provided
+    let externalCssStats = {
+        fetchedCount: 0,
+        failedCount: 0,
+        cssContent: [] as string[],
+    };
+    if (fetchExternalCss && baseUrl) {
+        try {
+            externalCssStats = await fetchAndExtractExternalCss($, baseUrl, colorMap);
+        } catch (cssError) {
+            logger.warn(
+                { error: cssError, baseUrl },
+                "Failed to fetch external CSS, continuing with inline styles only"
+            );
+        }
+    }
+
+    // Convert map back to array for selection
+    const allColors = Array.from(colorMap.values());
+    const selectedColors = selectBrandColors(allColors);
+
+    // Extract fonts from both inline and external CSS
+    let fonts: BrandData["fonts"] = { weights: [] };
+    try {
+        fonts = extractFonts($, externalCssStats.cssContent);
+    } catch (fontError) {
+        logger.warn({ error: fontError }, "Failed to extract fonts, using defaults");
+    }
+
+    // Detect gradients from both inline and external CSS
+    let hasGradients = false;
+    try {
+        hasGradients = detectGradients($, externalCssStats.cssContent);
+    } catch (gradientError) {
+        logger.warn({ error: gradientError }, "Failed to detect gradients");
+    }
+
+    // Calculate confidence based on data quality
+    const baseColorConfidence = Math.min(
+        100,
+        (allColors.length / COLOR_CONFIDENCE_THRESHOLD) * 100
+    );
+    const externalCssBonus =
+        externalCssStats.fetchedCount > 0
+            ? Math.min(20, externalCssStats.fetchedCount * 5)
+            : 0;
+    const colorConfidence = Math.min(100, baseColorConfidence + externalCssBonus);
+
+    const fontConfidence = fonts.primary ? FONT_CONFIDENCE_BASE + 30 : 20;
+    const overallConfidence = (colorConfidence + fontConfidence) / 2;
+
+    logger.info(
+        {
+            colorsFound: allColors.length,
+            externalCssFetched: externalCssStats.fetchedCount,
+            externalCssFailed: externalCssStats.failedCount,
+            colorConfidence,
+            fontConfidence,
+            overallConfidence,
+        },
+        "Brand extraction complete"
+    );
+
+    return {
+        colors: selectedColors,
+        fonts,
+        style: {
+            borderRadius: "8px",
+            shadows: true,
+            gradients: hasGradients,
+        },
+        confidence: {
+            colors: Math.round(colorConfidence),
+            fonts: Math.round(fontConfidence),
+            overall: Math.round(overallConfidence),
+        },
+    };
+}
+
+/**
  * Extract brand data from HTML
  * @param html - The HTML content to extract brand data from
  * @param options - Optional configuration for extraction
@@ -848,121 +1025,51 @@ export async function extractBrandFromHtml(
     html: string,
     options: BrandExtractionOptions = {}
 ): Promise<BrandData> {
+    // Handle empty or invalid HTML upfront
+    if (!html || typeof html !== "string" || html.trim().length === 0) {
+        logger.info("Empty or invalid HTML provided, returning defaults");
+        return getDefaultBrandData();
+    }
+
     try {
-        const { baseUrl, fetchExternalCss = !!baseUrl } = options;
-
-        logger.info({ baseUrl, fetchExternalCss }, "Extracting brand data from HTML");
-
-        // Handle empty HTML
-        if (!html || html.trim().length === 0) {
-            return {
-                colors: {
-                    primary: DEFAULT_BRAND_COLORS.PRIMARY,
-                    secondary: DEFAULT_BRAND_COLORS.SECONDARY,
-                    accent: DEFAULT_BRAND_COLORS.ACCENT,
-                    background: DEFAULT_BRAND_COLORS.BACKGROUND,
-                    text: DEFAULT_BRAND_COLORS.TEXT,
-                },
-                fonts: {
-                    primary: undefined,
-                    secondary: undefined,
-                    weights: [],
-                },
-                style: {
-                    borderRadius: "8px",
-                    shadows: false,
-                    gradients: false,
-                },
-                confidence: {
-                    colors: 0,
-                    fonts: 0,
-                    overall: 0,
-                },
-            };
-        }
-
-        // Parse HTML once for better performance
-        const $ = cheerio.load(html);
-
-        // Extract colors from inline styles and embedded <style> tags
-        const colors = extractColors($);
-        const colorMap = new Map<string, ColorInfo>(colors.map((c) => [c.color, c]));
-
-        // Fetch and extract colors from external CSS files if baseUrl is provided
-        let externalCssStats = {
-            fetchedCount: 0,
-            failedCount: 0,
-            cssContent: [] as string[],
-        };
-        if (fetchExternalCss && baseUrl) {
-            externalCssStats = await fetchAndExtractExternalCss($, baseUrl, colorMap);
-        }
-
-        // Convert map back to array for selection
-        const allColors = Array.from(colorMap.values());
-        const selectedColors = selectBrandColors(allColors);
-
-        // Extract fonts from both inline and external CSS
-        const fonts = extractFonts($, externalCssStats.cssContent);
-
-        // Detect gradients from both inline and external CSS
-        const hasGradients = detectGradients($, externalCssStats.cssContent);
-
-        // Calculate confidence based on data quality
-        // Boost confidence if we successfully fetched external CSS
-        const baseColorConfidence = Math.min(
-            100,
-            (allColors.length / COLOR_CONFIDENCE_THRESHOLD) * 100
+        // Wrap the extraction in a timeout to prevent hanging on complex HTML
+        const result = await withTimeout(
+            extractBrandFromHtmlInternal(html, options),
+            EXTRACTION_TIMEOUT_MS,
+            `Brand extraction timed out after ${EXTRACTION_TIMEOUT_MS / 1000} seconds`
         );
-        // Add confidence bonus for successfully fetched external CSS
-        const externalCssBonus =
-            externalCssStats.fetchedCount > 0
-                ? Math.min(20, externalCssStats.fetchedCount * 5)
-                : 0;
-        const colorConfidence = Math.min(100, baseColorConfidence + externalCssBonus);
-
-        const fontConfidence = fonts.primary ? FONT_CONFIDENCE_BASE + 30 : 20;
-        const overallConfidence = (colorConfidence + fontConfidence) / 2;
-
-        logger.info(
-            {
-                colorsFound: allColors.length,
-                externalCssFetched: externalCssStats.fetchedCount,
-                externalCssFailed: externalCssStats.failedCount,
-                colorConfidence,
-                fontConfidence,
-                overallConfidence,
-            },
-            "Brand extraction complete"
-        );
-
-        return {
-            colors: selectedColors,
-            fonts,
-            style: {
-                borderRadius: "8px", // Default, would need more parsing to detect
-                shadows: true,
-                gradients: hasGradients,
-            },
-            confidence: {
-                colors: Math.round(colorConfidence),
-                fonts: Math.round(fontConfidence),
-                overall: Math.round(overallConfidence),
-            },
-        };
+        return result;
     } catch (error) {
-        logger.error({ error }, "Failed to extract brand data");
+        const errorMessage =
+            error instanceof Error ? error.message : "Unknown extraction error";
+        const isTimeout = errorMessage.includes("timed out");
+
+        logger.error(
+            {
+                error: errorMessage,
+                isTimeout,
+                htmlLength: html.length,
+                baseUrl: options.baseUrl,
+            },
+            "Failed to extract brand data"
+        );
 
         Sentry.captureException(error, {
             tags: {
                 service: "scraping",
                 operation: "extract_brand_from_html",
+                isTimeout: isTimeout.toString(),
             },
             extra: {
-                htmlLength: html?.length || 0,
+                htmlLength: html.length,
+                baseUrl: options.baseUrl,
+                errorMessage,
             },
         });
 
-        throw error;
+        // Return default data instead of throwing to allow graceful degradation
+        // This prevents 500 errors and allows the user to manually enter colors
+        logger.info("Returning default brand data due to extraction failure");
+        return getDefaultBrandData();
     }
 }

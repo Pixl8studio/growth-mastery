@@ -8,6 +8,7 @@ import { DeckStructureEditor } from "@/components/funnel/deck-structure-editor";
 import { Sparkles, FileText, Trash2, Pencil, Download, Copy, User } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
+import { exportDeckToDocx } from "@/lib/export/deck-to-docx";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { useIsMobile } from "@/lib/mobile-utils.client";
 import type { BusinessProfile } from "@/types/business-profile";
@@ -55,10 +56,9 @@ export default function Step3Page({
     const [selectedDeck, setSelectedDeck] = useState<DeckStructure | null>(null);
     const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
     const [editingDeckName, setEditingDeckName] = useState("");
-    const [slideCount, setSlideCount] = useState<"5" | "60">("60");
-    const [presentationType, setPresentationType] = useState<
-        "webinar" | "vsl" | "sales_page"
-    >("webinar");
+    // Fixed to 60-slide webinar deck framework (per issue #285)
+    const slideCount = "60" as const;
+    const presentationType = "webinar" as const;
     const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(
         null
     );
@@ -329,17 +329,17 @@ export default function Step3Page({
         setSelectedDeck(deck);
     };
 
-    const handleDownloadDeck = (deck: DeckStructure) => {
-        const content = JSON.stringify(deck.slides, null, 2);
-        const blob = new Blob([content], { type: "application/json" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `${deck.title.replace(/[^a-zA-Z0-9]/g, "_")}.json`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+    const handleDownloadDeck = async (deck: DeckStructure) => {
+        try {
+            await exportDeckToDocx({
+                title: deck.title,
+                slides: deck.slides,
+            });
+            logger.info({ deckId: deck.id }, "Deck exported to Word document");
+        } catch (error) {
+            logger.error({ error, deckId: deck.id }, "Failed to export deck to Word");
+            alert("Failed to export deck. Please try again.");
+        }
     };
 
     const handleDeleteDeck = async (deckId: string) => {
@@ -535,52 +535,20 @@ export default function Step3Page({
                 {!isGenerating ? (
                     <div className="rounded-lg border border-primary/10 bg-gradient-to-br from-primary/5 to-emerald-light/5 p-8">
                         <div className="mx-auto mb-6 max-w-md space-y-4">
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-foreground">
-                                    Presentation Type
-                                </label>
-                                <div className="grid grid-cols-3 gap-3">
-                                    <button
-                                        onClick={() => setPresentationType("webinar")}
-                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
-                                            presentationType === "webinar"
-                                                ? "border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20"
-                                                : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5"
-                                        }`}
-                                    >
-                                        <div className="font-semibold">Webinar</div>
-                                        <div className="text-xs text-muted-foreground">
-                                            Full 60-slide framework
+                            {/* Framework Info Banner */}
+                            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                                        <FileText className="h-5 w-5 text-primary" />
+                                    </div>
+                                    <div>
+                                        <div className="font-semibold text-foreground">
+                                            60-Slide Webinar Framework
                                         </div>
-                                    </button>
-                                    <button
-                                        onClick={() => setPresentationType("vsl")}
-                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
-                                            presentationType === "vsl"
-                                                ? "border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20"
-                                                : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5"
-                                        }`}
-                                    >
-                                        <div className="font-semibold">VSL</div>
-                                        <div className="text-xs text-muted-foreground">
-                                            5-10 slide short script
+                                        <div className="text-sm text-muted-foreground">
+                                            Comprehensive presentation structure
                                         </div>
-                                    </button>
-                                    <button
-                                        onClick={() =>
-                                            setPresentationType("sales_page")
-                                        }
-                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
-                                            presentationType === "sales_page"
-                                                ? "border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20"
-                                                : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5"
-                                        }`}
-                                    >
-                                        <div className="font-semibold">Sales Page</div>
-                                        <div className="text-xs text-muted-foreground">
-                                            Pitch video script
-                                        </div>
-                                    </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -722,45 +690,6 @@ export default function Step3Page({
                                     )}
                                 </div>
                             </div>
-
-                            <div>
-                                <label className="mb-2 block text-sm font-medium text-foreground">
-                                    Deck Size
-                                </label>
-                                <div className="grid grid-cols-2 gap-3">
-                                    <button
-                                        onClick={() => setSlideCount("5")}
-                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
-                                            slideCount === "5"
-                                                ? "border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20"
-                                                : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5"
-                                        }`}
-                                    >
-                                        <div className="font-semibold">5 Slides</div>
-                                        <div className="text-xs text-muted-foreground">
-                                            Test Mode (~30s)
-                                        </div>
-                                    </button>
-                                    <button
-                                        onClick={() => setSlideCount("60")}
-                                        className={`rounded-lg border-2 px-4 py-3 text-left transition-all ${
-                                            slideCount === "60"
-                                                ? "border-primary bg-primary/5 text-primary shadow-md ring-2 ring-primary/20"
-                                                : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-primary/5"
-                                        }`}
-                                    >
-                                        <div className="font-semibold">60 Slides</div>
-                                        <div className="text-xs text-muted-foreground">
-                                            Full Deck (~3-5 min)
-                                        </div>
-                                    </button>
-                                </div>
-                                <p className="mt-2 text-xs text-muted-foreground">
-                                    {slideCount === "5"
-                                        ? "🚀 Quick test with first 5 slides from the framework"
-                                        : "📊 Complete 60-Slide Webinar Framework (recommended)"}
-                                </p>
-                            </div>
                         </div>
 
                         <div className="text-center">
@@ -780,19 +709,10 @@ export default function Step3Page({
                             </button>
 
                             <div className="mt-4 space-y-1 text-sm text-muted-foreground">
+                                <p>⚡ Generation time: ~3-5 minutes</p>
                                 <p>
-                                    ⚡ Generation time:{" "}
-                                    {slideCount === "5"
-                                        ? "~30 seconds"
-                                        : "~3-5 minutes"}
-                                </p>
-                                <p>
-                                    📊 Creates {slideCount} slides using{" "}
-                                    {presentationType === "webinar"
-                                        ? "Magnetic Masterclass Framework"
-                                        : presentationType === "vsl"
-                                          ? "VSL Framework"
-                                          : "Sales Page Pitch Framework"}
+                                    📊 Creates 60 slides using Magnetic
+                                    Masterclass Framework
                                 </p>
                             </div>
                         </div>
@@ -979,7 +899,7 @@ export default function Step3Page({
                                                         handleDownloadDeck(deck);
                                                     }}
                                                     className="rounded p-2 text-muted-foreground hover:bg-muted/50"
-                                                    title="Download JSON"
+                                                    title="Download Word Document"
                                                 >
                                                     <Download className="h-4 w-4" />
                                                 </button>

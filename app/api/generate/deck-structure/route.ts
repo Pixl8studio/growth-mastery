@@ -501,11 +501,19 @@ CRITICAL INSTRUCTIONS:
 6. Maintain the client's authentic voice and terminology from the context
 7. Create compelling, conversion-focused content using their real story
 
+SLIDE TITLE REQUIREMENTS - CRITICAL:
+- Create CUSTOMER-FACING titles that would appear on actual presentation slides
+- Titles should be engaging, clear, and speak directly to the audience
+- DO NOT use meta-level or placeholder titles like "Pain", "Problem", "Agitate", "Hook", "Pain Pattern Recognition", or "Transformation"
+- Instead, create specific, compelling titles based on the business context
+- Examples of GOOD titles: "What If You Could Double Your Income Working Half the Hours?", "The Hidden Reason 90% of Entrepreneurs Burn Out", "Meet Sarah: From Overwhelmed to 6-Figure Success"
+- Examples of BAD titles: "Pain Point", "Agitate", "Social Proof", "Objection Handler"
+
 OUTPUT FORMAT:
 Return a JSON array with objects for each slide. Each object must have:
 {
   "slideNumber": 1,
-  "title": "Slide title from framework",
+  "title": "Customer-facing slide title (engaging and specific)",
   "description": "Content based on framework guidance + client specifics (2-3 sentences)",
   "section": "connect, teach, or invite"
 }

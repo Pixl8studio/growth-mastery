@@ -28,11 +28,12 @@ export const FONT_CONFIDENCE_BASE = 50; // Base confidence when font family is f
 
 /**
  * Fetch retry configuration defaults
+ * Optimized for serverless function limits (60 second max on Vercel Pro)
  */
-export const DEFAULT_MAX_RETRIES = 3;
+export const DEFAULT_MAX_RETRIES = 2;
 export const DEFAULT_INITIAL_DELAY_MS = 1000; // 1 second
-export const DEFAULT_MAX_DELAY_MS = 10000; // 10 seconds
-export const DEFAULT_TIMEOUT_MS = 30000; // 30 seconds
+export const DEFAULT_MAX_DELAY_MS = 5000; // 5 seconds
+export const DEFAULT_TIMEOUT_MS = 15000; // 15 seconds (reduced from 30s for serverless compatibility)
 
 /**
  * Rate limiting configuration

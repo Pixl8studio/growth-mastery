@@ -16,9 +16,10 @@ import {
 } from "./constants";
 
 /**
- * Timeout for fetching external CSS files (5 seconds)
+ * Timeout for fetching external CSS files (3 seconds)
+ * Reduced from 5s to ensure total operation completes within serverless limits
  */
-const CSS_FETCH_TIMEOUT_MS = 5000;
+const CSS_FETCH_TIMEOUT_MS = 3000;
 
 /**
  * Maximum number of external CSS files to fetch

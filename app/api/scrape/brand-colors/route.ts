@@ -18,6 +18,14 @@ import { extractBrandFromHtml, BrandData } from "@/lib/scraping/brand-extractor"
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
 
 /**
+ * Route segment config for Vercel serverless function timeout
+ * Set to 60 seconds to accommodate website fetching + CSS processing
+ * This fixes the 500 Internal Server Error that occurred after ~45 seconds
+ * when brand extraction took too long for the default serverless timeout.
+ */
+export const maxDuration = 60;
+
+/**
  * Request schema for brand color extraction
  */
 const BrandColorRequestSchema = z.object({
@@ -125,9 +133,10 @@ export async function POST(request: NextRequest) {
         }
 
         // Fetch HTML with retry logic
+        // Reduced timeout (15s) and retries (2) to fit within serverless function limit
         const fetchResult = await fetchWithRetry(url, {
-            maxRetries: 3,
-            timeoutMs: 30000,
+            maxRetries: 2,
+            timeoutMs: 15000,
         });
 
         if (!fetchResult.success || !fetchResult.html) {

@@ -22,10 +22,12 @@ import {
     Palette,
     DollarSign,
     Database,
-    Code,
     Search,
     X,
+    Edit2,
+    Save,
 } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { BrandDataDisplay } from "./brand-data-display";
 import { PricingDisplay } from "./pricing-display";
 import { MetadataDisplay } from "./metadata-display";
@@ -76,7 +78,7 @@ interface IntakeSession {
     metadata?: Record<string, unknown>;
 }
 
-type TabType = "overview" | "content" | "brand" | "pricing" | "metadata" | "raw";
+type TabType = "customer" | "story" | "offer" | "beliefs" | "cta";
 
 interface IntakeDataViewerProps {
     session: IntakeSession | null;
@@ -85,11 +87,51 @@ interface IntakeDataViewerProps {
 }
 
 export function IntakeDataViewer({ session, isOpen, onClose }: IntakeDataViewerProps) {
-    const [activeTab, setActiveTab] = useState<TabType>("overview");
+    const [activeTab, setActiveTab] = useState<TabType>("customer");
     const [searchQuery, setSearchQuery] = useState("");
     const [copiedSection, setCopiedSection] = useState<string | null>(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedContent, setEditedContent] = useState<string>("");
+    const [isSaving, setIsSaving] = useState(false);
 
     if (!session) return null;
+
+    const handleStartEdit = () => {
+        setEditedContent(session.transcript_text || "");
+        setIsEditing(true);
+    };
+
+    const handleSaveEdit = async () => {
+        setIsSaving(true);
+        try {
+            const response = await fetch("/api/intake/update-content", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    intakeId: session.id,
+                    transcriptText: editedContent,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to save changes");
+            }
+
+            // Update the session object with the new content
+            session.transcript_text = editedContent;
+            setIsEditing(false);
+        } catch (error) {
+            // Error handling - in production would show a toast
+            console.error("Failed to save:", error);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleCancelEdit = () => {
+        setIsEditing(false);
+        setEditedContent("");
+    };
 
     const copyToClipboard = async (text: string, section: string) => {
         await navigator.clipboard.writeText(text);
@@ -104,41 +146,36 @@ export function IntakeDataViewer({ session, isOpen, onClose }: IntakeDataViewerP
         badge?: string;
     }[] = [
         {
-            id: "overview",
-            label: "Overview",
+            id: "customer",
+            label: "Customer",
             icon: <FileText className="h-4 w-4" />,
         },
         {
-            id: "content",
-            label: "Content",
+            id: "story",
+            label: "Story",
             icon: <FileText className="h-4 w-4" />,
             badge: session.transcript_text
                 ? `${Math.round(session.transcript_text.length / 1000)}k`
                 : undefined,
         },
         {
-            id: "brand",
-            label: "Brand",
-            icon: <Palette className="h-4 w-4" />,
-            badge: session.brand_data ? "✓" : undefined,
-        },
-        {
-            id: "pricing",
-            label: "Pricing",
+            id: "offer",
+            label: "Offer",
             icon: <DollarSign className="h-4 w-4" />,
             badge: session.extracted_data?.pricing?.length
                 ? String(session.extracted_data.pricing.length)
                 : undefined,
         },
         {
-            id: "metadata",
-            label: "Metadata",
-            icon: <Database className="h-4 w-4" />,
+            id: "beliefs",
+            label: "Beliefs",
+            icon: <Palette className="h-4 w-4" />,
+            badge: session.brand_data ? "✓" : undefined,
         },
         {
-            id: "raw",
-            label: "Raw",
-            icon: <Code className="h-4 w-4" />,
+            id: "cta",
+            label: "CTA",
+            icon: <Database className="h-4 w-4" />,
         },
     ];
 
@@ -208,8 +245,8 @@ export function IntakeDataViewer({ session, isOpen, onClose }: IntakeDataViewerP
 
                 {/* Content */}
                 <div className="max-h-[calc(90vh-180px)] overflow-y-auto p-6">
-                    {/* Overview Tab */}
-                    {activeTab === "overview" && (
+                    {/* Customer Tab (Overview) */}
+                    {activeTab === "customer" && (
                         <div className="space-y-6">
                             {/* Stats Cards */}
                             <div className="grid gap-4 sm:grid-cols-3">
@@ -312,7 +349,7 @@ export function IntakeDataViewer({ session, isOpen, onClose }: IntakeDataViewerP
                                         <Button
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => setActiveTab("content")}
+                                            onClick={() => setActiveTab("story")}
                                         >
                                             View Full Content →
                                         </Button>
@@ -326,61 +363,116 @@ export function IntakeDataViewer({ session, isOpen, onClose }: IntakeDataViewerP
                         </div>
                     )}
 
-                    {/* Content Tab */}
-                    {activeTab === "content" && (
+                    {/* Story Tab (Content) */}
+                    {activeTab === "story" && (
                         <div className="space-y-4">
-                            {/* Search Bar */}
+                            {/* Action Bar */}
                             <div className="flex items-center gap-2">
-                                <div className="relative flex-1">
-                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                                    <Input
-                                        type="text"
-                                        placeholder="Search within content..."
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                        className="pl-9"
-                                    />
-                                    {searchQuery && (
-                                        <button
-                                            onClick={() => setSearchQuery("")}
-                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                                        >
-                                            <X className="h-4 w-4" />
-                                        </button>
-                                    )}
-                                </div>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                        copyToClipboard(
-                                            session.transcript_text || "",
-                                            "content"
-                                        )
-                                    }
-                                >
-                                    {copiedSection === "content" ? (
+                                {!isEditing && (
+                                    <div className="relative flex-1">
+                                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                                        <Input
+                                            type="text"
+                                            placeholder="Search within content..."
+                                            value={searchQuery}
+                                            onChange={(e) =>
+                                                setSearchQuery(e.target.value)
+                                            }
+                                            className="pl-9"
+                                        />
+                                        {searchQuery && (
+                                            <button
+                                                onClick={() => setSearchQuery("")}
+                                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                            >
+                                                <X className="h-4 w-4" />
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
+                                {isEditing && (
+                                    <div className="flex-1 text-sm text-muted-foreground">
+                                        Editing content...
+                                    </div>
+                                )}
+                                <div className="flex gap-2">
+                                    {isEditing ? (
                                         <>
-                                            <Check className="mr-2 h-4 w-4" />
-                                            Copied!
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleCancelEdit}
+                                                disabled={isSaving}
+                                            >
+                                                <X className="mr-2 h-4 w-4" />
+                                                Cancel
+                                            </Button>
+                                            <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={handleSaveEdit}
+                                                disabled={isSaving}
+                                            >
+                                                <Save className="mr-2 h-4 w-4" />
+                                                {isSaving ? "Saving..." : "Save"}
+                                            </Button>
                                         </>
                                     ) : (
                                         <>
-                                            <Copy className="mr-2 h-4 w-4" />
-                                            Copy All
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleStartEdit}
+                                            >
+                                                <Edit2 className="mr-2 h-4 w-4" />
+                                                Edit
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() =>
+                                                    copyToClipboard(
+                                                        session.transcript_text || "",
+                                                        "content"
+                                                    )
+                                                }
+                                            >
+                                                {copiedSection === "content" ? (
+                                                    <>
+                                                        <Check className="mr-2 h-4 w-4" />
+                                                        Copied!
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Copy className="mr-2 h-4 w-4" />
+                                                        Copy
+                                                    </>
+                                                )}
+                                            </Button>
                                         </>
                                     )}
-                                </Button>
+                                </div>
                             </div>
 
-                            {/* Content Display */}
+                            {/* Content Display / Editor */}
                             <Card className="p-4">
-                                <pre className="max-h-[600px] overflow-auto whitespace-pre-wrap break-words font-sans text-sm text-foreground">
-                                    {filteredContent || "No content available"}
-                                </pre>
+                                {isEditing ? (
+                                    <Textarea
+                                        value={editedContent}
+                                        onChange={(e) =>
+                                            setEditedContent(e.target.value)
+                                        }
+                                        className="min-h-[500px] w-full resize-y font-sans text-sm"
+                                        placeholder="Enter content..."
+                                    />
+                                ) : (
+                                    <pre className="max-h-[600px] overflow-auto whitespace-pre-wrap break-words font-sans text-sm text-foreground">
+                                        {filteredContent || "No content available"}
+                                    </pre>
+                                )}
                             </Card>
 
-                            {searchQuery && (
+                            {!isEditing && searchQuery && (
                                 <p className="text-sm text-muted-foreground">
                                     {filteredContent
                                         ? `Found results for "${searchQuery}"`
@@ -390,66 +482,67 @@ export function IntakeDataViewer({ session, isOpen, onClose }: IntakeDataViewerP
                         </div>
                     )}
 
-                    {/* Brand Tab */}
-                    {activeTab === "brand" && (
-                        <BrandDataDisplay brandData={session.brand_data || null} />
-                    )}
-
-                    {/* Pricing Tab */}
-                    {activeTab === "pricing" && (
+                    {/* Offer Tab (Pricing) */}
+                    {activeTab === "offer" && (
                         <PricingDisplay
                             pricing={session.extracted_data?.pricing || null}
                         />
                     )}
 
-                    {/* Metadata Tab */}
-                    {activeTab === "metadata" && (
-                        <MetadataDisplay
-                            metadata={session.metadata || null}
-                            sessionName={session.session_name}
-                            intakeMethod={session.intake_method}
-                            createdAt={session.created_at}
-                            scrapedUrl={session.scraped_url}
-                            fileUrls={session.file_urls}
-                        />
+                    {/* Beliefs Tab (Brand) */}
+                    {activeTab === "beliefs" && (
+                        <BrandDataDisplay brandData={session.brand_data || null} />
                     )}
 
-                    {/* Raw Tab */}
-                    {activeTab === "raw" && (
-                        <div className="space-y-4">
-                            <div className="flex items-center justify-between">
-                                <p className="text-sm text-muted-foreground">
-                                    Raw JSON data for this intake session
-                                </p>
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() =>
-                                        copyToClipboard(
-                                            JSON.stringify(session, null, 2),
-                                            "raw"
-                                        )
-                                    }
-                                >
-                                    {copiedSection === "raw" ? (
-                                        <>
-                                            <Check className="mr-2 h-4 w-4" />
-                                            Copied!
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Copy className="mr-2 h-4 w-4" />
-                                            Copy JSON
-                                        </>
-                                    )}
-                                </Button>
-                            </div>
+                    {/* CTA Tab (Metadata + Raw) */}
+                    {activeTab === "cta" && (
+                        <div className="space-y-6">
+                            {/* Metadata Section */}
+                            <MetadataDisplay
+                                metadata={session.metadata || null}
+                                sessionName={session.session_name}
+                                intakeMethod={session.intake_method}
+                                createdAt={session.created_at}
+                                scrapedUrl={session.scraped_url}
+                                fileUrls={session.file_urls}
+                            />
 
-                            <Card className="p-4">
-                                <pre className="max-h-[600px] overflow-auto text-xs">
-                                    {JSON.stringify(session, null, 2)}
-                                </pre>
-                            </Card>
+                            {/* Raw Data Section */}
+                            <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-sm font-medium text-foreground">
+                                        Raw Data
+                                    </p>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() =>
+                                            copyToClipboard(
+                                                JSON.stringify(session, null, 2),
+                                                "raw"
+                                            )
+                                        }
+                                    >
+                                        {copiedSection === "raw" ? (
+                                            <>
+                                                <Check className="mr-2 h-4 w-4" />
+                                                Copied!
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Copy className="mr-2 h-4 w-4" />
+                                                Copy JSON
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+
+                                <Card className="p-4">
+                                    <pre className="max-h-[400px] overflow-auto text-xs">
+                                        {JSON.stringify(session, null, 2)}
+                                    </pre>
+                                </Card>
+                            </div>
                         </div>
                     )}
                 </div>

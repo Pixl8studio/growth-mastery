@@ -328,7 +328,9 @@ export function WizardSection({
                     <h2 className="text-2xl font-bold text-foreground">
                         {sectionDef.title}
                     </h2>
-                    <p className="mt-1 text-muted-foreground">{sectionDef.description}</p>
+                    <p className="mt-1 text-muted-foreground">
+                        {sectionDef.description}
+                    </p>
                 </div>
                 {/* Autosave indicator */}
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -402,8 +404,8 @@ export function WizardSection({
                                 Generated Answers
                             </h3>
                             <p className="text-sm text-muted-foreground">
-                                Review and edit your answers below. Click the refresh icon on
-                                any field to regenerate just that answer.
+                                Review and edit your answers below. Click the refresh
+                                icon on any field to regenerate just that answer.
                             </p>
                         </div>
                         <Button

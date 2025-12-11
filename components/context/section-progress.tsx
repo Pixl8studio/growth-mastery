@@ -62,8 +62,8 @@ export function SectionProgress({
                     const isComplete = completion === 100;
                     const isCurrent = sectionId === currentSection;
                     const isPast = index < currentIndex;
-                    const isClickable =
-                        onSectionClick && (isPast || isComplete || isCurrent);
+                    // All sections are clickable to allow navigation
+                    const isClickable = !!onSectionClick;
 
                     return (
                         <div key={sectionId} className="flex flex-1 items-center">

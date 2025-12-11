@@ -1,7 +1,7 @@
 /**
  * Presentation Structure Generation API
  * Generates presentation structure using various frameworks:
- * - Webinar: Magnetic Masterclass Framework (55 slides)
+ * - Webinar: Universal 60-Slide Webinar Framework (15-30-15 Connect/Teach/Invite)
  * - VSL: Video Sales Letter Framework (5-10 slides)
  * - Sales Page: Pitch Video Framework
  * Supports 5-slide test mode or full deck
@@ -37,7 +37,7 @@ const generateDeckStructureSchema = z
         transcriptId: z.string().uuid("Invalid transcript ID").optional(),
         businessProfileId: z.string().uuid("Invalid business profile ID").optional(),
         projectId: z.string().uuid("Invalid project ID"),
-        slideCount: z.enum(["5", "55"]).optional().default("55"),
+        slideCount: z.enum(["5", "60"]).optional().default("60"),
         presentationType: z
             .enum(["webinar", "vsl", "sales_page"])
             .optional()
@@ -244,11 +244,11 @@ export async function POST(request: NextRequest) {
                 "sales-page-pitch-framework.md"
             );
         } else {
-            // Default to webinar (Magnetic Masterclass)
+            // Default to webinar (Universal 60-Slide Webinar Framework)
             frameworkPath = path.join(
                 process.cwd(),
                 "templates",
-                "2.1 Magnetic Masterclass Framework - 55 Slides.md"
+                "60-Slide-Webinar-Framework.md"
             );
         }
 
@@ -275,8 +275,8 @@ export async function POST(request: NextRequest) {
             const testChunk = extractTestSlides(frameworkContent);
             generatedSlides = await generateSlideChunk(contextText, testChunk);
         } else {
-            // Full mode: Generate all 55 slides in chunks
-            log.info("Generating full 55-slide deck");
+            // Full mode: Generate all 60 slides in chunks
+            log.info("Generating full 60-slide deck");
             const slideChunks = splitFrameworkIntoChunks(frameworkContent);
             log.info("📊 Split into chunks", { totalChunks: slideChunks.length });
 
@@ -320,7 +320,7 @@ export async function POST(request: NextRequest) {
 
         // Save to database
         const frameworkNames = {
-            webinar: "Magnetic Masterclass",
+            webinar: "60-Slide Webinar",
             vsl: "VSL",
             sales_page: "Sales Page Pitch",
         };
@@ -476,7 +476,7 @@ async function generateSlideChunk(
 ): Promise<any[]> {
     const chunkContent = chunk.slides.join("\n");
 
-    const prompt = `You are an expert presentation strategist creating a personalized webinar deck. Create slides ${chunk.startSlide}-${chunk.endSlide} following the Magnetic Masterclass Framework exactly.
+    const prompt = `You are an expert presentation strategist creating a personalized webinar deck. Create slides ${chunk.startSlide}-${chunk.endSlide} following the Universal 60-Slide Webinar Framework exactly.
 
 FRAMEWORK TEMPLATE SECTION FOR THESE SLIDES:
 ${chunkContent}
@@ -485,17 +485,21 @@ BUSINESS CONTEXT TO EXTRACT CLIENT INFORMATION FROM:
 ${contextText}
 
 CRITICAL INSTRUCTIONS:
-1. Follow the Magnetic Masterclass Framework structure EXACTLY - every slide, every section, every purpose
-2. Extract the client's specific details from the business context to populate each slide:
+1. Follow the 60-Slide Webinar Framework structure EXACTLY - every slide, every section, every purpose
+2. The framework uses a 15-30-15 structure:
+   - Connect (Slides 1-15): Build rapport, share story, create emotional connection
+   - Teach (Slides 16-45): Deliver value, demonstrate expertise, build belief
+   - Invite (Slides 46-60): Present offer, handle objections, guide decision
+3. Extract the client's specific details from the business context to populate each slide:
    - Personal story and transformation journey
    - Business model, target audience, pain points
    - Solutions they provide, outcomes they deliver
    - Their unique approach and methodology
    - Credibility markers, results, testimonials
-3. Use the framework's Content Strategy, Focus Areas, and Purpose for each slide
-4. Match the psychological progression exactly as outlined in the framework
-5. Maintain the client's authentic voice and terminology from the context
-6. Create compelling, conversion-focused content using their real story
+4. Use the framework's Content Strategy, Focus Areas, and Purpose for each slide
+5. Match the psychological progression exactly as outlined in the framework
+6. Maintain the client's authentic voice and terminology from the context
+7. Create compelling, conversion-focused content using their real story
 
 OUTPUT FORMAT:
 Return a JSON array with objects for each slide. Each object must have:
@@ -503,7 +507,7 @@ Return a JSON array with objects for each slide. Each object must have:
   "slideNumber": 1,
   "title": "Slide title from framework",
   "description": "Content based on framework guidance + client specifics (2-3 sentences)",
-  "section": "hook, problem, agitate, solution, offer, or close"
+  "section": "connect, teach, or invite"
 }
 
 Generate slides ${chunk.startSlide}-${chunk.endSlide} as a JSON array. Return ONLY valid JSON, no markdown formatting or explanation.`;

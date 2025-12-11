@@ -28,8 +28,8 @@ export const FUNNEL_CONFIG = {
         "Ads Campaign",
     ],
     deckStructure: {
-        totalSlides: 55,
-        sections: ["hook", "problem", "agitate", "solution", "offer", "close"] as const,
+        totalSlides: 60,
+        sections: ["connect", "teach", "invite"] as const,
     },
     videoEngagement: {
         milestones: [25, 50, 75, 100] as const,

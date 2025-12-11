@@ -573,7 +573,7 @@ export default function Step1Page({
                 {intakeSessions.length > 0 && (
                     <Card className="p-6">
                         <h3 className="mb-4 text-lg font-semibold text-foreground">
-                            Previous Intake Sessions
+                            Completed Business Profiles
                         </h3>
 
                         {isLoadingSessions ? (

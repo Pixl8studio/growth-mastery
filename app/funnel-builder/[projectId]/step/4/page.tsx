@@ -711,8 +711,8 @@ export default function Step3Page({
                             <div className="mt-4 space-y-1 text-sm text-muted-foreground">
                                 <p>⚡ Generation time: ~3-5 minutes</p>
                                 <p>
-                                    📊 Creates 60 slides using Magnetic
-                                    Masterclass Framework
+                                    📊 Creates 60 slides using Magnetic Masterclass
+                                    Framework
                                 </p>
                             </div>
                         </div>

@@ -25,7 +25,7 @@ interface MethodOption {
 const METHODS: MethodOption[] = [
     {
         id: "wizard",
-        title: "AI-Assisted Questions",
+        title: "AI Assisted Wizard",
         description:
             "Answer questions section by section with AI assistance to generate your content. Our smart wizard guides you through each step.",
         icon: Wand2,
@@ -58,8 +58,8 @@ export function ContextMethodSelector({
                     How would you like to build your business profile?
                 </h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                    Choose the method that works best for you. Both paths create the same
-                    comprehensive business profile.
+                    Choose the method that works best for you. Both paths create the
+                    same comprehensive business profile.
                 </p>
             </div>
 
@@ -73,7 +73,7 @@ export function ContextMethodSelector({
                         <Card
                             key={method.id}
                             className={cn(
-                                "relative overflow-hidden p-6 transition-all duration-300",
+                                "relative overflow-visible p-6 pt-8 transition-all duration-300",
                                 {
                                     "border-2 border-primary ring-2 ring-primary/20":
                                         isSelected,
@@ -151,8 +151,8 @@ export function ContextMethodSelector({
 
             {/* Note about GPT paste mode - accessible via wizard */}
             <p className="text-center text-xs text-muted-foreground">
-                Already have content from a trained GPT? The AI-Assisted Questions wizard
-                supports pasting and importing your existing content.
+                Already have content from a trained GPT? The AI Assisted Wizard supports
+                pasting and importing your existing content.
             </p>
         </div>
     );

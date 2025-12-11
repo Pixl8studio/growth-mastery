@@ -26,6 +26,7 @@ interface BrandWizardProps {
     onComplete: (responses: BrandWizardResponses) => void;
     onCancel: () => void;
     isGenerating?: boolean;
+    initialAudienceDescription?: string;
 }
 
 interface WizardStep {
@@ -171,9 +172,21 @@ const COLOR_MOODS = [
     },
 ];
 
-export function BrandWizard({ onComplete, onCancel, isGenerating }: BrandWizardProps) {
+export function BrandWizard({
+    onComplete,
+    onCancel,
+    isGenerating,
+    initialAudienceDescription,
+}: BrandWizardProps) {
     const [currentStep, setCurrentStep] = useState(0);
-    const [responses, setResponses] = useState<BrandWizardResponses>({});
+    const [responses, setResponses] = useState<BrandWizardResponses>(() => {
+        const initial: BrandWizardResponses = {};
+        // Pre-populate audience description from business profile if available
+        if (initialAudienceDescription) {
+            initial.audience_description = initialAudienceDescription;
+        }
+        return initial;
+    });
 
     const progress = ((currentStep + 1) / WIZARD_STEPS.length) * 100;
 
@@ -183,7 +196,17 @@ export function BrandWizard({ onComplete, onCancel, isGenerating }: BrandWizardP
 
     const handleNext = () => {
         if (currentStep < WIZARD_STEPS.length - 1) {
-            setCurrentStep((prev) => prev + 1);
+            const nextStep = currentStep + 1;
+            // Initialize voice slider defaults when entering the voice step
+            if (WIZARD_STEPS[nextStep].id === "voice") {
+                setResponses((prev) => ({
+                    ...prev,
+                    formality_level: prev.formality_level ?? 5,
+                    energy_level: prev.energy_level ?? 5,
+                    authority_level: prev.authority_level ?? 5,
+                }));
+            }
+            setCurrentStep(nextStep);
         } else {
             onComplete(responses);
         }
@@ -204,7 +227,11 @@ export function BrandWizard({ onComplete, onCancel, isGenerating }: BrandWizardP
                     responses.personality_traits.length >= 2
                 );
             case "audience":
-                return responses.audience_description && responses.audience_age_range;
+                const hasAgeRange =
+                    Array.isArray(responses.audience_age_ranges)
+                        ? responses.audience_age_ranges.length > 0
+                        : !!responses.audience_age_range;
+                return responses.audience_description && hasAgeRange;
             case "visual":
                 return responses.design_style && responses.color_mood;
             case "voice":
@@ -305,40 +332,73 @@ export function BrandWizard({ onComplete, onCancel, isGenerating }: BrandWizardP
                         </div>
                         <div className="space-y-4">
                             <Label className="text-base font-medium">
-                                Primary age range
+                                Target age ranges (select all that apply)
                             </Label>
-                            <RadioGroup
-                                value={(responses.audience_age_range as string) || ""}
-                                onValueChange={(value) =>
-                                    updateResponse("audience_age_range", value)
-                                }
-                            >
-                                <div className="grid gap-3 sm:grid-cols-2">
-                                    {[
-                                        { value: "18-25", label: "18-25 (Gen Z)" },
-                                        {
-                                            value: "26-35",
-                                            label: "26-35 (Millennials)",
-                                        },
-                                        { value: "36-50", label: "36-50 (Gen X)" },
-                                        { value: "51+", label: "51+ (Baby Boomers)" },
-                                        { value: "all", label: "All ages" },
-                                    ].map((option) => (
+                            <p className="text-sm text-muted-foreground">
+                                Select one or more age ranges for your target audience
+                            </p>
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                {[
+                                    { value: "18-25", label: "18-25 (Gen Z)" },
+                                    { value: "26-35", label: "26-35 (Millennials)" },
+                                    { value: "36-50", label: "36-50 (Gen X)" },
+                                    { value: "51+", label: "51+ (Baby Boomers)" },
+                                    { value: "all", label: "All ages" },
+                                ].map((option) => {
+                                    const currentRanges = Array.isArray(
+                                        responses.audience_age_ranges
+                                    )
+                                        ? responses.audience_age_ranges
+                                        : [];
+                                    const isSelected = currentRanges.includes(
+                                        option.value
+                                    );
+                                    return (
                                         <div
                                             key={option.value}
-                                            className="flex items-center space-x-2 rounded-lg border p-4"
+                                            className={`flex items-center space-x-3 rounded-lg border p-4 cursor-pointer transition-colors ${
+                                                isSelected
+                                                    ? "border-primary bg-primary/5"
+                                                    : "border-border hover:border-primary/50"
+                                            }`}
+                                            onClick={() => {
+                                                if (isSelected) {
+                                                    updateResponse(
+                                                        "audience_age_ranges",
+                                                        currentRanges.filter(
+                                                            (r) => r !== option.value
+                                                        )
+                                                    );
+                                                } else {
+                                                    // If "All ages" is selected, clear others
+                                                    // If selecting specific age, remove "all"
+                                                    if (option.value === "all") {
+                                                        updateResponse(
+                                                            "audience_age_ranges",
+                                                            ["all"]
+                                                        );
+                                                    } else {
+                                                        updateResponse(
+                                                            "audience_age_ranges",
+                                                            [
+                                                                ...currentRanges.filter(
+                                                                    (r) => r !== "all"
+                                                                ),
+                                                                option.value,
+                                                            ]
+                                                        );
+                                                    }
+                                                }
+                                            }}
                                         >
-                                            <RadioGroupItem
-                                                value={option.value}
-                                                id={option.value}
-                                            />
-                                            <Label htmlFor={option.value}>
+                                            <Checkbox checked={isSelected} />
+                                            <Label className="cursor-pointer">
                                                 {option.label}
                                             </Label>
                                         </div>
-                                    ))}
-                                </div>
-                            </RadioGroup>
+                                    );
+                                })}
+                            </div>
                         </div>
                     </div>
                 );

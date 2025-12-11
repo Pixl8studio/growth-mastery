@@ -519,6 +519,7 @@ export default function Step3BrandDesignPage({
                         onComplete={handleWizardComplete}
                         onCancel={() => setShowWizard(false)}
                         isGenerating={isGenerating}
+                        initialAudienceDescription={businessProfile?.ideal_customer || undefined}
                     />
                 ) : (
                     <>

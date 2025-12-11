@@ -17,6 +17,7 @@ interface MethodOption {
     icon: React.ComponentType<{ className?: string }>;
     color: string;
     recommended?: boolean;
+    comingSoon?: boolean;
 }
 
 const METHODS: MethodOption[] = [
@@ -36,6 +37,7 @@ const METHODS: MethodOption[] = [
             "Have a natural 15-20 minute conversation with our AI assistant who will guide you through all the questions",
         icon: Phone,
         color: "blue",
+        comingSoon: true,
     },
     {
         id: "gpt_paste",
@@ -67,22 +69,27 @@ export function ContextMethodSelector({
                 {METHODS.map((method) => {
                     const Icon = method.icon;
                     const isSelected = selectedMethod === method.id;
+                    const isDisabled = method.comingSoon;
 
                     return (
                         <Card
                             key={method.id}
-                            className={cn(
-                                "relative cursor-pointer p-6 transition-all hover:shadow-lg",
-                                {
-                                    "border-2 border-primary bg-primary/5": isSelected,
-                                    "hover:border-primary/50": !isSelected,
-                                }
-                            )}
-                            onClick={() => onSelectMethod(method.id)}
+                            className={cn("relative p-6 transition-all", {
+                                "border-2 border-primary bg-primary/5": isSelected,
+                                "hover:border-primary/50 hover:shadow-lg cursor-pointer":
+                                    !isSelected && !isDisabled,
+                                "opacity-60 cursor-not-allowed": isDisabled,
+                            })}
+                            onClick={() => !isDisabled && onSelectMethod(method.id)}
                         >
                             {method.recommended && (
                                 <span className="absolute -top-2 right-4 rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground">
                                     Recommended
+                                </span>
+                            )}
+                            {method.comingSoon && (
+                                <span className="absolute -top-2 right-4 rounded-full bg-amber-500 px-3 py-1 text-xs font-semibold text-white">
+                                    Coming Soon
                                 </span>
                             )}
 

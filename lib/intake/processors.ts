@@ -188,6 +188,278 @@ export async function extractTextFromPlainFile(file: File): Promise<string> {
 }
 
 /**
+ * Extract text content from CSV files.
+ * Converts CSV data to a readable text format.
+ */
+export async function extractTextFromCSV(file: File): Promise<string> {
+    const fileName = file.name;
+
+    try {
+        const text = await file.text();
+
+        if (!text || text.trim().length === 0) {
+            throw new Error(`File "${fileName}" is empty.`);
+        }
+
+        // Parse CSV and convert to readable text
+        const lines = text.split("\n").filter((line) => line.trim());
+        const textParts: string[] = [];
+
+        // Get headers from first line
+        const headers = lines[0]?.split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
+
+        // Process data rows
+        for (let i = 1; i < lines.length; i++) {
+            const values = parseCSVLine(lines[i]);
+            if (values.length > 0) {
+                const rowText = headers
+                    ?.map((header, index) => {
+                        const value = values[index]?.trim();
+                        return value ? `${header}: ${value}` : null;
+                    })
+                    .filter(Boolean)
+                    .join(", ");
+                if (rowText) {
+                    textParts.push(rowText);
+                }
+            }
+        }
+
+        const extractedText = textParts.join("\n");
+
+        logger.info(
+            { fileName, rows: lines.length - 1, textLength: extractedText.length },
+            "Successfully extracted text from CSV"
+        );
+
+        return extractedText;
+    } catch (error) {
+        logger.error({ error, fileName }, "Failed to extract text from CSV");
+        if (error instanceof Error && error.message.includes(fileName)) {
+            throw error;
+        }
+        throw new Error(`Failed to extract text from "${fileName}".`);
+    }
+}
+
+/**
+ * Parse a single CSV line, handling quoted values with commas.
+ */
+function parseCSVLine(line: string): string[] {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+
+        if (char === '"') {
+            inQuotes = !inQuotes;
+        } else if (char === "," && !inQuotes) {
+            result.push(current.trim().replace(/^"|"$/g, ""));
+            current = "";
+        } else {
+            current += char;
+        }
+    }
+
+    // Add the last value
+    result.push(current.trim().replace(/^"|"$/g, ""));
+
+    return result;
+}
+
+/**
+ * Extract text content from Excel files (XLSX, XLS).
+ * Uses xlsx library for extraction.
+ */
+export async function extractTextFromExcel(file: File): Promise<string> {
+    const fileName = file.name;
+
+    try {
+        // Dynamic import
+        const XLSX = await import("xlsx");
+
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = XLSX.read(arrayBuffer, { type: "array" });
+
+        const textParts: string[] = [];
+
+        // Process each sheet
+        for (const sheetName of workbook.SheetNames) {
+            const sheet = workbook.Sheets[sheetName];
+            if (!sheet) continue;
+
+            // Convert sheet to JSON for easier processing
+            // Using header: 1 returns array of arrays
+            const data = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+                header: 1,
+                defval: "",
+            });
+
+            if (data.length === 0) continue;
+
+            // Add sheet name as header
+            textParts.push(`\n--- ${sheetName} ---\n`);
+
+            // Get headers from first row
+            const firstRow = data[0];
+            const headers = Array.isArray(firstRow)
+                ? firstRow.map((h) => String(h || ""))
+                : [];
+
+            // Process data rows
+            for (let i = 1; i < data.length; i++) {
+                const row = data[i];
+                if (!row || !Array.isArray(row) || row.every((cell) => !cell)) continue;
+
+                const rowText = headers
+                    .map((header, index) => {
+                        const value = row[index];
+                        const stringValue =
+                            value !== null && value !== undefined
+                                ? String(value).trim()
+                                : "";
+                        return stringValue ? `${header}: ${stringValue}` : null;
+                    })
+                    .filter(Boolean)
+                    .join(", ");
+
+                if (rowText) {
+                    textParts.push(rowText);
+                }
+            }
+        }
+
+        const extractedText = textParts.join("\n").trim();
+
+        if (!extractedText) {
+            throw new Error(
+                `No readable text found in "${fileName}". The spreadsheet may be empty.`
+            );
+        }
+
+        logger.info(
+            {
+                fileName,
+                sheets: workbook.SheetNames.length,
+                textLength: extractedText.length,
+            },
+            "Successfully extracted text from Excel"
+        );
+
+        return extractedText;
+    } catch (error) {
+        logger.error({ error, fileName }, "Failed to extract text from Excel");
+        if (error instanceof Error && error.message.includes(fileName)) {
+            throw error;
+        }
+        throw new Error(
+            `Failed to extract text from "${fileName}". Please ensure the file is a valid Excel document.`
+        );
+    }
+}
+
+/**
+ * Extract text content from PowerPoint files (PPTX).
+ * Uses pptx-parser or JSZip for extraction.
+ */
+export async function extractTextFromPowerPoint(file: File): Promise<string> {
+    const fileName = file.name;
+
+    try {
+        // Dynamic import JSZip for PPTX parsing
+        const JSZip = (await import("jszip")).default;
+
+        const arrayBuffer = await file.arrayBuffer();
+        const zip = await JSZip.loadAsync(arrayBuffer);
+
+        const textParts: string[] = [];
+
+        // PPTX files store slide content in ppt/slides/slideN.xml
+        const slideFiles = Object.keys(zip.files)
+            .filter((name) => name.match(/^ppt\/slides\/slide\d+\.xml$/))
+            .sort((a, b) => {
+                const numA = parseInt(a.match(/slide(\d+)/)?.[1] || "0", 10);
+                const numB = parseInt(b.match(/slide(\d+)/)?.[1] || "0", 10);
+                return numA - numB;
+            });
+
+        for (const slidePath of slideFiles) {
+            const slideContent = await zip.file(slidePath)?.async("string");
+            if (!slideContent) continue;
+
+            // Extract text from XML using regex (avoiding XML parser for simplicity)
+            const slideTexts: string[] = [];
+
+            // Match text content in <a:t> tags (PowerPoint text elements)
+            const textMatches = slideContent.matchAll(/<a:t>([^<]*)<\/a:t>/g);
+            for (const match of textMatches) {
+                const text = match[1]?.trim();
+                if (text) {
+                    slideTexts.push(text);
+                }
+            }
+
+            if (slideTexts.length > 0) {
+                const slideNum = slidePath.match(/slide(\d+)/)?.[1];
+                textParts.push(`\n--- Slide ${slideNum} ---\n${slideTexts.join(" ")}`);
+            }
+        }
+
+        // Also check notes slides for additional content
+        const notesFiles = Object.keys(zip.files).filter((name) =>
+            name.match(/^ppt\/notesSlides\/notesSlide\d+\.xml$/)
+        );
+
+        for (const notesPath of notesFiles) {
+            const notesContent = await zip.file(notesPath)?.async("string");
+            if (!notesContent) continue;
+
+            const noteTexts: string[] = [];
+            const textMatches = notesContent.matchAll(/<a:t>([^<]*)<\/a:t>/g);
+            for (const match of textMatches) {
+                const text = match[1]?.trim();
+                if (text && !text.match(/^\d+$/)) {
+                    // Skip page numbers
+                    noteTexts.push(text);
+                }
+            }
+
+            if (noteTexts.length > 0) {
+                const slideNum = notesPath.match(/notesSlide(\d+)/)?.[1];
+                textParts.push(
+                    `\n--- Slide ${slideNum} Notes ---\n${noteTexts.join(" ")}`
+                );
+            }
+        }
+
+        const extractedText = textParts.join("\n").trim();
+
+        if (!extractedText) {
+            throw new Error(
+                `No readable text found in "${fileName}". The presentation may be empty or contain only images.`
+            );
+        }
+
+        logger.info(
+            { fileName, slides: slideFiles.length, textLength: extractedText.length },
+            "Successfully extracted text from PowerPoint"
+        );
+
+        return extractedText;
+    } catch (error) {
+        logger.error({ error, fileName }, "Failed to extract text from PowerPoint");
+        if (error instanceof Error && error.message.includes(fileName)) {
+            throw error;
+        }
+        throw new Error(
+            `Failed to extract text from "${fileName}". Please ensure the file is a valid PowerPoint document.`
+        );
+    }
+}
+
+/**
  * Price information extracted from HTML
  */
 export interface ExtractedPrice {
@@ -444,6 +716,14 @@ export async function extractTextFromFile(file: File): Promise<string> {
         case "md":
         case "markdown":
             return extractTextFromPlainFile(file);
+        case "csv":
+            return extractTextFromCSV(file);
+        case "xlsx":
+        case "xls":
+            return extractTextFromExcel(file);
+        case "pptx":
+        case "ppt":
+            return extractTextFromPowerPoint(file);
         default:
             throw new Error(`Unsupported file type: ${ext}`);
     }

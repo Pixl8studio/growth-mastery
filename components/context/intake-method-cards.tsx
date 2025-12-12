@@ -184,7 +184,8 @@ Please provide detailed, specific answers for each question. Format your respons
             setUrl("");
             setScrapeProgress(null);
         } catch (error) {
-            logger.error({ error, url }, "Failed to scrape website");
+            // Use userError for expected scraping failures - website may not have extractable content
+            logger.userError({ error, url }, "Failed to scrape website");
             toast({
                 title: "Scraping failed",
                 description:
@@ -293,7 +294,8 @@ Please provide detailed, specific answers for each question. Format your respons
 
             setFile(null);
         } catch (error) {
-            logger.error({ error, fileName: file?.name }, "Failed to process file");
+            // Use userError for expected file processing failures - file may be invalid/corrupted
+            logger.userError({ error, fileName: file?.name }, "Failed to process file");
             toast({
                 title: "Upload failed",
                 description:

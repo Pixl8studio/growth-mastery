@@ -46,12 +46,29 @@ function LoginForm() {
             router.push(redirect);
             router.refresh();
         } catch (err) {
-            logger.error({ error: err }, "Login failed");
-            setError(
-                err instanceof Error
-                    ? err.message
-                    : "Failed to sign in. Please try again."
-            );
+            // Use userError for expected auth failures - these are user errors, not bugs
+            logger.userError({ error: err, email }, "Login failed");
+
+            // Provide user-friendly error messages for common auth issues
+            const errorMessage = err instanceof Error ? err.message : "";
+
+            if (errorMessage.toLowerCase().includes("email not confirmed")) {
+                setError(
+                    "Please confirm your email address before signing in. Check your inbox for a confirmation link."
+                );
+            } else if (
+                errorMessage.toLowerCase().includes("invalid login credentials")
+            ) {
+                setError(
+                    "Invalid email or password. Please check your credentials and try again."
+                );
+            } else {
+                setError(
+                    err instanceof Error
+                        ? err.message
+                        : "Failed to sign in. Please try again."
+                );
+            }
         } finally {
             setIsLoading(false);
         }

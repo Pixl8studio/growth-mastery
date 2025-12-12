@@ -124,7 +124,8 @@ export function UploadIntake({ projectId, userId, onComplete }: UploadIntakeProp
                 setTimeout(() => onComplete(), 1000);
             }
         } catch (error) {
-            logger.error({ error }, "Failed to upload file");
+            // Use userError for expected file processing failures - file may be invalid/corrupted
+            logger.userError({ error, fileName: file?.name }, "Failed to upload file");
             toast({
                 title: "Upload failed",
                 description:

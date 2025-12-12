@@ -1,16 +1,7 @@
 ---
 name: design-reviewer
-description:
-  "Invoke for frontend design review. Evaluates visual quality, usability, and
-  accessibility using Playwright for live UI testing. Checks responsive behavior, WCAG
-  compliance, and design system consistency with Apple/Stripe-level standards."
-tools:
-  Read, Grep, Glob, Bash, mcp__playwright__browser_snapshot,
-  mcp__playwright__browser_click, mcp__playwright__browser_navigate,
-  mcp__playwright__browser_take_screenshot, mcp__playwright__browser_evaluate,
-  mcp__playwright__browser_type, mcp__playwright__browser_fill_form
+description: "Invoke after frontend code changes for design review"
 color: pink
-model: sonnet
 ---
 
 <identity>

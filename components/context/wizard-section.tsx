@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { WizardQuestion } from "./wizard-question";
+import { IntakeMethodCards } from "./intake-method-cards";
 import {
     Sparkles,
     Loader2,
@@ -46,6 +47,7 @@ export function WizardSection({
     const { toast } = useToast();
     const sectionDef = SECTION_DEFINITIONS[sectionId];
     const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Get context field name
     const contextKey = `${sectionId}_context` as keyof BusinessProfile;
@@ -139,6 +141,34 @@ export function WizardSection({
         setContext(value);
         setHasUnsavedChanges(true);
     }, []);
+
+    // Handle content append from intake method cards (always appends, never replaces)
+    const handleContentAppend = useCallback(
+        (newContent: string) => {
+            if (!newContent.trim()) return;
+
+            setContext((prevContext) => {
+                // If there's existing content, add a separator
+                const separator = prevContext.trim() ? "\n\n---\n\n" : "";
+                return prevContext + separator + newContent.trim();
+            });
+            setHasUnsavedChanges(true);
+
+            // Auto-scroll to show newly added content after state update
+            setTimeout(() => {
+                if (textareaRef.current) {
+                    textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
+                    textareaRef.current.focus();
+                }
+            }, 100);
+
+            logger.info(
+                { sectionId, contentLength: newContent.length },
+                "Content appended to section context"
+            );
+        },
+        [sectionId]
+    );
 
     // Generate section answers
     const handleGenerate = async () => {
@@ -353,6 +383,13 @@ export function WizardSection({
                 </div>
             </div>
 
+            {/* Intake Method Cards */}
+            <IntakeMethodCards
+                sectionId={sectionId}
+                projectId={projectId}
+                onContentAppend={handleContentAppend}
+            />
+
             {/* Context Input */}
             <Card className="p-6">
                 <div className="space-y-4">
@@ -366,6 +403,7 @@ export function WizardSection({
                     </div>
 
                     <Textarea
+                        ref={textareaRef}
                         id="context"
                         value={context}
                         onChange={(e) => handleContextChange(e.target.value)}

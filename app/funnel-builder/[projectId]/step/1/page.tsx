@@ -26,6 +26,8 @@ import { UploadIntake } from "@/components/intake/upload-intake";
 import { ScrapeIntake } from "@/components/intake/scrape-intake";
 import { IntakeDataViewer } from "@/components/intake/intake-data-viewer";
 import { IntakeCompletionCard } from "@/components/intake/intake-completion-card";
+import { BusinessProfileSummaryCard } from "@/components/context/business-profile-summary-card";
+import { BusinessProfileEditModal } from "@/components/context/business-profile-edit-modal";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
@@ -109,6 +111,8 @@ export default function Step1Page({
     const [isViewerOpen, setIsViewerOpen] = useState(false);
     const [recentlyCompletedSession, setRecentlyCompletedSession] =
         useState<IntakeSession | null>(null);
+    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+    const [selectedSectionId, setSelectedSectionId] = useState<string>("section1");
 
     // Load completion status
     const { completedSteps, refreshCompletion } = useStepCompletion(projectId);
@@ -247,6 +251,18 @@ export default function Step1Page({
     const hasCompletedContext =
         (businessProfile?.completion_status?.overall ?? 0) > 0 ||
         intakeSessions.length > 0;
+
+    // Handle section click from summary card
+    const handleSectionClick = (sectionId: string) => {
+        setSelectedSectionId(sectionId);
+        setIsEditModalOpen(true);
+    };
+
+    // Handle profile update from edit modal (bidirectional sync)
+    const handleProfileUpdate = (updatedProfile: BusinessProfile) => {
+        setBusinessProfile(updatedProfile);
+        refreshCompletion();
+    };
 
     const handleIntakeComplete = async () => {
         setSelectedMethod(null);
@@ -500,73 +516,16 @@ export default function Step1Page({
                     />
                 )}
 
-                {/* Business Profile Progress - Hidden when guided methods (wizard/gpt_paste) are active since they have built-in progress */}
+                {/* Business Profile Summary Card - Shown when profile has data, hidden during wizard/gpt_paste */}
                 {businessProfile &&
                     businessProfile.completion_status &&
+                    businessProfile.completion_status.overall > 0 &&
                     selectedMethod !== "wizard" &&
                     selectedMethod !== "gpt_paste" && (
-                        <Card className="p-6">
-                            <h3 className="mb-4 text-lg font-semibold text-foreground">
-                                Business Profile Progress
-                            </h3>
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <span className="text-sm text-muted-foreground">
-                                        Overall Completion
-                                    </span>
-                                    <span className="text-sm font-semibold text-primary">
-                                        {businessProfile.completion_status.overall}%
-                                    </span>
-                                </div>
-                                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                                    <div
-                                        className="h-full rounded-full bg-primary transition-all duration-500"
-                                        style={{
-                                            width: `${businessProfile.completion_status.overall}%`,
-                                        }}
-                                    />
-                                </div>
-                                <div className="grid grid-cols-5 gap-2 pt-2">
-                                    {[
-                                        { id: "section1", label: "Customer" },
-                                        { id: "section2", label: "Story" },
-                                        { id: "section3", label: "Offer" },
-                                        { id: "section4", label: "Beliefs" },
-                                        { id: "section5", label: "CTA" },
-                                    ].map((section, index) => {
-                                        const completion =
-                                            businessProfile.completion_status[
-                                                section.id as keyof typeof businessProfile.completion_status
-                                            ] || 0;
-                                        return (
-                                            <div
-                                                key={section.id}
-                                                className="text-center"
-                                            >
-                                                <div
-                                                    className={`mx-auto mb-1 h-8 w-8 rounded-full flex items-center justify-center text-xs font-semibold ${
-                                                        completion === 100
-                                                            ? "bg-green-100 text-green-700"
-                                                            : completion > 0
-                                                              ? "bg-primary/20 text-primary"
-                                                              : "bg-muted text-muted-foreground"
-                                                    }`}
-                                                >
-                                                    {completion === 100 ? (
-                                                        <Check className="h-4 w-4" />
-                                                    ) : (
-                                                        index + 1
-                                                    )}
-                                                </div>
-                                                <span className="text-xs text-muted-foreground">
-                                                    {section.label}
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        </Card>
+                        <BusinessProfileSummaryCard
+                            businessProfile={businessProfile}
+                            onSectionClick={handleSectionClick}
+                        />
                     )}
 
                 {/* Legacy Intake Sessions List */}
@@ -783,6 +742,18 @@ export default function Step1Page({
                     setSelectedSession(null);
                 }}
             />
+
+            {/* Business Profile Edit Modal */}
+            {businessProfile && (
+                <BusinessProfileEditModal
+                    isOpen={isEditModalOpen}
+                    onClose={() => setIsEditModalOpen(false)}
+                    businessProfile={businessProfile}
+                    projectId={projectId}
+                    initialSection={selectedSectionId}
+                    onProfileUpdate={handleProfileUpdate}
+                />
+            )}
         </StepLayout>
     );
 }

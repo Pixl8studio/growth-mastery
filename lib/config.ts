@@ -113,9 +113,11 @@ export const CONTACT_CONFIG = {
 
 export const AI_CONFIG = {
     models: {
-        default: "gpt-4-turbo-preview",
-        fast: "gpt-3.5-turbo",
-        vision: "gpt-4-vision-preview",
+        // Claude models - used for all text/JSON generation
+        default: "claude-sonnet-4-20250514",
+        fast: "claude-3-5-haiku-20241022",
+        // Legacy reference - Claude doesn't have vision-specific model, uses default
+        vision: "claude-sonnet-4-20250514",
     },
     defaultTemperature: 0.7,
     defaultMaxTokens: 4000,

@@ -26,9 +26,12 @@ const envSchema = z.object({
     SUPABASE_PROJECT_ID: z.string().optional(),
 
     // ===========================================
-    // OpenAI Configuration
+    // AI Configuration (Claude primary, OpenAI for DALL-E only)
     // ===========================================
+    ANTHROPIC_API_KEY: z.string().optional(),
+    // OpenAI is only used for DALL-E image generation
     OPENAI_API_KEY: z.string().optional(),
+    // Legacy: OpenAI Assistant ID (deprecated, use Claude for chat)
     OPENAI_ASSISTANT_ID: z.string().optional(),
 
     // ===========================================

@@ -1,8 +1,10 @@
 /**
- * OpenAI Client
- * Wrapper around OpenAI API for funnel content generation
+ * AI Client
+ * Wrapper around Anthropic Claude API for funnel content generation
+ * Migrated from OpenAI to Claude for unified AI token management
  */
 
+import Anthropic from "@anthropic-ai/sdk";
 import OpenAI from "openai";
 import * as Sentry from "@sentry/nextjs";
 import { env } from "@/lib/env";
@@ -16,17 +18,37 @@ import type {
     GeneratedImage,
 } from "./types";
 
+let anthropicInstance: Anthropic | null = null;
 let openaiInstance: OpenAI | null = null;
 
 /**
- * Get OpenAI client instance (lazy initialization)
+ * Get Anthropic client instance (lazy initialization)
  * Only initializes when actually needed, preventing build-time errors
+ */
+function getAnthropicClient(): Anthropic {
+    if (!anthropicInstance) {
+        if (!env.ANTHROPIC_API_KEY) {
+            throw new Error(
+                "ANTHROPIC_API_KEY is not configured. Please add it to your environment variables."
+            );
+        }
+        anthropicInstance = new Anthropic({
+            apiKey: env.ANTHROPIC_API_KEY,
+        });
+    }
+    return anthropicInstance;
+}
+
+/**
+ * Get OpenAI client instance (lazy initialization)
+ * Only used for DALL-E image generation - Claude does not have image generation
  */
 function getOpenAIClient(): OpenAI {
     if (!openaiInstance) {
         if (!env.OPENAI_API_KEY) {
             throw new Error(
-                "OPENAI_API_KEY is not configured. Please add it to your environment variables."
+                "OPENAI_API_KEY is not configured. Please add it to your environment variables. " +
+                    "Note: OpenAI is only used for DALL-E image generation."
             );
         }
         openaiInstance = new OpenAI({
@@ -36,19 +58,80 @@ function getOpenAIClient(): OpenAI {
     return openaiInstance;
 }
 
-// Export as 'openai' for backward compatibility
-export const openai = new Proxy({} as OpenAI, {
-    get(_target, prop) {
-        return (getOpenAIClient() as any)[prop];
-    },
-});
+/**
+ * Message type compatible with both OpenAI and Anthropic formats
+ * Accepts OpenAI's ChatCompletionMessageParam for backward compatibility
+ */
+export type AIMessage = OpenAI.Chat.Completions.ChatCompletionMessageParam;
 
 /**
- * Generate content with OpenAI and parse JSON response
+ * Extract string content from OpenAI message content
+ * Handles both string and ContentPart array formats
+ */
+function extractContent(
+    content: OpenAI.Chat.Completions.ChatCompletionMessageParam["content"]
+): string {
+    if (typeof content === "string") {
+        return content;
+    }
+    if (Array.isArray(content)) {
+        return content
+            .filter(
+                (part): part is OpenAI.Chat.Completions.ChatCompletionContentPartText =>
+                    "type" in part && part.type === "text"
+            )
+            .map((part) => part.text)
+            .join("\n");
+    }
+    return "";
+}
+
+/**
+ * Convert messages array to Anthropic format
+ * Extracts system messages and converts to Anthropic message format
+ * Handles OpenAI's various message types including 'developer' role
+ */
+function convertToAnthropicFormat(messages: AIMessage[]): {
+    system: string | undefined;
+    messages: Anthropic.MessageParam[];
+} {
+    const systemMessages: string[] = [];
+    const anthropicMessages: Anthropic.MessageParam[] = [];
+
+    for (const msg of messages) {
+        const content = extractContent(msg.content);
+
+        // Handle system and developer messages as system context
+        if (msg.role === "system" || msg.role === "developer") {
+            if (content) {
+                systemMessages.push(content);
+            }
+        } else if (msg.role === "user" || msg.role === "assistant") {
+            if (content) {
+                anthropicMessages.push({
+                    role: msg.role,
+                    content,
+                });
+            }
+        }
+        // Ignore other roles like 'tool', 'function' that aren't supported
+    }
+
+    return {
+        system: systemMessages.length > 0 ? systemMessages.join("\n\n") : undefined,
+        messages: anthropicMessages,
+    };
+}
+
+/**
+ * Generate content with Claude and parse JSON response
  * Includes retry logic and token tracking
+ *
+ * @param messages - Array of messages in OpenAI-compatible format for backward compatibility
+ * @param options - Generation options (model, temperature, maxTokens)
  */
 export async function generateWithAI<T>(
-    messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
+    messages: AIMessage[],
     options?: AIGenerationOptions
 ): Promise<T> {
     const model = options?.model || AI_CONFIG.models.default;
@@ -56,11 +139,19 @@ export async function generateWithAI<T>(
     const maxTokens = options?.maxTokens || AI_CONFIG.defaultMaxTokens;
 
     const requestLogger = logger.child({ model, temperature, maxTokens });
-    requestLogger.info("Generating content with OpenAI");
+    requestLogger.info("Generating content with Claude");
+
+    // Convert messages to Anthropic format
+    const { system, messages: anthropicMessages } = convertToAnthropicFormat(messages);
+
+    // Enhance system prompt to ensure JSON output
+    const jsonSystemPrompt = system
+        ? `${system}\n\nIMPORTANT: You MUST respond with valid JSON only. No markdown code blocks, no explanations, just the raw JSON object.`
+        : "You MUST respond with valid JSON only. No markdown code blocks, no explanations, just the raw JSON object.";
 
     try {
         const result = await Sentry.startSpan(
-            { op: "ai.openai.chat.completions", name: `OpenAI Chat: ${model}` },
+            { op: "ai.claude.messages", name: `Claude: ${model}` },
             async (span) => {
                 span.setAttribute("model", model);
                 span.setAttribute("temperature", temperature);
@@ -68,40 +159,45 @@ export async function generateWithAI<T>(
 
                 const completion = await retry(
                     async () => {
-                        const response = await openai.chat.completions.create({
+                        const anthropic = getAnthropicClient();
+                        const response = await anthropic.messages.create({
                             model,
-                            messages,
-                            temperature,
                             max_tokens: maxTokens,
-                            response_format: { type: "json_object" },
+                            temperature,
+                            system: jsonSystemPrompt,
+                            messages: anthropicMessages,
                         });
 
-                        const content = response.choices[0]?.message?.content;
+                        const contentBlock = response.content[0];
+                        if (contentBlock.type !== "text") {
+                            throw new Error("Unexpected response type from Claude");
+                        }
+
+                        const content = contentBlock.text;
 
                         if (!content) {
-                            throw new Error("No content returned from OpenAI");
+                            throw new Error("No content returned from Claude");
                         }
 
                         requestLogger.info(
                             {
-                                tokensUsed: response.usage?.total_tokens,
-                                promptTokens: response.usage?.prompt_tokens,
-                                completionTokens: response.usage?.completion_tokens,
+                                tokensUsed:
+                                    response.usage.input_tokens +
+                                    response.usage.output_tokens,
+                                promptTokens: response.usage.input_tokens,
+                                completionTokens: response.usage.output_tokens,
                             },
-                            "OpenAI generation successful"
+                            "Claude generation successful"
                         );
 
                         span.setAttribute(
                             "tokens_used",
-                            response.usage?.total_tokens ?? 0
+                            response.usage.input_tokens + response.usage.output_tokens
                         );
-                        span.setAttribute(
-                            "prompt_tokens",
-                            response.usage?.prompt_tokens ?? 0
-                        );
+                        span.setAttribute("prompt_tokens", response.usage.input_tokens);
                         span.setAttribute(
                             "completion_tokens",
-                            response.usage?.completion_tokens ?? 0
+                            response.usage.output_tokens
                         );
 
                         // Try direct JSON parse first, fall back to recovery system
@@ -145,12 +241,12 @@ export async function generateWithAI<T>(
 
         return result;
     } catch (error) {
-        requestLogger.error({ error, model }, "Failed to generate content with OpenAI");
+        requestLogger.error({ error, model }, "Failed to generate content with Claude");
 
         Sentry.captureException(error, {
             tags: {
-                service: "openai",
-                operation: "chat_completions",
+                service: "claude",
+                operation: "messages",
                 model,
             },
             extra: {
@@ -171,7 +267,7 @@ export async function generateWithAI<T>(
  * For free-form text generation
  */
 export async function generateTextWithAI(
-    messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[],
+    messages: AIMessage[],
     options?: AIGenerationOptions
 ): Promise<string> {
     const model = options?.model || AI_CONFIG.models.default;
@@ -179,11 +275,14 @@ export async function generateTextWithAI(
     const maxTokens = options?.maxTokens || AI_CONFIG.defaultMaxTokens;
 
     const requestLogger = logger.child({ model, temperature, maxTokens });
-    requestLogger.info("Generating text with OpenAI");
+    requestLogger.info("Generating text with Claude");
+
+    // Convert messages to Anthropic format
+    const { system, messages: anthropicMessages } = convertToAnthropicFormat(messages);
 
     try {
         const result = await Sentry.startSpan(
-            { op: "ai.openai.text.completions", name: `OpenAI Text: ${model}` },
+            { op: "ai.claude.text", name: `Claude Text: ${model}` },
             async (span) => {
                 span.setAttribute("model", model);
                 span.setAttribute("temperature", temperature);
@@ -191,39 +290,45 @@ export async function generateTextWithAI(
 
                 const completion = await retry(
                     async () => {
-                        const response = await openai.chat.completions.create({
+                        const anthropic = getAnthropicClient();
+                        const response = await anthropic.messages.create({
                             model,
-                            messages,
-                            temperature,
                             max_tokens: maxTokens,
+                            temperature,
+                            system,
+                            messages: anthropicMessages,
                         });
 
-                        const content = response.choices[0]?.message?.content;
+                        const contentBlock = response.content[0];
+                        if (contentBlock.type !== "text") {
+                            throw new Error("Unexpected response type from Claude");
+                        }
+
+                        const content = contentBlock.text;
 
                         if (!content) {
-                            throw new Error("No content returned from OpenAI");
+                            throw new Error("No content returned from Claude");
                         }
 
                         requestLogger.info(
                             {
-                                tokensUsed: response.usage?.total_tokens,
-                                promptTokens: response.usage?.prompt_tokens,
-                                completionTokens: response.usage?.completion_tokens,
+                                tokensUsed:
+                                    response.usage.input_tokens +
+                                    response.usage.output_tokens,
+                                promptTokens: response.usage.input_tokens,
+                                completionTokens: response.usage.output_tokens,
                             },
-                            "OpenAI text generation successful"
+                            "Claude text generation successful"
                         );
 
                         span.setAttribute(
                             "tokens_used",
-                            response.usage?.total_tokens ?? 0
+                            response.usage.input_tokens + response.usage.output_tokens
                         );
-                        span.setAttribute(
-                            "prompt_tokens",
-                            response.usage?.prompt_tokens ?? 0
-                        );
+                        span.setAttribute("prompt_tokens", response.usage.input_tokens);
                         span.setAttribute(
                             "completion_tokens",
-                            response.usage?.completion_tokens ?? 0
+                            response.usage.output_tokens
                         );
 
                         return content;
@@ -241,12 +346,12 @@ export async function generateTextWithAI(
 
         return result;
     } catch (error) {
-        requestLogger.error({ error, model }, "Failed to generate text with OpenAI");
+        requestLogger.error({ error, model }, "Failed to generate text with Claude");
 
         Sentry.captureException(error, {
             tags: {
-                service: "openai",
-                operation: "text_completions",
+                service: "claude",
+                operation: "text",
                 model,
             },
             extra: {
@@ -265,6 +370,9 @@ export async function generateTextWithAI(
 /**
  * Generate image with DALL-E
  * Uses DALL-E 3 for high-quality image generation
+ *
+ * NOTE: This function still uses OpenAI as Claude does not have image generation capabilities.
+ * This is the only remaining OpenAI integration in the project.
  */
 export async function generateImageWithAI(
     prompt: string,
@@ -277,7 +385,7 @@ export async function generateImageWithAI(
     const requestLogger = logger.child({ model: "dall-e-3", size, quality, style });
     requestLogger.info(
         { prompt: prompt.substring(0, 100) },
-        "Generating image with DALL-E"
+        "Generating image with DALL-E (OpenAI)"
     );
 
     try {
@@ -291,6 +399,7 @@ export async function generateImageWithAI(
 
                 const image = await retry(
                     async () => {
+                        const openai = getOpenAIClient();
                         const response = await openai.images.generate({
                             model: "dall-e-3",
                             prompt,

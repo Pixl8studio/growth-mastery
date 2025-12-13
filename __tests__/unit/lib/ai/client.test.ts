@@ -1,6 +1,7 @@
 /**
  * Unit Tests: AI Client
  * Tests for lib/ai/client.ts
+ * Uses Claude for text/JSON generation, OpenAI for image generation (DALL-E)
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -11,26 +12,40 @@ import {
     estimateTokens,
 } from "@/lib/ai/client";
 
-// Mock OpenAI methods that will be used by the client
-const mockChatCompletionsCreate = vi.fn();
+// Mock Anthropic methods for text/JSON generation
+const mockAnthropicMessagesCreate = vi.fn();
+
+// Mock OpenAI methods for image generation (DALL-E)
 const mockImagesGenerate = vi.fn();
 
-// Mock dependencies
-vi.mock("openai", () => ({
+// Mock Anthropic SDK
+vi.mock("@anthropic-ai/sdk", () => ({
     default: vi.fn().mockImplementation(() => ({
-        chat: {
-            completions: {
-                create: mockChatCompletionsCreate,
-            },
-        },
-        images: {
-            generate: mockImagesGenerate,
+        messages: {
+            create: mockAnthropicMessagesCreate,
         },
     })),
 }));
 
+// Mock OpenAI SDK (used for DALL-E and types)
+vi.mock("openai", () => ({
+    default: vi.fn().mockImplementation(() => ({
+        images: {
+            generate: mockImagesGenerate,
+        },
+    })),
+    // Provide types namespace for AIMessage type alias
+    Chat: {
+        Completions: {
+            ChatCompletionMessageParam: {},
+            ChatCompletionContentPartText: {},
+        },
+    },
+}));
+
 vi.mock("@/lib/env", () => ({
     env: {
+        ANTHROPIC_API_KEY: "sk-ant-test-key",
         OPENAI_API_KEY: "sk-test-key",
     },
 }));
@@ -40,6 +55,7 @@ vi.mock("@/lib/logger", () => ({
         child: vi.fn(() => ({
             info: vi.fn(),
             error: vi.fn(),
+            warn: vi.fn(),
         })),
     },
 }));
@@ -47,10 +63,11 @@ vi.mock("@/lib/logger", () => ({
 vi.mock("@/lib/config", () => ({
     AI_CONFIG: {
         models: {
-            default: "gpt-4",
+            default: "claude-sonnet-4-20250514",
+            fast: "claude-3-5-haiku-20241022",
         },
         defaultTemperature: 0.7,
-        defaultMaxTokens: 2000,
+        defaultMaxTokens: 4000,
     },
 }));
 
@@ -64,36 +81,72 @@ describe("AI Client", () => {
     });
 
     describe("generateWithAI", () => {
-        it("should generate and parse JSON response", async () => {
+        it("should generate and parse JSON response using Claude", async () => {
             const mockResponse = {
-                choices: [
+                content: [
                     {
-                        message: {
-                            content: JSON.stringify({ result: "test data" }),
-                        },
+                        type: "text",
+                        text: JSON.stringify({ result: "test data" }),
                     },
                 ],
                 usage: {
-                    total_tokens: 100,
-                    prompt_tokens: 50,
-                    completion_tokens: 50,
+                    input_tokens: 50,
+                    output_tokens: 50,
                 },
             };
 
-            mockChatCompletionsCreate.mockResolvedValue(mockResponse);
+            mockAnthropicMessagesCreate.mockResolvedValue(mockResponse);
 
             const messages = [{ role: "user" as const, content: "Test prompt" }];
             const result = await generateWithAI<{ result: string }>(messages);
 
             expect(result).toEqual({ result: "test data" });
+            expect(mockAnthropicMessagesCreate).toHaveBeenCalled();
+        });
+
+        it("should handle system messages by extracting them", async () => {
+            const mockResponse = {
+                content: [
+                    {
+                        type: "text",
+                        text: JSON.stringify({ response: "ok" }),
+                    },
+                ],
+                usage: {
+                    input_tokens: 50,
+                    output_tokens: 50,
+                },
+            };
+
+            mockAnthropicMessagesCreate.mockResolvedValue(mockResponse);
+
+            const messages = [
+                { role: "system" as const, content: "You are a helpful assistant" },
+                { role: "user" as const, content: "Test prompt" },
+            ];
+            await generateWithAI<{ response: string }>(messages);
+
+            // Verify system message was passed to Claude correctly
+            expect(mockAnthropicMessagesCreate).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    system: expect.stringContaining("You are a helpful assistant"),
+                    messages: expect.arrayContaining([
+                        expect.objectContaining({
+                            role: "user",
+                            content: "Test prompt",
+                        }),
+                    ]),
+                })
+            );
         });
 
         it("should throw error when no content returned", async () => {
             const mockResponse = {
-                choices: [{ message: { content: null } }],
+                content: [{ type: "text", text: "" }],
+                usage: { input_tokens: 0, output_tokens: 0 },
             };
 
-            mockChatCompletionsCreate.mockResolvedValue(mockResponse);
+            mockAnthropicMessagesCreate.mockResolvedValue(mockResponse);
 
             const messages = [{ role: "user" as const, content: "Test" }];
 
@@ -101,36 +154,50 @@ describe("AI Client", () => {
                 "No content returned"
             );
         });
+
+        it("should throw error on unexpected response type", async () => {
+            const mockResponse = {
+                content: [{ type: "image", source: {} }],
+                usage: { input_tokens: 0, output_tokens: 0 },
+            };
+
+            mockAnthropicMessagesCreate.mockResolvedValue(mockResponse);
+
+            const messages = [{ role: "user" as const, content: "Test" }];
+
+            await expect(generateWithAI(messages)).rejects.toThrow(
+                "Unexpected response type"
+            );
+        });
     });
 
     describe("generateTextWithAI", () => {
-        it("should generate text content", async () => {
+        it("should generate text content using Claude", async () => {
             const mockResponse = {
-                choices: [
+                content: [
                     {
-                        message: {
-                            content: "Generated text response",
-                        },
+                        type: "text",
+                        text: "Generated text response",
                     },
                 ],
                 usage: {
-                    total_tokens: 50,
-                    prompt_tokens: 20,
-                    completion_tokens: 30,
+                    input_tokens: 20,
+                    output_tokens: 30,
                 },
             };
 
-            mockChatCompletionsCreate.mockResolvedValue(mockResponse);
+            mockAnthropicMessagesCreate.mockResolvedValue(mockResponse);
 
             const messages = [{ role: "user" as const, content: "Write a story" }];
             const result = await generateTextWithAI(messages);
 
             expect(result).toBe("Generated text response");
+            expect(mockAnthropicMessagesCreate).toHaveBeenCalled();
         });
     });
 
     describe("generateImageWithAI", () => {
-        it("should generate image with DALL-E", async () => {
+        it("should generate image with DALL-E (OpenAI)", async () => {
             const mockResponse = {
                 data: [
                     {
@@ -148,6 +215,7 @@ describe("AI Client", () => {
                 url: "https://images.openai.com/test.png",
                 revisedPrompt: "A revised prompt",
             });
+            expect(mockImagesGenerate).toHaveBeenCalled();
         });
 
         it("should use custom options", async () => {

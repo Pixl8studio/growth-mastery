@@ -1,17 +1,12 @@
 /**
  * Support Chat Message API
- * Sends messages to OpenAI Assistant and returns responses
+ * Sends messages to Claude and returns responses
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
-import {
-    sendMessage,
-    runAssistant,
-    getRunStatus,
-    getMessages,
-} from "@/lib/openai/assistants-client";
+import { sendMessageAndGetResponse } from "@/lib/claude/support-chat-client";
 import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
@@ -30,10 +25,7 @@ export async function POST(request: NextRequest) {
         const { threadId, message, contextPage, pageContext, businessContext } =
             await request.json();
 
-        // Send user message
-        await sendMessage(threadId, message);
-
-        // Build comprehensive context for assistant
+        // Build comprehensive context for Claude
         let contextInstructions = `User is currently on: ${contextPage}`;
 
         // Add page context if provided
@@ -68,37 +60,16 @@ Available actions are listed in the page context above.
 Be conversational, helpful, and proactive. If you see the user is on a form page,
 offer to help them fill it in by asking relevant questions about their business.`;
 
-        // Run assistant with enhanced context
-        const runId = await runAssistant(threadId, contextInstructions);
+        // Send message and get Claude's response in one call
+        const responseText = await sendMessageAndGetResponse(
+            threadId,
+            message,
+            contextInstructions
+        );
 
-        // Poll for completion (with timeout)
-        let attempts = 0;
-        while (attempts < 30) {
-            const run = await getRunStatus(threadId, runId);
-
-            if (run.status === "completed") {
-                const messages = await getMessages(threadId);
-                const lastMessage = messages[0];
-
-                const responseText =
-                    lastMessage.content[0].type === "text"
-                        ? lastMessage.content[0].text.value
-                        : "";
-
-                return NextResponse.json({
-                    response: responseText,
-                });
-            }
-
-            if (run.status === "failed") {
-                throw new Error("Assistant run failed");
-            }
-
-            await new Promise((resolve) => setTimeout(resolve, 1000));
-            attempts++;
-        }
-
-        throw new Error("Assistant response timeout");
+        return NextResponse.json({
+            response: responseText,
+        });
     } catch (error) {
         requestLogger.error({ error }, "Failed to send message");
 

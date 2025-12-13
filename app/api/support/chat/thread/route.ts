@@ -1,12 +1,12 @@
 /**
  * Support Chat Thread API
- * Creates new OpenAI Assistant thread for help conversations
+ * Creates new Claude chat thread for help conversations
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
-import { createThread } from "@/lib/openai/assistants-client";
+import { createThread } from "@/lib/claude/support-chat-client";
 import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
@@ -24,15 +24,16 @@ export async function POST(request: NextRequest) {
 
         const { contextPage } = await request.json();
 
-        // Create OpenAI thread
+        // Create Claude thread (local UUID)
         const threadId = await createThread();
 
-        // Log support interaction
+        // Log support interaction with empty chat_messages in metadata for Claude
         await supabase.from("support_interactions").insert({
             user_id: user.id,
             interaction_type: "chat",
             context_page: contextPage,
             assistant_thread_id: threadId,
+            metadata: { chat_messages: [] }, // Store messages in metadata JSONB
         });
 
         requestLogger.info(

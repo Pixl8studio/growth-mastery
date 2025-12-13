@@ -2,7 +2,8 @@
  * Generate Section API
  *
  * POST /api/context/generate-section
- * Generates all answers for a section based on user context
+ * Generates all answers for a section based on user context.
+ * Supports large input handling (50k+ characters) via intelligent chunking.
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -15,7 +16,15 @@ import {
     generateSingleFieldAnswer,
 } from "@/lib/business-profile/ai-section-generator";
 import { getProfileByProject } from "@/lib/business-profile/service";
+import {
+    needsChunking,
+    chunkText,
+    mergeChunkResults,
+} from "@/lib/business-profile/context-chunker";
 import type { SectionId, BusinessProfile } from "@/types/business-profile";
+
+// Threshold for when to summarize context before generation
+const LARGE_CONTEXT_THRESHOLD = 15000;
 
 export async function POST(request: NextRequest) {
     try {
@@ -123,22 +132,86 @@ export async function POST(request: NextRequest) {
             });
         }
 
+        const isLargeContext = needsChunking(context, LARGE_CONTEXT_THRESHOLD);
+
         logger.info(
             {
                 userId: user.id,
                 projectId,
                 sectionId,
                 contextLength: context.length,
+                isLargeContext,
             },
             "Generating section answers"
         );
 
-        // Generate section answers
-        const result = await generateSectionAnswers(
-            sectionId as SectionId,
-            context,
-            profileData
-        );
+        let result;
+
+        if (isLargeContext) {
+            // For large contexts, chunk the text and generate with each chunk,
+            // then merge the results to get comprehensive answers
+            const { chunks, stats } = chunkText(context, {
+                chunkSize: 12000,
+                overlap: 500,
+                maxChunks: 5,
+                preserveParagraphs: true,
+            });
+
+            logger.info(
+                {
+                    sectionId,
+                    totalChunks: stats.totalChunks,
+                    averageChunkSize: stats.averageChunkSize,
+                },
+                "Processing large context in chunks"
+            );
+
+            // Process chunks sequentially to maintain context coherence
+            const chunkResults = [];
+            for (const chunk of chunks) {
+                const chunkResult = await generateSectionAnswers(
+                    sectionId as SectionId,
+                    chunk.content,
+                    profileData
+                );
+
+                if (chunkResult.success && chunkResult.data) {
+                    chunkResults.push(chunkResult.data);
+                }
+            }
+
+            // Merge results from all chunks
+            if (chunkResults.length > 0) {
+                const mergedData = mergeChunkResults(chunkResults, {
+                    strategy: "smart",
+                });
+
+                result = {
+                    success: true,
+                    data: Array.isArray(mergedData) ? mergedData[0] : mergedData,
+                    generatedFields: chunkResults[0]
+                        ? Object.keys(chunkResults[0])
+                        : [],
+                };
+
+                logger.info(
+                    {
+                        sectionId,
+                        chunksProcessed: chunkResults.length,
+                    },
+                    "Large context processed and merged successfully"
+                );
+            } else {
+                throw new Error("Failed to generate answers from chunked context");
+            }
+        } else {
+            // Standard processing for normal-sized contexts
+            result = await generateSectionAnswers(
+                sectionId as SectionId,
+                context,
+                profileData
+            );
+        }
 
         if (!result.success) {
             throw new Error(result.error || "Failed to generate section answers");

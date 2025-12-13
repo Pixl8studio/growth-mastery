@@ -17,6 +17,8 @@ interface ContextWizardProps {
     userId: string;
     initialProfile?: BusinessProfile;
     onComplete?: () => void;
+    /** Callback when profile is updated (for bidirectional sync with parent) */
+    onProfileUpdate?: (profile: BusinessProfile) => void;
 }
 
 const SECTION_ORDER: SectionId[] = [
@@ -32,6 +34,7 @@ export function ContextWizard({
     userId,
     initialProfile,
     onComplete,
+    onProfileUpdate,
 }: ContextWizardProps) {
     const { toast } = useToast();
     const [currentSection, setCurrentSection] = useState<SectionId>("section1");
@@ -111,6 +114,11 @@ export function ContextWizard({
                 // Update local profile state
                 setProfile(result.profile);
 
+                // Notify parent of profile update for bidirectional sync
+                if (onProfileUpdate && result.profile) {
+                    onProfileUpdate(result.profile);
+                }
+
                 logger.info(
                     { sectionId: currentSection, projectId },
                     "Section saved successfully"
@@ -123,7 +131,7 @@ export function ContextWizard({
                 throw error;
             }
         },
-        [currentSection, projectId]
+        [currentSection, projectId, onProfileUpdate]
     );
 
     // Navigate to next section

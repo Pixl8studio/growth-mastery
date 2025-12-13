@@ -273,7 +273,9 @@ export function VoiceToTextButton({
                 isRecording && "bg-red-500 hover:bg-red-600 text-white animate-pulse",
                 className
             )}
-            title={isRecording ? "Click to stop recording" : "Click to start voice input"}
+            title={
+                isRecording ? "Click to stop recording" : "Click to start voice input"
+            }
         >
             {isProcessing ? (
                 <Loader2 className="h-4 w-4 animate-spin" />

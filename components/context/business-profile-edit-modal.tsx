@@ -405,6 +405,16 @@ function FieldEditor({
         [fieldKey, onChange]
     );
 
+    // Handle voice transcript - must be before any early returns (React hooks rule)
+    const handleVoiceTranscript = useCallback(
+        (transcript: string) => {
+            const currentValue = (value as string) || "";
+            const separator = currentValue.trim() ? " " : "";
+            onChange(fieldKey, currentValue + separator + transcript);
+        },
+        [value, onChange, fieldKey]
+    );
+
     // Pricing field
     if (type === "pricing") {
         const pricing = (value as Pricing) || { regular: null, webinar: null };
@@ -711,21 +721,14 @@ function FieldEditor({
         );
     }
 
-    // Handle voice transcript
-    const handleVoiceTranscript = useCallback(
-        (transcript: string) => {
-            const currentValue = (value as string) || "";
-            const separator = currentValue.trim() ? " " : "";
-            handleChange(currentValue + separator + transcript);
-        },
-        [value, handleChange]
-    );
-
     // Default: text or textarea
     return (
         <div className="space-y-2">
             <div className="flex items-center justify-between">
-                <Label htmlFor={fieldKey} className="text-sm font-medium text-foreground">
+                <Label
+                    htmlFor={fieldKey}
+                    className="text-sm font-medium text-foreground"
+                >
                     {label}
                 </Label>
                 {type === "textarea" && (

@@ -25,6 +25,7 @@ import {
     Palette,
     DollarSign,
     Wand2,
+    Phone,
 } from "lucide-react";
 import { ContextWizard } from "@/components/context/context-wizard";
 import { IntakeDataViewer } from "@/components/intake/intake-data-viewer";
@@ -434,8 +435,9 @@ export default function Step1Page({
                                 AI-Powered Business Profile Builder
                             </h3>
                             <p className="mx-auto mt-3 max-w-lg text-muted-foreground">
-                                Answer questions section by section with AI assistance. Use voice input
-                                or type your responses. Import existing content from files, URLs, or paste directly.
+                                Answer questions section by section with AI assistance.
+                                Use voice input or type your responses. Import existing
+                                content from files, URLs, or paste directly.
                             </p>
                         </div>
 

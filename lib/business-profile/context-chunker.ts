@@ -98,7 +98,10 @@ export function chunkText(text: string, config: ChunkConfig = {}): ChunkingResul
     } = config;
 
     // Validate config
-    const effectiveChunkSize = Math.min(Math.max(chunkSize, MIN_CHUNK_SIZE), MAX_CHUNK_SIZE);
+    const effectiveChunkSize = Math.min(
+        Math.max(chunkSize, MIN_CHUNK_SIZE),
+        MAX_CHUNK_SIZE
+    );
     const effectiveOverlap = Math.min(overlap, Math.floor(effectiveChunkSize / 4));
 
     // If text is small enough, return as single chunk
@@ -192,7 +195,9 @@ export function chunkText(text: string, config: ChunkConfig = {}): ChunkingResul
     const chunkSizes = chunks.map((c) => c.content.length);
     const stats = {
         totalChunks,
-        averageChunkSize: Math.round(chunkSizes.reduce((a, b) => a + b, 0) / totalChunks),
+        averageChunkSize: Math.round(
+            chunkSizes.reduce((a, b) => a + b, 0) / totalChunks
+        ),
         smallestChunk: Math.min(...chunkSizes),
         largestChunk: Math.max(...chunkSizes),
     };
@@ -271,10 +276,7 @@ function findBreakPoint(
 /**
  * Merge results from processing multiple chunks
  */
-export function mergeChunkResults<T>(
-    results: T[],
-    config: MergeConfig = {}
-): T | T[] {
+export function mergeChunkResults<T>(results: T[], config: MergeConfig = {}): T | T[] {
     const { strategy = "smart", separator = "\n\n", customMerge } = config;
 
     if (results.length === 0) {
@@ -301,7 +303,9 @@ export function mergeChunkResults<T>(
             case "deduplicate":
                 // Remove duplicate lines/paragraphs
                 const allLines = stringResults.flatMap((r) => r.split("\n"));
-                const uniqueLines = [...new Set(allLines)].filter((line) => line.trim());
+                const uniqueLines = [...new Set(allLines)].filter((line) =>
+                    line.trim()
+                );
                 return uniqueLines.join("\n") as unknown as T;
 
             case "smart":
@@ -436,7 +440,11 @@ export async function processLargeContext<T>(
     options: {
         chunkConfig?: ChunkConfig;
         mergeConfig?: MergeConfig;
-        onProgress?: (progress: { current: number; total: number; chunk: TextChunk }) => void;
+        onProgress?: (progress: {
+            current: number;
+            total: number;
+            chunk: TextChunk;
+        }) => void;
         parallel?: boolean;
         maxConcurrent?: number;
     } = {}
@@ -503,7 +511,11 @@ async function processParallel<T>(
     chunks: TextChunk[],
     handler: (chunk: TextChunk, index: number, total: number) => Promise<T>,
     maxConcurrent: number,
-    onProgress?: (progress: { current: number; total: number; chunk: TextChunk }) => void
+    onProgress?: (progress: {
+        current: number;
+        total: number;
+        chunk: TextChunk;
+    }) => void
 ): Promise<T[]> {
     const results: T[] = new Array(chunks.length);
     let completed = 0;

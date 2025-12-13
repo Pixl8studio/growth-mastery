@@ -127,7 +127,8 @@ export function AutoSaveIndicator({
                     <Check className="h-4 w-4 text-green-500" />
                     {!isCompact && (
                         <span className="text-green-600 font-medium">
-                            Saved{showTimestamp && formattedTime ? ` ${formattedTime}` : ""}
+                            Saved
+                            {showTimestamp && formattedTime ? ` ${formattedTime}` : ""}
                         </span>
                     )}
                 </>

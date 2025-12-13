@@ -18,14 +18,11 @@ import { Card } from "@/components/ui/card";
 import { WizardQuestion } from "./wizard-question";
 import { IntakeMethodCards } from "./intake-method-cards";
 import { VoiceToTextButton } from "@/components/ui/voice-to-text-button";
-import { AutoSaveIndicator, type SaveStatus } from "@/components/ui/auto-save-indicator";
 import {
-    Sparkles,
-    Loader2,
-    ChevronRight,
-    ChevronLeft,
-    Save,
-} from "lucide-react";
+    AutoSaveIndicator,
+    type SaveStatus,
+} from "@/components/ui/auto-save-indicator";
+import { Sparkles, Loader2, ChevronRight, ChevronLeft, Save } from "lucide-react";
 import type { SectionId, SectionData, BusinessProfile } from "@/types/business-profile";
 import { SECTION_DEFINITIONS } from "@/types/business-profile";
 import { useToast } from "@/components/ui/use-toast";
@@ -411,7 +408,10 @@ export function WizardSection({
                 <div className="space-y-4">
                     <div className="flex items-start justify-between">
                         <div>
-                            <Label htmlFor="context" className="text-base font-semibold">
+                            <Label
+                                htmlFor="context"
+                                className="text-base font-semibold"
+                            >
                                 Tell us about {sectionDef.title.toLowerCase()}
                             </Label>
                             <p className="mt-1 text-sm text-muted-foreground">

@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Wizard Section Component
+ * Individual section of the context wizard with AI generation and voice-to-text support.
+ * Features:
+ * - Voice-to-text input for context field
+ * - Auto-save with visual indicator
+ * - AI-powered field generation
+ * - Resizable textarea inputs
+ */
+
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,14 +17,14 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { WizardQuestion } from "./wizard-question";
 import { IntakeMethodCards } from "./intake-method-cards";
+import { VoiceToTextButton } from "@/components/ui/voice-to-text-button";
+import { AutoSaveIndicator, type SaveStatus } from "@/components/ui/auto-save-indicator";
 import {
     Sparkles,
     Loader2,
     ChevronRight,
     ChevronLeft,
     Save,
-    Check,
-    Cloud,
 } from "lucide-react";
 import type { SectionId, SectionData, BusinessProfile } from "@/types/business-profile";
 import { SECTION_DEFINITIONS } from "@/types/business-profile";
@@ -71,7 +81,7 @@ export function WizardSection({
     );
     const [isGenerating, setIsGenerating] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [isAutosaving, setIsAutosaving] = useState(false);
+    const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const [hasGenerated, setHasGenerated] = useState(
@@ -109,7 +119,7 @@ export function WizardSection({
     const performAutosave = async () => {
         if (isGenerating || isSaving) return;
 
-        setIsAutosaving(true);
+        setSaveStatus("saving");
         try {
             const dataToSave = {
                 ...sectionData,
@@ -119,14 +129,37 @@ export function WizardSection({
             await onSave(dataToSave as SectionData, aiGeneratedFields);
             setLastSaved(new Date());
             setHasUnsavedChanges(false);
+            setSaveStatus("saved");
             logger.info({ sectionId }, "Autosaved section");
+
+            // Return to idle after showing saved status
+            setTimeout(() => {
+                setSaveStatus("idle");
+            }, 2000);
         } catch (error) {
             logger.error({ error, sectionId }, "Autosave failed");
+            setSaveStatus("error");
             // Don't show toast for autosave failures to avoid UI noise
-        } finally {
-            setIsAutosaving(false);
         }
     };
+
+    // Handle voice transcript input
+    const handleVoiceTranscript = useCallback(
+        (transcript: string) => {
+            setContext((prevContext) => {
+                // Append transcript to existing content
+                const separator = prevContext.trim() ? " " : "";
+                return prevContext + separator + transcript;
+            });
+            setHasUnsavedChanges(true);
+
+            logger.info(
+                { sectionId, transcriptLength: transcript.length },
+                "Voice transcript added to context"
+            );
+        },
+        [sectionId]
+    );
 
     // Handle field change with autosave trigger
     const handleFieldChange = useCallback((key: string, value: unknown) => {
@@ -301,6 +334,7 @@ export function WizardSection({
         }
 
         setIsSaving(true);
+        setSaveStatus("saving");
 
         try {
             // Add context to section data
@@ -312,12 +346,19 @@ export function WizardSection({
             await onSave(dataToSave as SectionData, aiGeneratedFields);
             setLastSaved(new Date());
             setHasUnsavedChanges(false);
+            setSaveStatus("saved");
 
             toast({
                 title: "Section Saved",
                 description: "Your progress has been saved.",
             });
+
+            // Return to idle after showing saved status
+            setTimeout(() => {
+                setSaveStatus("idle");
+            }, 2000);
         } catch (error) {
+            setSaveStatus("error");
             toast({
                 title: "Save Failed",
                 description:
@@ -337,19 +378,6 @@ export function WizardSection({
         }
     };
 
-    // Format last saved time
-    const formatLastSaved = () => {
-        if (!lastSaved) return null;
-        const now = new Date();
-        const diff = Math.floor((now.getTime() - lastSaved.getTime()) / 1000);
-        if (diff < 60) return "just now";
-        if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-        return lastSaved.toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-        });
-    };
-
     return (
         <div className="space-y-6">
             {/* Section Header */}
@@ -362,25 +390,13 @@ export function WizardSection({
                         {sectionDef.description}
                     </p>
                 </div>
-                {/* Autosave indicator */}
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                    {isAutosaving ? (
-                        <>
-                            <Cloud className="h-4 w-4 animate-pulse" />
-                            <span>Saving...</span>
-                        </>
-                    ) : lastSaved ? (
-                        <>
-                            <Check className="h-4 w-4 text-green-500" />
-                            <span>Saved {formatLastSaved()}</span>
-                        </>
-                    ) : hasUnsavedChanges ? (
-                        <>
-                            <Cloud className="h-4 w-4" />
-                            <span>Unsaved changes</span>
-                        </>
-                    ) : null}
-                </div>
+                {/* Auto-save indicator - always visible */}
+                <AutoSaveIndicator
+                    status={saveStatus}
+                    lastSaved={lastSaved}
+                    persistWhenIdle={true}
+                    showTimestamp={true}
+                />
             </div>
 
             {/* Intake Method Cards */}
@@ -393,13 +409,26 @@ export function WizardSection({
             {/* Context Input */}
             <Card className="p-6">
                 <div className="space-y-4">
-                    <div>
-                        <Label htmlFor="context" className="text-base font-semibold">
-                            Tell us about {sectionDef.title.toLowerCase()}
-                        </Label>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            {sectionDef.contextPrompt}
-                        </p>
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <Label htmlFor="context" className="text-base font-semibold">
+                                Tell us about {sectionDef.title.toLowerCase()}
+                            </Label>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                {sectionDef.contextPrompt}
+                            </p>
+                        </div>
+                        {/* Voice-to-text button */}
+                        <VoiceToTextButton
+                            onTranscript={handleVoiceTranscript}
+                            variant="outline"
+                            size="default"
+                            showLabel={true}
+                            label="Voice input"
+                            recordingLabel="Listening..."
+                            disabled={isGenerating}
+                            className="flex-shrink-0"
+                        />
                     </div>
 
                     <Textarea
@@ -407,8 +436,8 @@ export function WizardSection({
                         id="context"
                         value={context}
                         onChange={(e) => handleContextChange(e.target.value)}
-                        placeholder="Type your thoughts here... Be as detailed as you'd like. The more context you provide, the better the AI can help."
-                        className="min-h-[150px] resize-y text-base"
+                        placeholder="Type your thoughts here or use voice input... Be as detailed as you'd like. The more context you provide, the better the AI can help."
+                        className="min-h-[200px] resize-y text-base"
                         disabled={isGenerating}
                     />
 
@@ -511,7 +540,7 @@ export function WizardSection({
                     <Button
                         variant="outline"
                         onClick={handleSave}
-                        disabled={isSaving || isAutosaving}
+                        disabled={isSaving || saveStatus === "saving"}
                     >
                         {isSaving ? (
                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

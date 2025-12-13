@@ -1,9 +1,18 @@
 "use client";
 
+/**
+ * Step 1 Page - Unified AI Wizard Flow
+ * Simplified single-path entry with integrated voice-to-text throughout.
+ * Features:
+ * - Direct wizard entry without method selection
+ * - Live business profile summary visible during wizard
+ * - Persistent auto-save indicators
+ * - Legacy intake session support
+ */
+
 import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import {
-    Phone,
     Clock,
     MessageSquare,
     Upload,
@@ -15,15 +24,9 @@ import {
     X,
     Palette,
     DollarSign,
-    ArrowLeft,
+    Wand2,
 } from "lucide-react";
-import { VapiCallWidget } from "@/components/funnel/vapi-call-widget";
-import { ContextMethodSelector } from "@/components/context/context-method-selector";
 import { ContextWizard } from "@/components/context/context-wizard";
-import { GptPasteMode } from "@/components/context/gpt-paste-mode";
-import { PasteIntake } from "@/components/intake/paste-intake";
-import { UploadIntake } from "@/components/intake/upload-intake";
-import { ScrapeIntake } from "@/components/intake/scrape-intake";
 import { IntakeDataViewer } from "@/components/intake/intake-data-viewer";
 import { IntakeCompletionCard } from "@/components/intake/intake-completion-card";
 import { BusinessProfileSummaryCard } from "@/components/context/business-profile-summary-card";
@@ -34,7 +37,6 @@ import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import type { ContextMethod } from "@/types/business-profile";
 import type { BusinessProfile } from "@/types/business-profile";
 
 interface IntakeSession {
@@ -100,7 +102,7 @@ export default function Step1Page({
     const [userId, setUserId] = useState("");
     const [intakeSessions, setIntakeSessions] = useState<IntakeSession[]>([]);
     const [isLoadingSessions, setIsLoadingSessions] = useState(true);
-    const [selectedMethod, setSelectedMethod] = useState<ContextMethod | null>(null);
+    const [showWizard, setShowWizard] = useState(false);
     const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(
         null
     );
@@ -264,44 +266,10 @@ export default function Step1Page({
         refreshCompletion();
     };
 
-    const handleIntakeComplete = async () => {
-        setSelectedMethod(null);
-
-        // Load sessions and get the most recently completed one
-        try {
-            const supabase = createClient();
-            const { data: sessions, error } = await supabase
-                .from("vapi_transcripts")
-                .select(
-                    "id, call_id, transcript_text, call_duration, call_status, created_at, extracted_data, brand_data, intake_method, session_name, file_urls, scraped_url, metadata"
-                )
-                .eq("funnel_project_id", projectId)
-                .order("created_at", { ascending: false })
-                .limit(1);
-
-            if (!error && sessions && sessions.length > 0) {
-                const latestSession = sessions[0] as IntakeSession;
-                setRecentlyCompletedSession(latestSession);
-                logger.info(
-                    { sessionId: latestSession.id },
-                    "Intake completed, showing completion card"
-                );
-            }
-        } catch (error) {
-            logger.error({ error }, "Failed to fetch latest intake session");
-        }
-
-        // Refresh all data
-        loadIntakeSessions();
-        loadBusinessProfile();
-        refreshCompletion();
-    };
-
     const handleWizardComplete = async () => {
-        setSelectedMethod(null);
+        setShowWizard(false);
 
-        // For wizard/GPT paste, create a simulated session for the completion card
-        // This provides consistent UX across all intake methods
+        // Create a simulated session for the completion card
         const simulatedSession: IntakeSession = {
             id: `wizard-${Date.now()}`,
             call_id: "",
@@ -451,56 +419,49 @@ export default function Step1Page({
             nextDisabled={!hasCompletedContext}
             nextLabel={hasCompletedContext ? "Define Offer" : "Complete Context First"}
             stepTitle="Define Context"
-            stepDescription="Build your business profile through AI-assisted questions or voice call"
+            stepDescription="Build your business profile through our AI-assisted wizard with voice input support"
         >
             <div className="space-y-8">
-                {/* Context Method Selector or Active Method Interface */}
-                {!selectedMethod ? (
-                    <ContextMethodSelector
-                        onSelectMethod={setSelectedMethod}
-                        selectedMethod={selectedMethod || undefined}
-                    />
+                {/* Unified Wizard Entry or Active Wizard */}
+                {!showWizard ? (
+                    <Card className="overflow-hidden">
+                        {/* Hero Section */}
+                        <div className="relative bg-gradient-to-br from-purple-500/10 via-pink-500/5 to-transparent p-8 text-center">
+                            <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-pink-500 shadow-lg shadow-purple-500/30">
+                                <Wand2 className="h-10 w-10 text-white" />
+                            </div>
+                            <h3 className="text-2xl font-bold text-foreground">
+                                AI-Powered Business Profile Builder
+                            </h3>
+                            <p className="mx-auto mt-3 max-w-lg text-muted-foreground">
+                                Answer questions section by section with AI assistance. Use voice input
+                                or type your responses. Import existing content from files, URLs, or paste directly.
+                            </p>
+                        </div>
+
+                        {/* Click to Begin Button */}
+                        <div className="border-t border-border bg-muted/30 p-6">
+                            <Button
+                                size="lg"
+                                className="w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:from-purple-600 hover:to-pink-600 shadow-lg shadow-purple-500/30 transition-all duration-300 hover:shadow-xl hover:scale-[1.02]"
+                                onClick={() => setShowWizard(true)}
+                            >
+                                <Wand2 className="mr-2 h-5 w-5" />
+                                Click to Begin
+                            </Button>
+                            <p className="mt-3 text-center text-xs text-muted-foreground">
+                                Your progress is automatically saved as you go
+                            </p>
+                        </div>
+                    </Card>
                 ) : (
-                    <div className="space-y-4">
-                        {/* Back Button */}
-                        <Button
-                            variant="ghost"
-                            onClick={() => setSelectedMethod(null)}
-                            className="gap-2"
-                        >
-                            <ArrowLeft className="h-4 w-4" />
-                            Choose a different method
-                        </Button>
-
-                        {/* Wizard Mode */}
-                        {selectedMethod === "wizard" && (
-                            <ContextWizard
-                                projectId={projectId}
-                                userId={userId}
-                                initialProfile={businessProfile || undefined}
-                                onComplete={handleWizardComplete}
-                            />
-                        )}
-
-                        {/* Voice Call Mode */}
-                        {selectedMethod === "voice" && (
-                            <VapiCallWidget
-                                projectId={projectId}
-                                userId={userId}
-                                onCallComplete={handleIntakeComplete}
-                            />
-                        )}
-
-                        {/* GPT Paste Mode */}
-                        {selectedMethod === "gpt_paste" && (
-                            <GptPasteMode
-                                projectId={projectId}
-                                userId={userId}
-                                initialProfile={businessProfile || undefined}
-                                onComplete={handleWizardComplete}
-                            />
-                        )}
-                    </div>
+                    <ContextWizard
+                        projectId={projectId}
+                        userId={userId}
+                        initialProfile={businessProfile || undefined}
+                        onComplete={handleWizardComplete}
+                        onProfileUpdate={handleProfileUpdate}
+                    />
                 )}
 
                 {/* Intake Completion Card - Shows after successful intake */}
@@ -516,12 +477,10 @@ export default function Step1Page({
                     />
                 )}
 
-                {/* Business Profile Summary Card - Shown when profile has data, hidden during wizard/gpt_paste */}
+                {/* Business Profile Summary Card - Always visible when profile has data */}
                 {businessProfile &&
                     businessProfile.completion_status &&
-                    businessProfile.completion_status.overall > 0 &&
-                    selectedMethod !== "wizard" &&
-                    selectedMethod !== "gpt_paste" && (
+                    businessProfile.completion_status.overall > 0 && (
                         <BusinessProfileSummaryCard
                             businessProfile={businessProfile}
                             onSectionClick={handleSectionClick}

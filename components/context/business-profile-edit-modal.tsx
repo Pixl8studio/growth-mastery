@@ -6,8 +6,9 @@
  * Features:
  * - Color-coded tabs matching section tiles
  * - All fields editable with appropriate field types
+ * - Voice-to-text support for textarea fields
  * - Auto-save with 1s debounce via PATCH endpoint
- * - Visual feedback: "Saving...", "Saved", error states
+ * - Persistent auto-save indicator
  * - Bidirectional sync with wizard
  */
 
@@ -22,15 +23,17 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { VoiceToTextButton } from "@/components/ui/voice-to-text-button";
+import {
+    AutoSaveIndicator,
+    type SaveStatus,
+} from "@/components/ui/auto-save-indicator";
 import {
     Users,
     BookOpen,
     Package,
     Lightbulb,
     Target,
-    Cloud,
-    Check,
-    AlertCircle,
     X,
     Plus,
     Trash2,
@@ -111,8 +114,6 @@ const TAB_CONFIG: TabConfig[] = [
     },
 ];
 
-type SaveStatus = "idle" | "saving" | "saved" | "error";
-
 interface BusinessProfileEditModalProps {
     isOpen: boolean;
     onClose: () => void;
@@ -133,6 +134,7 @@ export function BusinessProfileEditModal({
     const [activeTab, setActiveTab] = useState<SectionId>(initialSection as SectionId);
     const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [localProfile, setLocalProfile] = useState<BusinessProfile>(businessProfile);
     const autosaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
     const pendingChangesRef = useRef<{
@@ -191,6 +193,7 @@ export function BusinessProfileEditModal({
                 }
 
                 setSaveStatus("saved");
+                setLastSaved(new Date());
                 logger.info({ sectionId }, "Section saved successfully");
 
                 // Reset to idle after 2 seconds
@@ -285,8 +288,14 @@ export function BusinessProfileEditModal({
                                 {currentSection.description}
                             </p>
                         </div>
-                        {/* Save Status Indicator */}
-                        <SaveStatusIndicator status={saveStatus} error={saveError} />
+                        {/* Auto-save indicator - always visible */}
+                        <AutoSaveIndicator
+                            status={saveStatus}
+                            lastSaved={lastSaved}
+                            errorMessage={saveError}
+                            persistWhenIdle={true}
+                            showTimestamp={true}
+                        />
                     </div>
                 </DialogHeader>
 
@@ -334,40 +343,6 @@ export function BusinessProfileEditModal({
                 </div>
             </DialogContent>
         </Dialog>
-    );
-}
-
-// Save Status Indicator Component
-function SaveStatusIndicator({
-    status,
-    error,
-}: {
-    status: SaveStatus;
-    error: string | null;
-}) {
-    if (status === "idle") return null;
-
-    return (
-        <div className="flex items-center gap-2 text-sm">
-            {status === "saving" && (
-                <>
-                    <Cloud className="h-4 w-4 animate-pulse text-muted-foreground" />
-                    <span className="text-muted-foreground">Saving...</span>
-                </>
-            )}
-            {status === "saved" && (
-                <>
-                    <Check className="h-4 w-4 text-green-500" />
-                    <span className="text-green-600">Saved</span>
-                </>
-            )}
-            {status === "error" && (
-                <>
-                    <AlertCircle className="h-4 w-4 text-destructive" />
-                    <span className="text-destructive">{error || "Error saving"}</span>
-                </>
-            )}
-        </div>
     );
 }
 
@@ -736,19 +711,39 @@ function FieldEditor({
         );
     }
 
+    // Handle voice transcript
+    const handleVoiceTranscript = useCallback(
+        (transcript: string) => {
+            const currentValue = (value as string) || "";
+            const separator = currentValue.trim() ? " " : "";
+            handleChange(currentValue + separator + transcript);
+        },
+        [value, handleChange]
+    );
+
     // Default: text or textarea
     return (
         <div className="space-y-2">
-            <Label htmlFor={fieldKey} className="text-sm font-medium text-foreground">
-                {label}
-            </Label>
+            <div className="flex items-center justify-between">
+                <Label htmlFor={fieldKey} className="text-sm font-medium text-foreground">
+                    {label}
+                </Label>
+                {type === "textarea" && (
+                    <VoiceToTextButton
+                        onTranscript={handleVoiceTranscript}
+                        variant="ghost"
+                        size="sm"
+                        className="h-7"
+                    />
+                )}
+            </div>
             {type === "textarea" ? (
                 <Textarea
                     id={fieldKey}
                     value={(value as string) || ""}
                     onChange={(e) => handleChange(e.target.value)}
-                    placeholder={`Enter ${label.toLowerCase()}...`}
-                    className="min-h-[100px] resize-y"
+                    placeholder={`Enter ${label.toLowerCase()}... or use voice input`}
+                    className="min-h-[120px] resize-y"
                 />
             ) : (
                 <Input

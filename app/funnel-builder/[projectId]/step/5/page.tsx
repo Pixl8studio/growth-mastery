@@ -134,7 +134,7 @@ export default function Step4Page({
 
                 const transformed = (deckData || []).map((deck: any) => ({
                     id: deck.id,
-                    title: deck.title || "Untitled Deck",
+                    title: deck.metadata?.title || deck.title || "Untitled Deck",
                     slideCount: Array.isArray(deck.slides) ? deck.slides.length : 55,
                     slides: deck.slides || [],
                     created_at: deck.created_at,
@@ -251,7 +251,7 @@ export default function Step4Page({
                     title: "📄 Exporting to PDF",
                     description: (
                         <div className="space-y-2 text-sm">
-                            <p className="font-medium">Deck opened in Gamma!</p>
+                            <p className="font-medium">Deck opened!</p>
                             <ol className="ml-4 list-decimal space-y-1">
                                 <li>Click the 'Share' button (top right)</li>
                                 <li>Select 'Export'</li>
@@ -296,7 +296,7 @@ export default function Step4Page({
                     title: "📊 Exporting to Google Slides",
                     description: (
                         <div className="space-y-2 text-sm">
-                            <p className="font-medium">Deck opened in Gamma!</p>
+                            <p className="font-medium">Deck opened!</p>
                             <ol className="ml-4 list-decimal space-y-1">
                                 <li>Click the 'Share' button (top right)</li>
                                 <li>Select 'Export'</li>
@@ -373,7 +373,7 @@ export default function Step4Page({
                 hasCompletedGammaDeck ? "Create Enrollment Page" : "Generate Deck First"
             }
             stepTitle="Create Presentation"
-            stepDescription="Generate beautiful slides with Gamma AI"
+            stepDescription="Now that your presentation structure has been created, let's generate the beautifully designed deck"
         >
             <div className="space-y-8">
                 {/* Dependency Warning */}
@@ -449,7 +449,7 @@ export default function Step4Page({
                             >
                                 <Rocket className="h-6 w-6" />
                                 {selectedDeckId
-                                    ? "Generate Gamma Deck"
+                                    ? "Generate Deck"
                                     : "Select Deck Structure First"}
                             </button>
 
@@ -513,8 +513,7 @@ export default function Step4Page({
                             <div className="py-12 text-center text-muted-foreground">
                                 <Presentation className="mx-auto mb-4 h-12 w-12 opacity-50" />
                                 <p>
-                                    No Gamma presentations yet. Generate your first one
-                                    above!
+                                    No presentations yet. Generate your first one above!
                                 </p>
                             </div>
                         ) : (
@@ -649,7 +648,7 @@ export default function Step4Page({
                                                         className="inline-flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700"
                                                     >
                                                         <LinkIcon className="h-4 w-4" />
-                                                        Open in Gamma
+                                                        Open Presentation
                                                     </a>
                                                 )}
                                             </div>
@@ -684,7 +683,7 @@ export default function Step4Page({
                                                             target="_blank"
                                                             rel="noopener noreferrer"
                                                             className="rounded p-2 text-purple-600 hover:bg-purple-50"
-                                                            title="Open in Gamma"
+                                                            title="Open Presentation"
                                                         >
                                                             <Eye className="h-4 w-4" />
                                                         </a>

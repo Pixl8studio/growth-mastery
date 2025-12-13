@@ -16,7 +16,7 @@ const GAMMA_THEMES = [
     { id: "cornfield", name: "Cornfield", image: "/gamma-themes/cornfield.png" },
     { id: "cornflower", name: "Cornflower", image: "/gamma-themes/cornflower.png" },
     { id: "flax", name: "Flax", image: "/gamma-themes/flax.png" },
-    { id: "gamma dark", name: "Gamma Dark", image: "/gamma-themes/gamma dark.png" },
+    { id: "gamma dark", name: "Dark", image: "/gamma-themes/gamma dark.png" },
     { id: "goldleaf", name: "Goldleaf", image: "/gamma-themes/goldleaf.png" },
     { id: "iris", name: "Iris", image: "/gamma-themes/iris.png" },
     { id: "keepsake", name: "Keepsake", image: "/gamma-themes/keepsake.png" },
@@ -51,10 +51,10 @@ export default function GammaThemeSelector({
     return (
         <div className={className}>
             <label className="mb-4 block text-base font-medium text-foreground">
-                Choose Gamma Theme
+                Choose Theme
             </label>
             <p className="mb-4 text-sm text-muted-foreground">
-                Don't see a theme you love? You can change it later in Gamma.
+                Don't see a theme you love? You can change it later in the presentation editor.
             </p>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {GAMMA_THEMES.map((theme) => (

@@ -22,7 +22,7 @@ describe("GammaThemeSelector", () => {
     it("should render theme selector", () => {
         render(<GammaThemeSelector {...defaultProps} />);
 
-        expect(screen.getByText("Choose Gamma Theme")).toBeInTheDocument();
+        expect(screen.getByText("Choose Theme")).toBeInTheDocument();
     });
 
     it("should display theme selection tip", () => {

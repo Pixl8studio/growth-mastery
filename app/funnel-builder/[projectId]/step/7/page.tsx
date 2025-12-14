@@ -59,6 +59,7 @@ export default function Step6Page({
     >(null);
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
+    const [pollFailureCount, setPollFailureCount] = useState(0);
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
@@ -179,15 +180,55 @@ export default function Step6Page({
     useEffect(() => {
         if (!activeJobId) return;
 
+        // Reset failure count when starting new poll
+        setPollFailureCount(0);
+
+        const MAX_POLL_FAILURES = 5;
+
         const pollInterval = setInterval(async () => {
             try {
                 const response = await fetch(
                     `/api/generate/talk-track/status/${activeJobId}`
                 );
-                const { job } = await response.json();
+
+                // Check if response was successful
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    logger.error(
+                        { status: response.status, error: errorData },
+                        "Poll status request failed"
+                    );
+                    setPollFailureCount((prev) => {
+                        const newCount = prev + 1;
+                        if (newCount >= MAX_POLL_FAILURES) {
+                            clearInterval(pollInterval);
+                            setToastMessage(
+                                "Connection lost. Please refresh the page to check status."
+                            );
+                            setShowToast(true);
+                            setTimeout(() => setShowToast(false), 5000);
+                        }
+                        return newCount;
+                    });
+                    return;
+                }
+
+                const data = await response.json();
+
+                // Validate job data exists
+                if (!data.job) {
+                    logger.error({ data }, "Invalid response: missing job data");
+                    setPollFailureCount((prev) => prev + 1);
+                    return;
+                }
+
+                const { job } = data;
+
+                // Reset failure count on success
+                setPollFailureCount(0);
 
                 setJobStatus(job.status);
-                setGenerationProgress(job.progress);
+                setGenerationProgress(job.progress ?? 0);
 
                 if (job.status === "completed") {
                     clearInterval(pollInterval);
@@ -230,6 +271,18 @@ export default function Step6Page({
                 }
             } catch (error) {
                 logger.error({ error }, "Failed to poll job status");
+                setPollFailureCount((prev) => {
+                    const newCount = prev + 1;
+                    if (newCount >= MAX_POLL_FAILURES) {
+                        clearInterval(pollInterval);
+                        setToastMessage(
+                            "Connection lost. Please refresh the page to check status."
+                        );
+                        setShowToast(true);
+                        setTimeout(() => setShowToast(false), 5000);
+                    }
+                    return newCount;
+                });
             }
         }, 3000); // Poll every 3 seconds
 
@@ -384,23 +437,58 @@ export default function Step6Page({
             <div className="space-y-8">
                 {/* Toast Notification */}
                 {showToast && (
-                    <div className="fixed right-4 top-4 z-50 rounded-lg border-2 border-green-300 bg-green-50 p-4 shadow-float">
-                        <p className="font-medium text-green-900">{toastMessage}</p>
+                    <div
+                        className={`fixed right-4 top-4 z-50 rounded-lg border-2 p-4 shadow-float ${
+                            toastMessage.includes("failed") ||
+                            toastMessage.includes("Connection lost")
+                                ? "border-red-300 bg-red-50"
+                                : "border-green-300 bg-green-50"
+                        }`}
+                    >
+                        <p
+                            className={`font-medium ${
+                                toastMessage.includes("failed") ||
+                                toastMessage.includes("Connection lost")
+                                    ? "text-red-900"
+                                    : "text-green-900"
+                            }`}
+                        >
+                            {toastMessage}
+                        </p>
                     </div>
                 )}
 
                 {/* Warning Banner for Active Generation */}
                 {(jobStatus === "pending" || jobStatus === "processing") && (
                     <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4">
-                        <p className="font-medium text-amber-900">
-                            ⚠️ Generating Talk Track – This may take 2–5 minutes. You
-                            can navigate freely; we'll notify you when it's ready.
-                        </p>
-                        {generationProgress > 0 && (
-                            <p className="mt-2 text-sm text-amber-700">
-                                Progress: {generationProgress}% complete
-                            </p>
-                        )}
+                        <div className="flex items-start gap-3">
+                            <span className="text-xl">⏳</span>
+                            <div className="flex-1">
+                                <p className="font-semibold text-amber-900">
+                                    {jobStatus === "pending"
+                                        ? "Starting Talk Track Generation..."
+                                        : "Generating Your Talk Track"}
+                                </p>
+                                <p className="mt-1 text-sm text-amber-700">
+                                    This typically takes 1-3 minutes. You can navigate
+                                    away safely.
+                                </p>
+                                <div className="mt-3">
+                                    <div className="mb-1 flex items-center justify-between text-xs text-amber-700">
+                                        <span>Progress</span>
+                                        <span>{generationProgress}%</span>
+                                    </div>
+                                    <div className="h-2 w-full overflow-hidden rounded-full bg-amber-200">
+                                        <div
+                                            className="h-full rounded-full bg-amber-500 transition-all duration-500"
+                                            style={{
+                                                width: `${Math.max(generationProgress, 5)}%`,
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 

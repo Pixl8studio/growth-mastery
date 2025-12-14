@@ -192,11 +192,11 @@ export default function Step4Page({
 
             setGenerationProgress(80);
 
-            if (!response.ok) {
-                throw new Error("Failed to generate Gamma deck");
-            }
-
             const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || "Failed to generate Gamma deck");
+            }
             setGammaDecks((prev) => [result.gammaDeck, ...prev]);
             setGenerationProgress(100);
 
@@ -208,7 +208,18 @@ export default function Step4Page({
             logger.error({ error }, "Failed to generate Gamma deck");
             setIsGenerating(false);
             setGenerationProgress(0);
-            alert("Failed to generate Gamma deck. Please try again.");
+
+            // Extract error message from the error object or response
+            let errorMessage = "Failed to generate Gamma deck. Please try again.";
+            if (error instanceof Error) {
+                errorMessage = error.message;
+            }
+
+            toast({
+                title: "Generation Failed",
+                description: errorMessage,
+                variant: "destructive",
+            });
         }
     };
 

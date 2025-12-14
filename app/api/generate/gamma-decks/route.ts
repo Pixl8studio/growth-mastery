@@ -84,6 +84,18 @@ interface GammaStatusResponse {
 
 export async function POST(request: NextRequest) {
     try {
+        // Check for API key early - before any database operations
+        if (!GAMMA_API_KEY) {
+            log.error("GAMMA_API_KEY not configured", {});
+            return NextResponse.json(
+                {
+                    error: "Gamma API is not configured. Please contact support.",
+                    code: "GAMMA_API_NOT_CONFIGURED",
+                },
+                { status: 503 }
+            );
+        }
+
         const supabase = await createClient();
 
         // Verify authentication
@@ -274,7 +286,8 @@ export async function POST(request: NextRequest) {
             throw pollError;
         }
     } catch (error) {
-        log.error("Failed to generate Gamma deck", { error });
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
+        log.error("Failed to generate Gamma deck", { error: errorMessage });
         Sentry.captureException(error, {
             tags: { component: "api", action: "generate_gamma_deck" },
         });
@@ -286,8 +299,31 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Provide more specific error messages based on the error type
+        let userMessage = "Failed to generate Gamma deck. Please try again.";
+        let errorCode = "GENERATION_FAILED";
+
+        if (errorMessage.includes("Gamma API error")) {
+            userMessage =
+                "The presentation service is temporarily unavailable. Please try again in a few minutes.";
+            errorCode = "GAMMA_API_ERROR";
+        } else if (errorMessage.includes("timed out")) {
+            userMessage =
+                "The presentation took too long to generate. Please try again with a simpler structure.";
+            errorCode = "GENERATION_TIMEOUT";
+        } else if (errorMessage.includes("generation failed")) {
+            userMessage =
+                "The presentation generation failed. Please try again or select a different theme.";
+            errorCode = "GAMMA_GENERATION_FAILED";
+        }
+
         return NextResponse.json(
-            { error: "Failed to generate Gamma deck. Please try again." },
+            {
+                error: userMessage,
+                code: errorCode,
+                details:
+                    process.env.NODE_ENV === "development" ? errorMessage : undefined,
+            },
             { status: 500 }
         );
     }

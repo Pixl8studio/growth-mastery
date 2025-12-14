@@ -54,7 +54,8 @@ export default function GammaThemeSelector({
                 Choose Theme
             </label>
             <p className="mb-4 text-sm text-muted-foreground">
-                Don't see a theme you love? You can change it later in the presentation editor.
+                Don't see a theme you love? You can change it later in the presentation
+                editor.
             </p>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 {GAMMA_THEMES.map((theme) => (

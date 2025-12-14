@@ -337,11 +337,23 @@ function prepareContentForGamma(
     project: any,
     settings: any
 ): string {
-    log.info("📝 Preparing content for Gamma API");
+    log.info("📝 Preparing content for Gamma API", {
+        hasMetadata: !!deckStructure.metadata,
+        hasSlides: !!deckStructure.slides,
+        slidesIsArray: Array.isArray(deckStructure.slides),
+        totalSlides: deckStructure.total_slides,
+    });
 
     const title =
         deckStructure.metadata?.title || project.name || "Masterclass Presentation";
     const slides = deckStructure.slides || [];
+
+    log.info("📊 Deck structure details", {
+        title,
+        slideCount: slides.length,
+        firstSlideHasTitle: slides.length > 0 ? !!slides[0]?.title : false,
+        firstSlideHasDescription: slides.length > 0 ? !!slides[0]?.description : false,
+    });
 
     let inputText = `# ${title}\n\n`;
 
@@ -396,9 +408,20 @@ function buildGammaRequest(
         hasBrandDesign: !!brandDesign,
     });
 
-    // Determine slide count based on template type
+    // Determine slide count based on template type and actual deck structure
     const isTestMode = deckStructure.template_type === "5_slide_test";
-    const slideCount = isTestMode ? 5 : 55;
+    // Use actual slide count from deck structure, falling back to slides array length, then 60 as default
+    const actualSlideCount =
+        deckStructure.total_slides ||
+        (Array.isArray(deckStructure.slides) ? deckStructure.slides.length : 60);
+    const slideCount = isTestMode ? 5 : actualSlideCount;
+
+    log.info("📊 Slide count configuration", {
+        isTestMode,
+        actualSlideCount,
+        slideCount,
+        templateType: deckStructure.template_type,
+    });
 
     // Map styles to tone
     const toneMap: { [key: string]: string } = {

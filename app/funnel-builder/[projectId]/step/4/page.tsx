@@ -132,10 +132,7 @@ export default function Step4Page({
                     }
                 }
             } catch (profileError) {
-                logger.warn(
-                    { error: profileError },
-                    "Failed to load business profile"
-                );
+                logger.warn({ error: profileError }, "Failed to load business profile");
             } finally {
                 setIsLoadingProfile(false);
             }
@@ -466,12 +463,13 @@ export default function Step4Page({
                             <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
                             <div className="flex-1">
                                 <p className="font-medium text-amber-800">
-                                    Your business profile is {profileCompletion}% complete
+                                    Your business profile is {profileCompletion}%
+                                    complete
                                 </p>
                                 <p className="mt-1 text-sm text-amber-700">
-                                    For the best results, we recommend completing your full
-                                    business profile before generating your presentation
-                                    structure.{" "}
+                                    For the best results, we recommend completing your
+                                    full business profile before generating your
+                                    presentation structure.{" "}
                                     <Link
                                         href={`/funnel-builder/${projectId}/step/1`}
                                         className="font-medium underline hover:text-amber-900"
@@ -534,7 +532,8 @@ export default function Step4Page({
                                             {hasProfile ? (
                                                 <>
                                                     {profileCompletion}% complete
-                                                    {isProfileComplete && " - Ready to use"}
+                                                    {isProfileComplete &&
+                                                        " - Ready to use"}
                                                 </>
                                             ) : (
                                                 "Not started"
@@ -577,7 +576,8 @@ export default function Step4Page({
                             <div className="mt-4 space-y-1 text-sm text-muted-foreground">
                                 <p>Generation time: ~3-5 minutes</p>
                                 <p>
-                                    Creates 60 slides using Magnetic Masterclass Framework
+                                    Creates 60 slides using Magnetic Masterclass
+                                    Framework
                                 </p>
                             </div>
                         </div>
@@ -598,7 +598,8 @@ export default function Step4Page({
                         </div>
 
                         <div className="mx-auto mb-4 max-w-md rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-                            Please do not close this page while your outline is generating.
+                            Please do not close this page while your outline is
+                            generating.
                         </div>
 
                         <div className="mx-auto max-w-md">
@@ -637,13 +638,11 @@ export default function Step4Page({
                         {deckStructures.length === 0 ? (
                             <div className="py-12 text-center text-muted-foreground">
                                 <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
-                                <p className="mb-2">
-                                    No presentation structures yet.
-                                </p>
+                                <p className="mb-2">No presentation structures yet.</p>
                                 {hasProfile ? (
                                     <p className="text-sm">
-                                        Click &quot;Generate Deck Structure&quot; above to
-                                        create your first one!
+                                        Click &quot;Generate Deck Structure&quot; above
+                                        to create your first one!
                                     </p>
                                 ) : (
                                     <p className="text-sm">
@@ -683,16 +682,28 @@ export default function Step4Page({
                                                                 }
                                                                 className="flex-1 rounded border border-primary/30 px-2 py-1 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
                                                                 onKeyDown={(e) => {
-                                                                    if (e.key === "Enter")
-                                                                        saveDeckName(deck.id);
-                                                                    if (e.key === "Escape")
-                                                                        setEditingDeckId(null);
+                                                                    if (
+                                                                        e.key ===
+                                                                        "Enter"
+                                                                    )
+                                                                        saveDeckName(
+                                                                            deck.id
+                                                                        );
+                                                                    if (
+                                                                        e.key ===
+                                                                        "Escape"
+                                                                    )
+                                                                        setEditingDeckId(
+                                                                            null
+                                                                        );
                                                                 }}
                                                                 autoFocus
                                                             />
                                                             <button
                                                                 onClick={() =>
-                                                                    saveDeckName(deck.id)
+                                                                    saveDeckName(
+                                                                        deck.id
+                                                                    )
                                                                 }
                                                                 className="rounded bg-primary px-2 py-1 text-sm text-white hover:bg-primary/90"
                                                             >
@@ -700,7 +711,9 @@ export default function Step4Page({
                                                             </button>
                                                             <button
                                                                 onClick={() =>
-                                                                    setEditingDeckId(null)
+                                                                    setEditingDeckId(
+                                                                        null
+                                                                    )
                                                                 }
                                                                 className="rounded bg-gray-300 px-2 py-1 text-sm text-foreground hover:bg-gray-400"
                                                             >
@@ -713,7 +726,9 @@ export default function Step4Page({
                                                                 className="cursor-pointer text-lg font-semibold text-foreground hover:text-primary"
                                                                 onDoubleClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    startEditingName(deck);
+                                                                    startEditingName(
+                                                                        deck
+                                                                    );
                                                                 }}
                                                             >
                                                                 {deck.title}
@@ -721,7 +736,9 @@ export default function Step4Page({
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    startEditingName(deck);
+                                                                    startEditingName(
+                                                                        deck
+                                                                    );
                                                                 }}
                                                                 className="rounded p-1 text-primary hover:bg-primary/5"
                                                             >
@@ -732,7 +749,9 @@ export default function Step4Page({
                                                 </div>
 
                                                 <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                    <span>{deck.slideCount} slides</span>
+                                                    <span>
+                                                        {deck.slideCount} slides
+                                                    </span>
                                                     <span>
                                                         {new Date(
                                                             deck.created_at
@@ -848,7 +867,8 @@ export default function Step4Page({
                                                         presentation_type:
                                                             deck.presentation_type ||
                                                             "webinar",
-                                                        template_type: deck.template_type,
+                                                        template_type:
+                                                            deck.template_type,
                                                         sections: deck.sections,
                                                     })
                                                 );

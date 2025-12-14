@@ -274,7 +274,6 @@ export default function Step1Page({
         });
     };
 
-
     if (!projectId || !userId) {
         return (
             <div className="flex h-screen items-center justify-center">
@@ -360,7 +359,6 @@ export default function Step1Page({
                             onSectionClick={handleSectionClick}
                         />
                     )}
-
 
                 {/* What's Next */}
                 <Card className="border-border bg-muted/50 p-6">

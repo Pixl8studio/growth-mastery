@@ -67,7 +67,19 @@ serve(async (req) => {
 
         // Get deck structure slides
         const deckStructure = job.deck_structures;
-        const slides = deckStructure.slides as Slide[];
+
+        // Validate deck structure and slides exist
+        if (!deckStructure) {
+            throw new Error("Deck structure not found for this job");
+        }
+
+        const slides = deckStructure.slides as Slide[] | null;
+
+        if (!slides || !Array.isArray(slides) || slides.length === 0) {
+            throw new Error(
+                "No slides found in deck structure. Please regenerate the deck structure first."
+            );
+        }
 
         console.log(`[Talk Track] Processing ${slides.length} slides for job ${jobId}`);
 

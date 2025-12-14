@@ -34,6 +34,16 @@ const EXPECTED_USER_ERROR_PATTERNS = [
     /file too large/i,
     /password.*incorrect/i,
     /invalid credentials/i,
+    // External service errors - transient issues with third-party services (Gamma)
+    /presentation service.*temporarily unavailable/i,
+    /failed to generate gamma deck/i,
+    /gamma.*error/i,
+    /gamma.*failed/i,
+    // Network/polling errors - transient connectivity issues
+    /failed to fetch/i,
+    /failed to poll/i,
+    /network.*error/i,
+    /connection.*lost/i,
 ];
 
 /**

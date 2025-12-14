@@ -205,7 +205,8 @@ export default function Step4Page({
                 setGenerationProgress(0);
             }, 1000);
         } catch (error) {
-            logger.error({ error }, "Failed to generate Gamma deck");
+            // Use userError for expected service failures (not application bugs)
+            logger.userError({ error }, "Failed to generate Gamma deck");
             setIsGenerating(false);
             setGenerationProgress(0);
 

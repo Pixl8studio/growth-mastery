@@ -194,19 +194,34 @@ export default function Step6Page({
                 // Check if response was successful
                 if (!response.ok) {
                     const errorData = await response.json().catch(() => ({}));
-                    logger.error(
-                        { status: response.status, error: errorData },
-                        "Poll status request failed"
-                    );
                     setPollFailureCount((prev) => {
                         const newCount = prev + 1;
                         if (newCount >= MAX_POLL_FAILURES) {
+                            // Only report to Sentry after all retries exhausted
+                            logger.error(
+                                {
+                                    status: response.status,
+                                    error: errorData,
+                                    failureCount: newCount,
+                                },
+                                "Poll status request failed after maximum retries"
+                            );
                             clearInterval(pollInterval);
                             setToastMessage(
                                 "Connection lost. Please refresh the page to check status."
                             );
                             setShowToast(true);
                             setTimeout(() => setShowToast(false), 5000);
+                        } else {
+                            // Transient failure - log locally but don't report to Sentry
+                            logger.userError(
+                                {
+                                    status: response.status,
+                                    error: errorData,
+                                    failureCount: newCount,
+                                },
+                                "Poll status request failed (will retry)"
+                            );
                         }
                         return newCount;
                     });
@@ -270,16 +285,26 @@ export default function Step6Page({
                     setGenerationProgress(0);
                 }
             } catch (error) {
-                logger.error({ error }, "Failed to poll job status");
                 setPollFailureCount((prev) => {
                     const newCount = prev + 1;
                     if (newCount >= MAX_POLL_FAILURES) {
+                        // Only report to Sentry after all retries exhausted
+                        logger.error(
+                            { error, failureCount: newCount },
+                            "Failed to poll job status after maximum retries"
+                        );
                         clearInterval(pollInterval);
                         setToastMessage(
                             "Connection lost. Please refresh the page to check status."
                         );
                         setShowToast(true);
                         setTimeout(() => setShowToast(false), 5000);
+                    } else {
+                        // Transient failure - log locally but don't report to Sentry
+                        logger.userError(
+                            { error, failureCount: newCount },
+                            "Poll job status failed (will retry)"
+                        );
                     }
                     return newCount;
                 });

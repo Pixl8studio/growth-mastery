@@ -179,7 +179,11 @@ export default function Step4Page({
     }, [projectId]);
 
     const handleGenerateDeck = async () => {
-        if (!businessProfile) {
+        // TEMPORARY: Bypass businessProfile check for testing (Issue #323)
+        // Original check: if (!businessProfile) return;
+        // TODO: Restore when Step 3 is functional
+        // Note: API endpoint should validate businessProfileId parameter
+        if (!businessProfile && !canGenerateDeck) {
             return;
         }
 
@@ -199,9 +203,12 @@ export default function Step4Page({
                 }
             }, 3000);
 
+            // TEMPORARY: Use optional chaining due to bypass (Issue #323)
+            // Original: businessProfileId: businessProfile.id
+            // TODO: Restore when Step 3 is functional
             const requestBody = {
                 projectId,
-                businessProfileId: businessProfile.id,
+                businessProfileId: businessProfile?.id ?? null,
                 slideCount,
                 presentationType,
             };
@@ -462,8 +469,11 @@ export default function Step4Page({
                     />
                 )}
 
-                {/* Recommendation Banner - Profile incomplete but exists */}
-                {hasProfile && !isProfileComplete && (
+                {/* TEMPORARY: Recommendation Banner bypassed for testing (Issue #323)
+                    Original condition: {hasProfile && !isProfileComplete && (...)}
+                    TODO: Restore when Step 3 is functional */}
+                {/* Recommendation Banner - Profile incomplete but exists - BYPASSED */}
+                {false && hasProfile && !isProfileComplete && (
                     <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
                         <div className="flex items-start gap-3">
                             <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
@@ -492,8 +502,11 @@ export default function Step4Page({
                 {!isGenerating ? (
                     <div className="rounded-lg border border-primary/10 bg-gradient-to-br from-primary/5 to-emerald-light/5 p-8">
                         <div className="mx-auto mb-6 max-w-md space-y-4">
-                            {/* Business Profile Status Card - Always shown, non-interactive */}
-                            {!isLoadingProfile && (
+                            {/* TEMPORARY: Business Profile Status Card bypassed for testing (Issue #323)
+                                Original condition: {!isLoadingProfile && (...)}
+                                TODO: Restore when Step 3 is functional */}
+                            {/* Business Profile Status Card - BYPASSED */}
+                            {false && !isLoadingProfile && (
                                 <div
                                     className={`flex items-center gap-3 rounded-lg border p-4 ${
                                         hasProfile

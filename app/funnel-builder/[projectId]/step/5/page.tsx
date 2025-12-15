@@ -408,10 +408,13 @@ export default function Step4Page({
                                 <label className="mb-2 block text-sm font-medium text-foreground">
                                     Select Deck Structure
                                 </label>
+                                {/* TEMPORARY: Dropdown disabled state bypassed for testing (Issue #323)
+                                    Original: disabled={deckStructures.length === 0}
+                                    TODO: Restore when Step 3 is functional */}
                                 <select
                                     value={selectedDeckId}
                                     onChange={(e) => setSelectedDeckId(e.target.value)}
-                                    disabled={deckStructures.length === 0}
+                                    disabled={false}
                                     className="w-full rounded-lg border border-border px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:bg-muted"
                                 >
                                     {deckStructures.length === 0 ? (

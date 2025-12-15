@@ -40,12 +40,17 @@ The migration also:
 Add to your `.env.local` or environment:
 
 ```bash
-GAMMA_API_KEY=your_gamma_api_key_here
-# OR
+# New format (recommended)
+GAMMA_API_KEY=sk-gamma-your_key_here
+
+# Legacy format (still supported)
 GAMMA_AI_API=your_gamma_api_key_here
 ```
 
 The API will check for either variable name for backward compatibility.
+
+**Important:** The Gamma API key format starts with `sk-gamma-`. Get your key from
+https://gamma.app/settings/api
 
 ## How It Works
 
@@ -145,7 +150,16 @@ The frontend at `/app/funnel-builder/[projectId]/step/4/page.tsx`:
 
 ### "GAMMA_API_KEY not configured"
 
-Add the environment variable and restart the dev server
+Add the environment variable and restart the dev server.
+
+**To update the API key:**
+
+1. For local development: Update `GAMMA_API_KEY` in your `.env.local` file
+2. For production (Vercel): Update the environment variable in Vercel Dashboard →
+   Settings → Environment Variables
+3. Restart the server/redeploy after updating
+
+The key format should be: `sk-gamma-XXXXXXXXXXXXX`
 
 ### "Deck structure not found"
 
@@ -168,9 +182,29 @@ supabase db push
 
 ## Next Steps
 
-1. ✅ Add GAMMA_API_KEY to environment
+1. ✅ Add GAMMA_API_KEY to environment (format: `sk-gamma-XXXXX`)
 2. ✅ Apply database migration
 3. ✅ Restart dev server
-4. ✅ Test generation on Step 4
+4. ✅ Test generation on Step 5 (Create Presentation)
 
 The implementation is complete and matches the working v1 implementation!
+
+## Updating the Gamma API Key
+
+When you need to update the Gamma API key:
+
+**Local Development:**
+
+```bash
+# In .env.local
+GAMMA_API_KEY=sk-gamma-your_new_key_here
+```
+
+**Production (Vercel):**
+
+1. Go to Vercel Dashboard → Your Project → Settings → Environment Variables
+2. Find `GAMMA_API_KEY` and update the value
+3. Redeploy the application (or trigger a new deployment)
+
+**Validation:** After updating, test by navigating to Step 5 in the funnel builder and
+generating a presentation.

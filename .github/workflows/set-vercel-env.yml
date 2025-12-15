@@ -1,0 +1,44 @@
+name: Set Vercel Environment Variable
+
+on:
+  workflow_dispatch:
+    inputs:
+      env_key:
+        description: "Environment variable name"
+        required: true
+        type: string
+      env_value:
+        description: "Environment variable value"
+        required: true
+        type: string
+      targets:
+        description: "Targets (comma-separated: production,preview,development)"
+        required: true
+        default: "production,preview,development"
+        type: string
+
+jobs:
+  set-env:
+    name: Set Vercel Environment Variable
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set environment variable via Vercel API
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          # Parse targets into JSON array
+          TARGETS=$(echo '${{ inputs.targets }}' | tr ',' '\n' | jq -R . | jq -s .)
+
+          # Create the environment variable
+          curl -X POST "https://api.vercel.com/v10/projects/$VERCEL_PROJECT_ID/env" \
+            -H "Authorization: Bearer $VERCEL_TOKEN" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"key\": \"${{ inputs.env_key }}\",
+              \"value\": \"${{ inputs.env_value }}\",
+              \"type\": \"encrypted\",
+              \"target\": $TARGETS
+            }"
+
+          echo "✅ Environment variable ${{ inputs.env_key }} has been set"

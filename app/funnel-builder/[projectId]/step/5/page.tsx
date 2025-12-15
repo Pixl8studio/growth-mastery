@@ -174,6 +174,19 @@ export default function Step4Page({
     }, [projectId]);
 
     const handleGenerateGammaDeck = async () => {
+        // TEMPORARY: Add validation during bypass period (Issue #323)
+        // This prevents API errors when dropdown is enabled but empty
+        // TODO: Remove when Step 3 is functional (dropdown will be properly disabled)
+        if (!selectedDeckId) {
+            toast({
+                title: "No deck structure selected",
+                description:
+                    "Please select a deck structure first, or generate one in Step 4.",
+                variant: "destructive",
+            });
+            return;
+        }
+
         setIsGenerating(true);
         setGenerationProgress(0);
 

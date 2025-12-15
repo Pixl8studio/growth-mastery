@@ -179,13 +179,10 @@ export default function Step4Page({
     }, [projectId]);
 
     const handleGenerateDeck = async () => {
-        // TEMPORARY: Bypass businessProfile check for testing (Issue #323)
+        // TEMPORARY: businessProfile check removed for testing (Issue #323)
         // Original check: if (!businessProfile) return;
         // TODO: Restore when Step 3 is functional
-        // Note: API endpoint should validate businessProfileId parameter
-        if (!businessProfile && !canGenerateDeck) {
-            return;
-        }
+        // API endpoint now handles null businessProfileId with placeholder content
 
         setIsGenerating(true);
         setGenerationProgress(0);
@@ -492,6 +489,27 @@ export default function Step4Page({
                                     >
                                         Complete your profile in Step 1
                                     </Link>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* TEMPORARY: Testing Mode Warning Banner (Issue #323)
+                    Shows when generating without a business profile
+                    TODO: Remove when Step 3 is functional */}
+                {!businessProfile && canGenerateDeck && !isLoadingProfile && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                        <div className="flex items-start gap-3">
+                            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
+                            <div className="flex-1">
+                                <p className="font-medium text-amber-800">
+                                    Testing Mode Active
+                                </p>
+                                <p className="mt-1 text-sm text-amber-700">
+                                    Generating without a business profile will create
+                                    placeholder content. For personalized results,
+                                    complete your business profile first.
                                 </p>
                             </div>
                         </div>

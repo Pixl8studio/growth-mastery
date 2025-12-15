@@ -35,7 +35,14 @@ const log = isDev
 const generateDeckStructureSchema = z
     .object({
         transcriptId: z.string().uuid("Invalid transcript ID").optional(),
-        businessProfileId: z.string().uuid("Invalid business profile ID").optional(),
+        // TEMPORARY: Allow null businessProfileId for testing (Issue #323)
+        // Original: z.string().uuid("Invalid business profile ID").optional()
+        // TODO: Restore strict UUID validation when Step 3 is functional
+        businessProfileId: z
+            .string()
+            .uuid("Invalid business profile ID")
+            .optional()
+            .nullable(),
         projectId: z.string().uuid("Invalid project ID"),
         slideCount: z.enum(["5", "60"]).optional().default("60"),
         presentationType: z
@@ -43,8 +50,11 @@ const generateDeckStructureSchema = z
             .optional()
             .default("webinar"),
     })
-    .refine((data) => data.transcriptId || data.businessProfileId, {
-        message: "Either transcriptId or businessProfileId is required",
+    // TEMPORARY: Relaxed validation for testing (Issue #323)
+    // Original: .refine((data) => data.transcriptId || data.businessProfileId, {...})
+    // TODO: Restore strict validation when Step 3 is functional
+    .refine((data) => data.transcriptId || data.businessProfileId || data.projectId, {
+        message: "Either transcriptId, businessProfileId, or projectId is required",
     });
 
 /**
@@ -227,9 +237,54 @@ export async function POST(request: NextRequest) {
                 contextLength: contextText.length,
             });
         } else {
-            throw new ValidationError(
-                "Either transcriptId or businessProfileId is required"
-            );
+            // TEMPORARY: Generate placeholder content for testing (Issue #323)
+            // This allows testing Step 4 without a business profile
+            // TODO: Remove this fallback when Step 3 is functional
+            log.info("Using placeholder content for testing (Issue #323)", {
+                userId: user.id,
+                projectId,
+            });
+
+            contextText = `## Testing Mode - Placeholder Business Profile
+
+This is a placeholder business profile for testing the presentation generation workflow.
+
+## Ideal Customer & Core Problem
+Ideal Customer: Small business owners and entrepreneurs
+Transformation: From struggling to thriving in their business
+Perceived Problem: Lack of clear marketing strategy
+Root Cause: No systematic approach to customer acquisition
+Daily Pain Points: Inconsistent revenue, unclear messaging, scattered marketing efforts
+Secret Desires: Financial freedom, more time with family, business that runs without them
+Common Mistakes: Trying to do everything at once, not focusing on one channel
+
+## Your Story & Signature Method
+Struggle Story: Started with nothing, made every mistake possible
+Breakthrough Moment: Discovered a simple framework that changed everything
+Life Now: Running a successful business with consistent growth
+Credibility: Helped hundreds of entrepreneurs achieve their goals
+Signature Method: The 3-Step Growth Framework
+
+## Your Offer & Proof
+Offer Name: Business Growth Accelerator
+Offer Type: Online course and coaching program
+Deliverables: Video training, templates, weekly coaching calls
+Problem Solved: Creates a clear path from confusion to clarity
+Promise/Outcome: Double your revenue in 90 days
+Guarantee: 30-day money-back guarantee
+Testimonials: "This program changed my business" - Happy Customer
+
+## Call to Action & Objections
+Call to Action: Schedule a free strategy call
+Incentive: Free bonus training for early action takers
+Top Objections:
+  1. I don't have time - Response: The program is designed for busy entrepreneurs
+  2. It's too expensive - Response: The ROI far exceeds the investment
+  3. Will it work for me? - Response: Our framework works for any industry
+
+## Pricing
+Regular Price: $2,997
+Webinar Special: $997`;
         }
 
         // Load framework template based on presentation type

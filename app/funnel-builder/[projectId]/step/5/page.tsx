@@ -387,8 +387,11 @@ export default function Step4Page({
             stepDescription="Now that your presentation structure has been created, let's generate the beautifully designed deck"
         >
             <div className="space-y-8">
-                {/* Dependency Warning */}
-                {deckStructures.length === 0 && (
+                {/* TEMPORARY: Dependency Warning bypassed for testing (Issue #323)
+                    Original condition: {deckStructures.length === 0 && (...)}
+                    TODO: Restore when Step 3 is functional */}
+                {/* Dependency Warning - BYPASSED */}
+                {false && deckStructures.length === 0 && (
                     <DependencyWarning
                         message="You need to create a deck structure first before generating Gamma slides."
                         requiredStep={4}
@@ -430,7 +433,9 @@ export default function Step4Page({
                                     )}
                                 </select>
 
-                                {deckStructures.length === 0 && (
+                                {/* TEMPORARY: Inline warning bypassed for testing (Issue #323)
+                                    TODO: Restore when Step 3 is functional */}
+                                {false && deckStructures.length === 0 && (
                                     <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-600">
                                         💡 Complete Step 3 first to create deck
                                         structures

@@ -410,7 +410,10 @@ export default function Step4Page({
     const profileCompletion = businessProfile?.completion_status?.overall ?? 0;
     const hasProfile = businessProfile !== null && profileCompletion > 0;
     const isProfileComplete = profileCompletion === 100;
-    const canGenerateDeck = hasProfile;
+    // TEMPORARY: Bypass business profile prerequisite for testing (Issue #323)
+    // Original: const canGenerateDeck = hasProfile;
+    // TODO: Restore prerequisite check when Step 3 is functional
+    const canGenerateDeck = true;
     const hasCompletedDeck = deckStructures.some((d) => d.status === "completed");
 
     // Dynamic sub-headline based on profile state
@@ -446,8 +449,11 @@ export default function Step4Page({
             stepDescription={getSubHeadline()}
         >
             <div className="space-y-8">
-                {/* Dependency Warning - No business profile */}
-                {!isLoadingProfile && !hasProfile && (
+                {/* TEMPORARY: Dependency Warning bypassed for testing (Issue #323)
+                    Original condition: {!isLoadingProfile && !hasProfile && (...)}
+                    TODO: Restore when Step 3 is functional */}
+                {/* Dependency Warning - No business profile - BYPASSED */}
+                {false && !isLoadingProfile && !hasProfile && (
                     <DependencyWarning
                         message="Complete your business profile in Step 1 to generate a presentation structure. Your profile provides the context AI needs to create a personalized 60-slide masterclass outline."
                         requiredStep={1}

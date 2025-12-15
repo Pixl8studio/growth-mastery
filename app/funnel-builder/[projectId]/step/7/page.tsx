@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import { Sparkles, MessageSquare, Trash2, Download } from "lucide-react";
+import { Sparkles, MessageSquare, Trash2, Download, X } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
@@ -55,8 +55,9 @@ export default function Step6Page({
     >(new Map());
     const [activeJobId, setActiveJobId] = useState<string | null>(null);
     const [jobStatus, setJobStatus] = useState<
-        "pending" | "processing" | "completed" | "failed" | null
+        "pending" | "processing" | "completed" | "failed" | "cancelled" | null
     >(null);
+    const [isCancelling, setIsCancelling] = useState(false);
     const [showToast, setShowToast] = useState(false);
     const [toastMessage, setToastMessage] = useState("");
     const [pollFailureCount, setPollFailureCount] = useState(0);
@@ -268,6 +269,19 @@ export default function Step6Page({
                     setActiveJobId(null);
                     setIsGenerating(false);
                     setGenerationProgress(0);
+                } else if (job.status === "cancelled") {
+                    clearInterval(pollInterval);
+
+                    // Show cancellation toast
+                    setToastMessage("Generation cancelled");
+                    setShowToast(true);
+                    setTimeout(() => setShowToast(false), 3000);
+
+                    // Reset state
+                    setActiveJobId(null);
+                    setIsGenerating(false);
+                    setGenerationProgress(0);
+                    setIsCancelling(false);
                 }
             } catch (error) {
                 logger.error({ error }, "Failed to poll job status");
@@ -323,6 +337,43 @@ export default function Step6Page({
                 error instanceof Error
                     ? error.message
                     : "Failed to start generation. Please try again."
+            );
+        }
+    };
+
+    const handleCancel = async () => {
+        if (!activeJobId) return;
+
+        setIsCancelling(true);
+
+        try {
+            const response = await fetch(
+                `/api/generate/talk-track/cancel/${activeJobId}`,
+                { method: "POST" }
+            );
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to cancel generation");
+            }
+
+            // State will be reset by the polling logic when it detects "cancelled" status
+            // But if polling has already stopped, reset state here
+            setToastMessage("Generation cancelled");
+            setShowToast(true);
+            setTimeout(() => setShowToast(false), 3000);
+
+            setActiveJobId(null);
+            setIsGenerating(false);
+            setGenerationProgress(0);
+            setIsCancelling(false);
+        } catch (error) {
+            logger.error({ error }, "Failed to cancel talk track generation");
+            setIsCancelling(false);
+            alert(
+                error instanceof Error
+                    ? error.message
+                    : "Failed to cancel generation. Please try again."
             );
         }
     };
@@ -464,15 +515,26 @@ export default function Step6Page({
                         <div className="flex items-start gap-3">
                             <span className="text-xl">⏳</span>
                             <div className="flex-1">
-                                <p className="font-semibold text-amber-900">
-                                    {jobStatus === "pending"
-                                        ? "Starting Talk Track Generation..."
-                                        : "Generating Your Talk Track"}
-                                </p>
-                                <p className="mt-1 text-sm text-amber-700">
-                                    This typically takes 1-3 minutes. You can navigate
-                                    away safely.
-                                </p>
+                                <div className="flex items-start justify-between">
+                                    <div>
+                                        <p className="font-semibold text-amber-900">
+                                            {jobStatus === "pending"
+                                                ? "Starting Talk Track Generation..."
+                                                : "Generating Your Talk Track"}
+                                        </p>
+                                        <p className="mt-1 text-sm text-amber-700">
+                                            This typically takes 1-3 minutes. You can
+                                            navigate away safely.
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={handleCancel}
+                                        disabled={isCancelling}
+                                        className="ml-4 flex-shrink-0 rounded-md border border-amber-400 bg-white px-3 py-1 text-xs font-medium text-amber-700 transition-colors hover:bg-amber-100 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {isCancelling ? "Cancelling..." : "Cancel"}
+                                    </button>
+                                </div>
                                 <div className="mt-3">
                                     <div className="mb-1 flex items-center justify-between text-xs text-amber-700">
                                         <span>Progress</span>
@@ -595,6 +657,21 @@ export default function Step6Page({
                                     style={{ width: `${generationProgress}%` }}
                                 />
                             </div>
+                        </div>
+
+                        {/* Cancel Button */}
+                        <div className="mt-6 text-center">
+                            <button
+                                onClick={handleCancel}
+                                disabled={isCancelling}
+                                className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 transition-colors hover:border-red-300 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <X className="h-4 w-4" />
+                                {isCancelling ? "Cancelling..." : "Cancel Generation"}
+                            </button>
+                            <p className="mt-2 text-xs text-muted-foreground">
+                                This will stop the current generation process
+                            </p>
                         </div>
                     </div>
                 )}

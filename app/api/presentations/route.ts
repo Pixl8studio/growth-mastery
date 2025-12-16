@@ -8,9 +8,23 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
+import { ValidationError, NotFoundError } from "@/lib/errors";
+
+// Zod schemas for input validation
+const ListPresentationsSchema = z.object({
+    projectId: z.string().uuid("projectId must be a valid UUID"),
+});
+
+const CreatePresentationSchema = z.object({
+    projectId: z.string().uuid("projectId must be a valid UUID"),
+    deckStructureId: z.string().uuid("deckStructureId must be a valid UUID").optional(),
+    title: z.string().min(1, "title is required").max(500, "title too long"),
+    customization: z.record(z.string(), z.unknown()).optional(),
+});
 
 // GET - List presentations for a project
 export async function GET(request: Request) {
@@ -28,39 +42,54 @@ export async function GET(request: Request) {
         const { searchParams } = new URL(request.url);
         const projectId = searchParams.get("projectId");
 
-        if (!projectId) {
-            return NextResponse.json(
-                { error: "projectId is required" },
-                { status: 400 }
-            );
+        // Validate input with Zod
+        const validation = ListPresentationsSchema.safeParse({ projectId });
+        if (!validation.success) {
+            const errorMessage = validation.error.issues
+                .map((issue) => issue.message)
+                .join(", ");
+            throw new ValidationError(errorMessage);
         }
+
+        const { projectId: validProjectId } = validation.data;
 
         // Verify user owns the project
         const { data: project, error: projectError } = await supabase
             .from("funnel_projects")
             .select("id")
-            .eq("id", projectId)
+            .eq("id", validProjectId)
             .eq("user_id", user.id)
             .single();
 
         if (projectError || !project) {
-            return NextResponse.json({ error: "Project not found" }, { status: 404 });
+            throw new NotFoundError("Project");
         }
 
         // Fetch presentations
         const { data: presentations, error } = await supabase
             .from("presentations")
             .select("*")
-            .eq("funnel_project_id", projectId)
+            .eq("funnel_project_id", validProjectId)
             .order("created_at", { ascending: false });
 
         if (error) {
-            logger.error({ error }, "Failed to fetch presentations");
+            logger.error(
+                { error, projectId: validProjectId },
+                "Failed to fetch presentations"
+            );
             throw error;
         }
 
         return NextResponse.json({ presentations });
     } catch (error) {
+        if (error instanceof ValidationError) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+
+        if (error instanceof NotFoundError) {
+            return NextResponse.json({ error: error.message }, { status: 404 });
+        }
+
         logger.error({ error }, "Failed to list presentations");
 
         Sentry.captureException(error, {
@@ -87,15 +116,23 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const body = await request.json();
-        const { projectId, deckStructureId, title, customization } = body;
-
-        if (!projectId || !title) {
-            return NextResponse.json(
-                { error: "projectId and title are required" },
-                { status: 400 }
-            );
+        // Parse and validate input with Zod
+        let body: unknown;
+        try {
+            body = await request.json();
+        } catch {
+            throw new ValidationError("Invalid JSON body");
         }
+
+        const validation = CreatePresentationSchema.safeParse(body);
+        if (!validation.success) {
+            const errorMessage = validation.error.issues
+                .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+                .join(", ");
+            throw new ValidationError(errorMessage);
+        }
+
+        const { projectId, deckStructureId, title, customization } = validation.data;
 
         // Verify user owns the project
         const { data: project, error: projectError } = await supabase
@@ -106,7 +143,7 @@ export async function POST(request: Request) {
             .single();
 
         if (projectError || !project) {
-            return NextResponse.json({ error: "Project not found" }, { status: 404 });
+            throw new NotFoundError("Project");
         }
 
         // Create presentation
@@ -125,17 +162,25 @@ export async function POST(request: Request) {
             .single();
 
         if (error) {
-            logger.error({ error }, "Failed to create presentation");
+            logger.error({ error, projectId }, "Failed to create presentation");
             throw error;
         }
 
         logger.info(
-            { userId: user.id, presentationId: presentation.id },
+            { userId: user.id, presentationId: presentation.id, projectId },
             "Presentation created"
         );
 
         return NextResponse.json({ presentation });
     } catch (error) {
+        if (error instanceof ValidationError) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+
+        if (error instanceof NotFoundError) {
+            return NextResponse.json({ error: error.message }, { status: 404 });
+        }
+
         logger.error({ error }, "Failed to create presentation");
 
         Sentry.captureException(error, {

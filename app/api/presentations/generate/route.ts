@@ -8,22 +8,39 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import {
-    generatePresentation,
-    type PresentationCustomization,
-} from "@/lib/presentations/slide-generator";
+import { ValidationError, NotFoundError, ForbiddenError } from "@/lib/errors";
+import { generatePresentation } from "@/lib/presentations/slide-generator";
 
-interface GenerateRequest {
-    projectId: string;
-    deckStructureId: string;
-    customization: PresentationCustomization;
-}
+// Zod schema for presentation customization
+const PresentationCustomizationSchema = z.object({
+    textDensity: z.enum(["minimal", "balanced", "detailed"]),
+    visualStyle: z.enum(["professional", "creative", "minimal", "bold"]),
+    emphasisPreference: z.enum(["text", "visuals", "balanced"]),
+    animationLevel: z.enum(["none", "subtle", "moderate", "dynamic"]),
+    imageStyle: z.enum(["photography", "illustration", "abstract", "icons"]),
+});
+
+// Zod schema for generate request
+const GenerateRequestSchema = z.object({
+    projectId: z.string().uuid("projectId must be a valid UUID"),
+    deckStructureId: z.string().uuid("deckStructureId must be a valid UUID"),
+    customization: PresentationCustomizationSchema.optional(),
+});
+
+// Zod schema for deck structure slides from JSONB
+const DeckStructureSlideSchema = z.object({
+    title: z.string().optional(),
+    description: z.string().optional(),
+    section: z.string().optional(),
+});
 
 export async function POST(request: Request) {
     const startTime = Date.now();
+    let presentationId: string | null = null;
 
     try {
         const supabase = await createClient();
@@ -36,43 +53,77 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const body: GenerateRequest = await request.json();
-        const { projectId, deckStructureId, customization } = body;
-
-        if (!projectId || !deckStructureId) {
-            return NextResponse.json(
-                { error: "projectId and deckStructureId are required" },
-                { status: 400 }
-            );
+        // Parse and validate input with Zod
+        let body: unknown;
+        try {
+            body = await request.json();
+        } catch {
+            throw new ValidationError("Invalid JSON body");
         }
 
-        // Verify user owns the project
-        const { data: project, error: projectError } = await supabase
-            .from("funnel_projects")
-            .select("id, name, user_id")
-            .eq("id", projectId)
-            .single();
+        const validation = GenerateRequestSchema.safeParse(body);
+        if (!validation.success) {
+            const errorMessage = validation.error.issues
+                .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+                .join(", ");
+            throw new ValidationError(errorMessage);
+        }
+
+        const { projectId, deckStructureId, customization } = validation.data;
+
+        // Parallel database queries for project, deck structure, and brand design
+        const [
+            projectResult,
+            deckStructureResult,
+            brandDesignResult,
+            businessProfileResult,
+        ] = await Promise.all([
+            supabase
+                .from("funnel_projects")
+                .select("id, name, user_id")
+                .eq("id", projectId)
+                .single(),
+            supabase
+                .from("deck_structures")
+                .select("*")
+                .eq("id", deckStructureId)
+                .eq("user_id", user.id)
+                .single(),
+            supabase
+                .from("brand_designs")
+                .select("*")
+                .eq("funnel_project_id", projectId)
+                .maybeSingle(),
+            // Direct Supabase query instead of internal HTTP call (fixes SSRF vulnerability)
+            supabase
+                .from("business_profiles")
+                .select("*")
+                .eq("funnel_project_id", projectId)
+                .maybeSingle(),
+        ]);
+
+        const { data: project, error: projectError } = projectResult;
+        const { data: deckStructure, error: deckError } = deckStructureResult;
+        const { data: brandDesign } = brandDesignResult;
+        const { data: businessProfile, error: profileError } = businessProfileResult;
 
         if (projectError || !project) {
-            return NextResponse.json({ error: "Project not found" }, { status: 404 });
+            throw new NotFoundError("Project");
         }
 
         if (project.user_id !== user.id) {
-            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+            throw new ForbiddenError("You do not have access to this project");
         }
 
-        // Fetch deck structure
-        const { data: deckStructure, error: deckError } = await supabase
-            .from("deck_structures")
-            .select("*")
-            .eq("id", deckStructureId)
-            .eq("user_id", user.id)
-            .single();
-
         if (deckError || !deckStructure) {
-            return NextResponse.json(
-                { error: "Deck structure not found" },
-                { status: 404 }
+            throw new NotFoundError("Deck structure");
+        }
+
+        // Log if business profile fetch failed (but don't throw - it's optional)
+        if (profileError) {
+            logger.warn(
+                { error: profileError, projectId },
+                "Failed to fetch business profile - continuing without it"
             );
         }
 
@@ -81,36 +132,22 @@ export async function POST(request: Request) {
             "Starting presentation generation"
         );
 
-        // Fetch business profile (optional)
-        let businessProfile = null;
-        try {
-            const response = await fetch(
-                `${process.env.NEXT_PUBLIC_APP_URL || ""}/api/marketing/profiles?projectId=${projectId}`,
-                {
-                    headers: {
-                        Cookie: request.headers.get("Cookie") || "",
-                    },
-                }
-            );
-            if (response.ok) {
-                const data = await response.json();
-                if (data.profile) {
-                    businessProfile = data.profile;
-                }
+        // Validate and parse deck structure slides from JSONB
+        const rawSlides = Array.isArray(deckStructure.slides)
+            ? deckStructure.slides
+            : [];
+        const validatedSlides = rawSlides.map((slide: unknown, index: number) => {
+            const parsed = DeckStructureSlideSchema.safeParse(slide);
+            if (parsed.success) {
+                return parsed.data;
             }
-        } catch {
-            logger.warn("Failed to fetch business profile");
-        }
-
-        // Fetch brand design
-        const { data: brandDesign } = await supabase
-            .from("brand_designs")
-            .select("*")
-            .eq("funnel_project_id", projectId)
-            .maybeSingle();
-
-        // Parse deck structure slides
-        const slides = Array.isArray(deckStructure.slides) ? deckStructure.slides : [];
+            // Log validation issue but provide fallback
+            logger.warn(
+                { slideIndex: index, errors: parsed.error.issues },
+                "Slide validation failed, using fallback"
+            );
+            return { title: `Slide ${index + 1}`, description: "", section: "" };
+        });
 
         // Create presentation record
         const { data: presentation, error: createError } = await supabase
@@ -129,45 +166,74 @@ export async function POST(request: Request) {
             .single();
 
         if (createError) {
-            logger.error({ error: createError }, "Failed to create presentation");
+            logger.error(
+                { error: createError, projectId },
+                "Failed to create presentation record"
+            );
             throw createError;
         }
 
-        // Generate slides
-        const generatedSlides = await generatePresentation({
-            deckStructure: {
-                id: deckStructure.id,
-                title: deckStructure.title || "Presentation",
-                slideCount: slides.length,
-                slides: slides.map(
-                    (
-                        s: { title?: string; description?: string; section?: string },
-                        i: number
-                    ) => ({
-                        slideNumber: i + 1,
-                        title: s.title || `Slide ${i + 1}`,
-                        description: s.description || "",
-                        section: s.section || "",
-                    })
-                ),
-            },
-            customization: customization || {
-                textDensity: "balanced",
-                visualStyle: "professional",
-                emphasisPreference: "balanced",
-                animationLevel: "subtle",
-                imageStyle: "photography",
-            },
-            businessProfile: businessProfile || undefined,
-            brandDesign: brandDesign || undefined,
-            onSlideGenerated: async (slide, progress) => {
-                // Update progress in database
-                await supabase
-                    .from("presentations")
-                    .update({ generation_progress: progress })
-                    .eq("id", presentation.id);
-            },
-        });
+        presentationId = presentation.id;
+
+        // Default customization values
+        const finalCustomization = customization || {
+            textDensity: "balanced" as const,
+            visualStyle: "professional" as const,
+            emphasisPreference: "balanced" as const,
+            animationLevel: "subtle" as const,
+            imageStyle: "photography" as const,
+        };
+
+        // Generate slides with error handling for transaction safety
+        let generatedSlides;
+        try {
+            generatedSlides = await generatePresentation({
+                deckStructure: {
+                    id: deckStructure.id,
+                    title: deckStructure.title || "Presentation",
+                    slideCount: validatedSlides.length,
+                    slides: validatedSlides.map(
+                        (s: z.infer<typeof DeckStructureSlideSchema>, i: number) => ({
+                            slideNumber: i + 1,
+                            title: s.title || `Slide ${i + 1}`,
+                            description: s.description || "",
+                            section: s.section || "",
+                        })
+                    ),
+                },
+                customization: finalCustomization,
+                businessProfile: businessProfile || undefined,
+                brandDesign: brandDesign || undefined,
+                onSlideGenerated: async (slide, progress) => {
+                    // Update progress in database
+                    await supabase
+                        .from("presentations")
+                        .update({ generation_progress: progress })
+                        .eq("id", presentation.id);
+                },
+            });
+        } catch (generationError) {
+            // Transaction safety: Mark presentation as failed if generation fails
+            const errorMessage =
+                generationError instanceof Error
+                    ? generationError.message
+                    : "Unknown generation error";
+
+            logger.error(
+                { error: generationError, presentationId: presentation.id },
+                "Slide generation failed, marking presentation as failed"
+            );
+
+            await supabase
+                .from("presentations")
+                .update({
+                    status: "failed",
+                    error_message: errorMessage,
+                })
+                .eq("id", presentation.id);
+
+            throw generationError;
+        }
 
         // Update presentation with generated slides
         const { error: updateError } = await supabase
@@ -181,7 +247,10 @@ export async function POST(request: Request) {
             .eq("id", presentation.id);
 
         if (updateError) {
-            logger.error({ error: updateError }, "Failed to update presentation");
+            logger.error(
+                { error: updateError, presentationId: presentation.id },
+                "Failed to update presentation with generated slides"
+            );
             throw updateError;
         }
 
@@ -206,6 +275,41 @@ export async function POST(request: Request) {
         });
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+        // If we have a presentation ID and it's not already marked as failed, mark it
+        if (
+            presentationId &&
+            !(error instanceof ValidationError) &&
+            !(error instanceof NotFoundError)
+        ) {
+            try {
+                const supabase = await createClient();
+                await supabase
+                    .from("presentations")
+                    .update({
+                        status: "failed",
+                        error_message: errorMessage,
+                    })
+                    .eq("id", presentationId);
+            } catch (updateError) {
+                logger.error(
+                    { error: updateError, presentationId },
+                    "Failed to mark presentation as failed"
+                );
+            }
+        }
+
+        if (error instanceof ValidationError) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+
+        if (error instanceof NotFoundError) {
+            return NextResponse.json({ error: error.message }, { status: 404 });
+        }
+
+        if (error instanceof ForbiddenError) {
+            return NextResponse.json({ error: error.message }, { status: 403 });
+        }
 
         logger.error({ error }, "Presentation generation failed");
 

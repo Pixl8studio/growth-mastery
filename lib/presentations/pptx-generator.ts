@@ -6,29 +6,41 @@
  */
 
 import JSZip from "jszip";
+import { z } from "zod";
 
 import { logger } from "@/lib/logger";
 
-export interface SlideData {
-    slideNumber: number;
-    title: string;
-    content: string[];
-    speakerNotes: string;
-    layoutType:
-        | "title"
-        | "section"
-        | "content_left"
-        | "content_right"
-        | "bullets"
-        | "quote"
-        | "statistics"
-        | "comparison"
-        | "process"
-        | "cta";
-    section: string;
-    imagePrompt?: string;
-    imageUrl?: string;
-}
+// ============================================================================
+// Zod Schemas for Type Safety
+// ============================================================================
+
+// Layout types for slides
+const SlideLayoutTypeSchema = z.enum([
+    "title",
+    "section",
+    "content_left",
+    "content_right",
+    "bullets",
+    "quote",
+    "statistics",
+    "comparison",
+    "process",
+    "cta",
+]);
+
+// Zod schema for slide data validation (exported for use in API routes)
+export const SlideDataSchema = z.object({
+    slideNumber: z.number().int().positive(),
+    title: z.string(),
+    content: z.array(z.string()),
+    speakerNotes: z.string(),
+    layoutType: SlideLayoutTypeSchema,
+    section: z.string(),
+    imagePrompt: z.string().optional(),
+    imageUrl: z.string().url().optional(),
+});
+
+export type SlideData = z.infer<typeof SlideDataSchema>;
 
 export interface BrandColors {
     primary: string;
@@ -45,15 +57,83 @@ export interface PresentationOptions {
     brandColors?: BrandColors;
 }
 
+// ============================================================================
+// EMU Constants (English Metric Units)
+// PowerPoint uses EMUs for all positioning and sizing
+// 914400 EMUs = 1 inch
+// ============================================================================
+
+// Base conversion factor
+const EMU_PER_INCH = 914400;
+
+// Slide dimensions (standard 16:9 would be different)
+const SLIDE_WIDTH_INCHES = 10;
+const SLIDE_HEIGHT_INCHES = 7.5;
+const SLIDE_WIDTH = SLIDE_WIDTH_INCHES * EMU_PER_INCH; // 9144000
+const SLIDE_HEIGHT = SLIDE_HEIGHT_INCHES * EMU_PER_INCH; // 6858000
+
+// Content positioning - Title slide
+const TITLE_SLIDE_TITLE_X = 685800; // 0.75 inches
+const TITLE_SLIDE_TITLE_Y = 2130425; // ~2.33 inches
+const TITLE_SLIDE_TITLE_WIDTH = 7772400; // 8.5 inches
+const TITLE_SLIDE_TITLE_HEIGHT = 1470025; // ~1.6 inches
+const TITLE_SLIDE_SUBTITLE_Y = 3886200; // ~4.25 inches
+const TITLE_SLIDE_SUBTITLE_HEIGHT = 1752600; // ~1.92 inches
+
+// Content positioning - Section slide
+const SECTION_SLIDE_TITLE_X = 685800;
+const SECTION_SLIDE_TITLE_Y = 2743200; // 3 inches
+const SECTION_SLIDE_TITLE_WIDTH = 7772400;
+const SECTION_SLIDE_TITLE_HEIGHT = 1371600; // 1.5 inches
+
+// Content positioning - Standard content slide
+const CONTENT_SLIDE_MARGIN_X = 457200; // 0.5 inches
+const CONTENT_SLIDE_TITLE_Y = 274638; // ~0.3 inches
+const CONTENT_SLIDE_TITLE_WIDTH = 8229600; // 9 inches
+const CONTENT_SLIDE_TITLE_HEIGHT = 1143000; // 1.25 inches
+const CONTENT_SLIDE_BODY_Y = 1600200; // ~1.75 inches
+const CONTENT_SLIDE_BODY_HEIGHT = 4525963; // ~4.95 inches
+
+// Footer positioning
+const FOOTER_Y = 6400800; // 7 inches
+const FOOTER_HEIGHT = 365125; // ~0.4 inches
+const SLIDE_NUMBER_X = 6553200; // ~7.17 inches
+const SLIDE_NUMBER_WIDTH = 2133600; // ~2.33 inches
+const BRAND_WIDTH = 2743200; // 3 inches
+
+// Text formatting
+const BULLET_MARGIN_LEFT = 457200; // 0.5 inches
+const BULLET_INDENT = -457200; // Hanging indent
+
+// Font sizes (in hundredths of a point)
+const FONT_SIZE_TITLE_LARGE = 6000; // 60pt
+const FONT_SIZE_TITLE_SECTION = 5400; // 54pt
+const FONT_SIZE_TITLE_CONTENT = 4400; // 44pt
+const FONT_SIZE_BODY = 2400; // 24pt
+const FONT_SIZE_FOOTER = 1200; // 12pt
+
+// ============================================================================
+// Helper Functions
+// ============================================================================
+
 // Convert hex color to PPTX color format (RRGGBB without #)
 function hexToRgb(hex: string): string {
     return hex.replace("#", "").toUpperCase();
 }
 
-// EMU (English Metric Units) - PowerPoint uses EMUs for positioning
-const EMU_PER_INCH = 914400;
-const SLIDE_WIDTH = 9144000; // 10 inches
-const SLIDE_HEIGHT = 6858000; // 7.5 inches
+// Escape XML special characters
+function escapeXml(text: string): string {
+    return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&apos;");
+}
+
+// ============================================================================
+// Slide XML Generators
+// ============================================================================
 
 // Generate XML for a single slide
 function generateSlideXml(
@@ -70,12 +150,12 @@ function generateSlideXml(
         .map(
             (point) => `
       <a:p>
-        <a:pPr marL="457200" indent="-457200">
+        <a:pPr marL="${BULLET_MARGIN_LEFT}" indent="${BULLET_INDENT}">
           <a:buFont typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
           <a:buChar char="&#8226;"/>
         </a:pPr>
         <a:r>
-          <a:rPr lang="en-US" sz="2400" dirty="0">
+          <a:rPr lang="en-US" sz="${FONT_SIZE_BODY}" dirty="0">
             <a:solidFill>
               <a:srgbClr val="${textColor}"/>
             </a:solidFill>
@@ -117,8 +197,8 @@ function generateSlideXml(
         </p:nvSpPr>
         <p:spPr>
           <a:xfrm>
-            <a:off x="685800" y="2130425"/>
-            <a:ext cx="7772400" cy="1470025"/>
+            <a:off x="${TITLE_SLIDE_TITLE_X}" y="${TITLE_SLIDE_TITLE_Y}"/>
+            <a:ext cx="${TITLE_SLIDE_TITLE_WIDTH}" cy="${TITLE_SLIDE_TITLE_HEIGHT}"/>
           </a:xfrm>
         </p:spPr>
         <p:txBody>
@@ -127,7 +207,7 @@ function generateSlideXml(
           <a:p>
             <a:pPr algn="ctr"/>
             <a:r>
-              <a:rPr lang="en-US" sz="6000" b="1" dirty="0">
+              <a:rPr lang="en-US" sz="${FONT_SIZE_TITLE_LARGE}" b="1" dirty="0">
                 <a:solidFill>
                   <a:srgbClr val="${titleColor}"/>
                 </a:solidFill>
@@ -146,8 +226,8 @@ function generateSlideXml(
         </p:nvSpPr>
         <p:spPr>
           <a:xfrm>
-            <a:off x="685800" y="3886200"/>
-            <a:ext cx="7772400" cy="1752600"/>
+            <a:off x="${TITLE_SLIDE_TITLE_X}" y="${TITLE_SLIDE_SUBTITLE_Y}"/>
+            <a:ext cx="${TITLE_SLIDE_TITLE_WIDTH}" cy="${TITLE_SLIDE_SUBTITLE_HEIGHT}"/>
           </a:xfrm>
         </p:spPr>
         <p:txBody>
@@ -156,7 +236,7 @@ function generateSlideXml(
           <a:p>
             <a:pPr algn="ctr"/>
             <a:r>
-              <a:rPr lang="en-US" sz="2400" dirty="0">
+              <a:rPr lang="en-US" sz="${FONT_SIZE_BODY}" dirty="0">
                 <a:solidFill>
                   <a:srgbClr val="${textColor}"/>
                 </a:solidFill>
@@ -175,8 +255,8 @@ function generateSlideXml(
         </p:nvSpPr>
         <p:spPr>
           <a:xfrm>
-            <a:off x="457200" y="6400800"/>
-            <a:ext cx="2743200" cy="365125"/>
+            <a:off x="${CONTENT_SLIDE_MARGIN_X}" y="${FOOTER_Y}"/>
+            <a:ext cx="${BRAND_WIDTH}" cy="${FOOTER_HEIGHT}"/>
           </a:xfrm>
           <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
         </p:spPr>
@@ -185,7 +265,7 @@ function generateSlideXml(
           <a:lstStyle/>
           <a:p>
             <a:r>
-              <a:rPr lang="en-US" sz="1200" dirty="0">
+              <a:rPr lang="en-US" sz="${FONT_SIZE_FOOTER}" dirty="0">
                 <a:solidFill>
                   <a:srgbClr val="${accentColor}"/>
                 </a:solidFill>
@@ -235,8 +315,8 @@ function generateSlideXml(
         </p:nvSpPr>
         <p:spPr>
           <a:xfrm>
-            <a:off x="685800" y="2743200"/>
-            <a:ext cx="7772400" cy="1371600"/>
+            <a:off x="${SECTION_SLIDE_TITLE_X}" y="${SECTION_SLIDE_TITLE_Y}"/>
+            <a:ext cx="${SECTION_SLIDE_TITLE_WIDTH}" cy="${SECTION_SLIDE_TITLE_HEIGHT}"/>
           </a:xfrm>
           <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
         </p:spPr>
@@ -246,7 +326,7 @@ function generateSlideXml(
           <a:p>
             <a:pPr algn="ctr"/>
             <a:r>
-              <a:rPr lang="en-US" sz="5400" b="1" dirty="0">
+              <a:rPr lang="en-US" sz="${FONT_SIZE_TITLE_SECTION}" b="1" dirty="0">
                 <a:solidFill>
                   <a:srgbClr val="FFFFFF"/>
                 </a:solidFill>
@@ -289,8 +369,8 @@ function generateSlideXml(
         </p:nvSpPr>
         <p:spPr>
           <a:xfrm>
-            <a:off x="457200" y="274638"/>
-            <a:ext cx="8229600" cy="1143000"/>
+            <a:off x="${CONTENT_SLIDE_MARGIN_X}" y="${CONTENT_SLIDE_TITLE_Y}"/>
+            <a:ext cx="${CONTENT_SLIDE_TITLE_WIDTH}" cy="${CONTENT_SLIDE_TITLE_HEIGHT}"/>
           </a:xfrm>
         </p:spPr>
         <p:txBody>
@@ -298,7 +378,7 @@ function generateSlideXml(
           <a:lstStyle/>
           <a:p>
             <a:r>
-              <a:rPr lang="en-US" sz="4400" b="1" dirty="0">
+              <a:rPr lang="en-US" sz="${FONT_SIZE_TITLE_CONTENT}" b="1" dirty="0">
                 <a:solidFill>
                   <a:srgbClr val="${titleColor}"/>
                 </a:solidFill>
@@ -317,8 +397,8 @@ function generateSlideXml(
         </p:nvSpPr>
         <p:spPr>
           <a:xfrm>
-            <a:off x="457200" y="1600200"/>
-            <a:ext cx="8229600" cy="4525963"/>
+            <a:off x="${CONTENT_SLIDE_MARGIN_X}" y="${CONTENT_SLIDE_BODY_Y}"/>
+            <a:ext cx="${CONTENT_SLIDE_TITLE_WIDTH}" cy="${CONTENT_SLIDE_BODY_HEIGHT}"/>
           </a:xfrm>
         </p:spPr>
         <p:txBody>
@@ -335,8 +415,8 @@ function generateSlideXml(
         </p:nvSpPr>
         <p:spPr>
           <a:xfrm>
-            <a:off x="6553200" y="6400800"/>
-            <a:ext cx="2133600" cy="365125"/>
+            <a:off x="${SLIDE_NUMBER_X}" y="${FOOTER_Y}"/>
+            <a:ext cx="${SLIDE_NUMBER_WIDTH}" cy="${FOOTER_HEIGHT}"/>
           </a:xfrm>
           <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
         </p:spPr>
@@ -346,7 +426,7 @@ function generateSlideXml(
           <a:p>
             <a:pPr algn="r"/>
             <a:r>
-              <a:rPr lang="en-US" sz="1200" dirty="0">
+              <a:rPr lang="en-US" sz="${FONT_SIZE_FOOTER}" dirty="0">
                 <a:solidFill>
                   <a:srgbClr val="${accentColor}"/>
                 </a:solidFill>
@@ -364,8 +444,8 @@ function generateSlideXml(
         </p:nvSpPr>
         <p:spPr>
           <a:xfrm>
-            <a:off x="457200" y="6400800"/>
-            <a:ext cx="2743200" cy="365125"/>
+            <a:off x="${CONTENT_SLIDE_MARGIN_X}" y="${FOOTER_Y}"/>
+            <a:ext cx="${BRAND_WIDTH}" cy="${FOOTER_HEIGHT}"/>
           </a:xfrm>
           <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
         </p:spPr>
@@ -374,7 +454,7 @@ function generateSlideXml(
           <a:lstStyle/>
           <a:p>
             <a:r>
-              <a:rPr lang="en-US" sz="1200" dirty="0">
+              <a:rPr lang="en-US" sz="${FONT_SIZE_FOOTER}" dirty="0">
                 <a:solidFill>
                   <a:srgbClr val="${accentColor}"/>
                 </a:solidFill>
@@ -425,15 +505,9 @@ function generateNotesXml(notes: string): string {
 </p:notes>`;
 }
 
-// Escape XML special characters
-function escapeXml(text: string): string {
-    return text
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&apos;");
-}
+// ============================================================================
+// Main Generator Function
+// ============================================================================
 
 /**
  * Generate a PPTX file from presentation data

@@ -9,18 +9,41 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
+import { ValidationError, NotFoundError } from "@/lib/errors";
+import { SlideDataSchema } from "@/lib/presentations/pptx-generator";
 
 interface RouteParams {
     params: Promise<{ id: string }>;
 }
 
+// Zod schema for route parameter
+const RouteParamSchema = z.object({
+    id: z.string().uuid("id must be a valid UUID"),
+});
+
+// Zod schema for PATCH request body
+const UpdatePresentationSchema = z.object({
+    title: z.string().min(1).max(500).optional(),
+    slides: z.array(SlideDataSchema).optional(),
+    customization: z.record(z.string(), z.unknown()).optional(),
+    status: z.enum(["draft", "generating", "completed", "failed"]).optional(),
+});
+
 // GET - Fetch single presentation
 export async function GET(request: Request, { params }: RouteParams) {
     try {
         const { id } = await params;
+
+        // Validate route parameter
+        const paramValidation = RouteParamSchema.safeParse({ id });
+        if (!paramValidation.success) {
+            throw new ValidationError("Invalid presentation ID format");
+        }
+
         const supabase = await createClient();
 
         const {
@@ -39,14 +62,19 @@ export async function GET(request: Request, { params }: RouteParams) {
             .single();
 
         if (error || !presentation) {
-            return NextResponse.json(
-                { error: "Presentation not found" },
-                { status: 404 }
-            );
+            throw new NotFoundError("Presentation");
         }
 
         return NextResponse.json({ presentation });
     } catch (error) {
+        if (error instanceof ValidationError) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+
+        if (error instanceof NotFoundError) {
+            return NextResponse.json({ error: error.message }, { status: 404 });
+        }
+
         logger.error({ error }, "Failed to fetch presentation");
 
         Sentry.captureException(error, {
@@ -64,6 +92,13 @@ export async function GET(request: Request, { params }: RouteParams) {
 export async function PATCH(request: Request, { params }: RouteParams) {
     try {
         const { id } = await params;
+
+        // Validate route parameter
+        const paramValidation = RouteParamSchema.safeParse({ id });
+        if (!paramValidation.success) {
+            throw new ValidationError("Invalid presentation ID format");
+        }
+
         const supabase = await createClient();
 
         const {
@@ -83,14 +118,26 @@ export async function PATCH(request: Request, { params }: RouteParams) {
             .single();
 
         if (fetchError || !existing) {
-            return NextResponse.json(
-                { error: "Presentation not found" },
-                { status: 404 }
-            );
+            throw new NotFoundError("Presentation");
         }
 
-        const body = await request.json();
-        const { title, slides, customization, status } = body;
+        // Parse and validate body
+        let body: unknown;
+        try {
+            body = await request.json();
+        } catch {
+            throw new ValidationError("Invalid JSON body");
+        }
+
+        const validation = UpdatePresentationSchema.safeParse(body);
+        if (!validation.success) {
+            const errorMessage = validation.error.issues
+                .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+                .join(", ");
+            throw new ValidationError(errorMessage);
+        }
+
+        const { title, slides, customization, status } = validation.data;
 
         // Build update object with only provided fields
         const updateData: Record<string, unknown> = {};
@@ -98,6 +145,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
         if (slides !== undefined) updateData.slides = slides;
         if (customization !== undefined) updateData.customization = customization;
         if (status !== undefined) updateData.status = status;
+
+        if (Object.keys(updateData).length === 0) {
+            throw new ValidationError("No valid fields to update");
+        }
 
         const { data: presentation, error } = await supabase
             .from("presentations")
@@ -107,7 +158,10 @@ export async function PATCH(request: Request, { params }: RouteParams) {
             .single();
 
         if (error) {
-            logger.error({ error }, "Failed to update presentation");
+            logger.error(
+                { error, presentationId: id },
+                "Failed to update presentation"
+            );
             throw error;
         }
 
@@ -115,6 +169,14 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 
         return NextResponse.json({ presentation });
     } catch (error) {
+        if (error instanceof ValidationError) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+
+        if (error instanceof NotFoundError) {
+            return NextResponse.json({ error: error.message }, { status: 404 });
+        }
+
         logger.error({ error }, "Failed to update presentation");
 
         Sentry.captureException(error, {
@@ -132,6 +194,13 @@ export async function PATCH(request: Request, { params }: RouteParams) {
 export async function DELETE(request: Request, { params }: RouteParams) {
     try {
         const { id } = await params;
+
+        // Validate route parameter
+        const paramValidation = RouteParamSchema.safeParse({ id });
+        if (!paramValidation.success) {
+            throw new ValidationError("Invalid presentation ID format");
+        }
+
         const supabase = await createClient();
 
         const {
@@ -150,7 +219,10 @@ export async function DELETE(request: Request, { params }: RouteParams) {
             .eq("user_id", user.id);
 
         if (error) {
-            logger.error({ error }, "Failed to delete presentation");
+            logger.error(
+                { error, presentationId: id },
+                "Failed to delete presentation"
+            );
             throw error;
         }
 
@@ -158,6 +230,14 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
         return NextResponse.json({ success: true });
     } catch (error) {
+        if (error instanceof ValidationError) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+
+        if (error instanceof NotFoundError) {
+            return NextResponse.json({ error: error.message }, { status: 404 });
+        }
+
         logger.error({ error }, "Failed to delete presentation");
 
         Sentry.captureException(error, {

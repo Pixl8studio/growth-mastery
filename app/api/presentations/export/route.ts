@@ -8,14 +8,21 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import { generatePptx, type SlideData } from "@/lib/presentations/pptx-generator";
+import { ValidationError, NotFoundError } from "@/lib/errors";
+import {
+    generatePptx,
+    SlideDataSchema,
+    type SlideData,
+} from "@/lib/presentations/pptx-generator";
 
-interface ExportRequest {
-    presentationId: string;
-}
+// Zod schema for export request
+const ExportRequestSchema = z.object({
+    presentationId: z.string().uuid("presentationId must be a valid UUID"),
+});
 
 export async function POST(request: Request) {
     const startTime = Date.now();
@@ -31,15 +38,23 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const body: ExportRequest = await request.json();
-        const { presentationId } = body;
-
-        if (!presentationId) {
-            return NextResponse.json(
-                { error: "presentationId is required" },
-                { status: 400 }
-            );
+        // Parse and validate input with Zod
+        let body: unknown;
+        try {
+            body = await request.json();
+        } catch {
+            throw new ValidationError("Invalid JSON body");
         }
+
+        const validation = ExportRequestSchema.safeParse(body);
+        if (!validation.success) {
+            const errorMessage = validation.error.issues
+                .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+                .join(", ");
+            throw new ValidationError(errorMessage);
+        }
+
+        const { presentationId } = validation.data;
 
         // Fetch presentation
         const { data: presentation, error: presentationError } = await supabase
@@ -50,21 +65,49 @@ export async function POST(request: Request) {
             .single();
 
         if (presentationError || !presentation) {
-            return NextResponse.json(
-                { error: "Presentation not found" },
-                { status: 404 }
-            );
+            throw new NotFoundError("Presentation");
         }
 
         if (!presentation.slides || presentation.slides.length === 0) {
-            return NextResponse.json(
-                { error: "Presentation has no slides" },
-                { status: 400 }
-            );
+            throw new ValidationError("Presentation has no slides to export");
+        }
+
+        // Validate slides from JSONB
+        const validatedSlides: SlideData[] = [];
+        for (let i = 0; i < presentation.slides.length; i++) {
+            const slideValidation = SlideDataSchema.safeParse(presentation.slides[i]);
+            if (slideValidation.success) {
+                validatedSlides.push(slideValidation.data);
+            } else {
+                logger.warn(
+                    {
+                        slideIndex: i,
+                        errors: slideValidation.error.issues,
+                        presentationId,
+                    },
+                    "Slide validation failed, using fallback structure"
+                );
+                // Provide fallback for malformed slide data
+                const rawSlide = presentation.slides[i] as Record<string, unknown>;
+                validatedSlides.push({
+                    slideNumber: i + 1,
+                    title: String(rawSlide?.title || `Slide ${i + 1}`),
+                    content: Array.isArray(rawSlide?.content)
+                        ? rawSlide.content.map(String)
+                        : ["Content unavailable"],
+                    speakerNotes: String(rawSlide?.speakerNotes || ""),
+                    layoutType: "bullets",
+                    section: String(rawSlide?.section || ""),
+                });
+            }
         }
 
         logger.info(
-            { userId: user.id, presentationId, slideCount: presentation.slides.length },
+            {
+                userId: user.id,
+                presentationId,
+                slideCount: validatedSlides.length,
+            },
             "Starting PPTX export"
         );
 
@@ -78,7 +121,7 @@ export async function POST(request: Request) {
         // Generate PPTX
         const pptxBlob = await generatePptx({
             title: presentation.title,
-            slides: presentation.slides as SlideData[],
+            slides: validatedSlides,
             brandName: brandDesign?.brand_name || "Presentation",
             brandColors: brandDesign
                 ? {
@@ -111,6 +154,14 @@ export async function POST(request: Request) {
         });
     } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
+        if (error instanceof ValidationError) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+
+        if (error instanceof NotFoundError) {
+            return NextResponse.json({ error: error.message }, { status: 404 });
+        }
 
         logger.error({ error }, "PPTX export failed");
 

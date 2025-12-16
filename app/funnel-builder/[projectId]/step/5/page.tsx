@@ -136,7 +136,9 @@ export default function Step5Page({
     // Core state
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
-    const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null);
+    const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(
+        null
+    );
     const [brandDesign, setBrandDesign] = useState<BrandDesign | null>(null);
     const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
     const [presentations, setPresentations] = useState<Presentation[]>([]);
@@ -160,7 +162,8 @@ export default function Step5Page({
     const [generatedSlides, setGeneratedSlides] = useState<GeneratedSlide[]>([]);
 
     // Editor state
-    const [selectedPresentation, setSelectedPresentation] = useState<Presentation | null>(null);
+    const [selectedPresentation, setSelectedPresentation] =
+        useState<Presentation | null>(null);
     const [selectedSlideIndex, setSelectedSlideIndex] = useState(0);
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [editPrompt, setEditPrompt] = useState("");
@@ -230,7 +233,10 @@ export default function Step5Page({
                         }
                     }
                 } catch (profileError) {
-                    logger.warn({ error: profileError }, "Failed to load business profile");
+                    logger.warn(
+                        { error: profileError },
+                        "Failed to load business profile"
+                    );
                 }
 
                 // Load brand design
@@ -290,7 +296,8 @@ export default function Step5Page({
         (businessProfile.completion_status?.overall ?? 0) > 0;
     const hasBrandDesign = brandDesign !== null;
     const hasDeckStructure = deckStructures.length > 0;
-    const canGenerate = hasBusinessProfile && hasBrandDesign && hasDeckStructure && selectedDeckId;
+    const canGenerate =
+        hasBusinessProfile && hasBrandDesign && hasDeckStructure && selectedDeckId;
 
     // Helper functions for slide generation
     const generateSlideContent = useCallback(
@@ -440,7 +447,9 @@ export default function Step5Page({
 
             setSelectedPresentation(updatedPresentation);
             setPresentations((prev) =>
-                prev.map((p) => (p.id === updatedPresentation.id ? updatedPresentation : p))
+                prev.map((p) =>
+                    p.id === updatedPresentation.id ? updatedPresentation : p
+                )
             );
 
             toast({
@@ -469,7 +478,9 @@ export default function Step5Page({
 
             setSelectedPresentation(updatedPresentation);
             setPresentations((prev) =>
-                prev.map((p) => (p.id === updatedPresentation.id ? updatedPresentation : p))
+                prev.map((p) =>
+                    p.id === updatedPresentation.id ? updatedPresentation : p
+                )
             );
 
             if (selectedSlideIndex >= index && selectedSlideIndex > 0) {
@@ -528,7 +539,9 @@ export default function Step5Page({
         );
     }
 
-    const hasCompletedPresentation = presentations.some((p) => p.status === "completed");
+    const hasCompletedPresentation = presentations.some(
+        (p) => p.status === "completed"
+    );
 
     // Render main page
     return (
@@ -576,8 +589,8 @@ export default function Step5Page({
                                 </p>
                                 <p className="mt-1 text-sm text-amber-700">
                                     For best results, complete your business profile in
-                                    Step 1. AI will use your business context to generate
-                                    more personalized content.
+                                    Step 1. AI will use your business context to
+                                    generate more personalized content.
                                 </p>
                             </div>
                         </div>
@@ -595,8 +608,8 @@ export default function Step5Page({
                                     Select Deck Structure
                                 </CardTitle>
                                 <CardDescription>
-                                    Choose which presentation structure to transform into a
-                                    PowerPoint
+                                    Choose which presentation structure to transform
+                                    into a PowerPoint
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>
@@ -610,7 +623,10 @@ export default function Step5Page({
                                         </SelectTrigger>
                                         <SelectContent>
                                             {deckStructures.map((deck) => (
-                                                <SelectItem key={deck.id} value={deck.id}>
+                                                <SelectItem
+                                                    key={deck.id}
+                                                    value={deck.id}
+                                                >
                                                     <div className="flex items-center gap-2">
                                                         <span>{deck.title}</span>
                                                         <span className="text-muted-foreground">
@@ -623,8 +639,8 @@ export default function Step5Page({
                                     </Select>
                                 ) : (
                                     <p className="text-sm text-muted-foreground">
-                                        No deck structures available. Create one in Step 4
-                                        first.
+                                        No deck structures available. Create one in Step
+                                        4 first.
                                     </p>
                                 )}
                             </CardContent>
@@ -639,8 +655,8 @@ export default function Step5Page({
                                         Customize Your Presentation
                                     </CardTitle>
                                     <CardDescription>
-                                        Adjust these settings to control how AI generates
-                                        your slides
+                                        Adjust these settings to control how AI
+                                        generates your slides
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="space-y-6">
@@ -653,7 +669,12 @@ export default function Step5Page({
                                             </Label>
                                             <Select
                                                 value={customization.textDensity}
-                                                onValueChange={(value: "minimal" | "balanced" | "detailed") =>
+                                                onValueChange={(
+                                                    value:
+                                                        | "minimal"
+                                                        | "balanced"
+                                                        | "detailed"
+                                                ) =>
                                                     setCustomization({
                                                         ...customization,
                                                         textDensity: value,
@@ -685,7 +706,13 @@ export default function Step5Page({
                                             </Label>
                                             <Select
                                                 value={customization.visualStyle}
-                                                onValueChange={(value: "professional" | "creative" | "minimal" | "bold") =>
+                                                onValueChange={(
+                                                    value:
+                                                        | "professional"
+                                                        | "creative"
+                                                        | "minimal"
+                                                        | "bold"
+                                                ) =>
                                                     setCustomization({
                                                         ...customization,
                                                         visualStyle: value,
@@ -697,7 +724,8 @@ export default function Step5Page({
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="professional">
-                                                        Professional - Clean and corporate
+                                                        Professional - Clean and
+                                                        corporate
                                                     </SelectItem>
                                                     <SelectItem value="creative">
                                                         Creative - Bold and expressive
@@ -706,7 +734,8 @@ export default function Step5Page({
                                                         Minimal - Simple and elegant
                                                     </SelectItem>
                                                     <SelectItem value="bold">
-                                                        Bold - High contrast and striking
+                                                        Bold - High contrast and
+                                                        striking
                                                     </SelectItem>
                                                 </SelectContent>
                                             </Select>
@@ -720,7 +749,12 @@ export default function Step5Page({
                                             </Label>
                                             <Select
                                                 value={customization.emphasisPreference}
-                                                onValueChange={(value: "text" | "visuals" | "balanced") =>
+                                                onValueChange={(
+                                                    value:
+                                                        | "text"
+                                                        | "visuals"
+                                                        | "balanced"
+                                                ) =>
                                                     setCustomization({
                                                         ...customization,
                                                         emphasisPreference: value,
@@ -732,7 +766,8 @@ export default function Step5Page({
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="text">
-                                                        Text-focused - Words drive the story
+                                                        Text-focused - Words drive the
+                                                        story
                                                     </SelectItem>
                                                     <SelectItem value="visuals">
                                                         Visual-focused - Images lead
@@ -752,7 +787,13 @@ export default function Step5Page({
                                             </Label>
                                             <Select
                                                 value={customization.animationLevel}
-                                                onValueChange={(value: "none" | "subtle" | "moderate" | "dynamic") =>
+                                                onValueChange={(
+                                                    value:
+                                                        | "none"
+                                                        | "subtle"
+                                                        | "moderate"
+                                                        | "dynamic"
+                                                ) =>
                                                     setCustomization({
                                                         ...customization,
                                                         animationLevel: value,
@@ -787,7 +828,13 @@ export default function Step5Page({
                                             </Label>
                                             <Select
                                                 value={customization.imageStyle}
-                                                onValueChange={(value: "photography" | "illustration" | "abstract" | "icons") =>
+                                                onValueChange={(
+                                                    value:
+                                                        | "photography"
+                                                        | "illustration"
+                                                        | "abstract"
+                                                        | "icons"
+                                                ) =>
                                                     setCustomization({
                                                         ...customization,
                                                         imageStyle: value,
@@ -890,7 +937,8 @@ export default function Step5Page({
                                         <p className="mb-2">No presentations yet.</p>
                                         <p className="text-sm">
                                             Select a deck structure and customize your
-                                            settings to generate your first presentation!
+                                            settings to generate your first
+                                            presentation!
                                         </p>
                                     </div>
                                 ) : (
@@ -905,8 +953,8 @@ export default function Step5Page({
                                                         {presentation.title}
                                                     </h4>
                                                     <p className="text-sm text-muted-foreground">
-                                                        {presentation.slides.length} slides
-                                                        •{" "}
+                                                        {presentation.slides.length}{" "}
+                                                        slides •{" "}
                                                         {new Date(
                                                             presentation.created_at
                                                         ).toLocaleDateString()}
@@ -999,7 +1047,8 @@ export default function Step5Page({
                                     </div>
                                 ))}
                                 {/* Generating placeholder */}
-                                {currentGeneratingSlide <= (selectedDeck?.slideCount || 0) && (
+                                {currentGeneratingSlide <=
+                                    (selectedDeck?.slideCount || 0) && (
                                     <div className="aspect-[16/9] animate-pulse rounded-lg border border-primary bg-primary/10 p-2">
                                         <div className="flex h-full items-center justify-center">
                                             <Loader2 className="h-4 w-4 animate-spin text-primary" />
@@ -1033,7 +1082,10 @@ export default function Step5Page({
                                     <Download className="mr-1 h-4 w-4" />
                                     Export PPTX
                                 </Button>
-                                <Button size="sm" onClick={() => setIsEditorOpen(false)}>
+                                <Button
+                                    size="sm"
+                                    onClick={() => setIsEditorOpen(false)}
+                                >
                                     <CheckCircle2 className="mr-1 h-4 w-4" />
                                     Save & Close
                                 </Button>
@@ -1090,7 +1142,9 @@ export default function Step5Page({
                                                             className="rounded p-0.5 hover:bg-muted"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleDuplicateSlide(index);
+                                                                handleDuplicateSlide(
+                                                                    index
+                                                                );
                                                             }}
                                                         >
                                                             <Copy className="h-3 w-3" />
@@ -1099,7 +1153,9 @@ export default function Step5Page({
                                                             className="rounded p-0.5 hover:bg-red-50"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
-                                                                handleDeleteSlide(index);
+                                                                handleDeleteSlide(
+                                                                    index
+                                                                );
                                                             }}
                                                         >
                                                             <Trash2 className="h-3 w-3 text-red-500" />
@@ -1149,7 +1205,8 @@ export default function Step5Page({
                                         onClick={() =>
                                             setSelectedSlideIndex((prev) =>
                                                 Math.min(
-                                                    selectedPresentation.slides.length - 1,
+                                                    selectedPresentation.slides.length -
+                                                        1,
                                                     prev + 1
                                                 )
                                             )
@@ -1166,7 +1223,8 @@ export default function Step5Page({
                                         className="aspect-[16/9] w-full max-w-4xl rounded-lg border shadow-xl"
                                         style={{
                                             backgroundColor:
-                                                brandDesign?.background_color || "#ffffff",
+                                                brandDesign?.background_color ||
+                                                "#ffffff",
                                         }}
                                     >
                                         <div className="flex h-full flex-col p-8">
@@ -1226,7 +1284,9 @@ export default function Step5Page({
                                                         "#6b7280",
                                                 }}
                                             >
-                                                <span>{brandDesign?.brand_name || ""}</span>
+                                                <span>
+                                                    {brandDesign?.brand_name || ""}
+                                                </span>
                                                 <span>
                                                     {selectedSlideIndex + 1} /{" "}
                                                     {selectedPresentation.slides.length}
@@ -1242,14 +1302,18 @@ export default function Step5Page({
                                 <div className="space-y-6">
                                     {/* Quick Actions */}
                                     <div>
-                                        <h3 className="mb-3 font-semibold">Quick Actions</h3>
+                                        <h3 className="mb-3 font-semibold">
+                                            Quick Actions
+                                        </h3>
                                         <div className="grid grid-cols-2 gap-2">
                                             <Button
                                                 variant="outline"
                                                 size="sm"
                                                 className="justify-start"
                                                 onClick={() =>
-                                                    handleQuickAction("regenerate_image")
+                                                    handleQuickAction(
+                                                        "regenerate_image"
+                                                    )
                                                 }
                                                 disabled={isEditingSlide}
                                             >
@@ -1314,7 +1378,8 @@ export default function Step5Page({
                                                     size="sm"
                                                     className="flex-1"
                                                     disabled={
-                                                        !editPrompt.trim() || isEditingSlide
+                                                        !editPrompt.trim() ||
+                                                        isEditingSlide
                                                     }
                                                 >
                                                     <MessageSquare className="mr-1 h-4 w-4" />
@@ -1333,7 +1398,9 @@ export default function Step5Page({
 
                                     {/* Speaker Notes */}
                                     <div>
-                                        <h3 className="mb-3 font-semibold">Speaker Notes</h3>
+                                        <h3 className="mb-3 font-semibold">
+                                            Speaker Notes
+                                        </h3>
                                         <div className="rounded-lg border border-border bg-muted/30 p-3">
                                             <p className="text-sm text-muted-foreground">
                                                 {selectedPresentation.slides[
@@ -1353,12 +1420,15 @@ export default function Step5Page({
 
                                     {/* Layout Type */}
                                     <div>
-                                        <h3 className="mb-3 font-semibold">Layout Type</h3>
+                                        <h3 className="mb-3 font-semibold">
+                                            Layout Type
+                                        </h3>
                                         <div className="rounded-lg border border-border bg-muted/30 p-3">
                                             <p className="text-sm capitalize">
                                                 {selectedPresentation.slides[
                                                     selectedSlideIndex
-                                                ]?.layoutType.replace("_", " ") || "Default"}
+                                                ]?.layoutType.replace("_", " ") ||
+                                                    "Default"}
                                             </p>
                                         </div>
                                     </div>

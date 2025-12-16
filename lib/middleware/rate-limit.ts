@@ -31,16 +31,50 @@ const brandColorsRatelimit = new Ratelimit({
 });
 
 /**
+ * Rate limiter for presentation generation
+ * Limits: 5 requests per minute per user (expensive AI operation)
+ */
+const presentationGenerationRatelimit = new Ratelimit({
+    redis: kv,
+    limiter: Ratelimit.slidingWindow(5, "1 m"),
+    analytics: true,
+    prefix: "ratelimit:presentation-generation",
+});
+
+/**
+ * Rate limiter for presentation export
+ * Limits: 20 requests per minute per user (CPU intensive but not AI)
+ */
+const presentationExportRatelimit = new Ratelimit({
+    redis: kv,
+    limiter: Ratelimit.slidingWindow(20, "1 m"),
+    analytics: true,
+    prefix: "ratelimit:presentation-export",
+});
+
+export type RateLimitEndpoint =
+    | "scraping"
+    | "brand-colors"
+    | "presentation-generation"
+    | "presentation-export";
+
+/**
  * Check rate limit for a user
  * Returns null if allowed, or NextResponse with 429 if rate limited
  */
 export async function checkRateLimit(
     identifier: string,
-    endpoint: "scraping" | "brand-colors"
+    endpoint: RateLimitEndpoint
 ): Promise<NextResponse | null> {
     try {
-        const limiter =
-            endpoint === "scraping" ? scrapingRatelimit : brandColorsRatelimit;
+        const limiterMap: Record<RateLimitEndpoint, Ratelimit> = {
+            scraping: scrapingRatelimit,
+            "brand-colors": brandColorsRatelimit,
+            "presentation-generation": presentationGenerationRatelimit,
+            "presentation-export": presentationExportRatelimit,
+        };
+
+        const limiter = limiterMap[endpoint];
 
         const { success, limit, remaining, reset } = await limiter.limit(identifier);
 

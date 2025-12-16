@@ -7,13 +7,20 @@
  */
 
 import * as Sentry from "@sentry/nextjs";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import { ValidationError, NotFoundError, ForbiddenError } from "@/lib/errors";
+import {
+    ValidationError,
+    NotFoundError,
+    ForbiddenError,
+    RateLimitError,
+    AIGenerationError,
+} from "@/lib/errors";
 import { generatePresentation } from "@/lib/presentations/slide-generator";
+import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
 
 // Zod schema for presentation customization
 const PresentationCustomizationSchema = z.object({
@@ -38,7 +45,7 @@ const DeckStructureSlideSchema = z.object({
     section: z.string().optional(),
 });
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     const startTime = Date.now();
     let presentationId: string | null = null;
 
@@ -51,6 +58,20 @@ export async function POST(request: Request) {
 
         if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // Rate limiting - 5 requests per minute for expensive AI generation
+        const rateLimitIdentifier = getRateLimitIdentifier(request, user.id);
+        const rateLimitResponse = await checkRateLimit(
+            rateLimitIdentifier,
+            "presentation-generation"
+        );
+        if (rateLimitResponse) {
+            logger.warn(
+                { userId: user.id, endpoint: "presentation-generation" },
+                "Rate limit exceeded for presentation generation"
+            );
+            return rateLimitResponse;
         }
 
         // Parse and validate input with Zod
@@ -309,6 +330,22 @@ export async function POST(request: Request) {
 
         if (error instanceof ForbiddenError) {
             return NextResponse.json({ error: error.message }, { status: 403 });
+        }
+
+        if (error instanceof RateLimitError) {
+            return NextResponse.json({ error: error.message }, { status: 429 });
+        }
+
+        if (error instanceof AIGenerationError) {
+            const statusCode = error.retryable ? 503 : 500;
+            return NextResponse.json(
+                {
+                    error: error.message,
+                    errorCode: error.errorCode,
+                    retryable: error.retryable,
+                },
+                { status: statusCode }
+            );
         }
 
         logger.error({ error }, "Presentation generation failed");

@@ -7,7 +7,7 @@
  */
 
 import * as Sentry from "@sentry/nextjs";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 
 import { createClient } from "@/lib/supabase/server";
@@ -18,13 +18,14 @@ import {
     SlideDataSchema,
     type SlideData,
 } from "@/lib/presentations/pptx-generator";
+import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
 
 // Zod schema for export request
 const ExportRequestSchema = z.object({
     presentationId: z.string().uuid("presentationId must be a valid UUID"),
 });
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     const startTime = Date.now();
 
     try {
@@ -36,6 +37,20 @@ export async function POST(request: Request) {
 
         if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // Rate limiting - 20 requests per minute for export
+        const rateLimitIdentifier = getRateLimitIdentifier(request, user.id);
+        const rateLimitResponse = await checkRateLimit(
+            rateLimitIdentifier,
+            "presentation-export"
+        );
+        if (rateLimitResponse) {
+            logger.warn(
+                { userId: user.id, endpoint: "presentation-export" },
+                "Rate limit exceeded for presentation export"
+            );
+            return rateLimitResponse;
         }
 
         // Parse and validate input with Zod

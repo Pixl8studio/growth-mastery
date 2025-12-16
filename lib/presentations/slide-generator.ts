@@ -5,50 +5,64 @@
  * Related: GitHub Issue #325 - In-house PowerPoint Presentation Generator
  */
 
+import * as Sentry from "@sentry/nextjs";
 import OpenAI from "openai";
+import { z } from "zod";
 
 import { logger } from "@/lib/logger";
+import { AIGenerationError, RateLimitError } from "@/lib/errors";
 
 import type { SlideData } from "./pptx-generator";
 
-export interface DeckStructureSlide {
-    slideNumber: number;
-    title: string;
-    description: string;
-    section: string;
-}
+// ============================================================================
+// Zod Schemas for Type Safety
+// ============================================================================
 
-export interface DeckStructure {
-    id: string;
-    title: string;
-    slideCount: number;
-    slides: DeckStructureSlide[];
-}
+export const DeckStructureSlideSchema = z.object({
+    slideNumber: z.number().int().positive(),
+    title: z.string(),
+    description: z.string(),
+    section: z.string(),
+});
 
-export interface BusinessProfile {
-    business_name?: string;
-    target_audience?: string;
-    main_offer?: string;
-    unique_mechanism?: string;
-    brand_voice?: string;
-}
+export const DeckStructureSchema = z.object({
+    id: z.string(),
+    title: z.string(),
+    slideCount: z.number().int().positive(),
+    slides: z.array(DeckStructureSlideSchema),
+});
 
-export interface BrandDesign {
-    brand_name?: string;
-    primary_color?: string;
-    secondary_color?: string;
-    accent_color?: string;
-    background_color?: string;
-    text_color?: string;
-}
+export const BusinessProfileSchema = z.object({
+    business_name: z.string().optional(),
+    target_audience: z.string().optional(),
+    main_offer: z.string().optional(),
+    unique_mechanism: z.string().optional(),
+    brand_voice: z.string().optional(),
+});
 
-export interface PresentationCustomization {
-    textDensity: "minimal" | "balanced" | "detailed";
-    visualStyle: "professional" | "creative" | "minimal" | "bold";
-    emphasisPreference: "text" | "visuals" | "balanced";
-    animationLevel: "none" | "subtle" | "moderate" | "dynamic";
-    imageStyle: "photography" | "illustration" | "abstract" | "icons";
-}
+export const BrandDesignSchema = z.object({
+    brand_name: z.string().optional(),
+    primary_color: z.string().optional(),
+    secondary_color: z.string().optional(),
+    accent_color: z.string().optional(),
+    background_color: z.string().optional(),
+    text_color: z.string().optional(),
+});
+
+export const PresentationCustomizationSchema = z.object({
+    textDensity: z.enum(["minimal", "balanced", "detailed"]),
+    visualStyle: z.enum(["professional", "creative", "minimal", "bold"]),
+    emphasisPreference: z.enum(["text", "visuals", "balanced"]),
+    animationLevel: z.enum(["none", "subtle", "moderate", "dynamic"]),
+    imageStyle: z.enum(["photography", "illustration", "abstract", "icons"]),
+});
+
+// Export Zod-inferred types for consistency
+export type DeckStructureSlide = z.infer<typeof DeckStructureSlideSchema>;
+export type DeckStructure = z.infer<typeof DeckStructureSchema>;
+export type BusinessProfile = z.infer<typeof BusinessProfileSchema>;
+export type BrandDesign = z.infer<typeof BrandDesignSchema>;
+export type PresentationCustomization = z.infer<typeof PresentationCustomizationSchema>;
 
 export interface GenerateSlideOptions {
     deckSlide: DeckStructureSlide;
@@ -64,11 +78,197 @@ export interface GeneratePresentationOptions {
     businessProfile?: BusinessProfile;
     brandDesign?: BrandDesign;
     onSlideGenerated?: (slide: SlideData, progress: number) => void;
+    /** Timeout in milliseconds for the entire presentation generation (default: 5 minutes) */
+    timeoutMs?: number;
 }
 
-const openai = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-});
+// ============================================================================
+// OpenAI Client with Validation
+// ============================================================================
+
+// Validate API key at startup
+function validateOpenAIApiKey(): void {
+    if (!process.env.OPENAI_API_KEY) {
+        throw new Error(
+            "OPENAI_API_KEY environment variable is required for slide generation"
+        );
+    }
+}
+
+// Lazy initialization to allow startup validation
+let openaiClient: OpenAI | null = null;
+
+function getOpenAIClient(): OpenAI {
+    if (!openaiClient) {
+        validateOpenAIApiKey();
+        openaiClient = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY,
+        });
+    }
+    return openaiClient;
+}
+
+// ============================================================================
+// Retry Logic with Exponential Backoff
+// ============================================================================
+
+const MAX_RETRIES = 3;
+const INITIAL_RETRY_DELAY_MS = 1000;
+
+interface RetryOptions {
+    maxRetries?: number;
+    initialDelayMs?: number;
+    operationName?: string;
+}
+
+async function withRetry<T>(
+    operation: () => Promise<T>,
+    options: RetryOptions = {}
+): Promise<T> {
+    const {
+        maxRetries = MAX_RETRIES,
+        initialDelayMs = INITIAL_RETRY_DELAY_MS,
+        operationName = "operation",
+    } = options;
+
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+            return await operation();
+        } catch (error) {
+            lastError = error instanceof Error ? error : new Error(String(error));
+
+            // Parse OpenAI-specific errors
+            const { retryable, errorType } = parseOpenAIError(error);
+
+            if (!retryable || attempt === maxRetries) {
+                logger.error(
+                    { error, attempt, maxRetries, operationName, errorType },
+                    `${operationName} failed after ${attempt + 1} attempts`
+                );
+                throw error;
+            }
+
+            const delay = initialDelayMs * Math.pow(2, attempt);
+            logger.warn(
+                { error: lastError.message, attempt, delay, operationName, errorType },
+                `${operationName} failed, retrying in ${delay}ms`
+            );
+
+            Sentry.addBreadcrumb({
+                category: "openai.retry",
+                message: `Retrying ${operationName} (attempt ${attempt + 1}/${maxRetries})`,
+                level: "warning",
+                data: { delay, errorType },
+            });
+
+            await new Promise((resolve) => setTimeout(resolve, delay));
+        }
+    }
+
+    // This should never be reached, but TypeScript needs it
+    throw lastError || new Error("Unknown error in retry logic");
+}
+
+// ============================================================================
+// OpenAI Error Handling
+// ============================================================================
+
+type OpenAIErrorType =
+    | "rate_limit"
+    | "token_limit"
+    | "invalid_request"
+    | "api_error"
+    | "timeout"
+    | "unknown";
+
+interface ParsedOpenAIError {
+    retryable: boolean;
+    errorType: OpenAIErrorType;
+    message: string;
+}
+
+function parseOpenAIError(error: unknown): ParsedOpenAIError {
+    if (!(error instanceof Error)) {
+        return { retryable: false, errorType: "unknown", message: String(error) };
+    }
+
+    const message = error.message.toLowerCase();
+
+    // Rate limit errors (retryable)
+    if (
+        message.includes("rate limit") ||
+        message.includes("429") ||
+        message.includes("too many requests")
+    ) {
+        return {
+            retryable: true,
+            errorType: "rate_limit",
+            message: "OpenAI rate limit exceeded",
+        };
+    }
+
+    // Token limit errors (not retryable - need different approach)
+    if (
+        message.includes("maximum context length") ||
+        message.includes("token limit") ||
+        message.includes("max_tokens")
+    ) {
+        return {
+            retryable: false,
+            errorType: "token_limit",
+            message: "Content too long for AI processing",
+        };
+    }
+
+    // Invalid request errors (not retryable)
+    if (
+        message.includes("invalid") ||
+        message.includes("400") ||
+        message.includes("bad request")
+    ) {
+        return {
+            retryable: false,
+            errorType: "invalid_request",
+            message: "Invalid request to OpenAI",
+        };
+    }
+
+    // Timeout errors (retryable)
+    if (
+        message.includes("timeout") ||
+        message.includes("timed out") ||
+        message.includes("ETIMEDOUT")
+    ) {
+        return {
+            retryable: true,
+            errorType: "timeout",
+            message: "OpenAI request timed out",
+        };
+    }
+
+    // Server errors (retryable)
+    if (
+        message.includes("500") ||
+        message.includes("502") ||
+        message.includes("503") ||
+        message.includes("internal server error")
+    ) {
+        return {
+            retryable: true,
+            errorType: "api_error",
+            message: "OpenAI API error",
+        };
+    }
+
+    // Default to retryable for unknown errors
+    return {
+        retryable: true,
+        errorType: "unknown",
+        message: error.message,
+    };
+}
 
 // Map layout types based on slide content and position
 function determineLayoutType(
@@ -148,7 +348,12 @@ function getBulletCount(textDensity: "minimal" | "balanced" | "detailed"): {
 export async function generateSlideContent(
     options: GenerateSlideOptions
 ): Promise<SlideData> {
-    const { deckSlide, customization, businessProfile, brandDesign } = options;
+    const {
+        deckSlide,
+        customization,
+        businessProfile,
+        brandDesign: _brandDesign,
+    } = options;
 
     const bulletCount = getBulletCount(customization.textDensity);
 
@@ -194,28 +399,50 @@ Respond in JSON format:
   "imagePrompt": "Description for AI image generation"
 }`;
 
+    const openai = getOpenAIClient();
+
     try {
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-                {
-                    role: "system",
-                    content:
-                        "You are an expert presentation designer creating content for a professional business presentation. Generate clear, compelling content that engages the audience. Always respond with valid JSON.",
-                },
-                { role: "user", content: prompt },
-            ],
-            response_format: { type: "json_object" },
-            temperature: 0.7,
-            max_tokens: 1000,
-        });
+        const response = await withRetry(
+            async () => {
+                return await openai.chat.completions.create({
+                    model: "gpt-4o-mini",
+                    messages: [
+                        {
+                            role: "system",
+                            content:
+                                "You are an expert presentation designer creating content for a professional business presentation. Generate clear, compelling content that engages the audience. Always respond with valid JSON.",
+                        },
+                        { role: "user", content: prompt },
+                    ],
+                    response_format: { type: "json_object" },
+                    temperature: 0.7,
+                    max_tokens: 1000,
+                });
+            },
+            { operationName: `generateSlide_${deckSlide.slideNumber}` }
+        );
 
         const content = response.choices[0]?.message?.content;
         if (!content) {
-            throw new Error("No content generated");
+            throw new AIGenerationError("No content generated from OpenAI", {
+                retryable: false,
+                errorCode: "NO_CONTENT",
+            });
         }
 
-        const generated = JSON.parse(content);
+        let generated;
+        try {
+            generated = JSON.parse(content);
+        } catch (parseError) {
+            logger.error(
+                { error: parseError, content, slideNumber: deckSlide.slideNumber },
+                "Failed to parse OpenAI response as JSON"
+            );
+            throw new AIGenerationError("Invalid JSON response from OpenAI", {
+                retryable: false,
+                errorCode: "INVALID_JSON",
+            });
+        }
 
         return {
             slideNumber: deckSlide.slideNumber,
@@ -231,12 +458,43 @@ Respond in JSON format:
             section: deckSlide.section,
         };
     } catch (error) {
+        const { errorType, message: errorMessage } = parseOpenAIError(error);
+
         logger.error(
-            { error, slideNumber: deckSlide.slideNumber },
+            { error, slideNumber: deckSlide.slideNumber, errorType },
             "Failed to generate slide content"
         );
 
-        // Fallback to basic content
+        Sentry.captureException(error, {
+            tags: {
+                component: "slide-generator",
+                action: "generate_slide_content",
+                errorType,
+                slideNumber: deckSlide.slideNumber.toString(),
+            },
+        });
+
+        // For rate limit errors, throw specific error
+        if (errorType === "rate_limit") {
+            throw new RateLimitError(
+                "OpenAI rate limit exceeded during slide generation"
+            );
+        }
+
+        // For non-recoverable errors, throw AI error
+        if (errorType === "token_limit" || errorType === "invalid_request") {
+            throw new AIGenerationError(errorMessage, {
+                retryable: false,
+                errorCode: errorType.toUpperCase(),
+            });
+        }
+
+        // Fallback to basic content for other errors
+        logger.warn(
+            { slideNumber: deckSlide.slideNumber },
+            "Using fallback content due to AI generation failure"
+        );
+
         return {
             slideNumber: deckSlide.slideNumber,
             title: deckSlide.title,
@@ -248,8 +506,12 @@ Respond in JSON format:
     }
 }
 
+// Default timeout: 5 minutes
+const DEFAULT_GENERATION_TIMEOUT_MS = 5 * 60 * 1000;
+
 /**
  * Generate all slides for a presentation
+ * Includes timeout protection and comprehensive monitoring
  */
 export async function generatePresentation(
     options: GeneratePresentationOptions
@@ -260,50 +522,118 @@ export async function generatePresentation(
         businessProfile,
         brandDesign,
         onSlideGenerated,
+        timeoutMs = DEFAULT_GENERATION_TIMEOUT_MS,
     } = options;
+
+    const startTime = Date.now();
 
     logger.info(
         {
             deckId: deckStructure.id,
             slideCount: deckStructure.slides.length,
             customization,
+            timeoutMs,
         },
         "Starting presentation generation"
     );
 
-    const slides: SlideData[] = [];
-    const totalSlides = deckStructure.slides.length;
+    // Start Sentry span for performance monitoring
+    return await Sentry.startSpan(
+        {
+            op: "ai.generate",
+            name: "generatePresentation",
+        },
+        async (span) => {
+            span.setAttribute("deck_id", deckStructure.id);
+            span.setAttribute("slide_count", deckStructure.slides.length);
 
-    for (let i = 0; i < totalSlides; i++) {
-        const deckSlide = deckStructure.slides[i];
+            const slides: SlideData[] = [];
+            const totalSlides = deckStructure.slides.length;
 
-        const slide = await generateSlideContent({
-            deckSlide,
-            customization,
-            businessProfile,
-            brandDesign,
-            previousSlides: slides,
-        });
+            for (let i = 0; i < totalSlides; i++) {
+                // Check timeout before each slide
+                const elapsed = Date.now() - startTime;
+                if (elapsed > timeoutMs) {
+                    const error = new AIGenerationError(
+                        `Presentation generation timed out after ${Math.round(elapsed / 1000)}s (${i}/${totalSlides} slides completed)`,
+                        { retryable: false, errorCode: "TIMEOUT" }
+                    );
 
-        slides.push(slide);
+                    logger.error(
+                        {
+                            elapsed,
+                            slideIndex: i,
+                            totalSlides,
+                            deckId: deckStructure.id,
+                        },
+                        "Presentation generation timed out"
+                    );
 
-        const progress = Math.round(((i + 1) / totalSlides) * 100);
+                    Sentry.captureException(error, {
+                        tags: {
+                            component: "slide-generator",
+                            action: "generate_presentation_timeout",
+                        },
+                        extra: {
+                            slidesCompleted: i,
+                            totalSlides,
+                            elapsedMs: elapsed,
+                        },
+                    });
 
-        if (onSlideGenerated) {
-            onSlideGenerated(slide, progress);
+                    throw error;
+                }
+
+                const deckSlide = deckStructure.slides[i];
+
+                const slide = await generateSlideContent({
+                    deckSlide,
+                    customization,
+                    businessProfile,
+                    brandDesign,
+                    previousSlides: slides,
+                });
+
+                slides.push(slide);
+
+                const progress = Math.round(((i + 1) / totalSlides) * 100);
+
+                if (onSlideGenerated) {
+                    onSlideGenerated(slide, progress);
+                }
+
+                logger.info(
+                    { slideNumber: slide.slideNumber, progress },
+                    "Slide generated"
+                );
+
+                // Small delay to avoid rate limiting
+                if (i < totalSlides - 1) {
+                    await new Promise((resolve) => setTimeout(resolve, 200));
+                }
+            }
+
+            const totalTime = Date.now() - startTime;
+
+            logger.info(
+                { totalSlides: slides.length, totalTimeMs: totalTime },
+                "Presentation generation complete"
+            );
+
+            // Record performance metrics
+            Sentry.setMeasurement("slides_generated", slides.length, "none");
+            Sentry.setMeasurement("generation_time_ms", totalTime, "millisecond");
+            Sentry.setMeasurement(
+                "ms_per_slide",
+                totalTime / slides.length,
+                "millisecond"
+            );
+
+            span.setStatus({ code: 1, message: "Success" });
+
+            return slides;
         }
-
-        logger.info({ slideNumber: slide.slideNumber, progress }, "Slide generated");
-
-        // Small delay to avoid rate limiting
-        if (i < totalSlides - 1) {
-            await new Promise((resolve) => setTimeout(resolve, 200));
-        }
-    }
-
-    logger.info({ totalSlides: slides.length }, "Presentation generation complete");
-
-    return slides;
+    );
 }
 
 /**
@@ -312,9 +642,11 @@ export async function generatePresentation(
 export async function regenerateSlide(
     slide: SlideData,
     instruction: string,
-    businessProfile?: BusinessProfile,
-    brandDesign?: BrandDesign
+    _businessProfile?: BusinessProfile,
+    _brandDesign?: BrandDesign
 ): Promise<SlideData> {
+    const openai = getOpenAIClient();
+
     const prompt = `Modify this presentation slide based on the following instruction:
 
 Current Slide:
@@ -333,27 +665,47 @@ Generate updated content in JSON format:
 }`;
 
     try {
-        const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-                {
-                    role: "system",
-                    content:
-                        "You are an expert presentation designer. Modify the slide content based on the user's instruction while maintaining professionalism. Always respond with valid JSON.",
-                },
-                { role: "user", content: prompt },
-            ],
-            response_format: { type: "json_object" },
-            temperature: 0.7,
-            max_tokens: 1000,
-        });
+        const response = await withRetry(
+            async () => {
+                return await openai.chat.completions.create({
+                    model: "gpt-4o-mini",
+                    messages: [
+                        {
+                            role: "system",
+                            content:
+                                "You are an expert presentation designer. Modify the slide content based on the user's instruction while maintaining professionalism. Always respond with valid JSON.",
+                        },
+                        { role: "user", content: prompt },
+                    ],
+                    response_format: { type: "json_object" },
+                    temperature: 0.7,
+                    max_tokens: 1000,
+                });
+            },
+            { operationName: `regenerateSlide_${slide.slideNumber}` }
+        );
 
         const content = response.choices[0]?.message?.content;
         if (!content) {
-            throw new Error("No content generated");
+            throw new AIGenerationError("No content generated from OpenAI", {
+                retryable: false,
+                errorCode: "NO_CONTENT",
+            });
         }
 
-        const generated = JSON.parse(content);
+        let generated;
+        try {
+            generated = JSON.parse(content);
+        } catch (parseError) {
+            logger.error(
+                { error: parseError, content, slideNumber: slide.slideNumber },
+                "Failed to parse OpenAI response as JSON"
+            );
+            throw new AIGenerationError("Invalid JSON response from OpenAI", {
+                retryable: false,
+                errorCode: "INVALID_JSON",
+            });
+        }
 
         return {
             ...slide,
@@ -363,10 +715,22 @@ Generate updated content in JSON format:
             imagePrompt: generated.imagePrompt,
         };
     } catch (error) {
+        const { errorType } = parseOpenAIError(error);
+
         logger.error(
-            { error, slideNumber: slide.slideNumber },
+            { error, slideNumber: slide.slideNumber, errorType },
             "Failed to regenerate slide"
         );
+
+        Sentry.captureException(error, {
+            tags: {
+                component: "slide-generator",
+                action: "regenerate_slide",
+                errorType,
+                slideNumber: slide.slideNumber.toString(),
+            },
+        });
+
         throw error;
     }
 }

@@ -274,6 +274,36 @@ export default function Step5Page({
                         setSelectedDeckId(transformed[0].id);
                     }
                 }
+
+                // Load existing presentations from database
+                try {
+                    const presentationsResponse = await fetch(
+                        `/api/presentations?projectId=${projectId}`,
+                        { credentials: "include" }
+                    );
+
+                    if (presentationsResponse.ok) {
+                        const presentationsResult = await presentationsResponse.json();
+                        if (presentationsResult.presentations) {
+                            const dbPresentations =
+                                presentationsResult.presentations.map((p: any) => ({
+                                    id: p.id,
+                                    title: p.title,
+                                    slides: p.slides || [],
+                                    status: p.status,
+                                    deckStructureId: p.deck_structure_id,
+                                    created_at: p.created_at,
+                                    customization: p.customization || {},
+                                }));
+                            setPresentations(dbPresentations);
+                        }
+                    }
+                } catch (presentationsError) {
+                    logger.warn(
+                        { error: presentationsError },
+                        "Failed to load presentations"
+                    );
+                }
             } catch (error) {
                 logger.error({ error }, "Failed to load Step 5 data");
             } finally {
@@ -352,40 +382,35 @@ export default function Step5Page({
         setGeneratedSlides([]);
 
         try {
-            const totalSlides = selectedDeck.slideCount;
-            const newGeneratedSlides: GeneratedSlide[] = [];
+            // Call the API to generate presentation
+            const response = await fetch("/api/presentations/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "include",
+                body: JSON.stringify({
+                    projectId,
+                    deckStructureId: selectedDeck.id,
+                    customization,
+                }),
+            });
 
-            for (let i = 0; i < totalSlides; i++) {
-                setCurrentGeneratingSlide(i + 1);
-                setGenerationProgress(Math.round(((i + 1) / totalSlides) * 100));
-
-                // Generate slide based on deck structure
-                const deckSlide = selectedDeck.slides[i];
-                const generatedSlide: GeneratedSlide = {
-                    slideNumber: i + 1,
-                    title: deckSlide?.title || `Slide ${i + 1}`,
-                    content: generateSlideContent(deckSlide, customization),
-                    speakerNotes: generateSpeakerNotes(deckSlide),
-                    layoutType: determineLayoutType(i, deckSlide?.section),
-                    section: deckSlide?.section || "content",
-                    isGenerating: false,
-                };
-
-                newGeneratedSlides.push(generatedSlide);
-                setGeneratedSlides([...newGeneratedSlides]);
-
-                // Simulate generation time (15-20 seconds per slide in production)
-                // Using shorter time for demo purposes
-                if (i < totalSlides - 1) {
-                    await new Promise((resolve) => setTimeout(resolve, 200));
-                }
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || "Failed to generate presentation");
             }
 
-            // Create presentation record
+            const result = await response.json();
+
+            // Update progress to 100%
+            setGenerationProgress(100);
+            setCurrentGeneratingSlide(result.slideCount);
+            setGeneratedSlides(result.slides);
+
+            // Create presentation record for local state
             const newPresentation: Presentation = {
-                id: crypto.randomUUID(),
+                id: result.presentationId,
                 title: `${selectedDeck.title} - Generated`,
-                slides: newGeneratedSlides,
+                slides: result.slides,
                 status: "completed",
                 deckStructureId: selectedDeck.id,
                 created_at: new Date().toISOString(),
@@ -396,34 +421,32 @@ export default function Step5Page({
 
             toast({
                 title: "Presentation Generated",
-                description: `Successfully created ${totalSlides} slides. You can now edit and download your presentation.`,
+                description: `Successfully created ${result.slideCount} slides. You can now edit and download your presentation.`,
             });
 
             logger.info(
-                { projectId, deckId: selectedDeck.id, slideCount: totalSlides },
+                {
+                    projectId,
+                    deckId: selectedDeck.id,
+                    slideCount: result.slideCount,
+                    generationTime: result.generationTime,
+                },
                 "Presentation generated successfully"
             );
         } catch (error) {
             logger.error({ error }, "Failed to generate presentation");
             toast({
                 title: "Generation Failed",
-                description: "Failed to generate presentation. Please try again.",
+                description:
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to generate presentation. Please try again.",
                 variant: "destructive",
             });
         } finally {
             setIsGenerating(false);
-            setGenerationProgress(100);
         }
-    }, [
-        canGenerate,
-        selectedDeck,
-        customization,
-        projectId,
-        generateSlideContent,
-        generateSpeakerNotes,
-        determineLayoutType,
-        toast,
-    ]);
+    }, [canGenerate, selectedDeck, customization, projectId, toast]);
 
     // Handle slide actions
     const handleDuplicateSlide = useCallback(
@@ -520,12 +543,87 @@ export default function Step5Page({
     );
 
     const handleDeletePresentation = useCallback(
-        (presentationId: string) => {
-            setPresentations((prev) => prev.filter((p) => p.id !== presentationId));
-            toast({
-                title: "Presentation Deleted",
-                description: "The presentation has been removed.",
-            });
+        async (presentationId: string) => {
+            try {
+                const response = await fetch(`/api/presentations/${presentationId}`, {
+                    method: "DELETE",
+                    credentials: "include",
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to delete presentation");
+                }
+
+                setPresentations((prev) => prev.filter((p) => p.id !== presentationId));
+                toast({
+                    title: "Presentation Deleted",
+                    description: "The presentation has been removed.",
+                });
+            } catch (error) {
+                logger.error({ error }, "Failed to delete presentation");
+                toast({
+                    title: "Delete Failed",
+                    description: "Failed to delete presentation. Please try again.",
+                    variant: "destructive",
+                });
+            }
+        },
+        [toast]
+    );
+
+    const handleDownloadPptx = useCallback(
+        async (presentation: Presentation) => {
+            try {
+                toast({
+                    title: "Exporting...",
+                    description: "Generating your PowerPoint file.",
+                });
+
+                const response = await fetch("/api/presentations/export", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        presentationId: presentation.id,
+                    }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || "Failed to export presentation");
+                }
+
+                // Download the file
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = `${presentation.title}.pptx`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+
+                toast({
+                    title: "Download Complete",
+                    description: "Your PowerPoint presentation has been downloaded.",
+                });
+
+                logger.info(
+                    { presentationId: presentation.id },
+                    "PPTX downloaded successfully"
+                );
+            } catch (error) {
+                logger.error({ error }, "Failed to download PPTX");
+                toast({
+                    title: "Export Failed",
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : "Failed to export presentation. Please try again.",
+                    variant: "destructive",
+                });
+            }
         },
         [toast]
     );
@@ -975,7 +1073,15 @@ export default function Step5Page({
                                                         <Pencil className="mr-1 h-4 w-4" />
                                                         Edit
                                                     </Button>
-                                                    <Button variant="outline" size="sm">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            handleDownloadPptx(
+                                                                presentation
+                                                            )
+                                                        }
+                                                    >
                                                         <Download className="mr-1 h-4 w-4" />
                                                         Download PPTX
                                                     </Button>
@@ -1078,7 +1184,14 @@ export default function Step5Page({
                                 </h2>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Button variant="outline" size="sm">
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                        selectedPresentation &&
+                                        handleDownloadPptx(selectedPresentation)
+                                    }
+                                >
                                     <Download className="mr-1 h-4 w-4" />
                                     Export PPTX
                                 </Button>

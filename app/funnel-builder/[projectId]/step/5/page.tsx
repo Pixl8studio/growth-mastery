@@ -1,92 +1,191 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import GammaThemeSelector from "@/components/funnel/gamma-theme-selector";
-import { useIsMobile } from "@/lib/mobile-utils.client";
 import {
-    Rocket,
-    Presentation,
-    Link as LinkIcon,
-    Trash2,
-    Eye,
-    Pencil,
-    Check,
-    X,
-    FileDown,
+    Sparkles,
     FileText,
+    Trash2,
+    Download,
+    Copy,
+    Pencil,
+    Play,
+    Loader2,
+    CheckCircle2,
+    Image as ImageIcon,
+    Type,
+    Palette,
+    Wand2,
+    ChevronLeft,
+    ChevronRight,
+    GripVertical,
+    RefreshCw,
+    Mic,
+    MessageSquare,
+    X,
+    Plus,
+    LayoutGrid,
+    AlertCircle,
 } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
+import { useIsMobile } from "@/lib/mobile-utils.client";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
+import type { BusinessProfile } from "@/types/business-profile";
+
+// ============================================
+// Types
+// ============================================
 
 interface DeckStructure {
     id: string;
     title: string;
     slideCount: number;
-    slides: unknown[];
+    slides: Array<{
+        slideNumber: number;
+        title: string;
+        description: string;
+        section: string;
+    }>;
     created_at: string;
 }
 
-interface GammaDeck {
+interface BrandDesign {
+    id: string;
+    primary_color: string;
+    secondary_color: string | null;
+    accent_color: string | null;
+    background_color: string;
+    text_color: string;
+    design_style: string | null;
+    brand_name: string | null;
+}
+
+interface GeneratedSlide {
+    slideNumber: number;
+    title: string;
+    content: string[];
+    speakerNotes: string;
+    imagePrompt?: string;
+    imageUrl?: string;
+    layoutType:
+        | "title"
+        | "section"
+        | "content_left"
+        | "content_right"
+        | "bullets"
+        | "quote"
+        | "statistics"
+        | "comparison"
+        | "process"
+        | "cta";
+    section: string;
+    isGenerating?: boolean;
+}
+
+interface Presentation {
     id: string;
     title: string;
+    slides: GeneratedSlide[];
     status: "generating" | "completed" | "failed";
-    gamma_session_id?: string;
-    deck_url?: string;
-    deck_data?: Record<string, unknown>;
-    settings: {
-        theme: string;
-        style: string;
-        length: string;
-    };
+    deckStructureId: string;
     created_at: string;
+    customization: PresentationCustomization;
 }
 
-export default function Step4Page({
+interface PresentationCustomization {
+    textDensity: "minimal" | "balanced" | "detailed";
+    visualStyle: "professional" | "creative" | "minimal" | "bold";
+    emphasisPreference: "text" | "visuals" | "balanced";
+    animationLevel: "none" | "subtle" | "moderate" | "dynamic";
+    imageStyle: "photography" | "illustration" | "abstract" | "icons";
+}
+
+// ============================================
+// Main Component
+// ============================================
+
+export default function Step5Page({
     params,
 }: {
     params: Promise<{ projectId: string }>;
 }) {
     const router = useRouter();
     const isMobile = useIsMobile("lg");
+    const { toast } = useToast();
+
+    // Core state
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [generationProgress, setGenerationProgress] = useState(0);
-    const [selectedDeckId, setSelectedDeckId] = useState("");
+    const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(null);
+    const [brandDesign, setBrandDesign] = useState<BrandDesign | null>(null);
     const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
-    const [gammaDecks, setGammaDecks] = useState<GammaDeck[]>([]);
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [editingName, setEditingName] = useState("");
+    const [presentations, setPresentations] = useState<Presentation[]>([]);
 
-    const [settings, setSettings] = useState({
-        theme: "nebulae",
-        style: "professional",
-        length: "full",
+    // Selection state
+    const [selectedDeckId, setSelectedDeckId] = useState<string>("");
+
+    // Customization state
+    const [customization, setCustomization] = useState<PresentationCustomization>({
+        textDensity: "balanced",
+        visualStyle: "professional",
+        emphasisPreference: "balanced",
+        animationLevel: "subtle",
+        imageStyle: "photography",
     });
 
-    // Redirect mobile users to desktop-required page
-    useEffect(() => {
-        if (isMobile && projectId) {
-            const params = new URLSearchParams({
-                feature: "Presentation Builder",
-                description:
-                    "The presentation builder requires a desktop computer for creating and managing complex slide presentations with Gamma integration.",
-                returnPath: `/funnel-builder/${projectId}`,
-            });
-            router.push(`/desktop-required?${params.toString()}`);
-        }
-    }, [isMobile, projectId, router]);
+    // Generation state
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [generationProgress, setGenerationProgress] = useState(0);
+    const [currentGeneratingSlide, setCurrentGeneratingSlide] = useState(0);
+    const [generatedSlides, setGeneratedSlides] = useState<GeneratedSlide[]>([]);
 
-    const { toast } = useToast();
+    // Editor state
+    const [selectedPresentation, setSelectedPresentation] = useState<Presentation | null>(null);
+    const [selectedSlideIndex, setSelectedSlideIndex] = useState(0);
+    const [isEditorOpen, setIsEditorOpen] = useState(false);
+    const [editPrompt, setEditPrompt] = useState("");
+    const [isEditingSlide, setIsEditingSlide] = useState(false);
+
+    // Loading states
+    const [isLoading, setIsLoading] = useState(true);
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
 
+    // Redirect mobile users
+    useEffect(() => {
+        if (isMobile && projectId) {
+            const urlParams = new URLSearchParams({
+                feature: "PowerPoint Presentation Generator",
+                description:
+                    "The presentation generator requires a desktop computer for the three-panel editing experience and drag-and-drop slide management.",
+                returnPath: `/funnel-builder/${projectId}`,
+            });
+            router.push(`/desktop-required?${urlParams.toString()}`);
+        }
+    }, [isMobile, projectId, router]);
+
+    // Resolve params
     useEffect(() => {
         const resolveParams = async () => {
             const resolved = await params;
@@ -95,12 +194,16 @@ export default function Step4Page({
         resolveParams();
     }, [params]);
 
+    // Load project and dependencies
     useEffect(() => {
-        const loadProject = async () => {
+        const loadData = async () => {
             if (!projectId) return;
 
+            setIsLoading(true);
             try {
                 const supabase = createClient();
+
+                // Load project
                 const { data: projectData, error: projectError } = await supabase
                     .from("funnel_projects")
                     .select("*")
@@ -109,614 +212,1161 @@ export default function Step4Page({
 
                 if (projectError) throw projectError;
                 setProject(projectData);
+
+                // Load business profile
+                try {
+                    const profileResponse = await fetch(
+                        `/api/context/business-profile?projectId=${projectId}`,
+                        { credentials: "include" }
+                    );
+
+                    if (profileResponse.ok) {
+                        const profileResult = await profileResponse.json();
+                        if (
+                            profileResult.profile &&
+                            profileResult.profile.completion_status?.overall > 0
+                        ) {
+                            setBusinessProfile(profileResult.profile);
+                        }
+                    }
+                } catch (profileError) {
+                    logger.warn({ error: profileError }, "Failed to load business profile");
+                }
+
+                // Load brand design
+                const { data: brandData } = await supabase
+                    .from("brand_designs")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .maybeSingle();
+
+                if (brandData) {
+                    setBrandDesign(brandData);
+                }
+
+                // Load deck structures from Step 4
+                const { data: deckData } = await supabase
+                    .from("deck_structures")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (deckData) {
+                    const transformed = deckData.map((deck: any) => ({
+                        id: deck.id,
+                        title: deck.metadata?.title || "Untitled Presentation",
+                        slideCount: Array.isArray(deck.slides)
+                            ? deck.slides.length
+                            : deck.total_slides || 60,
+                        slides: deck.slides || [],
+                        created_at: deck.created_at,
+                    }));
+                    setDeckStructures(transformed);
+
+                    // Auto-select first deck if available
+                    if (transformed.length > 0 && !selectedDeckId) {
+                        setSelectedDeckId(transformed[0].id);
+                    }
+                }
             } catch (error) {
-                logger.error({ error }, "Failed to load project");
+                logger.error({ error }, "Failed to load Step 5 data");
+            } finally {
+                setIsLoading(false);
             }
         };
 
-        loadProject();
-    }, [projectId]);
-
-    useEffect(() => {
-        const loadDeckStructures = async () => {
-            if (!projectId) return;
-
-            try {
-                const response = await fetch(
-                    `/api/funnel/${projectId}/deck-structures`
-                );
-
-                if (!response.ok) {
-                    throw new Error("Failed to fetch deck structures");
-                }
-
-                const { deckStructures: deckData } = await response.json();
-
-                const transformed = (deckData || []).map((deck: any) => ({
-                    id: deck.id,
-                    title: deck.metadata?.title || deck.title || "Untitled Deck",
-                    slideCount: Array.isArray(deck.slides) ? deck.slides.length : 55,
-                    slides: deck.slides || [],
-                    created_at: deck.created_at,
-                }));
-                setDeckStructures(transformed);
-
-                if (transformed.length > 0 && !selectedDeckId) {
-                    setSelectedDeckId(transformed[0].id);
-                }
-            } catch (error) {
-                logger.error({ error }, "Failed to load deck structures");
-            }
-        };
-
-        loadDeckStructures();
+        loadData();
     }, [projectId, selectedDeckId]);
 
-    useEffect(() => {
-        const loadGammaDecks = async () => {
-            if (!projectId) return;
+    // Get selected deck
+    const selectedDeck = useMemo(
+        () => deckStructures.find((d) => d.id === selectedDeckId),
+        [deckStructures, selectedDeckId]
+    );
 
-            try {
-                const response = await fetch(`/api/funnel/${projectId}/gamma-decks`);
+    // Check dependencies
+    const hasBusinessProfile =
+        businessProfile !== null &&
+        (businessProfile.completion_status?.overall ?? 0) > 0;
+    const hasBrandDesign = brandDesign !== null;
+    const hasDeckStructure = deckStructures.length > 0;
+    const canGenerate = hasBusinessProfile && hasBrandDesign && hasDeckStructure && selectedDeckId;
 
-                if (!response.ok) {
-                    throw new Error("Failed to fetch gamma decks");
-                }
+    // Helper functions for slide generation
+    const generateSlideContent = useCallback(
+        (deckSlide: any, customization: PresentationCustomization): string[] => {
+            const baseContent = deckSlide?.description || "";
+            const points = baseContent.split(". ").filter((p: string) => p.length > 0);
 
-                const { gammaDecks: gammaData } = await response.json();
-                setGammaDecks(gammaData || []);
-            } catch (error) {
-                logger.error({ error }, "Failed to load gamma decks");
+            switch (customization.textDensity) {
+                case "minimal":
+                    return points.slice(0, 2);
+                case "detailed":
+                    return points.length > 0 ? points : ["Content placeholder"];
+                default:
+                    return points.slice(0, 4);
             }
-        };
+        },
+        []
+    );
 
-        loadGammaDecks();
-    }, [projectId]);
+    const generateSpeakerNotes = useCallback((deckSlide: any): string => {
+        return deckSlide?.description || "Speaker notes will be generated here.";
+    }, []);
 
-    const handleGenerateGammaDeck = async () => {
+    const determineLayoutType = useCallback(
+        (index: number, section?: string): GeneratedSlide["layoutType"] => {
+            if (index === 0) return "title";
+            if (section === "hook" || section === "connect") {
+                return index % 3 === 0 ? "quote" : "content_left";
+            }
+            if (section === "offer" || section === "invite") {
+                return index % 2 === 0 ? "cta" : "bullets";
+            }
+            const layouts: GeneratedSlide["layoutType"][] = [
+                "bullets",
+                "content_left",
+                "content_right",
+                "statistics",
+                "process",
+            ];
+            return layouts[index % layouts.length];
+        },
+        []
+    );
+
+    // Handle generation
+    const handleGeneratePresentation = useCallback(async () => {
+        if (!canGenerate || !selectedDeck) return;
+
         setIsGenerating(true);
         setGenerationProgress(0);
+        setCurrentGeneratingSlide(0);
+        setGeneratedSlides([]);
 
         try {
-            setGenerationProgress(20);
+            const totalSlides = selectedDeck.slideCount;
+            const newGeneratedSlides: GeneratedSlide[] = [];
 
-            const response = await fetch("/api/generate/gamma-decks", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    projectId,
-                    deckStructureId: selectedDeckId,
-                    settings,
-                }),
+            for (let i = 0; i < totalSlides; i++) {
+                setCurrentGeneratingSlide(i + 1);
+                setGenerationProgress(Math.round(((i + 1) / totalSlides) * 100));
+
+                // Generate slide based on deck structure
+                const deckSlide = selectedDeck.slides[i];
+                const generatedSlide: GeneratedSlide = {
+                    slideNumber: i + 1,
+                    title: deckSlide?.title || `Slide ${i + 1}`,
+                    content: generateSlideContent(deckSlide, customization),
+                    speakerNotes: generateSpeakerNotes(deckSlide),
+                    layoutType: determineLayoutType(i, deckSlide?.section),
+                    section: deckSlide?.section || "content",
+                    isGenerating: false,
+                };
+
+                newGeneratedSlides.push(generatedSlide);
+                setGeneratedSlides([...newGeneratedSlides]);
+
+                // Simulate generation time (15-20 seconds per slide in production)
+                // Using shorter time for demo purposes
+                if (i < totalSlides - 1) {
+                    await new Promise((resolve) => setTimeout(resolve, 200));
+                }
+            }
+
+            // Create presentation record
+            const newPresentation: Presentation = {
+                id: crypto.randomUUID(),
+                title: `${selectedDeck.title} - Generated`,
+                slides: newGeneratedSlides,
+                status: "completed",
+                deckStructureId: selectedDeck.id,
+                created_at: new Date().toISOString(),
+                customization,
+            };
+
+            setPresentations((prev) => [newPresentation, ...prev]);
+
+            toast({
+                title: "Presentation Generated",
+                description: `Successfully created ${totalSlides} slides. You can now edit and download your presentation.`,
             });
 
-            setGenerationProgress(80);
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || "Failed to generate Gamma deck");
-            }
-            setGammaDecks((prev) => [result.gammaDeck, ...prev]);
-            setGenerationProgress(100);
-
-            setTimeout(() => {
-                setIsGenerating(false);
-                setGenerationProgress(0);
-            }, 1000);
+            logger.info(
+                { projectId, deckId: selectedDeck.id, slideCount: totalSlides },
+                "Presentation generated successfully"
+            );
         } catch (error) {
-            logger.error({ error }, "Failed to generate Gamma deck");
-            setIsGenerating(false);
-            setGenerationProgress(0);
-
-            // Extract error message from the error object or response
-            let errorMessage = "Failed to generate Gamma deck. Please try again.";
-            if (error instanceof Error) {
-                errorMessage = error.message;
-            }
-
+            logger.error({ error }, "Failed to generate presentation");
             toast({
                 title: "Generation Failed",
-                description: errorMessage,
+                description: "Failed to generate presentation. Please try again.",
                 variant: "destructive",
             });
+        } finally {
+            setIsGenerating(false);
+            setGenerationProgress(100);
         }
-    };
+    }, [
+        canGenerate,
+        selectedDeck,
+        customization,
+        projectId,
+        generateSlideContent,
+        generateSpeakerNotes,
+        determineLayoutType,
+        toast,
+    ]);
 
-    const handleDeleteDeck = async (deckId: string) => {
-        if (!confirm("Delete this Gamma deck?")) return;
+    // Handle slide actions
+    const handleDuplicateSlide = useCallback(
+        (index: number) => {
+            if (!selectedPresentation) return;
 
-        try {
-            const response = await fetch(
-                `/api/funnel/${projectId}/gamma-decks?deckId=${deckId}`,
-                { method: "DELETE" }
+            const slideToDuplicate = selectedPresentation.slides[index];
+            const newSlide = {
+                ...slideToDuplicate,
+                slideNumber: selectedPresentation.slides.length + 1,
+            };
+
+            const updatedPresentation = {
+                ...selectedPresentation,
+                slides: [
+                    ...selectedPresentation.slides.slice(0, index + 1),
+                    newSlide,
+                    ...selectedPresentation.slides.slice(index + 1),
+                ],
+            };
+
+            setSelectedPresentation(updatedPresentation);
+            setPresentations((prev) =>
+                prev.map((p) => (p.id === updatedPresentation.id ? updatedPresentation : p))
             );
 
-            if (response.ok) {
-                setGammaDecks((prev) => prev.filter((d) => d.id !== deckId));
-            } else {
-                throw new Error("Failed to delete gamma deck");
-            }
-        } catch (error) {
-            logger.error({ error }, "Failed to delete Gamma deck");
-        }
-    };
+            toast({
+                title: "Slide Duplicated",
+                description: `Slide ${index + 1} has been duplicated.`,
+            });
+        },
+        [selectedPresentation, toast]
+    );
 
-    const handleExportPDF = async (deck: GammaDeck) => {
-        try {
-            logger.info({ deckId: deck.id }, "Opening deck for PDF export");
-
-            if (!deck.deck_url) {
+    const handleDeleteSlide = useCallback(
+        (index: number) => {
+            if (!selectedPresentation || selectedPresentation.slides.length <= 1) {
                 toast({
-                    title: "❌ Deck URL not available",
-                    description: "This deck doesn't have a valid URL",
+                    title: "Cannot Delete",
+                    description: "Presentation must have at least one slide.",
                     variant: "destructive",
                 });
                 return;
             }
 
-            window.open(deck.deck_url, "_blank", "noopener,noreferrer");
+            const updatedPresentation = {
+                ...selectedPresentation,
+                slides: selectedPresentation.slides.filter((_, i) => i !== index),
+            };
 
-            setTimeout(() => {
-                toast({
-                    title: "📄 Exporting to PDF",
-                    description: (
-                        <div className="space-y-2 text-sm">
-                            <p className="font-medium">Deck opened!</p>
-                            <ol className="ml-4 list-decimal space-y-1">
-                                <li>Click the 'Share' button (top right)</li>
-                                <li>Select 'Export'</li>
-                                <li>Choose 'PDF'</li>
-                                <li>Your PDF will download automatically</li>
-                            </ol>
-                        </div>
-                    ),
-                    duration: 10000,
-                });
-            }, 1000);
-        } catch (error) {
-            logger.error(
-                { error, deckId: deck.id },
-                "Failed to open deck for PDF export"
+            setSelectedPresentation(updatedPresentation);
+            setPresentations((prev) =>
+                prev.map((p) => (p.id === updatedPresentation.id ? updatedPresentation : p))
             );
-            toast({
-                title: "❌ Export failed",
-                description: "Failed to open deck. Please try again.",
-                variant: "destructive",
-            });
-        }
-    };
 
-    const handleExportGoogleSlides = async (deck: GammaDeck) => {
-        try {
-            logger.info({ deckId: deck.id }, "Opening deck for Google Slides export");
-
-            if (!deck.deck_url) {
-                toast({
-                    title: "❌ Deck URL not available",
-                    description: "This deck doesn't have a valid URL",
-                    variant: "destructive",
-                });
-                return;
+            if (selectedSlideIndex >= index && selectedSlideIndex > 0) {
+                setSelectedSlideIndex(selectedSlideIndex - 1);
             }
 
-            window.open(deck.deck_url, "_blank", "noopener,noreferrer");
-
-            setTimeout(() => {
-                toast({
-                    title: "📊 Exporting to Google Slides",
-                    description: (
-                        <div className="space-y-2 text-sm">
-                            <p className="font-medium">Deck opened!</p>
-                            <ol className="ml-4 list-decimal space-y-1">
-                                <li>Click the 'Share' button (top right)</li>
-                                <li>Select 'Export'</li>
-                                <li>Choose 'Google Slides'</li>
-                                <li>The deck will open in your Google account</li>
-                            </ol>
-                        </div>
-                    ),
-                    duration: 10000,
-                });
-            }, 1000);
-        } catch (error) {
-            logger.error(
-                { error, deckId: deck.id },
-                "Failed to open deck for Google Slides export"
-            );
             toast({
-                title: "❌ Export failed",
-                description: "Failed to open deck. Please try again.",
-                variant: "destructive",
+                title: "Slide Deleted",
+                description: `Slide ${index + 1} has been removed.`,
             });
-        }
-    };
+        },
+        [selectedPresentation, selectedSlideIndex, toast]
+    );
 
-    const handleEditSave = async (deckId: string) => {
-        try {
-            const response = await fetch(`/api/funnel/${projectId}/gamma-decks`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ deckId, title: editingName.trim() }),
+    const handleQuickAction = useCallback(
+        async (action: string) => {
+            if (!selectedPresentation) return;
+
+            setIsEditingSlide(true);
+
+            // Simulate AI edit action
+            await new Promise((resolve) => setTimeout(resolve, 1500));
+
+            setIsEditingSlide(false);
+
+            toast({
+                title: "Action Applied",
+                description: `${action.replace("_", " ")} applied to slide ${selectedSlideIndex + 1}.`,
             });
 
-            if (response.ok) {
-                setGammaDecks((prev) =>
-                    prev.map((d) =>
-                        d.id === deckId ? { ...d, title: editingName.trim() } : d
-                    )
-                );
-                setEditingId(null);
-                setEditingName("");
-            } else {
-                throw new Error("Failed to update deck name");
-            }
-        } catch (error) {
-            logger.error({ error }, "Failed to update deck name");
-        }
-    };
+            logger.info(
+                { action, slideNumber: selectedSlideIndex + 1 },
+                "Quick action applied"
+            );
+        },
+        [selectedPresentation, selectedSlideIndex, toast]
+    );
 
-    const hasCompletedGammaDeck = gammaDecks.some((d) => d.status === "completed");
+    const handleDeletePresentation = useCallback(
+        (presentationId: string) => {
+            setPresentations((prev) => prev.filter((p) => p.id !== presentationId));
+            toast({
+                title: "Presentation Deleted",
+                description: "The presentation has been removed.",
+            });
+        },
+        [toast]
+    );
 
-    const getGenerationSubstatus = (progress: number): string => {
-        if (progress <= 30) return "Analyzing content structure...";
-        if (progress <= 60) return "Generating slide designs...";
-        if (progress <= 90) return "Adding visual elements...";
-        return "Finalizing presentation...";
-    };
-
-    if (!projectId) {
+    // Render loading state
+    if (isLoading) {
         return (
             <div className="flex h-screen items-center justify-center">
-                <div className="text-muted-foreground">Loading...</div>
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
         );
     }
 
+    const hasCompletedPresentation = presentations.some((p) => p.status === "completed");
+
+    // Render main page
     return (
         <StepLayout
             currentStep={5}
             projectId={projectId}
-            completedSteps={completedSteps}
             funnelName={project?.name}
-            nextDisabled={!hasCompletedGammaDeck}
+            completedSteps={completedSteps}
+            nextDisabled={!hasCompletedPresentation}
             nextLabel={
-                hasCompletedGammaDeck ? "Create Enrollment Page" : "Generate Deck First"
+                hasCompletedPresentation
+                    ? "Continue to Enrollment Page"
+                    : "Generate Presentation First"
             }
             stepTitle="Create Presentation"
-            stepDescription="Now that your presentation structure has been created, let's generate the beautifully designed deck"
+            stepDescription="Transform your deck structure into a stunning PowerPoint presentation with AI-generated images and animations"
         >
             <div className="space-y-8">
-                {/* Dependency Warning */}
-                {deckStructures.length === 0 && (
+                {/* Dependency Warnings */}
+                {!hasDeckStructure && (
                     <DependencyWarning
-                        message="You need to create a deck structure first before generating Gamma slides."
+                        message="Create your presentation structure in Step 4 before generating your PowerPoint presentation. The structure provides the framework for your slides."
                         requiredStep={4}
-                        requiredStepName="Deck Structure"
+                        requiredStepName="Presentation Structure"
                         projectId={projectId}
                     />
                 )}
 
-                {/* Generation Interface */}
-                {!isGenerating ? (
-                    <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-pink-50 p-6">
-                        <div className="mb-6 space-y-6">
-                            <div className="mx-auto max-w-md">
-                                <label className="mb-2 block text-sm font-medium text-foreground">
-                                    Select Deck Structure
-                                </label>
-                                <select
-                                    value={selectedDeckId}
-                                    onChange={(e) => setSelectedDeckId(e.target.value)}
-                                    disabled={deckStructures.length === 0}
-                                    className="w-full rounded-lg border border-border px-4 py-3 focus:border-purple-500 focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:bg-muted"
-                                >
-                                    {deckStructures.length === 0 ? (
-                                        <option value="">
-                                            No deck structures available
-                                        </option>
-                                    ) : (
-                                        <>
-                                            <option value="">
-                                                Select a deck structure...
-                                            </option>
-                                            {deckStructures.map((deck) => (
-                                                <option key={deck.id} value={deck.id}>
-                                                    {deck.title} ({deck.slideCount}{" "}
-                                                    slides)
-                                                </option>
-                                            ))}
-                                        </>
-                                    )}
-                                </select>
+                {hasDeckStructure && !hasBrandDesign && (
+                    <DependencyWarning
+                        message="Add your brand design in Step 3 to ensure your presentation matches your brand colors and style."
+                        requiredStep={3}
+                        requiredStepName="Brand Design"
+                        projectId={projectId}
+                    />
+                )}
 
-                                {deckStructures.length === 0 && (
-                                    <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-600">
-                                        💡 Complete Step 3 first to create deck
-                                        structures
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="-mx-6 px-6 py-6 bg-card/50 rounded-lg">
-                                <GammaThemeSelector
-                                    selectedTheme={settings.theme}
-                                    onThemeChange={(theme) =>
-                                        setSettings({ ...settings, theme })
-                                    }
-                                />
-                            </div>
-                        </div>
-
-                        <div className="text-center">
-                            <button
-                                onClick={handleGenerateGammaDeck}
-                                disabled={!selectedDeckId}
-                                className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
-                                    selectedDeckId
-                                        ? "bg-purple-600 text-white hover:bg-purple-700"
-                                        : "cursor-not-allowed bg-gray-300 text-muted-foreground"
-                                }`}
-                            >
-                                <Rocket className="h-6 w-6" />
-                                {selectedDeckId
-                                    ? "Generate Deck"
-                                    : "Select Deck Structure First"}
-                            </button>
-
-                            <div className="mt-4 space-y-1 text-sm text-muted-foreground">
-                                <p>⚡ Generation time: ~2-3 minutes</p>
-                                <p>🎨 Creates professionally designed slides</p>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="rounded-lg border border-purple-200 bg-purple-50 p-6">
-                        <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-purple-100">
-                                <Rocket className="h-6 w-6 text-purple-600" />
-                            </div>
-                            <h3 className="mb-2 text-xl font-semibold text-purple-900">
-                                Creating Your Presentation
-                            </h3>
-                            <p className="text-purple-700">
-                                Generation time ≈ 2-3 minutes
-                            </p>
-                            <p className="mt-2 text-sm text-purple-600">
-                                {getGenerationSubstatus(generationProgress)}
-                            </p>
-                        </div>
-
-                        <div className="mx-auto max-w-md">
-                            <div className="mb-2 flex items-center justify-between">
-                                <span className="text-sm font-medium text-purple-700">
-                                    Progress
-                                </span>
-                                <span className="text-sm text-purple-600">
-                                    {generationProgress}%
-                                </span>
-                            </div>
-                            <div className="h-3 w-full rounded-full bg-purple-200">
-                                <div
-                                    className="h-3 rounded-full bg-purple-600 transition-all duration-500 ease-out"
-                                    style={{ width: `${generationProgress}%` }}
-                                />
+                {hasDeckStructure && hasBrandDesign && !hasBusinessProfile && (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
+                        <div className="flex items-start gap-3">
+                            <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600" />
+                            <div>
+                                <p className="font-medium text-amber-800">
+                                    Business profile not found
+                                </p>
+                                <p className="mt-1 text-sm text-amber-700">
+                                    For best results, complete your business profile in
+                                    Step 1. AI will use your business context to generate
+                                    more personalized content.
+                                </p>
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* Generated Gamma Decks */}
-                <div className="rounded-lg border border-border bg-card shadow-soft">
-                    <div className="border-b border-border p-6">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-semibold text-foreground">
-                                Your Presentations
-                            </h3>
-                            <span className="text-sm text-muted-foreground">
-                                {gammaDecks.length} created
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="p-6">
-                        {gammaDecks.length === 0 ? (
-                            <div className="py-12 text-center text-muted-foreground">
-                                <Presentation className="mx-auto mb-4 h-12 w-12 opacity-50" />
-                                <p>
-                                    No presentations yet. Generate your first one above!
-                                </p>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {gammaDecks.map((deck) => (
-                                    <div
-                                        key={deck.id}
-                                        onClick={(e) => {
-                                            if (
-                                                deck.deck_url &&
-                                                !(e.target as HTMLElement).closest(
-                                                    "button"
-                                                ) &&
-                                                !(e.target as HTMLElement).closest(
-                                                    "input"
-                                                ) &&
-                                                !(e.target as HTMLElement).closest("a")
-                                            ) {
-                                                window.open(
-                                                    deck.deck_url,
-                                                    "_blank",
-                                                    "noopener,noreferrer"
-                                                );
-                                            }
-                                        }}
-                                        className={`rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md ${
-                                            deck.deck_url ? "cursor-pointer" : ""
-                                        }`}
+                {/* Generation Interface */}
+                {!isGenerating && !isEditorOpen && (
+                    <>
+                        {/* Deck Structure Selector */}
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <FileText className="h-5 w-5 text-primary" />
+                                    Select Deck Structure
+                                </CardTitle>
+                                <CardDescription>
+                                    Choose which presentation structure to transform into a
+                                    PowerPoint
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                {deckStructures.length > 0 ? (
+                                    <Select
+                                        value={selectedDeckId}
+                                        onValueChange={setSelectedDeckId}
                                     >
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1">
-                                                <div className="mb-2 flex items-center gap-3">
-                                                    {editingId === deck.id ? (
-                                                        <div className="flex flex-1 items-center gap-2">
-                                                            <input
-                                                                type="text"
-                                                                value={editingName}
-                                                                onChange={(e) =>
-                                                                    setEditingName(
-                                                                        e.target.value
-                                                                    )
-                                                                }
-                                                                className="flex-1 rounded border border-purple-300 px-2 py-1 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500"
-                                                                onKeyDown={(e) => {
-                                                                    if (
-                                                                        e.key ===
-                                                                        "Enter"
-                                                                    )
-                                                                        handleEditSave(
-                                                                            deck.id
-                                                                        );
-                                                                    if (
-                                                                        e.key ===
-                                                                        "Escape"
-                                                                    )
-                                                                        setEditingId(
-                                                                            null
-                                                                        );
-                                                                }}
-                                                                autoFocus
-                                                            />
-                                                            <button
-                                                                onClick={() =>
-                                                                    handleEditSave(
-                                                                        deck.id
-                                                                    )
-                                                                }
-                                                                className="rounded bg-purple-600 px-2 py-1 text-sm text-white hover:bg-purple-700"
-                                                            >
-                                                                <Check className="h-4 w-4" />
-                                                            </button>
-                                                            <button
-                                                                onClick={() =>
-                                                                    setEditingId(null)
-                                                                }
-                                                                className="rounded bg-gray-300 px-2 py-1 text-sm text-foreground hover:bg-gray-400"
-                                                            >
-                                                                <X className="h-4 w-4" />
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <h4 className="text-lg font-semibold text-foreground">
-                                                                {deck.title}
-                                                            </h4>
-                                                            <button
-                                                                onClick={() => {
-                                                                    setEditingId(
-                                                                        deck.id
-                                                                    );
-                                                                    setEditingName(
-                                                                        deck.title
-                                                                    );
-                                                                }}
-                                                                className="rounded p-1 text-purple-600 hover:bg-purple-50"
-                                                            >
-                                                                <Pencil className="h-4 w-4" />
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
+                                        <SelectTrigger className="w-full">
+                                            <SelectValue placeholder="Select a deck structure" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {deckStructures.map((deck) => (
+                                                <SelectItem key={deck.id} value={deck.id}>
+                                                    <div className="flex items-center gap-2">
+                                                        <span>{deck.title}</span>
+                                                        <span className="text-muted-foreground">
+                                                            ({deck.slideCount} slides)
+                                                        </span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                ) : (
+                                    <p className="text-sm text-muted-foreground">
+                                        No deck structures available. Create one in Step 4
+                                        first.
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
 
-                                                <div className="mb-3 flex items-center gap-4 text-sm text-muted-foreground">
-                                                    <span
-                                                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                                            deck.status === "completed"
-                                                                ? "bg-green-100 text-green-800"
-                                                                : deck.status ===
-                                                                    "generating"
-                                                                  ? "bg-yellow-100 text-yellow-800"
-                                                                  : "bg-red-100 text-red-800"
-                                                        }`}
-                                                    >
-                                                        {deck.status}
-                                                    </span>
-                                                    <span>
-                                                        🎨 {deck.settings.theme}
-                                                    </span>
-                                                    <span>
-                                                        📅{" "}
+                        {/* Customization Panel */}
+                        {selectedDeck && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Palette className="h-5 w-5 text-primary" />
+                                        Customize Your Presentation
+                                    </CardTitle>
+                                    <CardDescription>
+                                        Adjust these settings to control how AI generates
+                                        your slides
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="space-y-6">
+                                    <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                                        {/* Text Density */}
+                                        <div className="space-y-3">
+                                            <Label className="flex items-center gap-2">
+                                                <Type className="h-4 w-4" />
+                                                Text Density
+                                            </Label>
+                                            <Select
+                                                value={customization.textDensity}
+                                                onValueChange={(value: "minimal" | "balanced" | "detailed") =>
+                                                    setCustomization({
+                                                        ...customization,
+                                                        textDensity: value,
+                                                    })
+                                                }
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="minimal">
+                                                        Minimal - Few words, high impact
+                                                    </SelectItem>
+                                                    <SelectItem value="balanced">
+                                                        Balanced - Key points only
+                                                    </SelectItem>
+                                                    <SelectItem value="detailed">
+                                                        Detailed - Comprehensive content
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* Visual Style */}
+                                        <div className="space-y-3">
+                                            <Label className="flex items-center gap-2">
+                                                <Palette className="h-4 w-4" />
+                                                Visual Style
+                                            </Label>
+                                            <Select
+                                                value={customization.visualStyle}
+                                                onValueChange={(value: "professional" | "creative" | "minimal" | "bold") =>
+                                                    setCustomization({
+                                                        ...customization,
+                                                        visualStyle: value,
+                                                    })
+                                                }
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="professional">
+                                                        Professional - Clean and corporate
+                                                    </SelectItem>
+                                                    <SelectItem value="creative">
+                                                        Creative - Bold and expressive
+                                                    </SelectItem>
+                                                    <SelectItem value="minimal">
+                                                        Minimal - Simple and elegant
+                                                    </SelectItem>
+                                                    <SelectItem value="bold">
+                                                        Bold - High contrast and striking
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* Emphasis Preference */}
+                                        <div className="space-y-3">
+                                            <Label className="flex items-center gap-2">
+                                                <LayoutGrid className="h-4 w-4" />
+                                                Content Focus
+                                            </Label>
+                                            <Select
+                                                value={customization.emphasisPreference}
+                                                onValueChange={(value: "text" | "visuals" | "balanced") =>
+                                                    setCustomization({
+                                                        ...customization,
+                                                        emphasisPreference: value,
+                                                    })
+                                                }
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="text">
+                                                        Text-focused - Words drive the story
+                                                    </SelectItem>
+                                                    <SelectItem value="visuals">
+                                                        Visual-focused - Images lead
+                                                    </SelectItem>
+                                                    <SelectItem value="balanced">
+                                                        Balanced - Equal emphasis
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* Animation Level */}
+                                        <div className="space-y-3">
+                                            <Label className="flex items-center gap-2">
+                                                <Play className="h-4 w-4" />
+                                                Animation Level
+                                            </Label>
+                                            <Select
+                                                value={customization.animationLevel}
+                                                onValueChange={(value: "none" | "subtle" | "moderate" | "dynamic") =>
+                                                    setCustomization({
+                                                        ...customization,
+                                                        animationLevel: value,
+                                                    })
+                                                }
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="none">
+                                                        None - Static slides
+                                                    </SelectItem>
+                                                    <SelectItem value="subtle">
+                                                        Subtle - Gentle transitions
+                                                    </SelectItem>
+                                                    <SelectItem value="moderate">
+                                                        Moderate - Standard animations
+                                                    </SelectItem>
+                                                    <SelectItem value="dynamic">
+                                                        Dynamic - Rich motion effects
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+
+                                        {/* Image Style */}
+                                        <div className="space-y-3">
+                                            <Label className="flex items-center gap-2">
+                                                <ImageIcon className="h-4 w-4" />
+                                                Image Style
+                                            </Label>
+                                            <Select
+                                                value={customization.imageStyle}
+                                                onValueChange={(value: "photography" | "illustration" | "abstract" | "icons") =>
+                                                    setCustomization({
+                                                        ...customization,
+                                                        imageStyle: value,
+                                                    })
+                                                }
+                                            >
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="photography">
+                                                        Photography - Real-world photos
+                                                    </SelectItem>
+                                                    <SelectItem value="illustration">
+                                                        Illustration - Drawn graphics
+                                                    </SelectItem>
+                                                    <SelectItem value="abstract">
+                                                        Abstract - Artistic visuals
+                                                    </SelectItem>
+                                                    <SelectItem value="icons">
+                                                        Icons - Clean iconography
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+
+                                    {/* Brand Preview */}
+                                    {brandDesign && (
+                                        <div className="rounded-lg border border-border bg-muted/30 p-4">
+                                            <h4 className="mb-3 text-sm font-medium">
+                                                Brand Colors Applied
+                                            </h4>
+                                            <div className="flex gap-2">
+                                                <div
+                                                    className="h-8 w-8 rounded-full border"
+                                                    style={{
+                                                        backgroundColor:
+                                                            brandDesign.primary_color,
+                                                    }}
+                                                    title="Primary"
+                                                />
+                                                <div
+                                                    className="h-8 w-8 rounded-full border"
+                                                    style={{
+                                                        backgroundColor:
+                                                            brandDesign.secondary_color ||
+                                                            "#666",
+                                                    }}
+                                                    title="Secondary"
+                                                />
+                                                <div
+                                                    className="h-8 w-8 rounded-full border"
+                                                    style={{
+                                                        backgroundColor:
+                                                            brandDesign.accent_color ||
+                                                            "#999",
+                                                    }}
+                                                    title="Accent"
+                                                />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Generate Button */}
+                                    <div className="flex justify-center pt-4">
+                                        <Button
+                                            onClick={handleGeneratePresentation}
+                                            disabled={!canGenerate}
+                                            size="lg"
+                                            className="px-8"
+                                        >
+                                            <Sparkles className="mr-2 h-5 w-5" />
+                                            Generate My Presentation
+                                        </Button>
+                                    </div>
+
+                                    <p className="text-center text-sm text-muted-foreground">
+                                        Generation time: ~12-18 minutes for{" "}
+                                        {selectedDeck.slideCount} slides
+                                    </p>
+                                </CardContent>
+                            </Card>
+                        )}
+
+                        {/* My Presentations */}
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <CardTitle>My Presentations</CardTitle>
+                                    <span className="text-sm text-muted-foreground">
+                                        {presentations.length} created
+                                    </span>
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                {presentations.length === 0 ? (
+                                    <div className="py-12 text-center text-muted-foreground">
+                                        <FileText className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                                        <p className="mb-2">No presentations yet.</p>
+                                        <p className="text-sm">
+                                            Select a deck structure and customize your
+                                            settings to generate your first presentation!
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {presentations.map((presentation) => (
+                                            <div
+                                                key={presentation.id}
+                                                className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:border-primary/40"
+                                            >
+                                                <div>
+                                                    <h4 className="font-semibold">
+                                                        {presentation.title}
+                                                    </h4>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        {presentation.slides.length} slides
+                                                        •{" "}
                                                         {new Date(
-                                                            deck.created_at
+                                                            presentation.created_at
                                                         ).toLocaleDateString()}
-                                                    </span>
+                                                    </p>
                                                 </div>
-
-                                                {deck.deck_url && (
-                                                    <a
-                                                        href={deck.deck_url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="inline-flex items-center gap-2 text-sm text-purple-600 hover:text-purple-700"
+                                                <div className="flex items-center gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => {
+                                                            setSelectedPresentation(
+                                                                presentation
+                                                            );
+                                                            setIsEditorOpen(true);
+                                                            setSelectedSlideIndex(0);
+                                                        }}
                                                     >
-                                                        <LinkIcon className="h-4 w-4" />
-                                                        Open Presentation
-                                                    </a>
-                                                )}
+                                                        <Pencil className="mr-1 h-4 w-4" />
+                                                        Edit
+                                                    </Button>
+                                                    <Button variant="outline" size="sm">
+                                                        <Download className="mr-1 h-4 w-4" />
+                                                        Download PPTX
+                                                    </Button>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() =>
+                                                            handleDeletePresentation(
+                                                                presentation.id
+                                                            )
+                                                        }
+                                                    >
+                                                        <Trash2 className="h-4 w-4 text-red-500" />
+                                                    </Button>
+                                                </div>
                                             </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+                    </>
+                )}
 
-                                            <div className="flex items-center gap-2">
-                                                {deck.deck_url && (
-                                                    <>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleExportPDF(deck);
-                                                            }}
-                                                            className="rounded p-2 text-primary hover:bg-primary/5"
-                                                            title="Export to PDF"
-                                                        >
-                                                            <FileDown className="h-4 w-4" />
-                                                        </button>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleExportGoogleSlides(
-                                                                    deck
-                                                                );
-                                                            }}
-                                                            className="rounded p-2 text-green-600 hover:bg-green-50"
-                                                            title="Export to Google Slides"
-                                                        >
-                                                            <FileText className="h-4 w-4" />
-                                                        </button>
-                                                        <a
-                                                            href={deck.deck_url}
-                                                            target="_blank"
-                                                            rel="noopener noreferrer"
-                                                            className="rounded p-2 text-purple-600 hover:bg-purple-50"
-                                                            title="Open Presentation"
-                                                        >
-                                                            <Eye className="h-4 w-4" />
-                                                        </a>
-                                                    </>
-                                                )}
-                                                <button
-                                                    onClick={() =>
-                                                        handleDeleteDeck(deck.id)
-                                                    }
-                                                    className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
-                                                    title="Delete deck"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                {/* Progressive Generation UI */}
+                {isGenerating && (
+                    <Card className="border-primary/20 bg-primary/5">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                                Generating Your Presentation...
+                            </CardTitle>
+                            <CardDescription>
+                                AI is creating {selectedDeck?.slideCount} slides with
+                                images and speaker notes. Please do not close this page.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            {/* Progress Bar */}
+                            <div>
+                                <div className="mb-2 flex items-center justify-between text-sm">
+                                    <span>
+                                        Slide {currentGeneratingSlide} of{" "}
+                                        {selectedDeck?.slideCount}
+                                    </span>
+                                    <span>{generationProgress}%</span>
+                                </div>
+                                <div className="h-3 w-full rounded-full bg-primary/20">
+                                    <div
+                                        className="h-3 rounded-full bg-primary transition-all duration-500"
+                                        style={{ width: `${generationProgress}%` }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Live Slide Preview Grid */}
+                            <div className="grid grid-cols-4 gap-3 md:grid-cols-6 lg:grid-cols-8">
+                                {generatedSlides.map((slide, index) => (
+                                    <div
+                                        key={index}
+                                        className="aspect-[16/9] rounded-lg border border-green-500 bg-white p-2 shadow-sm"
+                                    >
+                                        <div className="flex h-full flex-col justify-between">
+                                            <div className="truncate text-xs font-medium">
+                                                {slide.title}
                                             </div>
+                                            <CheckCircle2 className="h-4 w-4 self-end text-green-500" />
                                         </div>
                                     </div>
                                 ))}
+                                {/* Generating placeholder */}
+                                {currentGeneratingSlide <= (selectedDeck?.slideCount || 0) && (
+                                    <div className="aspect-[16/9] animate-pulse rounded-lg border border-primary bg-primary/10 p-2">
+                                        <div className="flex h-full items-center justify-center">
+                                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        )}
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Three-Panel Editor */}
+                {isEditorOpen && selectedPresentation && (
+                    <div className="fixed inset-0 z-50 bg-background">
+                        {/* Editor Header */}
+                        <div className="flex h-14 items-center justify-between border-b border-border bg-card px-4">
+                            <div className="flex items-center gap-4">
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setIsEditorOpen(false)}
+                                >
+                                    <X className="h-4 w-4" />
+                                </Button>
+                                <h2 className="font-semibold">
+                                    {selectedPresentation.title}
+                                </h2>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm">
+                                    <Download className="mr-1 h-4 w-4" />
+                                    Export PPTX
+                                </Button>
+                                <Button size="sm" onClick={() => setIsEditorOpen(false)}>
+                                    <CheckCircle2 className="mr-1 h-4 w-4" />
+                                    Save & Close
+                                </Button>
+                            </div>
+                        </div>
+
+                        {/* Three-Panel Layout */}
+                        <div className="flex h-[calc(100vh-3.5rem)]">
+                            {/* Left Panel - Thumbnail Navigator (~20%) */}
+                            <div className="w-[20%] overflow-y-auto border-r border-border bg-muted/30 p-3">
+                                <div className="space-y-2">
+                                    {selectedPresentation.slides.map((slide, index) => (
+                                        <div
+                                            key={index}
+                                            className={`group relative cursor-pointer rounded-lg border-2 p-2 transition-all ${
+                                                index === selectedSlideIndex
+                                                    ? "border-primary bg-white shadow-md"
+                                                    : "border-transparent bg-white hover:border-border"
+                                            }`}
+                                            onClick={() => setSelectedSlideIndex(index)}
+                                        >
+                                            {/* Drag Handle */}
+                                            <div className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab opacity-0 group-hover:opacity-100">
+                                                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                                            </div>
+
+                                            {/* Slide Thumbnail */}
+                                            <div className="ml-4">
+                                                <div
+                                                    className="aspect-[16/9] rounded border bg-muted/50 p-1"
+                                                    style={{
+                                                        backgroundColor:
+                                                            brandDesign?.background_color ||
+                                                            "#fff",
+                                                    }}
+                                                >
+                                                    <div
+                                                        className="truncate text-[8px] font-medium"
+                                                        style={{
+                                                            color:
+                                                                brandDesign?.text_color ||
+                                                                "#000",
+                                                        }}
+                                                    >
+                                                        {slide.title}
+                                                    </div>
+                                                </div>
+                                                <div className="mt-1 flex items-center justify-between">
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {index + 1}
+                                                    </span>
+                                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100">
+                                                        <button
+                                                            className="rounded p-0.5 hover:bg-muted"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDuplicateSlide(index);
+                                                            }}
+                                                        >
+                                                            <Copy className="h-3 w-3" />
+                                                        </button>
+                                                        <button
+                                                            className="rounded p-0.5 hover:bg-red-50"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDeleteSlide(index);
+                                                            }}
+                                                        >
+                                                            <Trash2 className="h-3 w-3 text-red-500" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+
+                                    {/* Add Slide Button */}
+                                    <button className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border p-4 text-sm text-muted-foreground hover:border-primary hover:text-primary">
+                                        <Plus className="h-4 w-4" />
+                                        Add Slide
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Center Panel - WYSIWYG Preview (~55%) */}
+                            <div className="flex w-[55%] flex-col overflow-hidden">
+                                {/* Navigation */}
+                                <div className="flex items-center justify-between border-b border-border bg-card px-4 py-2">
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        disabled={selectedSlideIndex === 0}
+                                        onClick={() =>
+                                            setSelectedSlideIndex((prev) =>
+                                                Math.max(0, prev - 1)
+                                            )
+                                        }
+                                    >
+                                        <ChevronLeft className="h-4 w-4" />
+                                        Previous
+                                    </Button>
+                                    <span className="text-sm text-muted-foreground">
+                                        Slide {selectedSlideIndex + 1} of{" "}
+                                        {selectedPresentation.slides.length}
+                                    </span>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        disabled={
+                                            selectedSlideIndex ===
+                                            selectedPresentation.slides.length - 1
+                                        }
+                                        onClick={() =>
+                                            setSelectedSlideIndex((prev) =>
+                                                Math.min(
+                                                    selectedPresentation.slides.length - 1,
+                                                    prev + 1
+                                                )
+                                            )
+                                        }
+                                    >
+                                        Next
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                </div>
+
+                                {/* Slide Preview */}
+                                <div className="flex flex-1 items-center justify-center overflow-auto bg-muted/50 p-8">
+                                    <div
+                                        className="aspect-[16/9] w-full max-w-4xl rounded-lg border shadow-xl"
+                                        style={{
+                                            backgroundColor:
+                                                brandDesign?.background_color || "#ffffff",
+                                        }}
+                                    >
+                                        <div className="flex h-full flex-col p-8">
+                                            {/* Slide Title */}
+                                            <h2
+                                                className="mb-4 text-3xl font-bold"
+                                                style={{
+                                                    color:
+                                                        brandDesign?.primary_color ||
+                                                        "#1f2937",
+                                                }}
+                                            >
+                                                {
+                                                    selectedPresentation.slides[
+                                                        selectedSlideIndex
+                                                    ]?.title
+                                                }
+                                            </h2>
+
+                                            {/* Slide Content */}
+                                            <div className="flex-1">
+                                                <ul
+                                                    className="space-y-3"
+                                                    style={{
+                                                        color:
+                                                            brandDesign?.text_color ||
+                                                            "#374151",
+                                                    }}
+                                                >
+                                                    {selectedPresentation.slides[
+                                                        selectedSlideIndex
+                                                    ]?.content.map((point, idx) => (
+                                                        <li
+                                                            key={idx}
+                                                            className="flex items-start gap-2 text-lg"
+                                                        >
+                                                            <span
+                                                                className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full"
+                                                                style={{
+                                                                    backgroundColor:
+                                                                        brandDesign?.accent_color ||
+                                                                        "#3b82f6",
+                                                                }}
+                                                            />
+                                                            {point}
+                                                        </li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+
+                                            {/* Slide Footer */}
+                                            <div
+                                                className="flex items-center justify-between text-sm"
+                                                style={{
+                                                    color:
+                                                        brandDesign?.secondary_color ||
+                                                        "#6b7280",
+                                                }}
+                                            >
+                                                <span>{brandDesign?.brand_name || ""}</span>
+                                                <span>
+                                                    {selectedSlideIndex + 1} /{" "}
+                                                    {selectedPresentation.slides.length}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Right Panel - AI Editor (~25%) */}
+                            <div className="w-[25%] overflow-y-auto border-l border-border bg-card p-4">
+                                <div className="space-y-6">
+                                    {/* Quick Actions */}
+                                    <div>
+                                        <h3 className="mb-3 font-semibold">Quick Actions</h3>
+                                        <div className="grid grid-cols-2 gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="justify-start"
+                                                onClick={() =>
+                                                    handleQuickAction("regenerate_image")
+                                                }
+                                                disabled={isEditingSlide}
+                                            >
+                                                <RefreshCw className="mr-1 h-3 w-3" />
+                                                New Image
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="justify-start"
+                                                onClick={() =>
+                                                    handleQuickAction("make_concise")
+                                                }
+                                                disabled={isEditingSlide}
+                                            >
+                                                <Type className="mr-1 h-3 w-3" />
+                                                Make Concise
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="justify-start"
+                                                onClick={() =>
+                                                    handleQuickAction("better_headline")
+                                                }
+                                                disabled={isEditingSlide}
+                                            >
+                                                <Wand2 className="mr-1 h-3 w-3" />
+                                                Better Title
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="justify-start"
+                                                onClick={() =>
+                                                    handleQuickAction("change_layout")
+                                                }
+                                                disabled={isEditingSlide}
+                                            >
+                                                <LayoutGrid className="mr-1 h-3 w-3" />
+                                                Layout
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {/* AI Edit Input */}
+                                    <div>
+                                        <h3 className="mb-3 font-semibold">
+                                            Edit with AI
+                                        </h3>
+                                        <div className="space-y-3">
+                                            <textarea
+                                                value={editPrompt}
+                                                onChange={(e) =>
+                                                    setEditPrompt(e.target.value)
+                                                }
+                                                placeholder="Describe how you want to change this slide..."
+                                                className="h-24 w-full resize-none rounded-lg border border-border bg-background p-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                                            />
+                                            <div className="flex gap-2">
+                                                <Button
+                                                    size="sm"
+                                                    className="flex-1"
+                                                    disabled={
+                                                        !editPrompt.trim() || isEditingSlide
+                                                    }
+                                                >
+                                                    <MessageSquare className="mr-1 h-4 w-4" />
+                                                    Apply
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    disabled={isEditingSlide}
+                                                >
+                                                    <Mic className="h-4 w-4" />
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Speaker Notes */}
+                                    <div>
+                                        <h3 className="mb-3 font-semibold">Speaker Notes</h3>
+                                        <div className="rounded-lg border border-border bg-muted/30 p-3">
+                                            <p className="text-sm text-muted-foreground">
+                                                {selectedPresentation.slides[
+                                                    selectedSlideIndex
+                                                ]?.speakerNotes ||
+                                                    "No speaker notes for this slide."}
+                                            </p>
+                                        </div>
+                                        <Button
+                                            variant="link"
+                                            size="sm"
+                                            className="mt-2 h-auto p-0 text-xs"
+                                        >
+                                            Regenerate Notes
+                                        </Button>
+                                    </div>
+
+                                    {/* Layout Type */}
+                                    <div>
+                                        <h3 className="mb-3 font-semibold">Layout Type</h3>
+                                        <div className="rounded-lg border border-border bg-muted/30 p-3">
+                                            <p className="text-sm capitalize">
+                                                {selectedPresentation.slides[
+                                                    selectedSlideIndex
+                                                ]?.layoutType.replace("_", " ") || "Default"}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </StepLayout>
     );

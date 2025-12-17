@@ -13,6 +13,7 @@ import { logger } from "@/lib/logger";
 import { AIGenerationError, RateLimitError } from "@/lib/errors";
 import { env } from "@/lib/env";
 import { AI_CONFIG } from "@/lib/config";
+import { recoverJSON } from "@/lib/ai/json-recovery";
 
 import type { SlideData } from "./pptx-generator";
 
@@ -427,18 +428,46 @@ Respond in JSON format:
             });
         }
 
+        // Try direct JSON parse first, fall back to recovery system
         let generated;
         try {
             generated = JSON.parse(content);
         } catch (parseError) {
-            logger.error(
-                { error: parseError, content, slideNumber: deckSlide.slideNumber },
-                "Failed to parse Anthropic response as JSON"
+            logger.warn(
+                {
+                    parseError,
+                    contentPreview: content.slice(0, 200),
+                    slideNumber: deckSlide.slideNumber,
+                },
+                "Direct JSON parse failed, attempting recovery"
             );
-            throw new AIGenerationError("Invalid JSON response from Anthropic", {
-                retryable: false,
-                errorCode: "INVALID_JSON",
-            });
+
+            const recovered = recoverJSON<{
+                title?: string;
+                content?: string[];
+                speakerNotes?: string;
+                imagePrompt?: string;
+            }>(content);
+
+            if (recovered.success && recovered.data !== undefined) {
+                logger.info(
+                    {
+                        strategy: recovered.strategy,
+                        slideNumber: deckSlide.slideNumber,
+                    },
+                    "JSON recovered successfully for slide"
+                );
+                generated = recovered.data;
+            } else {
+                logger.error(
+                    { error: parseError, content, slideNumber: deckSlide.slideNumber },
+                    "Failed to parse Anthropic response as JSON"
+                );
+                throw new AIGenerationError("Invalid JSON response from Anthropic", {
+                    retryable: false,
+                    errorCode: "INVALID_JSON",
+                });
+            }
         }
 
         return {
@@ -685,18 +714,43 @@ Generate updated content in JSON format:
             });
         }
 
+        // Try direct JSON parse first, fall back to recovery system
         let generated;
         try {
             generated = JSON.parse(content);
         } catch (parseError) {
-            logger.error(
-                { error: parseError, content, slideNumber: slide.slideNumber },
-                "Failed to parse Anthropic response as JSON"
+            logger.warn(
+                {
+                    parseError,
+                    contentPreview: content.slice(0, 200),
+                    slideNumber: slide.slideNumber,
+                },
+                "Direct JSON parse failed in regenerateSlide, attempting recovery"
             );
-            throw new AIGenerationError("Invalid JSON response from Anthropic", {
-                retryable: false,
-                errorCode: "INVALID_JSON",
-            });
+
+            const recovered = recoverJSON<{
+                title?: string;
+                content?: string[];
+                speakerNotes?: string;
+                imagePrompt?: string;
+            }>(content);
+
+            if (recovered.success && recovered.data !== undefined) {
+                logger.info(
+                    { strategy: recovered.strategy, slideNumber: slide.slideNumber },
+                    "JSON recovered successfully for slide regeneration"
+                );
+                generated = recovered.data;
+            } else {
+                logger.error(
+                    { error: parseError, content, slideNumber: slide.slideNumber },
+                    "Failed to parse Anthropic response as JSON"
+                );
+                throw new AIGenerationError("Invalid JSON response from Anthropic", {
+                    retryable: false,
+                    errorCode: "INVALID_JSON",
+                });
+            }
         }
 
         return {

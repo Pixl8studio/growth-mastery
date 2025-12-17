@@ -7,12 +7,34 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers":
-        "authorization, x-client-info, apikey, content-type",
-};
+// CORS Configuration - restrict to production domains
+const ALLOWED_ORIGINS = [
+    Deno.env.get("NEXT_PUBLIC_APP_URL") || "http://localhost:3000",
+    "https://genie-v5.vercel.app",
+].filter(Boolean);
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+    // Check if origin is in allowed list
+    const allowedOrigin =
+        origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+
+    return {
+        "Access-Control-Allow-Origin": allowedOrigin,
+        "Access-Control-Allow-Headers":
+            "authorization, x-client-info, apikey, content-type",
+    };
+}
+
+// Anthropic API Configuration
+const ANTHROPIC_API_VERSION = Deno.env.get("ANTHROPIC_API_VERSION") || "2023-06-01";
+const ANTHROPIC_MODEL = Deno.env.get("ANTHROPIC_MODEL") || "claude-sonnet-4-20250514";
+
+// Input validation schema
+const JobRequestSchema = z.object({
+    jobId: z.string().uuid("Invalid job ID format"),
+});
 
 interface Slide {
     slideNumber: number;
@@ -29,13 +51,33 @@ interface TalkTrackSlide {
 }
 
 serve(async (req) => {
+    const origin = req.headers.get("origin");
+    const corsHeaders = getCorsHeaders(origin);
+
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
     }
 
     try {
-        const { jobId } = await req.json();
+        // Parse and validate input
+        const rawBody = await req.json();
+        const validationResult = JobRequestSchema.safeParse(rawBody);
+
+        if (!validationResult.success) {
+            return new Response(
+                JSON.stringify({
+                    error: "Invalid request",
+                    details: validationResult.error.errors,
+                }),
+                {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                }
+            );
+        }
+
+        const { jobId } = validationResult.data;
 
         const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
         const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -179,27 +221,39 @@ serve(async (req) => {
     } catch (error) {
         console.error("[Talk Track] Error:", error);
 
-        // Try to get jobId from request to update job status
+        // Try to update job status - jobId is already validated at this point
+        // Use the rawBody we parsed earlier if available
         try {
-            const body = await req.clone().json();
-            const jobId = body.jobId;
+            // Since we already consumed the body, we need to extract jobId from the error context
+            // The jobId should be accessible in the scope if validation passed before the error
+            const supabaseUrl = Deno.env.get("SUPABASE_URL");
+            const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-            if (jobId) {
-                const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-                const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-                const supabase = createClient(supabaseUrl, supabaseKey);
+            // Only try to update if we have both credentials and the error occurred after validation
+            if (supabaseUrl && supabaseKey) {
+                // Try to extract jobId from rawBody if it was parsed successfully
+                const jobIdMatch =
+                    typeof rawBody === "object" && rawBody?.jobId
+                        ? String(rawBody.jobId)
+                        : null;
 
-                await supabase
-                    .from("talk_track_jobs")
-                    .update({
-                        status: "failed",
-                        error_message:
-                            error instanceof Error ? error.message : "Unknown error",
-                        completed_at: new Date().toISOString(),
-                    })
-                    .eq("id", jobId);
+                if (jobIdMatch && z.string().uuid().safeParse(jobIdMatch).success) {
+                    const supabase = createClient(supabaseUrl, supabaseKey);
 
-                console.log(`[Talk Track] Job ${jobId} marked as failed`);
+                    await supabase
+                        .from("talk_track_jobs")
+                        .update({
+                            status: "failed",
+                            error_message:
+                                error instanceof Error
+                                    ? error.message
+                                    : "Unknown error",
+                            completed_at: new Date().toISOString(),
+                        })
+                        .eq("id", jobIdMatch);
+
+                    console.log(`[Talk Track] Job ${jobIdMatch} marked as failed`);
+                }
             }
         } catch (updateError) {
             console.error("[Talk Track] Failed to update job status:", updateError);
@@ -267,10 +321,10 @@ Return ONLY the JSON object. No markdown, no explanation.`;
         headers: {
             "Content-Type": "application/json",
             "x-api-key": anthropicKey,
-            "anthropic-version": "2023-06-01",
+            "anthropic-version": ANTHROPIC_API_VERSION,
         },
         body: JSON.stringify({
-            model: "claude-sonnet-4-20250514",
+            model: ANTHROPIC_MODEL,
             max_tokens: 4000,
             temperature: 0.7,
             system: systemPrompt,

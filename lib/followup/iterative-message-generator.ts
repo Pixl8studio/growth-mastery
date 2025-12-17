@@ -67,7 +67,6 @@ export async function generateSingleMessage(
                 },
             ],
             {
-                model: "gpt-4o",
                 temperature: 0.7,
                 maxTokens: 1500,
             }

@@ -4,7 +4,11 @@
  * Related: GitHub Issue #327 - Enhanced Presentation Generator
  */
 
-export { SlideThumbnail, SlideThumbnailSkeleton, GeneratingSlotPlaceholder } from "./slide-thumbnail";
+export {
+    SlideThumbnail,
+    SlideThumbnailSkeleton,
+    GeneratingSlotPlaceholder,
+} from "./slide-thumbnail";
 export type { SlideData, BrandDesign } from "./slide-thumbnail";
 
 export { DraggableSlides } from "./draggable-slides";

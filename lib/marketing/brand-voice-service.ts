@@ -173,7 +173,6 @@ Keep it concise but actionable (300-500 words).`;
                 },
             ],
             {
-                model: "gpt-4o",
                 temperature: 0.7,
                 maxTokens: 1000,
             }
@@ -264,7 +263,6 @@ Signature phrases are unique expressions this person uses repeatedly.`;
                 },
             ],
             {
-                model: "gpt-4o",
                 temperature: 0.3,
                 maxTokens: 1000,
             }
@@ -363,7 +361,6 @@ Return as JSON:
                 },
             ],
             {
-                model: "gpt-4o",
                 temperature: 0.5,
                 maxTokens: 500,
             }

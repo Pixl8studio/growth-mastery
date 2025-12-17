@@ -1,16 +1,18 @@
 /**
  * AI Slide Generator
- * Uses OpenAI to generate slide content based on deck structure and customization
+ * Uses Anthropic Claude to generate slide content based on deck structure and customization
  *
  * Related: GitHub Issue #325 - In-house PowerPoint Presentation Generator
  */
 
 import * as Sentry from "@sentry/nextjs";
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 
 import { logger } from "@/lib/logger";
 import { AIGenerationError, RateLimitError } from "@/lib/errors";
+import { env } from "@/lib/env";
+import { AI_CONFIG } from "@/lib/config";
 
 import type { SlideData } from "./pptx-generator";
 
@@ -83,29 +85,29 @@ export interface GeneratePresentationOptions {
 }
 
 // ============================================================================
-// OpenAI Client with Validation
+// Anthropic Client with Validation
 // ============================================================================
 
 // Validate API key at startup
-function validateOpenAIApiKey(): void {
-    if (!process.env.OPENAI_API_KEY) {
+function validateAnthropicApiKey(): void {
+    if (!env.ANTHROPIC_API_KEY) {
         throw new Error(
-            "OPENAI_API_KEY environment variable is required for slide generation"
+            "ANTHROPIC_API_KEY environment variable is required for slide generation"
         );
     }
 }
 
 // Lazy initialization to allow startup validation
-let openaiClient: OpenAI | null = null;
+let anthropicClient: Anthropic | null = null;
 
-function getOpenAIClient(): OpenAI {
-    if (!openaiClient) {
-        validateOpenAIApiKey();
-        openaiClient = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
+function getAnthropicClient(): Anthropic {
+    if (!anthropicClient) {
+        validateAnthropicApiKey();
+        anthropicClient = new Anthropic({
+            apiKey: env.ANTHROPIC_API_KEY,
         });
     }
-    return openaiClient;
+    return anthropicClient;
 }
 
 // ============================================================================
@@ -139,8 +141,8 @@ async function withRetry<T>(
         } catch (error) {
             lastError = error instanceof Error ? error : new Error(String(error));
 
-            // Parse OpenAI-specific errors
-            const { retryable, errorType } = parseOpenAIError(error);
+            // Parse Anthropic-specific errors
+            const { retryable, errorType } = parseAnthropicError(error);
 
             if (!retryable || attempt === maxRetries) {
                 logger.error(
@@ -157,7 +159,7 @@ async function withRetry<T>(
             );
 
             Sentry.addBreadcrumb({
-                category: "openai.retry",
+                category: "anthropic.retry",
                 message: `Retrying ${operationName} (attempt ${attempt + 1}/${maxRetries})`,
                 level: "warning",
                 data: { delay, errorType },
@@ -172,10 +174,10 @@ async function withRetry<T>(
 }
 
 // ============================================================================
-// OpenAI Error Handling
+// Anthropic Error Handling
 // ============================================================================
 
-type OpenAIErrorType =
+type AnthropicErrorType =
     | "rate_limit"
     | "token_limit"
     | "invalid_request"
@@ -183,13 +185,13 @@ type OpenAIErrorType =
     | "timeout"
     | "unknown";
 
-interface ParsedOpenAIError {
+interface ParsedAnthropicError {
     retryable: boolean;
-    errorType: OpenAIErrorType;
+    errorType: AnthropicErrorType;
     message: string;
 }
 
-function parseOpenAIError(error: unknown): ParsedOpenAIError {
+function parseAnthropicError(error: unknown): ParsedAnthropicError {
     if (!(error instanceof Error)) {
         return { retryable: false, errorType: "unknown", message: String(error) };
     }
@@ -205,7 +207,7 @@ function parseOpenAIError(error: unknown): ParsedOpenAIError {
         return {
             retryable: true,
             errorType: "rate_limit",
-            message: "OpenAI rate limit exceeded",
+            message: "Anthropic rate limit exceeded",
         };
     }
 
@@ -231,7 +233,7 @@ function parseOpenAIError(error: unknown): ParsedOpenAIError {
         return {
             retryable: false,
             errorType: "invalid_request",
-            message: "Invalid request to OpenAI",
+            message: "Invalid request to Anthropic",
         };
     }
 
@@ -244,7 +246,7 @@ function parseOpenAIError(error: unknown): ParsedOpenAIError {
         return {
             retryable: true,
             errorType: "timeout",
-            message: "OpenAI request timed out",
+            message: "Anthropic request timed out",
         };
     }
 
@@ -258,7 +260,7 @@ function parseOpenAIError(error: unknown): ParsedOpenAIError {
         return {
             retryable: true,
             errorType: "api_error",
-            message: "OpenAI API error",
+            message: "Anthropic API error",
         };
     }
 
@@ -399,32 +401,27 @@ Respond in JSON format:
   "imagePrompt": "Description for AI image generation"
 }`;
 
-    const openai = getOpenAIClient();
+    const anthropic = getAnthropicClient();
 
     try {
         const response = await withRetry(
             async () => {
-                return await openai.chat.completions.create({
-                    model: "gpt-4o-mini",
-                    messages: [
-                        {
-                            role: "system",
-                            content:
-                                "You are an expert presentation designer creating content for a professional business presentation. Generate clear, compelling content that engages the audience. Always respond with valid JSON.",
-                        },
-                        { role: "user", content: prompt },
-                    ],
-                    response_format: { type: "json_object" },
-                    temperature: 0.7,
+                return await anthropic.messages.create({
+                    model: AI_CONFIG.models.default,
                     max_tokens: 1000,
+                    temperature: 0.7,
+                    system: "You are an expert presentation designer creating content for a professional business presentation. Generate clear, compelling content that engages the audience. Always respond with valid JSON only, no markdown code blocks.",
+                    messages: [{ role: "user", content: prompt }],
                 });
             },
             { operationName: `generateSlide_${deckSlide.slideNumber}` }
         );
 
-        const content = response.choices[0]?.message?.content;
+        const textBlock = response.content.find((block) => block.type === "text");
+        const content = textBlock?.type === "text" ? textBlock.text : null;
+
         if (!content) {
-            throw new AIGenerationError("No content generated from OpenAI", {
+            throw new AIGenerationError("No content generated from Anthropic", {
                 retryable: false,
                 errorCode: "NO_CONTENT",
             });
@@ -436,9 +433,9 @@ Respond in JSON format:
         } catch (parseError) {
             logger.error(
                 { error: parseError, content, slideNumber: deckSlide.slideNumber },
-                "Failed to parse OpenAI response as JSON"
+                "Failed to parse Anthropic response as JSON"
             );
-            throw new AIGenerationError("Invalid JSON response from OpenAI", {
+            throw new AIGenerationError("Invalid JSON response from Anthropic", {
                 retryable: false,
                 errorCode: "INVALID_JSON",
             });
@@ -458,7 +455,7 @@ Respond in JSON format:
             section: deckSlide.section,
         };
     } catch (error) {
-        const { errorType, message: errorMessage } = parseOpenAIError(error);
+        const { errorType, message: errorMessage } = parseAnthropicError(error);
 
         logger.error(
             { error, slideNumber: deckSlide.slideNumber, errorType },
@@ -477,7 +474,7 @@ Respond in JSON format:
         // For rate limit errors, throw specific error
         if (errorType === "rate_limit") {
             throw new RateLimitError(
-                "OpenAI rate limit exceeded during slide generation"
+                "Anthropic rate limit exceeded during slide generation"
             );
         }
 
@@ -645,7 +642,7 @@ export async function regenerateSlide(
     _businessProfile?: BusinessProfile,
     _brandDesign?: BrandDesign
 ): Promise<SlideData> {
-    const openai = getOpenAIClient();
+    const anthropic = getAnthropicClient();
 
     const prompt = `Modify this presentation slide based on the following instruction:
 
@@ -667,27 +664,22 @@ Generate updated content in JSON format:
     try {
         const response = await withRetry(
             async () => {
-                return await openai.chat.completions.create({
-                    model: "gpt-4o-mini",
-                    messages: [
-                        {
-                            role: "system",
-                            content:
-                                "You are an expert presentation designer. Modify the slide content based on the user's instruction while maintaining professionalism. Always respond with valid JSON.",
-                        },
-                        { role: "user", content: prompt },
-                    ],
-                    response_format: { type: "json_object" },
-                    temperature: 0.7,
+                return await anthropic.messages.create({
+                    model: AI_CONFIG.models.default,
                     max_tokens: 1000,
+                    temperature: 0.7,
+                    system: "You are an expert presentation designer. Modify the slide content based on the user's instruction while maintaining professionalism. Always respond with valid JSON only, no markdown code blocks.",
+                    messages: [{ role: "user", content: prompt }],
                 });
             },
             { operationName: `regenerateSlide_${slide.slideNumber}` }
         );
 
-        const content = response.choices[0]?.message?.content;
+        const textBlock = response.content.find((block) => block.type === "text");
+        const content = textBlock?.type === "text" ? textBlock.text : null;
+
         if (!content) {
-            throw new AIGenerationError("No content generated from OpenAI", {
+            throw new AIGenerationError("No content generated from Anthropic", {
                 retryable: false,
                 errorCode: "NO_CONTENT",
             });
@@ -699,9 +691,9 @@ Generate updated content in JSON format:
         } catch (parseError) {
             logger.error(
                 { error: parseError, content, slideNumber: slide.slideNumber },
-                "Failed to parse OpenAI response as JSON"
+                "Failed to parse Anthropic response as JSON"
             );
-            throw new AIGenerationError("Invalid JSON response from OpenAI", {
+            throw new AIGenerationError("Invalid JSON response from Anthropic", {
                 retryable: false,
                 errorCode: "INVALID_JSON",
             });
@@ -715,7 +707,7 @@ Generate updated content in JSON format:
             imagePrompt: generated.imagePrompt,
         };
     } catch (error) {
-        const { errorType } = parseOpenAIError(error);
+        const { errorType } = parseAnthropicError(error);
 
         logger.error(
             { error, slideNumber: slide.slideNumber, errorType },

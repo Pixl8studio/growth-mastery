@@ -95,19 +95,11 @@ export const GenerationErrorDialog = memo(function GenerationErrorDialog({
 
                     {/* Actions */}
                     <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
-                        <Button
-                            size="lg"
-                            className="gap-2"
-                            onClick={onRetry}
-                        >
+                        <Button size="lg" className="gap-2" onClick={onRetry}>
                             <RefreshCw className="h-4 w-4" />
                             Retry Generation
                         </Button>
-                        <Button
-                            variant="outline"
-                            size="lg"
-                            onClick={onClose}
-                        >
+                        <Button variant="outline" size="lg" onClick={onClose}>
                             Maybe Later
                         </Button>
                     </div>

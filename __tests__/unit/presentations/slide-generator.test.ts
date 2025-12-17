@@ -5,27 +5,24 @@
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-// Mock OpenAI
-vi.mock("openai", () => {
+// Mock Anthropic
+vi.mock("@anthropic-ai/sdk", () => {
     return {
         default: vi.fn().mockImplementation(() => ({
-            chat: {
-                completions: {
-                    create: vi.fn().mockResolvedValue({
-                        choices: [
-                            {
-                                message: {
-                                    content: JSON.stringify({
-                                        title: "Test Slide Title",
-                                        content: ["Point 1", "Point 2", "Point 3"],
-                                        speakerNotes: "Test speaker notes",
-                                        imagePrompt: "A professional business image",
-                                    }),
-                                },
-                            },
-                        ],
-                    }),
-                },
+            messages: {
+                create: vi.fn().mockResolvedValue({
+                    content: [
+                        {
+                            type: "text",
+                            text: JSON.stringify({
+                                title: "Test Slide Title",
+                                content: ["Point 1", "Point 2", "Point 3"],
+                                speakerNotes: "Test speaker notes",
+                                imagePrompt: "A professional business image",
+                            }),
+                        },
+                    ],
+                }),
             },
         })),
     };
@@ -33,14 +30,32 @@ vi.mock("openai", () => {
 
 // Mock Sentry
 vi.mock("@sentry/nextjs", () => ({
-    startSpan: vi.fn(async (_: object, callback: () => Promise<unknown>) => callback()),
+    startSpan: vi.fn(
+        async (
+            _config: object,
+            callback: (span: {
+                setAttribute: ReturnType<typeof vi.fn>;
+                setStatus: ReturnType<typeof vi.fn>;
+            }) => Promise<unknown>
+        ) => callback({ setAttribute: vi.fn(), setStatus: vi.fn() })
+    ),
     captureException: vi.fn(),
     setMeasurement: vi.fn(),
     addBreadcrumb: vi.fn(),
 }));
 
+// Mock logger
+vi.mock("@/lib/logger", () => ({
+    logger: {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        debug: vi.fn(),
+    },
+}));
+
 // Mock environment
-vi.stubEnv("OPENAI_API_KEY", "test-api-key");
+vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test-api-key");
 
 describe("Slide Generator", () => {
     beforeEach(() => {
@@ -118,9 +133,24 @@ describe("Slide Generator", () => {
                     title: "Test Presentation",
                     slideCount: 3,
                     slides: [
-                        { slideNumber: 1, title: "Intro", description: "Welcome", section: "connect" },
-                        { slideNumber: 2, title: "Main", description: "Content", section: "teach" },
-                        { slideNumber: 3, title: "End", description: "Call to action", section: "invite" },
+                        {
+                            slideNumber: 1,
+                            title: "Intro",
+                            description: "Welcome",
+                            section: "connect",
+                        },
+                        {
+                            slideNumber: 2,
+                            title: "Main",
+                            description: "Content",
+                            section: "teach",
+                        },
+                        {
+                            slideNumber: 3,
+                            title: "End",
+                            description: "Call to action",
+                            section: "invite",
+                        },
                     ],
                 },
                 customization: {

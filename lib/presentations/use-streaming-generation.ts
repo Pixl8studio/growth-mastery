@@ -99,8 +99,14 @@ export function useStreamingGeneration() {
 
     const startGeneration = useCallback(
         async (options: StreamingGenerationOptions) => {
-            const { projectId, deckStructureId, customization, onSlideGenerated, onComplete, onError } =
-                options;
+            const {
+                projectId,
+                deckStructureId,
+                customization,
+                onSlideGenerated,
+                onComplete,
+                onError,
+            } = options;
 
             // Reset state
             setState({
@@ -134,7 +140,10 @@ export function useStreamingGeneration() {
                         totalSlides: data.totalSlides,
                     }));
                     logger.info(
-                        { presentationId: data.presentationId, totalSlides: data.totalSlides },
+                        {
+                            presentationId: data.presentationId,
+                            totalSlides: data.totalSlides,
+                        },
                         "SSE connected for presentation generation"
                     );
                 });
@@ -211,7 +220,9 @@ export function useStreamingGeneration() {
                         try {
                             const data = JSON.parse(event.data);
                             errorMessage = data.error || errorMessage;
-                            isTimeout = data.isTimeout === true || errorMessage === "AI_PROVIDER_TIMEOUT";
+                            isTimeout =
+                                data.isTimeout === true ||
+                                errorMessage === "AI_PROVIDER_TIMEOUT";
                         } catch {
                             // Not a JSON event, likely a connection error
                             return; // Let onerror handle non-JSON errors
@@ -233,7 +244,10 @@ export function useStreamingGeneration() {
 
                     closeConnection();
 
-                    logger.error({ error: errorMessage, isTimeout }, "Server-sent error event received");
+                    logger.error(
+                        { error: errorMessage, isTimeout },
+                        "Server-sent error event received"
+                    );
                 });
 
                 // Handle native EventSource connection errors (network failures, connection closed)
@@ -258,7 +272,10 @@ export function useStreamingGeneration() {
                         isNetworkError = true;
                     } else if (eventSource.readyState === EventSource.CONNECTING) {
                         // Still trying to reconnect
-                        logger.warn({}, "SSE connection interrupted, attempting reconnect");
+                        logger.warn(
+                            {},
+                            "SSE connection interrupted, attempting reconnect"
+                        );
                         return; // Don't close yet, let it try to reconnect
                     } else {
                         // Generic server error
@@ -288,7 +305,10 @@ export function useStreamingGeneration() {
                     );
                 };
             } catch (error) {
-                const errorMessage = error instanceof Error ? error.message : "Failed to start generation";
+                const errorMessage =
+                    error instanceof Error
+                        ? error.message
+                        : "Failed to start generation";
 
                 setState((prev) => ({
                     ...prev,

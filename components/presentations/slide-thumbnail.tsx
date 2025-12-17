@@ -57,7 +57,10 @@ interface SlideThumbnailProps {
 }
 
 // Layout type icons and styles
-const LAYOUT_STYLES: Record<SlideData["layoutType"], { gradient: string; icon: string }> = {
+const LAYOUT_STYLES: Record<
+    SlideData["layoutType"],
+    { gradient: string; icon: string }
+> = {
     title: { gradient: "from-amber-500/20 to-orange-500/20", icon: "T" },
     section: { gradient: "from-blue-500/20 to-indigo-500/20", icon: "S" },
     content_left: { gradient: "from-emerald-500/20 to-teal-500/20", icon: "L" },
@@ -142,10 +145,7 @@ export const SlideThumbnail = memo(function SlideThumbnail({
                     {/* Content preview */}
                     <div className="space-y-0.5">
                         {slide.content.slice(0, 3).map((point, idx) => (
-                            <div
-                                key={idx}
-                                className="flex items-start gap-1"
-                            >
+                            <div key={idx} className="flex items-start gap-1">
                                 <span
                                     className="mt-[2px] h-1 w-1 flex-shrink-0 rounded-full"
                                     style={{ backgroundColor: accentColor }}

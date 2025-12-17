@@ -1,5 +1,5 @@
 /**
- * Unit Tests: OpenAI Assistants Client
+ * Unit Tests: Support Chat Client (Anthropic)
  * Tests for lib/openai/assistants-client.ts
  */
 
@@ -10,63 +10,121 @@ import {
     runAssistant,
     getRunStatus,
     getMessages,
+    generateSupportResponse,
 } from "@/lib/openai/assistants-client";
 
+// Mock Anthropic methods
+const mockMessagesCreate = vi.fn();
+
 // Mock dependencies
-vi.mock("openai", () => {
-    return {
-        default: vi.fn().mockImplementation(() => ({
-            beta: {
-                threads: {
-                    create: vi.fn().mockResolvedValue({ id: "thread-mock-123" }),
-                    messages: {
-                        create: vi.fn().mockResolvedValue({ id: "msg-mock-123" }),
-                        list: vi.fn().mockResolvedValue({ data: [] }),
-                    },
-                    runs: {
-                        create: vi.fn().mockResolvedValue({ id: "run-mock-123" }),
-                        retrieve: vi.fn().mockResolvedValue({
-                            id: "run-mock-123",
-                            status: "completed",
-                        }),
-                    },
-                },
-            },
-        })),
-    };
-});
+vi.mock("@anthropic-ai/sdk", () => ({
+    default: vi.fn().mockImplementation(() => ({
+        messages: {
+            create: mockMessagesCreate,
+        },
+    })),
+}));
 
 vi.mock("@/lib/env", () => ({
     env: {
-        OPENAI_API_KEY: "sk-test-key",
-        OPENAI_ASSISTANT_ID: "asst-test-123",
+        ANTHROPIC_API_KEY: "sk-ant-test-key",
     },
 }));
 
-describe("OpenAI Assistants Client", () => {
+vi.mock("@/lib/config", () => ({
+    AI_CONFIG: {
+        models: {
+            default: "claude-sonnet-4-20250514",
+        },
+        defaultTemperature: 0.7,
+        defaultMaxTokens: 4000,
+    },
+}));
+
+describe("Support Chat Client (Anthropic)", () => {
     beforeEach(() => {
         vi.clearAllMocks();
     });
 
     describe("createThread", () => {
         it("should create a thread and return thread ID", async () => {
-            const OpenAI = (await import("openai")).default;
-            const mockOpenAI = new OpenAI({ apiKey: "test" });
+            const threadId = await createThread();
 
-            (mockOpenAI.beta.threads.create as any).mockResolvedValue({
-                id: "thread-123",
-            });
+            expect(threadId).toBeDefined();
+            expect(threadId).toMatch(/^thread_/);
+        });
 
-            vi.doMock("openai", () => ({
-                default: vi.fn(() => mockOpenAI),
-            }));
+        it("should generate unique thread IDs", async () => {
+            const threadId1 = await createThread();
+            const threadId2 = await createThread();
 
-            const { createThread: create } = await import(
-                "@/lib/openai/assistants-client"
+            expect(threadId1).not.toBe(threadId2);
+        });
+    });
+
+    describe("generateSupportResponse", () => {
+        it("should generate response from Anthropic Claude", async () => {
+            const mockResponse = {
+                content: [
+                    {
+                        type: "text",
+                        text: "Hello! How can I help you today?",
+                    },
+                ],
+                usage: {
+                    input_tokens: 50,
+                    output_tokens: 20,
+                },
+            };
+
+            mockMessagesCreate.mockResolvedValue(mockResponse);
+
+            const messages = [
+                {
+                    role: "user" as const,
+                    content: "I need help with my funnel",
+                    timestamp: new Date().toISOString(),
+                },
+            ];
+
+            const result = await generateSupportResponse(
+                messages,
+                "You are Genie AI, a helpful assistant."
             );
 
-            const threadId = await create();
-            expect(threadId).toBeDefined();
+            expect(result).toBe("Hello! How can I help you today?");
+            expect(mockMessagesCreate).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    model: "claude-sonnet-4-20250514",
+                    messages: expect.arrayContaining([
+                        expect.objectContaining({
+                            role: "user",
+                            content: "I need help with my funnel",
+                        }),
+                    ]),
+                })
+            );
+        });
+
+        it("should throw error when no response content", async () => {
+            const mockResponse = {
+                content: [],
+                usage: { input_tokens: 0, output_tokens: 0 },
+            };
+
+            mockMessagesCreate.mockResolvedValue(mockResponse);
+
+            const messages = [
+                {
+                    role: "user" as const,
+                    content: "Test",
+                    timestamp: new Date().toISOString(),
+                },
+            ];
+
+            await expect(
+                generateSupportResponse(messages, "System prompt")
+            ).rejects.toThrow("No text response from Anthropic");
         });
 
         it("should throw error when API key is missing", async () => {
@@ -74,112 +132,62 @@ describe("OpenAI Assistants Client", () => {
 
             vi.doMock("@/lib/env", () => ({
                 env: {
-                    OPENAI_API_KEY: undefined,
+                    ANTHROPIC_API_KEY: undefined,
                 },
             }));
 
-            vi.doMock("openai", () => ({
-                default: vi.fn().mockImplementation(() => ({
-                    beta: {
-                        threads: {
-                            create: vi
-                                .fn()
-                                .mockResolvedValue({ id: "thread-mock-123" }),
-                        },
-                    },
-                })),
-            }));
-
-            const { createThread: create } = await import(
+            const { generateSupportResponse: generate } = await import(
                 "@/lib/openai/assistants-client"
             );
 
-            await expect(create()).rejects.toThrow("OPENAI_API_KEY is not configured");
-        });
-    });
-
-    describe("sendMessage", () => {
-        it("should send a message to a thread", async () => {
-            const threadId = "thread-123";
-            const content = "Hello, assistant!";
-
-            await sendMessage(threadId, content);
-
-            // Message was sent (implementation detail tested through integration)
-            expect(true).toBe(true);
-        });
-    });
-
-    describe("runAssistant", () => {
-        it("should run assistant on a thread", async () => {
-            const threadId = "thread-123";
-
-            const runId = await runAssistant(threadId);
-
-            expect(runId).toBeDefined();
-        });
-
-        it("should accept additional instructions", async () => {
-            const threadId = "thread-123";
-            const instructions = "Focus on technical details";
-
-            const runId = await runAssistant(threadId, instructions);
-
-            expect(runId).toBeDefined();
-        });
-
-        it("should throw error when assistant ID is missing", async () => {
-            vi.resetModules();
-
-            vi.doMock("@/lib/env", () => ({
-                env: {
-                    OPENAI_API_KEY: "sk-test-key",
-                    OPENAI_ASSISTANT_ID: undefined,
+            const messages = [
+                {
+                    role: "user" as const,
+                    content: "Test",
+                    timestamp: new Date().toISOString(),
                 },
-            }));
+            ];
 
-            vi.doMock("openai", () => ({
-                default: vi.fn().mockImplementation(() => ({
-                    beta: {
-                        threads: {
-                            runs: {
-                                create: vi
-                                    .fn()
-                                    .mockResolvedValue({ id: "run-mock-123" }),
-                            },
-                        },
-                    },
-                })),
-            }));
-
-            const { runAssistant: run } = await import(
-                "@/lib/openai/assistants-client"
-            );
-
-            await expect(run("thread-123")).rejects.toThrow(
-                "OPENAI_ASSISTANT_ID is not configured"
+            await expect(generate(messages, "System prompt")).rejects.toThrow(
+                "ANTHROPIC_API_KEY is not configured"
             );
         });
     });
 
-    describe("getRunStatus", () => {
-        it("should retrieve run status", async () => {
-            const threadId = "thread-123";
-            const runId = "run-456";
-
-            const status = await getRunStatus(threadId, runId);
-
-            expect(status).toBeDefined();
+    // Legacy functions (deprecated but kept for compatibility)
+    describe("Legacy Functions", () => {
+        describe("sendMessage", () => {
+            it("should be a no-op function", async () => {
+                await sendMessage("thread-123", "Hello");
+                // No error thrown = success
+                expect(true).toBe(true);
+            });
         });
-    });
 
-    describe("getMessages", () => {
-        it("should retrieve messages from a thread", async () => {
-            const threadId = "thread-123";
+        describe("runAssistant", () => {
+            it("should return a run ID", async () => {
+                const runId = await runAssistant("thread-123");
+                expect(runId).toMatch(/^run_/);
+            });
 
-            const messages = await getMessages(threadId);
+            it("should accept additional instructions", async () => {
+                const runId = await runAssistant("thread-123", "Extra context");
+                expect(runId).toBeDefined();
+            });
+        });
 
-            expect(messages).toBeDefined();
+        describe("getRunStatus", () => {
+            it("should always return completed status", async () => {
+                const status = await getRunStatus("thread-123", "run-456");
+                expect(status).toEqual({ status: "completed" });
+            });
+        });
+
+        describe("getMessages", () => {
+            it("should return empty array", async () => {
+                const messages = await getMessages("thread-123");
+                expect(messages).toEqual([]);
+            });
         });
     });
 });

@@ -143,7 +143,9 @@ export default function Step5Page({
     const streaming = useStreamingGeneration();
     const [showGenerationBanner, setShowGenerationBanner] = useState(false);
     const [showErrorDialog, setShowErrorDialog] = useState(false);
-    const [errorDialogType, setErrorDialogType] = useState<"timeout" | "general">("general");
+    const [errorDialogType, setErrorDialogType] = useState<"timeout" | "general">(
+        "general"
+    );
 
     // Editor state
     const [selectedPresentation, setSelectedPresentation] =
@@ -1209,7 +1211,9 @@ export default function Step5Page({
                                         selectedPresentation &&
                                         handleDownloadPptx(selectedPresentation)
                                     }
-                                    disabled={selectedPresentation.status === "generating"}
+                                    disabled={
+                                        selectedPresentation.status === "generating"
+                                    }
                                 >
                                     <Download className="mr-1 h-4 w-4" />
                                     Export PPTX
@@ -1249,7 +1253,8 @@ export default function Step5Page({
                                     onAddSlide={() => {
                                         toast({
                                             title: "Coming Soon",
-                                            description: "Add slide functionality will be available soon.",
+                                            description:
+                                                "Add slide functionality will be available soon.",
                                         });
                                     }}
                                 />
@@ -1280,7 +1285,9 @@ export default function Step5Page({
                             {/* Right Panel - AI Editor with Quick Actions & Voice Input (~25%) */}
                             <div className="w-[25%] overflow-y-auto border-l border-border bg-card p-4">
                                 <SlideEditorPanel
-                                    slide={selectedPresentation.slides[selectedSlideIndex]}
+                                    slide={
+                                        selectedPresentation.slides[selectedSlideIndex]
+                                    }
                                     presentationId={selectedPresentation.id}
                                     onSlideUpdate={handleSlideUpdate}
                                 />

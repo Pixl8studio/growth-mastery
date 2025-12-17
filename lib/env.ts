@@ -26,10 +26,14 @@ const envSchema = z.object({
     SUPABASE_PROJECT_ID: z.string().optional(),
 
     // ===========================================
-    // OpenAI Configuration
+    // Anthropic Configuration (Primary AI Provider)
+    // ===========================================
+    ANTHROPIC_API_KEY: z.string().optional(),
+
+    // ===========================================
+    // OpenAI Configuration (Image Generation Only)
     // ===========================================
     OPENAI_API_KEY: z.string().optional(),
-    OPENAI_ASSISTANT_ID: z.string().optional(),
 
     // ===========================================
     // VAPI Configuration

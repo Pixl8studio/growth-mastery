@@ -212,25 +212,52 @@ export function useStreamingGeneration() {
                     logger.error({ error: errorMessage, isTimeout }, "Presentation generation failed");
                 });
 
-                eventSource.onerror = () => {
-                    // SSE connection error
-                    if (eventSource.readyState === EventSource.CLOSED) {
-                        // Connection was closed, check if we were still generating
-                        setState((prev) => {
-                            if (prev.isGenerating) {
-                                const errorMsg = "Connection lost during generation";
-                                if (onError) {
-                                    onError(errorMsg, false);
-                                }
-                                return {
-                                    ...prev,
-                                    isGenerating: false,
-                                    error: errorMsg,
-                                };
-                            }
-                            return prev;
-                        });
+                eventSource.onerror = (event) => {
+                    // Determine error type for better user feedback
+                    let errorMsg: string;
+                    let isNetworkError = false;
+
+                    // Check if this is an ErrorEvent with a message
+                    if (event instanceof ErrorEvent && event.message) {
+                        errorMsg = event.message;
+                        isNetworkError = true;
+                    } else if (eventSource.readyState === EventSource.CLOSED) {
+                        // Connection was unexpectedly closed
+                        errorMsg = "Connection lost during generation";
+                        isNetworkError = true;
+                    } else if (eventSource.readyState === EventSource.CONNECTING) {
+                        // Still trying to reconnect
+                        errorMsg = "Connection interrupted, attempting to reconnect...";
+                        // Don't close yet, let it try to reconnect
+                        logger.warn({}, "SSE connection interrupted, attempting reconnect");
+                        return;
+                    } else {
+                        // Generic server error
+                        errorMsg = "Server error during generation";
                     }
+
+                    // Only handle if we were still generating
+                    setState((prev) => {
+                        if (prev.isGenerating) {
+                            if (onError) {
+                                onError(errorMsg, false);
+                            }
+                            return {
+                                ...prev,
+                                isGenerating: false,
+                                error: errorMsg,
+                            };
+                        }
+                        return prev;
+                    });
+
+                    eventSource.close();
+                    eventSourceRef.current = null;
+
+                    logger.error(
+                        { error: errorMsg, isNetworkError, readyState: eventSource.readyState },
+                        "SSE connection error"
+                    );
                 };
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : "Failed to start generation";

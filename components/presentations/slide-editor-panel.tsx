@@ -70,6 +70,7 @@ export function SlideEditorPanel({
     const [activeAction, setActiveAction] = useState<string | null>(null);
     const [isRecording, setIsRecording] = useState(false);
     const [showLayoutDropdown, setShowLayoutDropdown] = useState(false);
+    const [isSpeechSupported, setIsSpeechSupported] = useState<boolean | null>(null);
     const [feedback, setFeedback] = useState<{
         type: "success" | "error";
         message: string;
@@ -78,6 +79,15 @@ export function SlideEditorPanel({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recognitionRef = useRef<any>(null);
     const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Check for Speech Recognition support on mount
+    useEffect(() => {
+        const win = window as typeof window & {
+            SpeechRecognition?: unknown;
+            webkitSpeechRecognition?: unknown;
+        };
+        setIsSpeechSupported(!!win.SpeechRecognition || !!win.webkitSpeechRecognition);
+    }, []);
 
     // Clear feedback after 3 seconds
     useEffect(() => {
@@ -487,17 +497,25 @@ export function SlideEditorPanel({
                             )}
                             disabled={isProcessing}
                         />
-                        {/* Voice input button */}
+                        {/* Voice input button with browser support indicator */}
                         <button
                             className={cn(
                                 "absolute bottom-3 right-3 rounded-full p-1.5 transition-colors",
                                 isRecording
                                     ? "bg-red-500 text-white animate-pulse"
-                                    : "hover:bg-muted text-muted-foreground"
+                                    : isSpeechSupported === false
+                                      ? "text-muted-foreground/40 cursor-not-allowed"
+                                      : "hover:bg-muted text-muted-foreground"
                             )}
                             onClick={toggleVoiceInput}
-                            disabled={isProcessing}
-                            title={isRecording ? "Stop recording" : "Voice input"}
+                            disabled={isProcessing || isSpeechSupported === false}
+                            title={
+                                isSpeechSupported === false
+                                    ? "Voice input not supported in this browser (try Chrome or Edge)"
+                                    : isRecording
+                                      ? "Stop recording"
+                                      : "Voice input"
+                            }
                         >
                             {isRecording ? (
                                 <MicOff className="h-4 w-4" />

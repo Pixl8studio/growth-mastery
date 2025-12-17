@@ -281,11 +281,19 @@ export async function GET(request: NextRequest) {
                                 )
                             );
 
-                            // Update database progress
-                            await supabase
+                            // Update database progress (fire-and-forget to avoid slowing generation)
+                            void supabase
                                 .from("presentations")
                                 .update({ generation_progress: progress })
-                                .eq("id", presentation.id);
+                                .eq("id", presentation.id)
+                                .then(({ error }) => {
+                                    if (error) {
+                                        logger.warn(
+                                            { error, presentationId: presentation.id, progress },
+                                            "Failed to update generation progress"
+                                        );
+                                    }
+                                });
                         },
                     });
 

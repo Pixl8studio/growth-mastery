@@ -35,14 +35,21 @@ VALUES (
 )
 ON CONFLICT (id) DO NOTHING;
 
--- Create storage policy for authenticated users to upload
-CREATE POLICY "Users can upload presentation media"
+-- Create storage policy for authenticated users to upload to their OWN presentations
+-- Path format: presentations/{presentationId}/slide-{slideNumber}-{timestamp}.png
+-- Verifies user owns the presentation via JOIN
+CREATE POLICY "Users can upload to own presentation media"
 ON storage.objects
 FOR INSERT
 TO authenticated
 WITH CHECK (
     bucket_id = 'presentation-media'
     AND (storage.foldername(name))[1] = 'presentations'
+    AND EXISTS (
+        SELECT 1 FROM presentations p
+        WHERE p.id = (storage.foldername(name))[2]::uuid
+        AND p.user_id = auth.uid()
+    )
 );
 
 -- Create storage policy for public read access
@@ -52,20 +59,41 @@ FOR SELECT
 TO public
 USING (bucket_id = 'presentation-media');
 
--- Create storage policy for users to update their own images
-CREATE POLICY "Users can update presentation media"
+-- Create storage policy for users to update their OWN presentation images
+CREATE POLICY "Users can update own presentation media"
 ON storage.objects
 FOR UPDATE
 TO authenticated
-USING (bucket_id = 'presentation-media')
-WITH CHECK (bucket_id = 'presentation-media');
+USING (
+    bucket_id = 'presentation-media'
+    AND EXISTS (
+        SELECT 1 FROM presentations p
+        WHERE p.id = (storage.foldername(name))[2]::uuid
+        AND p.user_id = auth.uid()
+    )
+)
+WITH CHECK (
+    bucket_id = 'presentation-media'
+    AND EXISTS (
+        SELECT 1 FROM presentations p
+        WHERE p.id = (storage.foldername(name))[2]::uuid
+        AND p.user_id = auth.uid()
+    )
+);
 
--- Create storage policy for users to delete their own images
-CREATE POLICY "Users can delete presentation media"
+-- Create storage policy for users to delete their OWN presentation images
+CREATE POLICY "Users can delete own presentation media"
 ON storage.objects
 FOR DELETE
 TO authenticated
-USING (bucket_id = 'presentation-media');
+USING (
+    bucket_id = 'presentation-media'
+    AND EXISTS (
+        SELECT 1 FROM presentations p
+        WHERE p.id = (storage.foldername(name))[2]::uuid
+        AND p.user_id = auth.uid()
+    )
+);
 
 -- Add comment for documentation
 COMMENT ON FUNCTION update_presentation_progress(UUID, INTEGER) IS

@@ -195,7 +195,14 @@ export function useStreamingGeneration() {
                     );
                 });
 
+                // Handle custom SSE "error" events sent by the server (e.g., timeout, AI failures)
+                // This is DIFFERENT from native EventSource errors - these are named events with data
                 eventSource.addEventListener("error", (event) => {
+                    // Guard against handling after close
+                    if (isClosingRef.current || !eventSourceRef.current) {
+                        return;
+                    }
+
                     let errorMessage = "Generation failed";
                     let isTimeout = false;
 
@@ -207,7 +214,11 @@ export function useStreamingGeneration() {
                             isTimeout = data.isTimeout === true || errorMessage === "AI_PROVIDER_TIMEOUT";
                         } catch {
                             // Not a JSON event, likely a connection error
+                            return; // Let onerror handle non-JSON errors
                         }
+                    } else {
+                        // Not a MessageEvent with data, let onerror handle it
+                        return;
                     }
 
                     setState((prev) => ({
@@ -222,11 +233,11 @@ export function useStreamingGeneration() {
 
                     closeConnection();
 
-                    logger.error({ error: errorMessage, isTimeout }, "Presentation generation failed");
+                    logger.error({ error: errorMessage, isTimeout }, "Server-sent error event received");
                 });
 
-                // Single consolidated error handler for EventSource errors
-                // Using onerror only (not addEventListener) to prevent double handling
+                // Handle native EventSource connection errors (network failures, connection closed)
+                // This is DIFFERENT from custom SSE events - these are browser-level connection errors
                 eventSource.onerror = (event) => {
                     // Guard against handling errors after intentional close
                     if (isClosingRef.current || !eventSourceRef.current) {

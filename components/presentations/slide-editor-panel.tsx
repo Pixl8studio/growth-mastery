@@ -300,8 +300,18 @@ export function SlideEditorPanel({
             return;
         }
 
+        // Always clean up any existing instance first to prevent memory leaks
+        // This handles rapid toggles where previous instance might still be active
+        if (recognitionRef.current) {
+            try {
+                recognitionRef.current.stop();
+            } catch {
+                // Ignore errors from stopping already stopped recognition
+            }
+            recognitionRef.current = null;
+        }
+
         if (isRecording) {
-            recognitionRef.current?.stop();
             setIsRecording(false);
             return;
         }

@@ -139,9 +139,8 @@ export default function Step5Page({
         imageStyle: "photography",
     });
 
-    // Generation state - now using streaming hook (Issue #327)
+    // Generation state - now using streaming hook (Issue #327, Issue #331)
     const streaming = useStreamingGeneration();
-    const [showGenerationBanner, setShowGenerationBanner] = useState(false);
     const [showErrorDialog, setShowErrorDialog] = useState(false);
     const [errorDialogType, setErrorDialogType] = useState<"timeout" | "general">(
         "general"
@@ -358,24 +357,53 @@ export default function Step5Page({
         []
     );
 
-    // Handle generation with real-time streaming (Issue #327)
+    // Handle generation with real-time streaming (Issue #327, Issue #331)
+    // Now immediately opens editor with skeleton loading - no intermediate screen
     const handleGeneratePresentation = useCallback(async () => {
         if (!canGenerate || !selectedDeck) return;
 
-        setShowGenerationBanner(true);
+        // Create a temporary presentation object for immediate editor display (Issue #331)
+        const tempPresentation: Presentation = {
+            id: "generating-" + Date.now(),
+            title: `${selectedDeck.title} - Generating...`,
+            slides: [], // Start empty, slides will appear as they generate
+            status: "generating",
+            deckStructureId: selectedDeck.id,
+            created_at: new Date().toISOString(),
+            customization,
+        };
+
+        // Immediately open editor with skeleton loading state (Issue #331)
+        setSelectedPresentation(tempPresentation);
+        setSelectedSlideIndex(0);
+        setIsEditorOpen(true);
 
         streaming.startGeneration({
             projectId,
             deckStructureId: selectedDeck.id,
             customization,
             onSlideGenerated: (slide, progress) => {
+                // Update the temporary presentation with new slide (Issue #331)
+                setSelectedPresentation((prev) => {
+                    if (!prev) return prev;
+                    const updatedSlides = [...prev.slides, slide as GeneratedSlide];
+                    // Auto-select first slide when it arrives
+                    if (updatedSlides.length === 1) {
+                        setSelectedSlideIndex(0);
+                    }
+                    return {
+                        ...prev,
+                        slides: updatedSlides,
+                    };
+                });
+
                 logger.info(
                     { slideNumber: slide.slideNumber, progress },
                     "Slide generated in real-time"
                 );
             },
             onComplete: (presentationId, slides) => {
-                // Create presentation record for local state
+                // Create final presentation record for local state
                 const newPresentation: Presentation = {
                     id: presentationId,
                     title: `${selectedDeck.title} - Generated`,
@@ -386,11 +414,13 @@ export default function Step5Page({
                     customization,
                 };
 
+                // Update the selected presentation with final data
+                setSelectedPresentation(newPresentation);
                 setPresentations((prev) => [newPresentation, ...prev]);
 
                 toast({
-                    title: "Presentation Generated",
-                    description: `Successfully created ${slides.length} slides with real-time streaming.`,
+                    title: "Presentation Complete",
+                    description: `Successfully created ${slides.length} slides. You can now edit and export.`,
                 });
 
                 logger.info(
@@ -399,7 +429,9 @@ export default function Step5Page({
                 );
             },
             onError: (error, isTimeout) => {
-                setShowGenerationBanner(false);
+                // Close editor on error
+                setIsEditorOpen(false);
+                setSelectedPresentation(null);
 
                 // Show friendly dialog for timeout errors
                 if (isTimeout || error === "AI_PROVIDER_TIMEOUT") {
@@ -411,7 +443,7 @@ export default function Step5Page({
                 }
             },
         });
-    }, [canGenerate, selectedDeck, customization, projectId, streaming]);
+    }, [canGenerate, selectedDeck, customization, projectId, streaming, toast]);
 
     // Handle slide actions
     const handleDuplicateSlide = useCallback(
@@ -707,21 +739,7 @@ export default function Step5Page({
                     </div>
                 )}
 
-                {/* Generation Banner - Shows during streaming (Issue #327) */}
-                {showGenerationBanner && (
-                    <GenerationBanner
-                        isGenerating={streaming.isGenerating}
-                        progress={streaming.progress}
-                        currentSlide={streaming.currentSlide}
-                        totalSlides={streaming.totalSlides}
-                        error={streaming.error}
-                        onCancel={() => {
-                            streaming.stopGeneration();
-                            setShowGenerationBanner(false);
-                        }}
-                        onDismiss={() => setShowGenerationBanner(false)}
-                    />
-                )}
+                {/* Note: GenerationBanner removed per Issue #331 - now showing progress directly in editor header */}
 
                 {/* Generation Interface */}
                 {!streaming.isGenerating && !isEditorOpen && (
@@ -1134,76 +1152,72 @@ export default function Step5Page({
                     </>
                 )}
 
-                {/* Live Streaming Slide Grid - Shows slides as they generate (Issue #327) */}
-                {streaming.isGenerating && streaming.slides.length > 0 && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center gap-2">
-                                <Sparkles className="h-5 w-5 text-primary" />
-                                Slides Generated
-                            </CardTitle>
-                            <CardDescription>
-                                Click on any completed slide to preview it
-                            </CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-4 gap-3 md:grid-cols-6 lg:grid-cols-8">
-                                {streaming.slides.map((slide, index) => (
-                                    <div
-                                        key={index}
-                                        className="aspect-[16/9] cursor-pointer rounded-lg border border-green-500 bg-white p-2 shadow-sm transition-transform hover:scale-105"
-                                        onClick={() => {
-                                            // Create a temporary presentation for preview
-                                            const tempPresentation: Presentation = {
-                                                id: streaming.presentationId || "temp",
-                                                title: "Generating...",
-                                                slides: streaming.slides as GeneratedSlide[],
-                                                status: "generating",
-                                                deckStructureId: selectedDeck?.id || "",
-                                                created_at: new Date().toISOString(),
-                                                customization,
-                                            };
-                                            setSelectedPresentation(tempPresentation);
-                                            setSelectedSlideIndex(index);
-                                            setIsEditorOpen(true);
-                                        }}
-                                    >
-                                        <div className="flex h-full flex-col justify-between">
-                                            <div className="truncate text-xs font-medium">
-                                                {slide.title}
-                                            </div>
-                                            <CheckCircle2 className="h-4 w-4 self-end text-green-500" />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </CardContent>
-                    </Card>
-                )}
+                {/* Note: Live Streaming Slide Grid removed per Issue #331 - slides now appear directly in editor */}
 
-                {/* Enhanced Three-Panel Editor (Issue #327) */}
+                {/* Enhanced Three-Panel Editor (Issue #327, Issue #331) */}
                 {isEditorOpen && selectedPresentation && (
                     <div className="fixed inset-0 z-50 bg-background">
-                        {/* Editor Header */}
+                        {/* Editor Header with Generation Progress (Issue #331) */}
                         <div className="flex h-14 items-center justify-between border-b border-border bg-card px-4">
                             <div className="flex items-center gap-4">
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => setIsEditorOpen(false)}
+                                    onClick={() => {
+                                        if (streaming.isGenerating) {
+                                            streaming.stopGeneration();
+                                        }
+                                        setIsEditorOpen(false);
+                                    }}
                                 >
                                     <X className="h-4 w-4" />
                                 </Button>
                                 <h2 className="font-semibold">
-                                    {selectedPresentation.title}
+                                    {selectedPresentation.status === "generating"
+                                        ? `Generating Presentation...`
+                                        : selectedPresentation.title}
                                 </h2>
-                                {selectedPresentation.status === "generating" && (
-                                    <span className="text-sm text-primary animate-pulse">
-                                        Generating...
+                                {/* Live generation progress indicator (Issue #331) */}
+                                {streaming.isGenerating && (
+                                    <div className="flex items-center gap-3">
+                                        <div className="flex items-center gap-2">
+                                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                                            <span className="text-sm text-primary">
+                                                Slide {streaming.currentSlide} of{" "}
+                                                {streaming.totalSlides}
+                                            </span>
+                                        </div>
+                                        <div className="h-2 w-32 overflow-hidden rounded-full bg-muted">
+                                            <div
+                                                className="h-full bg-gradient-to-r from-primary to-primary/80 transition-all duration-300"
+                                                style={{
+                                                    width: `${streaming.progress}%`,
+                                                }}
+                                            />
+                                        </div>
+                                        <span className="text-xs text-muted-foreground">
+                                            {streaming.progress}%
+                                        </span>
+                                    </div>
+                                )}
+                                {selectedPresentation.status === "completed" && (
+                                    <span className="flex items-center gap-1 text-sm text-green-600">
+                                        <CheckCircle2 className="h-4 w-4" />
+                                        Complete
                                     </span>
                                 )}
                             </div>
                             <div className="flex items-center gap-2">
+                                {streaming.isGenerating && (
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => streaming.stopGeneration()}
+                                        className="text-red-600 hover:text-red-700"
+                                    >
+                                        Cancel Generation
+                                    </Button>
+                                )}
                                 <Button
                                     variant="outline"
                                     size="sm"
@@ -1212,7 +1226,8 @@ export default function Step5Page({
                                         handleDownloadPptx(selectedPresentation)
                                     }
                                     disabled={
-                                        selectedPresentation.status === "generating"
+                                        streaming.isGenerating ||
+                                        selectedPresentation.slides.length === 0
                                     }
                                 >
                                     <Download className="mr-1 h-4 w-4" />
@@ -1220,10 +1235,18 @@ export default function Step5Page({
                                 </Button>
                                 <Button
                                     size="sm"
-                                    onClick={() => setIsEditorOpen(false)}
+                                    onClick={() => {
+                                        if (streaming.isGenerating) {
+                                            streaming.stopGeneration();
+                                        }
+                                        setIsEditorOpen(false);
+                                    }}
+                                    disabled={streaming.isGenerating}
                                 >
                                     <CheckCircle2 className="mr-1 h-4 w-4" />
-                                    Save & Close
+                                    {streaming.isGenerating
+                                        ? "Generating..."
+                                        : "Save & Close"}
                                 </Button>
                             </div>
                         </div>

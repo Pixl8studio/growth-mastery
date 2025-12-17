@@ -65,6 +65,7 @@ export function SlideEditorPanel({
     onSlideUpdate,
     className,
 }: SlideEditorPanelProps) {
+    // All hooks must be called unconditionally at the top (React rules of hooks)
     const [editPrompt, setEditPrompt] = useState("");
     const [isProcessing, setIsProcessing] = useState(false);
     const [activeAction, setActiveAction] = useState<string | null>(null);
@@ -347,6 +348,24 @@ export function SlideEditorPanel({
             recognitionRef.current?.stop();
         };
     }, []);
+
+    // Guard against undefined slide - show loading skeleton
+    if (!slide) {
+        return (
+            <div className={cn("space-y-6", className)}>
+                <div className="animate-pulse space-y-4">
+                    <div className="h-6 w-32 rounded bg-muted" />
+                    <div className="grid grid-cols-2 gap-2">
+                        {[1, 2, 3, 4, 5, 6].map((i) => (
+                            <div key={i} className="h-9 rounded bg-muted" />
+                        ))}
+                    </div>
+                    <div className="h-6 w-24 rounded bg-muted" />
+                    <div className="h-24 rounded bg-muted" />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className={cn("space-y-6", className)}>

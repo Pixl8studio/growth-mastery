@@ -63,8 +63,30 @@ export const SlidePreview = memo(function SlidePreview({
     onNext,
     className,
 }: SlidePreviewProps) {
-    const layoutGradient = LAYOUT_GRADIENTS[slide.layoutType];
-    const textColors = LAYOUT_TEXT_COLORS[slide.layoutType];
+    // Guard against undefined slide - can happen during initial load or empty presentations
+    if (!slide) {
+        return (
+            <div className={cn("flex flex-col", className)}>
+                <div className="flex items-center justify-between border-b bg-card px-4 py-2">
+                    <span className="text-sm text-muted-foreground">
+                        Loading slide...
+                    </span>
+                </div>
+                <div className="flex-1 flex items-center justify-center bg-muted/50 p-8">
+                    <div className="relative aspect-[16/9] w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden bg-gradient-to-br from-slate-100 to-slate-200 animate-pulse">
+                        <div className="flex h-full items-center justify-center">
+                            <span className="text-muted-foreground">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    const layoutGradient =
+        LAYOUT_GRADIENTS[slide.layoutType] || LAYOUT_GRADIENTS.bullets;
+    const textColors =
+        LAYOUT_TEXT_COLORS[slide.layoutType] || LAYOUT_TEXT_COLORS.bullets;
 
     // Use brand colors when available
     const titleColor = brandDesign?.primary_color;

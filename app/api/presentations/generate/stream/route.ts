@@ -48,6 +48,22 @@ function formatSSE(message: SSEMessage): string {
     return `event: ${message.type}\ndata: ${JSON.stringify(message.data)}\n\n`;
 }
 
+// Stream timeout protection (5 minutes max)
+const STREAM_TIMEOUT_MS = 5 * 60 * 1000;
+
+class StreamTimeoutError extends Error {
+    constructor(timeoutMs: number) {
+        super(`Stream generation timed out after ${Math.round(timeoutMs / 1000)}s`);
+        this.name = "StreamTimeoutError";
+    }
+}
+
+function createTimeoutPromise<T>(timeoutMs: number): Promise<T> {
+    return new Promise((_, reject) => {
+        setTimeout(() => reject(new StreamTimeoutError(timeoutMs)), timeoutMs);
+    });
+}
+
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
@@ -221,7 +237,9 @@ export async function GET(request: NextRequest) {
                 );
 
                 try {
-                    const generatedSlides = await generatePresentation({
+                    // Wrap generation in timeout to prevent hung connections
+                    // This protects against OpenAI API hangs and ensures resources are released
+                    const generationPromise = generatePresentation({
                         deckStructure: {
                             id: deckStructure.id,
                             title: deckStructure.title || "Presentation",
@@ -271,6 +289,12 @@ export async function GET(request: NextRequest) {
                         },
                     });
 
+                    // Race between generation and timeout
+                    const generatedSlides = await Promise.race([
+                        generationPromise,
+                        createTimeoutPromise<Awaited<typeof generationPromise>>(STREAM_TIMEOUT_MS),
+                    ]);
+
                     // Update presentation with completed slides
                     await supabase
                         .from("presentations")
@@ -303,12 +327,23 @@ export async function GET(request: NextRequest) {
 
                     controller.close();
                 } catch (error) {
-                    const errorMessage =
-                        error instanceof Error ? error.message : "Unknown error";
+                    const isTimeout = error instanceof StreamTimeoutError;
+                    const errorMessage = isTimeout
+                        ? "Generation timed out. Please try again with fewer slides or simpler customization."
+                        : error instanceof Error
+                          ? error.message
+                          : "Unknown error";
 
                     logger.error(
-                        { error, presentationId: presentation.id },
-                        "Streaming generation failed"
+                        {
+                            error,
+                            presentationId: presentation.id,
+                            isTimeout,
+                            timeoutMs: STREAM_TIMEOUT_MS,
+                        },
+                        isTimeout
+                            ? "Streaming generation timed out"
+                            : "Streaming generation failed"
                     );
 
                     // Mark presentation as failed
@@ -320,7 +355,7 @@ export async function GET(request: NextRequest) {
                         })
                         .eq("id", presentation.id);
 
-                    // Send error event
+                    // Send error event with timeout flag
                     controller.enqueue(
                         encoder.encode(
                             formatSSE({
@@ -328,6 +363,7 @@ export async function GET(request: NextRequest) {
                                 data: {
                                     error: errorMessage,
                                     presentationId: presentation.id,
+                                    isTimeout,
                                 },
                             })
                         )
@@ -337,8 +373,12 @@ export async function GET(request: NextRequest) {
                         tags: {
                             component: "api",
                             action: "stream_presentation_generation",
+                            errorType: isTimeout ? "timeout" : "generation_error",
                         },
-                        extra: { presentationId: presentation.id },
+                        extra: {
+                            presentationId: presentation.id,
+                            timeoutMs: STREAM_TIMEOUT_MS,
+                        },
                     });
 
                     controller.close();

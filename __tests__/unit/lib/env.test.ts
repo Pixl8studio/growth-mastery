@@ -85,14 +85,14 @@ describe("lib/env", () => {
             expect(env.SUPABASE_SERVICE_ROLE_KEY).toBeUndefined();
         });
 
-        it("should allow optional OpenAI variables to be undefined", async () => {
+        it("should allow optional AI variables to be undefined", async () => {
+            vi.stubEnv("ANTHROPIC_API_KEY", undefined);
             vi.stubEnv("OPENAI_API_KEY", undefined);
-            vi.stubEnv("OPENAI_ASSISTANT_ID", undefined);
 
             const { env } = await import("@/lib/env");
 
+            expect(env.ANTHROPIC_API_KEY).toBeUndefined();
             expect(env.OPENAI_API_KEY).toBeUndefined();
-            expect(env.OPENAI_ASSISTANT_ID).toBeUndefined();
         });
 
         it("should allow optional Stripe variables to be undefined", async () => {

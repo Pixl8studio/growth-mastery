@@ -212,14 +212,10 @@ describe("GenerationErrorDialog", () => {
     });
 
     it("should render timeout message for timeout errors", () => {
-        render(
-            <GenerationErrorDialog {...defaultProps} errorType="timeout" />
-        );
+        render(<GenerationErrorDialog {...defaultProps} errorType="timeout" />);
 
         expect(screen.getByText("Oops! AI Brain Fart")).toBeInTheDocument();
-        expect(
-            screen.getByText(/Our AI had a little brain fart/)
-        ).toBeInTheDocument();
+        expect(screen.getByText(/Our AI had a little brain fart/)).toBeInTheDocument();
     });
 
     it("should render general error message for non-timeout errors", () => {

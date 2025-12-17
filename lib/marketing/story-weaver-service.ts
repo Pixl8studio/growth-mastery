@@ -96,7 +96,6 @@ Return as JSON:
                 },
             ],
             {
-                model: "gpt-4o",
                 temperature: 0.8,
                 maxTokens: 2000,
             }
@@ -179,7 +178,6 @@ Return ONLY the post content (no meta commentary).`;
                 },
             ],
             {
-                model: "gpt-4o",
                 temperature: 0.7,
                 maxTokens: Math.ceil(targetLength * 2), // Allow buffer for generation
             }
@@ -310,7 +308,6 @@ Write 250-350 words in a conversational, authentic style.`;
                 },
             ],
             {
-                model: "gpt-4o",
                 temperature: 0.7,
                 maxTokens: 1000,
             }
@@ -395,7 +392,6 @@ Return ONLY the adapted content.`;
                 },
             ],
             {
-                model: "gpt-4o",
                 temperature: 0.6,
                 maxTokens: 1000,
             }

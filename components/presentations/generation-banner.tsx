@@ -193,8 +193,8 @@ export const GenerationBanner = memo(function GenerationBanner({
 
                 {/* Current slide hint */}
                 <p className="mt-3 text-xs text-muted-foreground">
-                    AI is creating slide content, speaker notes, and image prompts.
-                    You can start editing slides as they appear.
+                    AI is creating slide content, speaker notes, and image prompts. You
+                    can start editing slides as they appear.
                 </p>
             </div>
         </div>

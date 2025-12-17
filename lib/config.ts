@@ -113,9 +113,9 @@ export const CONTACT_CONFIG = {
 
 export const AI_CONFIG = {
     models: {
-        default: "gpt-4-turbo-preview",
-        fast: "gpt-3.5-turbo",
-        vision: "gpt-4-vision-preview",
+        default: "claude-sonnet-4-20250514",
+        fast: "claude-sonnet-4-20250514",
+        vision: "claude-sonnet-4-20250514",
     },
     defaultTemperature: 0.7,
     defaultMaxTokens: 4000,

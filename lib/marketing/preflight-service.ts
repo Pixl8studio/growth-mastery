@@ -420,7 +420,6 @@ Score 70+ = passed, 50-69 = warning, below 50 = failed.`;
                 },
             ],
             {
-                model: "gpt-4o",
                 temperature: 0.3,
                 maxTokens: 800,
             }

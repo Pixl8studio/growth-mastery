@@ -69,14 +69,8 @@ function SortableSlide({
     onDuplicate,
     onDelete,
 }: SortableSlideProps) {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging,
-    } = useSortable({ id: slide.slideNumber });
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
+        useSortable({ id: slide.slideNumber });
 
     const style = {
         transform: CSS.Transform.toString(transform),
@@ -150,12 +144,8 @@ export function DraggableSlides({
             const { active, over } = event;
 
             if (over && active.id !== over.id) {
-                const oldIndex = slides.findIndex(
-                    (s) => s.slideNumber === active.id
-                );
-                const newIndex = slides.findIndex(
-                    (s) => s.slideNumber === over.id
-                );
+                const oldIndex = slides.findIndex((s) => s.slideNumber === active.id);
+                const newIndex = slides.findIndex((s) => s.slideNumber === over.id);
 
                 if (oldIndex !== -1 && newIndex !== -1) {
                     const reorderedSlides = arrayMove(slides, oldIndex, newIndex);
@@ -240,21 +230,21 @@ export function DraggableSlides({
                     )}
 
                     {/* Pending slots */}
-                    {Array.from({ length: Math.min(remainingGeneratingSlots - 1, 2) }).map(
-                        (_, idx) => (
-                            <div
-                                key={`pending-${idx}`}
-                                className="rounded-xl border-2 border-dashed border-muted bg-muted/20 p-2.5"
-                            >
-                                <div className="aspect-[16/9] rounded-lg bg-muted/30" />
-                                <div className="mt-1.5">
-                                    <span className="text-[10px] text-muted-foreground/50">
-                                        {slides.length + idx + 2}
-                                    </span>
-                                </div>
+                    {Array.from({
+                        length: Math.min(remainingGeneratingSlots - 1, 2),
+                    }).map((_, idx) => (
+                        <div
+                            key={`pending-${idx}`}
+                            className="rounded-xl border-2 border-dashed border-muted bg-muted/20 p-2.5"
+                        >
+                            <div className="aspect-[16/9] rounded-lg bg-muted/30" />
+                            <div className="mt-1.5">
+                                <span className="text-[10px] text-muted-foreground/50">
+                                    {slides.length + idx + 2}
+                                </span>
                             </div>
-                        )
-                    )}
+                        </div>
+                    ))}
 
                     {/* "More slides generating" indicator */}
                     {remainingGeneratingSlots > 3 && (

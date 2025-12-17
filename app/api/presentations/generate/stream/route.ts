@@ -128,30 +128,34 @@ export async function GET(request: NextRequest) {
         }
 
         // Fetch required data
-        const [projectResult, deckStructureResult, brandDesignResult, businessProfileResult] =
-            await Promise.all([
-                supabase
-                    .from("funnel_projects")
-                    .select("id, name, user_id")
-                    .eq("id", projectId)
-                    .single(),
-                supabase
-                    .from("deck_structures")
-                    .select("*")
-                    .eq("id", deckStructureId)
-                    .eq("user_id", user.id)
-                    .single(),
-                supabase
-                    .from("brand_designs")
-                    .select("*")
-                    .eq("funnel_project_id", projectId)
-                    .maybeSingle(),
-                supabase
-                    .from("business_profiles")
-                    .select("*")
-                    .eq("funnel_project_id", projectId)
-                    .maybeSingle(),
-            ]);
+        const [
+            projectResult,
+            deckStructureResult,
+            brandDesignResult,
+            businessProfileResult,
+        ] = await Promise.all([
+            supabase
+                .from("funnel_projects")
+                .select("id, name, user_id")
+                .eq("id", projectId)
+                .single(),
+            supabase
+                .from("deck_structures")
+                .select("*")
+                .eq("id", deckStructureId)
+                .eq("user_id", user.id)
+                .single(),
+            supabase
+                .from("brand_designs")
+                .select("*")
+                .eq("funnel_project_id", projectId)
+                .maybeSingle(),
+            supabase
+                .from("business_profiles")
+                .select("*")
+                .eq("funnel_project_id", projectId)
+                .maybeSingle(),
+        ]);
 
         const { data: project, error: projectError } = projectResult;
         const { data: deckStructure, error: deckError } = deckStructureResult;
@@ -180,7 +184,9 @@ export async function GET(request: NextRequest) {
         }
 
         // Validate slides
-        const rawSlides = Array.isArray(deckStructure.slides) ? deckStructure.slides : [];
+        const rawSlides = Array.isArray(deckStructure.slides)
+            ? deckStructure.slides
+            : [];
         const validatedSlides = rawSlides.map((slide: unknown, index: number) => {
             const parsed = DeckStructureSlideSchema.safeParse(slide);
             if (parsed.success) {
@@ -206,7 +212,10 @@ export async function GET(request: NextRequest) {
             .single();
 
         if (createError) {
-            logger.error({ error: createError, projectId }, "Failed to create presentation record");
+            logger.error(
+                { error: createError, projectId },
+                "Failed to create presentation record"
+            );
             return new Response(
                 JSON.stringify({ error: "Failed to create presentation" }),
                 { status: 500, headers: { "Content-Type": "application/json" } }
@@ -214,7 +223,12 @@ export async function GET(request: NextRequest) {
         }
 
         logger.info(
-            { userId: user.id, projectId, deckStructureId, presentationId: presentation.id },
+            {
+                userId: user.id,
+                projectId,
+                deckStructureId,
+                presentationId: presentation.id,
+            },
             "Starting streaming presentation generation"
         );
 
@@ -245,7 +259,10 @@ export async function GET(request: NextRequest) {
                             title: deckStructure.title || "Presentation",
                             slideCount: validatedSlides.length,
                             slides: validatedSlides.map(
-                                (s: z.infer<typeof DeckStructureSlideSchema>, i: number) => ({
+                                (
+                                    s: z.infer<typeof DeckStructureSlideSchema>,
+                                    i: number
+                                ) => ({
                                     slideNumber: i + 1,
                                     title: s.title || `Slide ${i + 1}`,
                                     description: s.description || "",
@@ -276,7 +293,10 @@ export async function GET(request: NextRequest) {
                                 encoder.encode(
                                     formatSSE({
                                         type: "progress",
-                                        data: { progress, currentSlide: slide.slideNumber },
+                                        data: {
+                                            progress,
+                                            currentSlide: slide.slideNumber,
+                                        },
                                     })
                                 )
                             );
@@ -295,11 +315,17 @@ export async function GET(request: NextRequest) {
                                             // Function not found
                                             return supabase
                                                 .from("presentations")
-                                                .update({ generation_progress: progress })
+                                                .update({
+                                                    generation_progress: progress,
+                                                })
                                                 .eq("id", presentation.id);
                                         }
                                         logger.warn(
-                                            { error, presentationId: presentation.id, progress },
+                                            {
+                                                error,
+                                                presentationId: presentation.id,
+                                                progress,
+                                            },
                                             "Failed to update generation progress"
                                         );
                                     }
@@ -310,7 +336,9 @@ export async function GET(request: NextRequest) {
                     // Race between generation and timeout
                     const generatedSlides = await Promise.race([
                         generationPromise,
-                        createTimeoutPromise<Awaited<typeof generationPromise>>(STREAM_TIMEOUT_MS),
+                        createTimeoutPromise<Awaited<typeof generationPromise>>(
+                            STREAM_TIMEOUT_MS
+                        ),
                     ]);
 
                     // Update presentation with completed slides
@@ -339,7 +367,10 @@ export async function GET(request: NextRequest) {
                     );
 
                     logger.info(
-                        { presentationId: presentation.id, slideCount: generatedSlides.length },
+                        {
+                            presentationId: presentation.id,
+                            slideCount: generatedSlides.length,
+                        },
                         "Streaming presentation generation complete"
                     );
 

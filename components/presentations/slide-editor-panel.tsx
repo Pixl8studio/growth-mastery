@@ -106,12 +106,9 @@ export function SlideEditorPanel({
         };
     }, [feedback]);
 
-    const showFeedback = useCallback(
-        (type: "success" | "error", message: string) => {
-            setFeedback({ type, message });
-        },
-        []
-    );
+    const showFeedback = useCallback((type: "success" | "error", message: string) => {
+        setFeedback({ type, message });
+    }, []);
 
     const executeQuickAction = useCallback(
         async (action: QuickAction) => {
@@ -183,10 +180,7 @@ export function SlideEditorPanel({
             setEditPrompt("");
             showFeedback("success", "Changes applied");
 
-            logger.info(
-                { slideNumber: slide.slideNumber },
-                "Custom AI edit executed"
-            );
+            logger.info({ slideNumber: slide.slideNumber }, "Custom AI edit executed");
         } catch (error) {
             logger.error({ error }, "Custom edit failed");
             showFeedback(
@@ -269,10 +263,7 @@ export function SlideEditorPanel({
             });
             showFeedback("success", "Image generated");
 
-            logger.info(
-                { slideNumber: slide.slideNumber },
-                "AI image generated"
-            );
+            logger.info({ slideNumber: slide.slideNumber }, "AI image generated");
         } catch (error) {
             logger.error({ error }, "Image generation failed");
             showFeedback(
@@ -293,7 +284,8 @@ export function SlideEditorPanel({
             webkitSpeechRecognition?: new () => SpeechRecognitionInstance;
         };
 
-        const SpeechRecognitionAPI = win.SpeechRecognition || win.webkitSpeechRecognition;
+        const SpeechRecognitionAPI =
+            win.SpeechRecognition || win.webkitSpeechRecognition;
 
         if (!SpeechRecognitionAPI) {
             showFeedback("error", "Speech recognition not supported in this browser");
@@ -573,13 +565,17 @@ export function SlideEditorPanel({
                     {slide.section && (
                         <div className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2">
                             <span className="text-muted-foreground">Section</span>
-                            <span className="font-medium capitalize">{slide.section}</span>
+                            <span className="font-medium capitalize">
+                                {slide.section}
+                            </span>
                         </div>
                     )}
                     {slide.imageUrl && (
                         <div className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2">
                             <span className="text-muted-foreground">Image</span>
-                            <span className="font-medium text-green-600">Generated</span>
+                            <span className="font-medium text-green-600">
+                                Generated
+                            </span>
                         </div>
                     )}
                 </div>

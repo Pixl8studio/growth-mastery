@@ -76,11 +76,7 @@ describe("Slide Reorder API", () => {
 
     it("should validate new order has correct length", () => {
         // Test validation logic
-        const slides = [
-            { slideNumber: 1 },
-            { slideNumber: 2 },
-            { slideNumber: 3 },
-        ];
+        const slides = [{ slideNumber: 1 }, { slideNumber: 2 }, { slideNumber: 3 }];
         const newOrder = [3, 1, 2];
 
         expect(newOrder.length).toBe(slides.length);
@@ -301,7 +297,8 @@ describe("API Error Handling", () => {
                 deckStructureId: "valid-id",
             };
 
-            const isValid = params.projectId !== null && params.deckStructureId !== null;
+            const isValid =
+                params.projectId !== null && params.deckStructureId !== null;
             expect(isValid).toBe(false);
 
             // Expected response
@@ -318,7 +315,8 @@ describe("API Error Handling", () => {
                 deckStructureId: null,
             };
 
-            const isValid = params.projectId !== null && params.deckStructureId !== null;
+            const isValid =
+                params.projectId !== null && params.deckStructureId !== null;
             expect(isValid).toBe(false);
 
             const errorResponse = {

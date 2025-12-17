@@ -105,7 +105,10 @@ export async function PATCH(
 
         // Rate limiting - 30 requests per minute for slide edits
         const rateLimitIdentifier = getRateLimitIdentifier(request, user.id);
-        const rateLimitResponse = await checkRateLimit(rateLimitIdentifier, "slide-edit");
+        const rateLimitResponse = await checkRateLimit(
+            rateLimitIdentifier,
+            "slide-edit"
+        );
         if (rateLimitResponse) {
             logger.warn(
                 { userId: user.id, endpoint: "slide-edit" },
@@ -130,8 +133,15 @@ export async function PATCH(
             throw new ValidationError(errorMessage);
         }
 
-        const { action, customPrompt, layoutType, title, content, speakerNotes, imagePrompt } =
-            validation.data;
+        const {
+            action,
+            customPrompt,
+            layoutType,
+            title,
+            content,
+            speakerNotes,
+            imagePrompt,
+        } = validation.data;
 
         // Fetch presentation
         const { data: presentation, error: presentationError } = await supabase
@@ -163,7 +173,11 @@ export async function PATCH(
         let updatedSlide: Slide = { ...currentSlide };
 
         // Handle direct updates (manual editing)
-        if (title !== undefined || content !== undefined || speakerNotes !== undefined) {
+        if (
+            title !== undefined ||
+            content !== undefined ||
+            speakerNotes !== undefined
+        ) {
             if (title !== undefined) updatedSlide.title = title;
             if (content !== undefined) updatedSlide.content = content;
             if (speakerNotes !== undefined) updatedSlide.speakerNotes = speakerNotes;
@@ -228,7 +242,10 @@ export async function PATCH(
                     "Slide regenerated with AI"
                 );
             } catch (error) {
-                logger.error({ error, presentationId, slideNumber }, "AI regeneration failed");
+                logger.error(
+                    { error, presentationId, slideNumber },
+                    "AI regeneration failed"
+                );
 
                 if (error instanceof AIGenerationError) {
                     throw error;
@@ -309,9 +326,6 @@ export async function PATCH(
             },
         });
 
-        return NextResponse.json(
-            { error: "Slide update failed" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Slide update failed" }, { status: 500 });
     }
 }

@@ -38,7 +38,10 @@ const LAYOUT_GRADIENTS: Record<SlideData["layoutType"], string> = {
 };
 
 // Text colors based on background
-const LAYOUT_TEXT_COLORS: Record<SlideData["layoutType"], { title: string; body: string }> = {
+const LAYOUT_TEXT_COLORS: Record<
+    SlideData["layoutType"],
+    { title: string; body: string }
+> = {
     title: { title: "text-white", body: "text-white/80" },
     section: { title: "text-white", body: "text-white/70" },
     content_left: { title: "text-slate-900", body: "text-slate-700" },
@@ -74,8 +77,15 @@ export const SlidePreview = memo(function SlidePreview({
                 return (
                     <div className="flex h-full flex-col items-center justify-center text-center p-12">
                         <h1
-                            className={cn("text-5xl font-bold leading-tight mb-6", textColors.title)}
-                            style={titleColor && slide.layoutType !== "title" ? { color: titleColor } : undefined}
+                            className={cn(
+                                "text-5xl font-bold leading-tight mb-6",
+                                textColors.title
+                            )}
+                            style={
+                                titleColor && slide.layoutType !== "title"
+                                    ? { color: titleColor }
+                                    : undefined
+                            }
                         >
                             {slide.title}
                         </h1>
@@ -120,11 +130,21 @@ export const SlidePreview = memo(function SlidePreview({
                             >
                                 "
                             </div>
-                            <blockquote className={cn("text-2xl italic leading-relaxed", textColors.title)}>
+                            <blockquote
+                                className={cn(
+                                    "text-2xl italic leading-relaxed",
+                                    textColors.title
+                                )}
+                            >
                                 {slide.content[0] || slide.title}
                             </blockquote>
                             {slide.content[1] && (
-                                <p className={cn("mt-6 text-lg font-medium", textColors.body)}>
+                                <p
+                                    className={cn(
+                                        "mt-6 text-lg font-medium",
+                                        textColors.body
+                                    )}
+                                >
                                     — {slide.content[1]}
                                 </p>
                             )}
@@ -163,7 +183,10 @@ export const SlidePreview = memo(function SlidePreview({
                 return (
                     <div className="flex h-full flex-col p-12">
                         <h2
-                            className={cn("text-3xl font-bold mb-8 text-center", textColors.title)}
+                            className={cn(
+                                "text-3xl font-bold mb-8 text-center",
+                                textColors.title
+                            )}
                             style={{ color: titleColor }}
                         >
                             {slide.title}
@@ -172,21 +195,37 @@ export const SlidePreview = memo(function SlidePreview({
                             <div className="rounded-2xl bg-white/50 p-6 shadow-sm">
                                 <h3 className="text-lg font-semibold mb-4">Before</h3>
                                 <ul className="space-y-2">
-                                    {slide.content.slice(0, Math.ceil(slide.content.length / 2)).map((point, idx) => (
-                                        <li key={idx} className={cn("text-sm", textColors.body)}>
-                                            • {point}
-                                        </li>
-                                    ))}
+                                    {slide.content
+                                        .slice(0, Math.ceil(slide.content.length / 2))
+                                        .map((point, idx) => (
+                                            <li
+                                                key={idx}
+                                                className={cn(
+                                                    "text-sm",
+                                                    textColors.body
+                                                )}
+                                            >
+                                                • {point}
+                                            </li>
+                                        ))}
                                 </ul>
                             </div>
                             <div className="rounded-2xl bg-white/50 p-6 shadow-sm">
                                 <h3 className="text-lg font-semibold mb-4">After</h3>
                                 <ul className="space-y-2">
-                                    {slide.content.slice(Math.ceil(slide.content.length / 2)).map((point, idx) => (
-                                        <li key={idx} className={cn("text-sm", textColors.body)}>
-                                            • {point}
-                                        </li>
-                                    ))}
+                                    {slide.content
+                                        .slice(Math.ceil(slide.content.length / 2))
+                                        .map((point, idx) => (
+                                            <li
+                                                key={idx}
+                                                className={cn(
+                                                    "text-sm",
+                                                    textColors.body
+                                                )}
+                                            >
+                                                • {point}
+                                            </li>
+                                        ))}
                                 </ul>
                             </div>
                         </div>
@@ -229,7 +268,12 @@ export const SlidePreview = memo(function SlidePreview({
                             {slide.title}
                         </h2>
                         {slide.content[0] && (
-                            <p className={cn("text-xl mb-8 max-w-2xl", textColors.body)}>
+                            <p
+                                className={cn(
+                                    "text-xl mb-8 max-w-2xl",
+                                    textColors.body
+                                )}
+                            >
                                 {slide.content[0]}
                             </p>
                         )}
@@ -251,11 +295,17 @@ export const SlidePreview = memo(function SlidePreview({
                         >
                             {slide.title}
                         </h2>
-                        <div className={cn(
-                            "flex-1 grid gap-8",
-                            slide.imageUrl && slide.layoutType === "content_left" && "grid-cols-2",
-                            slide.imageUrl && slide.layoutType === "content_right" && "grid-cols-2"
-                        )}>
+                        <div
+                            className={cn(
+                                "flex-1 grid gap-8",
+                                slide.imageUrl &&
+                                    slide.layoutType === "content_left" &&
+                                    "grid-cols-2",
+                                slide.imageUrl &&
+                                    slide.layoutType === "content_right" &&
+                                    "grid-cols-2"
+                            )}
+                        >
                             {slide.layoutType === "content_right" && slide.imageUrl && (
                                 <div className="rounded-2xl overflow-hidden bg-muted/30">
                                     <img
@@ -267,7 +317,10 @@ export const SlidePreview = memo(function SlidePreview({
                             )}
                             <ul className="space-y-4">
                                 {slide.content.map((point, idx) => (
-                                    <li key={idx} className="flex items-start gap-3 text-lg">
+                                    <li
+                                        key={idx}
+                                        className="flex items-start gap-3 text-lg"
+                                    >
                                         <span
                                             className="mt-2 h-2 w-2 flex-shrink-0 rounded-full"
                                             style={{ backgroundColor: accentColor }}
@@ -325,9 +378,13 @@ export const SlidePreview = memo(function SlidePreview({
                         "relative aspect-[16/9] w-full max-w-4xl rounded-2xl shadow-2xl overflow-hidden",
                         !bgColor && `bg-gradient-to-br ${layoutGradient}`
                     )}
-                    style={bgColor && slide.layoutType !== "title" && slide.layoutType !== "section" && slide.layoutType !== "cta"
-                        ? { backgroundColor: bgColor }
-                        : undefined
+                    style={
+                        bgColor &&
+                        slide.layoutType !== "title" &&
+                        slide.layoutType !== "section" &&
+                        slide.layoutType !== "cta"
+                            ? { backgroundColor: bgColor }
+                            : undefined
                     }
                 >
                     {/* Decorative elements */}
@@ -339,16 +396,32 @@ export const SlidePreview = memo(function SlidePreview({
                     )}
 
                     {/* Slide content */}
-                    <div className="relative h-full">
-                        {renderSlideContent()}
-                    </div>
+                    <div className="relative h-full">{renderSlideContent()}</div>
 
                     {/* Footer */}
                     <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-xs opacity-50">
-                        <span style={{ color: textColors.body === "text-white/80" || textColors.body === "text-white/70" || textColors.body === "text-white/90" ? "#fff" : undefined }}>
+                        <span
+                            style={{
+                                color:
+                                    textColors.body === "text-white/80" ||
+                                    textColors.body === "text-white/70" ||
+                                    textColors.body === "text-white/90"
+                                        ? "#fff"
+                                        : undefined,
+                            }}
+                        >
                             {brandDesign?.brand_name || ""}
                         </span>
-                        <span style={{ color: textColors.body === "text-white/80" || textColors.body === "text-white/70" || textColors.body === "text-white/90" ? "#fff" : undefined }}>
+                        <span
+                            style={{
+                                color:
+                                    textColors.body === "text-white/80" ||
+                                    textColors.body === "text-white/70" ||
+                                    textColors.body === "text-white/90"
+                                        ? "#fff"
+                                        : undefined,
+                            }}
+                        >
                             {slideIndex + 1} / {totalSlides}
                         </span>
                     </div>

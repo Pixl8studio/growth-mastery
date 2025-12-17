@@ -1,6 +1,6 @@
 /**
  * Unit Tests for Slide Generator
- * Tests OpenAI response parsing, retry logic, timeout handling, and error handling
+ * Tests Anthropic Claude response parsing, retry logic, timeout handling, and error handling
  *
  * Related: GitHub Issue #325 - In-house PowerPoint Presentation Generator
  */
@@ -21,14 +21,12 @@ import {
     type PresentationCustomization,
 } from "@/lib/presentations/slide-generator";
 
-// Mock OpenAI
-const mockOpenAICreate = vi.fn();
-vi.mock("openai", () => ({
-    default: class MockOpenAI {
-        chat = {
-            completions: {
-                create: mockOpenAICreate,
-            },
+// Mock Anthropic
+const mockAnthropicCreate = vi.fn();
+vi.mock("@anthropic-ai/sdk", () => ({
+    default: class MockAnthropic {
+        messages = {
+            create: mockAnthropicCreate,
         };
     },
 }));
@@ -57,11 +55,11 @@ describe("Slide Generator", () => {
     beforeEach(() => {
         vi.clearAllMocks();
         // Set up environment variable
-        process.env.OPENAI_API_KEY = "test-api-key";
+        process.env.ANTHROPIC_API_KEY = "sk-ant-test-api-key";
     });
 
     afterEach(() => {
-        delete process.env.OPENAI_API_KEY;
+        delete process.env.ANTHROPIC_API_KEY;
     });
 
     describe("Zod Schema Validation", () => {
@@ -240,17 +238,16 @@ describe("Slide Generator", () => {
         };
 
         it("should generate slide content successfully", async () => {
-            mockOpenAICreate.mockResolvedValueOnce({
-                choices: [
+            mockAnthropicCreate.mockResolvedValueOnce({
+                content: [
                     {
-                        message: {
-                            content: JSON.stringify({
-                                title: "Welcome & Introduction",
-                                content: ["Key point 1", "Key point 2", "Key point 3"],
-                                speakerNotes: "Start with a warm welcome",
-                                imagePrompt: "Professional business meeting scene",
-                            }),
-                        },
+                        type: "text",
+                        text: JSON.stringify({
+                            title: "Welcome & Introduction",
+                            content: ["Key point 1", "Key point 2", "Key point 3"],
+                            speakerNotes: "Start with a warm welcome",
+                            imagePrompt: "Professional business meeting scene",
+                        }),
                     },
                 ],
             });
@@ -266,11 +263,11 @@ describe("Slide Generator", () => {
             expect(result.slideNumber).toBe(1);
         });
 
-        it("should use fallback content when OpenAI fails", async () => {
-            mockOpenAICreate.mockRejectedValueOnce(new Error("API Error"));
-            mockOpenAICreate.mockRejectedValueOnce(new Error("API Error"));
-            mockOpenAICreate.mockRejectedValueOnce(new Error("API Error"));
-            mockOpenAICreate.mockRejectedValueOnce(new Error("API Error"));
+        it("should use fallback content when Anthropic fails", async () => {
+            mockAnthropicCreate.mockRejectedValueOnce(new Error("API Error"));
+            mockAnthropicCreate.mockRejectedValueOnce(new Error("API Error"));
+            mockAnthropicCreate.mockRejectedValueOnce(new Error("API Error"));
+            mockAnthropicCreate.mockRejectedValueOnce(new Error("API Error"));
 
             const result = await generateSlideContent({
                 deckSlide: defaultDeckSlide,
@@ -283,17 +280,16 @@ describe("Slide Generator", () => {
         });
 
         it("should determine correct layout type for title slide", async () => {
-            mockOpenAICreate.mockResolvedValueOnce({
-                choices: [
+            mockAnthropicCreate.mockResolvedValueOnce({
+                content: [
                     {
-                        message: {
-                            content: JSON.stringify({
-                                title: "Title",
-                                content: [],
-                                speakerNotes: "",
-                                imagePrompt: "",
-                            }),
-                        },
+                        type: "text",
+                        text: JSON.stringify({
+                            title: "Title",
+                            content: [],
+                            speakerNotes: "",
+                            imagePrompt: "",
+                        }),
                     },
                 ],
             });
@@ -308,17 +304,16 @@ describe("Slide Generator", () => {
         });
 
         it("should determine CTA layout for last slide", async () => {
-            mockOpenAICreate.mockResolvedValueOnce({
-                choices: [
+            mockAnthropicCreate.mockResolvedValueOnce({
+                content: [
                     {
-                        message: {
-                            content: JSON.stringify({
-                                title: "Call to Action",
-                                content: [],
-                                speakerNotes: "",
-                                imagePrompt: "",
-                            }),
-                        },
+                        type: "text",
+                        text: JSON.stringify({
+                            title: "Call to Action",
+                            content: [],
+                            speakerNotes: "",
+                            imagePrompt: "",
+                        }),
                     },
                 ],
             });
@@ -332,13 +327,13 @@ describe("Slide Generator", () => {
             expect(result.layoutType).toBe("cta");
         });
 
-        it("should handle invalid JSON from OpenAI", async () => {
-            mockOpenAICreate.mockResolvedValueOnce({
-                choices: [
+        it("should handle invalid JSON from Anthropic", async () => {
+            // Return invalid JSON that cannot be parsed - use Anthropic's response format
+            mockAnthropicCreate.mockResolvedValueOnce({
+                content: [
                     {
-                        message: {
-                            content: "not valid json",
-                        },
+                        type: "text",
+                        text: "not valid json",
                     },
                 ],
             });
@@ -352,17 +347,11 @@ describe("Slide Generator", () => {
             ).rejects.toThrow();
         });
 
-        it("should handle empty response from OpenAI with fallback", async () => {
+        it("should handle empty response from Anthropic with fallback", async () => {
             // For empty content, after exhausting retries, the code provides fallback content
             // This is intentional graceful degradation
-            mockOpenAICreate.mockResolvedValue({
-                choices: [
-                    {
-                        message: {
-                            content: null,
-                        },
-                    },
-                ],
+            mockAnthropicCreate.mockResolvedValue({
+                content: [],
             });
 
             // After retries fail, should return fallback content instead of throwing
@@ -402,17 +391,16 @@ describe("Slide Generator", () => {
         it("should generate all slides in order", async () => {
             const deckStructure = createDeckStructure(3);
 
-            mockOpenAICreate.mockImplementation(async () => ({
-                choices: [
+            mockAnthropicCreate.mockImplementation(async () => ({
+                content: [
                     {
-                        message: {
-                            content: JSON.stringify({
-                                title: "Generated Title",
-                                content: ["Point 1", "Point 2"],
-                                speakerNotes: "Notes",
-                                imagePrompt: "Image description",
-                            }),
-                        },
+                        type: "text",
+                        text: JSON.stringify({
+                            title: "Generated Title",
+                            content: ["Point 1", "Point 2"],
+                            speakerNotes: "Notes",
+                            imagePrompt: "Image description",
+                        }),
                     },
                 ],
             }));
@@ -435,17 +423,16 @@ describe("Slide Generator", () => {
         it("should report progress correctly", async () => {
             const deckStructure = createDeckStructure(4);
 
-            mockOpenAICreate.mockImplementation(async () => ({
-                choices: [
+            mockAnthropicCreate.mockImplementation(async () => ({
+                content: [
                     {
-                        message: {
-                            content: JSON.stringify({
-                                title: "Title",
-                                content: ["Content"],
-                                speakerNotes: "",
-                                imagePrompt: "",
-                            }),
-                        },
+                        type: "text",
+                        text: JSON.stringify({
+                            title: "Title",
+                            content: ["Content"],
+                            speakerNotes: "",
+                            imagePrompt: "",
+                        }),
                     },
                 ],
             }));
@@ -467,22 +454,21 @@ describe("Slide Generator", () => {
             const deckStructure = createDeckStructure(10);
 
             // Mock slow API response
-            mockOpenAICreate.mockImplementation(
+            mockAnthropicCreate.mockImplementation(
                 () =>
                     new Promise((resolve) =>
                         setTimeout(
                             () =>
                                 resolve({
-                                    choices: [
+                                    content: [
                                         {
-                                            message: {
-                                                content: JSON.stringify({
-                                                    title: "Title",
-                                                    content: [],
-                                                    speakerNotes: "",
-                                                    imagePrompt: "",
-                                                }),
-                                            },
+                                            type: "text",
+                                            text: JSON.stringify({
+                                                title: "Title",
+                                                content: [],
+                                                speakerNotes: "",
+                                                imagePrompt: "",
+                                            }),
                                         },
                                     ],
                                 }),
@@ -513,17 +499,16 @@ describe("Slide Generator", () => {
         };
 
         it("should regenerate slide with new content", async () => {
-            mockOpenAICreate.mockResolvedValueOnce({
-                choices: [
+            mockAnthropicCreate.mockResolvedValueOnce({
+                content: [
                     {
-                        message: {
-                            content: JSON.stringify({
-                                title: "Updated Title",
-                                content: ["New point 1", "New point 2", "New point 3"],
-                                speakerNotes: "Updated notes",
-                                imagePrompt: "New image prompt",
-                            }),
-                        },
+                        type: "text",
+                        text: JSON.stringify({
+                            title: "Updated Title",
+                            content: ["New point 1", "New point 2", "New point 3"],
+                            speakerNotes: "Updated notes",
+                            imagePrompt: "New image prompt",
+                        }),
                     },
                 ],
             });
@@ -543,7 +528,7 @@ describe("Slide Generator", () => {
         });
 
         it("should throw error on API failure", async () => {
-            mockOpenAICreate.mockRejectedValue(new Error("API Error"));
+            mockAnthropicCreate.mockRejectedValue(new Error("API Error"));
 
             await expect(
                 regenerateSlide(existingSlide, "Make it better")
@@ -552,11 +537,45 @@ describe("Slide Generator", () => {
     });
 
     describe("API Key Validation", () => {
-        it("should throw error when OPENAI_API_KEY is not set", async () => {
-            delete process.env.OPENAI_API_KEY;
+        it("should throw error when ANTHROPIC_API_KEY is not set", async () => {
+            delete process.env.ANTHROPIC_API_KEY;
 
             // Reset the module to clear cached client
             vi.resetModules();
+
+            // Re-register the Anthropic mock after resetModules
+            vi.doMock("@anthropic-ai/sdk", () => ({
+                default: class MockAnthropic {
+                    messages = {
+                        create: vi.fn(),
+                    };
+                },
+            }));
+
+            // Re-mock dependencies that slide-generator imports
+            vi.doMock("@/lib/logger", () => ({
+                logger: {
+                    info: vi.fn(),
+                    warn: vi.fn(),
+                    error: vi.fn(),
+                    debug: vi.fn(),
+                },
+            }));
+
+            vi.doMock("@sentry/nextjs", () => ({
+                captureException: vi.fn(),
+                addBreadcrumb: vi.fn(),
+                startSpan: vi.fn(
+                    (
+                        config: unknown,
+                        callback: (span: {
+                            setAttribute: ReturnType<typeof vi.fn>;
+                            setStatus: ReturnType<typeof vi.fn>;
+                        }) => unknown
+                    ) => callback({ setAttribute: vi.fn(), setStatus: vi.fn() })
+                ),
+                setMeasurement: vi.fn(),
+            }));
 
             // Re-import after resetting
             const { generateSlideContent: freshGenerate } = await import(
@@ -579,7 +598,7 @@ describe("Slide Generator", () => {
                         imageStyle: "photography",
                     },
                 })
-            ).rejects.toThrow(/OPENAI_API_KEY/i);
+            ).rejects.toThrow(/ANTHROPIC_API_KEY/i);
         });
     });
 });

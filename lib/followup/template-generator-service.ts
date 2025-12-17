@@ -128,7 +128,6 @@ export async function generateFollowupTemplates(
                 input.segment || "engaged"
             ),
             {
-                model: "gpt-4o",
                 temperature: 0.7,
                 maxTokens: 4000,
             }

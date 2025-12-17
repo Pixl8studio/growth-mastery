@@ -1,81 +1,118 @@
 /**
- * OpenAI Assistants API Client
- * Manages chat threads for in-app help system
+ * Support Chat Client
+ * Manages chat conversations for in-app help system using Anthropic Claude
+ * Conversation history is stored in the database via API routes
  */
 
-import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
 import { env } from "@/lib/env";
+import { AI_CONFIG } from "@/lib/config";
 
-let openaiInstance: OpenAI | null = null;
+let anthropicInstance: Anthropic | null = null;
 
 /**
- * Get OpenAI client instance (lazy initialization)
+ * Get Anthropic client instance (lazy initialization)
  * Only initializes when actually needed, preventing build-time errors
  */
-function getOpenAIClient(): OpenAI {
-    if (!openaiInstance) {
-        if (!env.OPENAI_API_KEY) {
+function getAnthropicClient(): Anthropic {
+    if (!anthropicInstance) {
+        if (!env.ANTHROPIC_API_KEY) {
             throw new Error(
-                "OPENAI_API_KEY is not configured. Please add it to your environment variables."
+                "ANTHROPIC_API_KEY is not configured. Please add it to your environment variables."
             );
         }
-        openaiInstance = new OpenAI({
-            apiKey: env.OPENAI_API_KEY,
+        anthropicInstance = new Anthropic({
+            apiKey: env.ANTHROPIC_API_KEY,
         });
     }
-    return openaiInstance;
+    return anthropicInstance;
+}
+
+// Message type for conversation history
+export interface ChatMessage {
+    role: "user" | "assistant";
+    content: string;
+    timestamp: string;
 }
 
 /**
  * Create a new conversation thread
+ * Returns a unique thread ID (UUID-like string)
  */
-export async function createThread() {
-    const openai = getOpenAIClient();
-    const thread = await openai.beta.threads.create();
-    return thread.id;
+export async function createThread(): Promise<string> {
+    // Generate a unique thread ID
+    const threadId = `thread_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    return threadId;
 }
 
 /**
- * Send a user message to a thread
+ * Generate a support chat response using Anthropic Claude
+ * Takes the full conversation history and returns the assistant's response
  */
-export async function sendMessage(threadId: string, content: string) {
-    const openai = getOpenAIClient();
-    await openai.beta.threads.messages.create(threadId, {
-        role: "user",
-        content,
+export async function generateSupportResponse(
+    messages: ChatMessage[],
+    systemPrompt: string
+): Promise<string> {
+    const anthropic = getAnthropicClient();
+
+    // Convert to Anthropic message format
+    const anthropicMessages = messages.map((msg) => ({
+        role: msg.role as "user" | "assistant",
+        content: msg.content,
+    }));
+
+    const response = await anthropic.messages.create({
+        model: AI_CONFIG.models.default,
+        max_tokens: AI_CONFIG.defaultMaxTokens,
+        temperature: AI_CONFIG.defaultTemperature,
+        system: systemPrompt,
+        messages: anthropicMessages,
     });
-}
 
-/**
- * Run the assistant on a thread with optional context
- */
-export async function runAssistant(threadId: string, additionalInstructions?: string) {
-    const openai = getOpenAIClient();
-    if (!env.OPENAI_ASSISTANT_ID) {
-        throw new Error(
-            "OPENAI_ASSISTANT_ID is not configured. Please add it to your environment variables."
-        );
+    const textBlock = response.content.find((block) => block.type === "text");
+    if (!textBlock || textBlock.type !== "text") {
+        throw new Error("No text response from Anthropic");
     }
-    const run = await openai.beta.threads.runs.create(threadId, {
-        assistant_id: env.OPENAI_ASSISTANT_ID,
-        additional_instructions: additionalInstructions,
-    });
-    return run.id;
+
+    return textBlock.text;
+}
+
+// Legacy exports for backward compatibility during migration
+// These are no longer used but kept to prevent import errors
+
+/**
+ * @deprecated Use generateSupportResponse instead
+ */
+export async function sendMessage(_threadId: string, _content: string): Promise<void> {
+    // No-op: Messages are now handled directly in the API route
 }
 
 /**
- * Get the status of a run
+ * @deprecated Use generateSupportResponse instead
  */
-export async function getRunStatus(threadId: string, runId: string) {
-    const openai = getOpenAIClient();
-    return await openai.beta.threads.runs.retrieve(runId, { thread_id: threadId });
+export async function runAssistant(
+    _threadId: string,
+    _additionalInstructions?: string
+): Promise<string> {
+    // Returns a dummy run ID for backward compatibility
+    return `run_${Date.now()}`;
 }
 
 /**
- * Get all messages from a thread
+ * @deprecated Use generateSupportResponse instead
  */
-export async function getMessages(threadId: string) {
-    const openai = getOpenAIClient();
-    const messages = await openai.beta.threads.messages.list(threadId);
-    return messages.data;
+export async function getRunStatus(
+    _threadId: string,
+    _runId: string
+): Promise<{ status: string }> {
+    // Always return completed since we now use synchronous responses
+    return { status: "completed" };
+}
+
+/**
+ * @deprecated Use generateSupportResponse instead
+ */
+export async function getMessages(_threadId: string): Promise<ChatMessage[]> {
+    // Messages are now stored in the database
+    return [];
 }

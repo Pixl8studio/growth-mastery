@@ -95,7 +95,9 @@ export async function POST(
 
         // Reorder slides
         const reorderedSlides = newOrder.map((slideNum, index) => {
-            const slide = slides.find((s: { slideNumber: number }) => s.slideNumber === slideNum);
+            const slide = slides.find(
+                (s: { slideNumber: number }) => s.slideNumber === slideNum
+            );
             return {
                 ...slide,
                 slideNumber: index + 1, // Update slide number to new position
@@ -119,10 +121,7 @@ export async function POST(
             throw updateError;
         }
 
-        logger.info(
-            { presentationId, newOrder },
-            "Slides reordered successfully"
-        );
+        logger.info({ presentationId, newOrder }, "Slides reordered successfully");
 
         return NextResponse.json({
             success: true,
@@ -152,9 +151,6 @@ export async function POST(
             },
         });
 
-        return NextResponse.json(
-            { error: "Slide reorder failed" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Slide reorder failed" }, { status: 500 });
     }
 }

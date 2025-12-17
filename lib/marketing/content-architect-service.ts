@@ -172,7 +172,6 @@ Return as JSON:
                 },
             ],
             {
-                model: "gpt-4o",
                 temperature: 0.7,
                 maxTokens: 1500,
             }
@@ -332,7 +331,6 @@ Return as JSON:
                 },
             ],
             {
-                model: "gpt-4o",
                 temperature: 0.6,
                 maxTokens: 1000,
             }
@@ -423,7 +421,6 @@ Do not include the # symbol, just the tag text.`;
                 },
             ],
             {
-                model: "gpt-4o",
                 temperature: 0.6,
                 maxTokens: 500,
             }

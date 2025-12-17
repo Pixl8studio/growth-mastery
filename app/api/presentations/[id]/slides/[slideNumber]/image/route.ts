@@ -161,7 +161,9 @@ export async function POST(
             try {
                 const imageResponse = await fetch(tempImageUrl);
                 if (!imageResponse.ok) {
-                    throw new Error(`Failed to download image: ${imageResponse.status}`);
+                    throw new Error(
+                        `Failed to download image: ${imageResponse.status}`
+                    );
                 }
 
                 const imageBlob = await imageResponse.blob();
@@ -254,13 +256,18 @@ export async function POST(
             const isRateLimit =
                 errorMessage.toLowerCase().includes("rate limit") ||
                 errorMessage.includes("429");
-            const isContentPolicy = errorMessage.toLowerCase().includes("content policy");
+            const isContentPolicy = errorMessage
+                .toLowerCase()
+                .includes("content policy");
 
             if (isRateLimit) {
-                throw new AIGenerationError("OpenAI rate limit exceeded. Please try again.", {
-                    retryable: true,
-                    errorCode: "RATE_LIMIT",
-                });
+                throw new AIGenerationError(
+                    "OpenAI rate limit exceeded. Please try again.",
+                    {
+                        retryable: true,
+                        errorCode: "RATE_LIMIT",
+                    }
+                );
             }
 
             if (isContentPolicy) {
@@ -313,9 +320,6 @@ export async function POST(
             },
         });
 
-        return NextResponse.json(
-            { error: "Image generation failed" },
-            { status: 500 }
-        );
+        return NextResponse.json({ error: "Image generation failed" }, { status: 500 });
     }
 }

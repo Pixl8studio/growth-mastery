@@ -94,7 +94,10 @@ export function validateSlide(slide: unknown): Slide | null {
  * Get a slide by number from an array, with validation
  * Returns null if slide doesn't exist or is invalid
  */
-export function getSlideByNumber(rawSlides: unknown, slideNumber: number): Slide | null {
+export function getSlideByNumber(
+    rawSlides: unknown,
+    slideNumber: number
+): Slide | null {
     const slides = parseSlidesFromDB(rawSlides);
     const slide = slides.find((s) => s.slideNumber === slideNumber);
     return slide || null;

@@ -49,6 +49,7 @@ import {
     SlideEditorPanel,
     SlidePreview,
     GenerationBanner,
+    GenerationErrorDialog,
     type SlideData,
     type BrandDesign as BrandDesignType,
 } from "@/components/presentations";
@@ -141,6 +142,8 @@ export default function Step5Page({
     // Generation state - now using streaming hook (Issue #327)
     const streaming = useStreamingGeneration();
     const [showGenerationBanner, setShowGenerationBanner] = useState(false);
+    const [showErrorDialog, setShowErrorDialog] = useState(false);
+    const [errorDialogType, setErrorDialogType] = useState<"timeout" | "general">("general");
 
     // Editor state
     const [selectedPresentation, setSelectedPresentation] =
@@ -393,15 +396,20 @@ export default function Step5Page({
                     "Presentation generated with streaming"
                 );
             },
-            onError: (error) => {
-                toast({
-                    title: "Generation Failed",
-                    description: error,
-                    variant: "destructive",
-                });
+            onError: (error, isTimeout) => {
+                setShowGenerationBanner(false);
+
+                // Show friendly dialog for timeout errors
+                if (isTimeout || error === "AI_PROVIDER_TIMEOUT") {
+                    setErrorDialogType("timeout");
+                    setShowErrorDialog(true);
+                } else {
+                    setErrorDialogType("general");
+                    setShowErrorDialog(true);
+                }
             },
         });
-    }, [canGenerate, selectedDeck, customization, projectId, streaming, toast]);
+    }, [canGenerate, selectedDeck, customization, projectId, streaming]);
 
     // Handle slide actions
     const handleDuplicateSlide = useCallback(
@@ -1280,6 +1288,18 @@ export default function Step5Page({
                         </div>
                     </div>
                 )}
+
+                {/* Friendly Error Dialog for Generation Failures (Issue #327) */}
+                <GenerationErrorDialog
+                    isOpen={showErrorDialog}
+                    errorType={errorDialogType}
+                    errorMessage={streaming.error || undefined}
+                    onRetry={() => {
+                        setShowErrorDialog(false);
+                        handleGeneratePresentation();
+                    }}
+                    onClose={() => setShowErrorDialog(false)}
+                />
             </div>
         </StepLayout>
     );

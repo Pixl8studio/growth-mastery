@@ -4,8 +4,9 @@
  */
 
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { GenerationBanner } from "@/components/presentations/generation-banner";
+import { GenerationErrorDialog } from "@/components/presentations/generation-error-dialog";
 import {
     SlideThumbnail,
     SlideThumbnailSkeleton,
@@ -22,6 +23,8 @@ vi.mock("lucide-react", () => ({
     Trash2: () => <div data-testid="trash-icon" />,
     Loader2: () => <div data-testid="loader-icon" />,
     ImageIcon: () => <div data-testid="image-icon" />,
+    Brain: () => <div data-testid="brain-icon" />,
+    RefreshCw: () => <div data-testid="refresh-icon" />,
 }));
 
 describe("GenerationBanner", () => {
@@ -189,5 +192,80 @@ describe("GeneratingSlotPlaceholder", () => {
 
         expect(screen.getByText("5")).toBeInTheDocument();
         expect(screen.getByText("Generating...")).toBeInTheDocument();
+    });
+});
+
+describe("GenerationErrorDialog", () => {
+    const defaultProps = {
+        isOpen: true,
+        errorType: "general" as const,
+        onRetry: vi.fn(),
+        onClose: vi.fn(),
+    };
+
+    it("should not render when isOpen is false", () => {
+        const { container } = render(
+            <GenerationErrorDialog {...defaultProps} isOpen={false} />
+        );
+
+        expect(container.firstChild).toBeNull();
+    });
+
+    it("should render timeout message for timeout errors", () => {
+        render(
+            <GenerationErrorDialog {...defaultProps} errorType="timeout" />
+        );
+
+        expect(screen.getByText("Oops! AI Brain Fart")).toBeInTheDocument();
+        expect(
+            screen.getByText(/Our AI had a little brain fart/)
+        ).toBeInTheDocument();
+    });
+
+    it("should render general error message for non-timeout errors", () => {
+        render(
+            <GenerationErrorDialog
+                {...defaultProps}
+                errorType="general"
+                errorMessage="Something broke"
+            />
+        );
+
+        expect(screen.getByText("Something Went Wrong")).toBeInTheDocument();
+        expect(screen.getByText("Something broke")).toBeInTheDocument();
+    });
+
+    it("should call onRetry when retry button is clicked", () => {
+        const onRetry = vi.fn();
+        render(<GenerationErrorDialog {...defaultProps} onRetry={onRetry} />);
+
+        const retryButton = screen.getByText("Retry Generation");
+        fireEvent.click(retryButton);
+
+        expect(onRetry).toHaveBeenCalledTimes(1);
+    });
+
+    it("should call onClose when close button is clicked", () => {
+        const onClose = vi.fn();
+        render(<GenerationErrorDialog {...defaultProps} onClose={onClose} />);
+
+        const closeButton = screen.getByText("Maybe Later");
+        fireEvent.click(closeButton);
+
+        expect(onClose).toHaveBeenCalledTimes(1);
+    });
+
+    it("should show brain icon in dialog", () => {
+        render(<GenerationErrorDialog {...defaultProps} />);
+
+        expect(screen.getByTestId("brain-icon")).toBeInTheDocument();
+    });
+
+    it("should show apology message", () => {
+        render(<GenerationErrorDialog {...defaultProps} />);
+
+        expect(
+            screen.getByText("We apologize for the inconvenience!")
+        ).toBeInTheDocument();
     });
 });

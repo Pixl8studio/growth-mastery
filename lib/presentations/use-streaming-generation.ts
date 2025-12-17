@@ -53,7 +53,7 @@ interface StreamingGenerationOptions {
     customization: PresentationCustomization;
     onSlideGenerated?: (slide: GeneratedSlide, progress: number) => void;
     onComplete?: (presentationId: string, slides: GeneratedSlide[]) => void;
-    onError?: (error: string) => void;
+    onError?: (error: string, isTimeout: boolean) => void;
 }
 
 export function useStreamingGeneration() {
@@ -183,12 +183,14 @@ export function useStreamingGeneration() {
 
                 eventSource.addEventListener("error", (event) => {
                     let errorMessage = "Generation failed";
+                    let isTimeout = false;
 
                     // Check if this is a custom error event with data
                     if (event instanceof MessageEvent && event.data) {
                         try {
                             const data = JSON.parse(event.data);
                             errorMessage = data.error || errorMessage;
+                            isTimeout = data.isTimeout === true || errorMessage === "AI_PROVIDER_TIMEOUT";
                         } catch {
                             // Not a JSON event, likely a connection error
                         }
@@ -201,13 +203,13 @@ export function useStreamingGeneration() {
                     }));
 
                     if (onError) {
-                        onError(errorMessage);
+                        onError(errorMessage, isTimeout);
                     }
 
                     eventSource.close();
                     eventSourceRef.current = null;
 
-                    logger.error({ error: errorMessage }, "Presentation generation failed");
+                    logger.error({ error: errorMessage, isTimeout }, "Presentation generation failed");
                 });
 
                 eventSource.onerror = () => {
@@ -218,7 +220,7 @@ export function useStreamingGeneration() {
                             if (prev.isGenerating) {
                                 const errorMsg = "Connection lost during generation";
                                 if (onError) {
-                                    onError(errorMsg);
+                                    onError(errorMsg, false);
                                 }
                                 return {
                                     ...prev,
@@ -240,7 +242,7 @@ export function useStreamingGeneration() {
                 }));
 
                 if (onError) {
-                    onError(errorMessage);
+                    onError(errorMessage, false);
                 }
 
                 logger.error({ error }, "Failed to initialize SSE connection");

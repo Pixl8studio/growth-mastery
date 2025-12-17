@@ -48,8 +48,8 @@ function formatSSE(message: SSEMessage): string {
     return `event: ${message.type}\ndata: ${JSON.stringify(message.data)}\n\n`;
 }
 
-// Stream timeout protection (5 minutes max)
-const STREAM_TIMEOUT_MS = 5 * 60 * 1000;
+// Stream timeout protection (30 minutes max for large presentations)
+const STREAM_TIMEOUT_MS = 30 * 60 * 1000;
 
 class StreamTimeoutError extends Error {
     constructor(timeoutMs: number) {
@@ -329,7 +329,7 @@ export async function GET(request: NextRequest) {
                 } catch (error) {
                     const isTimeout = error instanceof StreamTimeoutError;
                     const errorMessage = isTimeout
-                        ? "Generation timed out. Please try again with fewer slides or simpler customization."
+                        ? "AI_PROVIDER_TIMEOUT"
                         : error instanceof Error
                           ? error.message
                           : "Unknown error";

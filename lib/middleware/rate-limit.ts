@@ -52,11 +52,35 @@ const presentationExportRatelimit = new Ratelimit({
     prefix: "ratelimit:presentation-export",
 });
 
+/**
+ * Rate limiter for slide editing
+ * Limits: 30 requests per minute per user (AI-powered quick actions)
+ */
+const slideEditRatelimit = new Ratelimit({
+    redis: kv,
+    limiter: Ratelimit.slidingWindow(30, "1 m"),
+    analytics: true,
+    prefix: "ratelimit:slide-edit",
+});
+
+/**
+ * Rate limiter for AI image generation
+ * Limits: 10 requests per minute per user (expensive image generation)
+ */
+const imageGenerationRatelimit = new Ratelimit({
+    redis: kv,
+    limiter: Ratelimit.slidingWindow(10, "1 m"),
+    analytics: true,
+    prefix: "ratelimit:image-generation",
+});
+
 export type RateLimitEndpoint =
     | "scraping"
     | "brand-colors"
     | "presentation-generation"
-    | "presentation-export";
+    | "presentation-export"
+    | "slide-edit"
+    | "image-generation";
 
 /**
  * Check rate limit for a user
@@ -72,6 +96,8 @@ export async function checkRateLimit(
             "brand-colors": brandColorsRatelimit,
             "presentation-generation": presentationGenerationRatelimit,
             "presentation-export": presentationExportRatelimit,
+            "slide-edit": slideEditRatelimit,
+            "image-generation": imageGenerationRatelimit,
         };
 
         const limiter = limiterMap[endpoint];

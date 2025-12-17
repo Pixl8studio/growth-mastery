@@ -9,25 +9,16 @@ import {
     FileText,
     Trash2,
     Download,
-    Copy,
     Pencil,
     Play,
     Loader2,
-    CheckCircle2,
     Image as ImageIcon,
     Type,
     Palette,
-    Wand2,
-    ChevronLeft,
-    ChevronRight,
-    GripVertical,
-    RefreshCw,
-    Mic,
-    MessageSquare,
     X,
-    Plus,
     LayoutGrid,
     AlertCircle,
+    CheckCircle2,
 } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
@@ -51,6 +42,17 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import type { BusinessProfile } from "@/types/business-profile";
+
+// Enhanced presentation components (Issue #327)
+import {
+    DraggableSlides,
+    SlideEditorPanel,
+    SlidePreview,
+    GenerationBanner,
+    type SlideData,
+    type BrandDesign as BrandDesignType,
+} from "@/components/presentations";
+import { useStreamingGeneration } from "@/lib/presentations/use-streaming-generation";
 
 // ============================================
 // Types
@@ -80,27 +82,8 @@ interface BrandDesign {
     brand_name: string | null;
 }
 
-interface GeneratedSlide {
-    slideNumber: number;
-    title: string;
-    content: string[];
-    speakerNotes: string;
-    imagePrompt?: string;
-    imageUrl?: string;
-    layoutType:
-        | "title"
-        | "section"
-        | "content_left"
-        | "content_right"
-        | "bullets"
-        | "quote"
-        | "statistics"
-        | "comparison"
-        | "process"
-        | "cta";
-    section: string;
-    isGenerating?: boolean;
-}
+// Re-export the SlideData type as GeneratedSlide for backward compatibility
+type GeneratedSlide = SlideData;
 
 interface Presentation {
     id: string;
@@ -155,11 +138,9 @@ export default function Step5Page({
         imageStyle: "photography",
     });
 
-    // Generation state
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [generationProgress, setGenerationProgress] = useState(0);
-    const [currentGeneratingSlide, setCurrentGeneratingSlide] = useState(0);
-    const [generatedSlides, setGeneratedSlides] = useState<GeneratedSlide[]>([]);
+    // Generation state - now using streaming hook (Issue #327)
+    const streaming = useStreamingGeneration();
+    const [showGenerationBanner, setShowGenerationBanner] = useState(false);
 
     // Editor state
     const [selectedPresentation, setSelectedPresentation] =
@@ -372,81 +353,55 @@ export default function Step5Page({
         []
     );
 
-    // Handle generation
+    // Handle generation with real-time streaming (Issue #327)
     const handleGeneratePresentation = useCallback(async () => {
         if (!canGenerate || !selectedDeck) return;
 
-        setIsGenerating(true);
-        setGenerationProgress(0);
-        setCurrentGeneratingSlide(0);
-        setGeneratedSlides([]);
+        setShowGenerationBanner(true);
 
-        try {
-            // Call the API to generate presentation
-            const response = await fetch("/api/presentations/generate", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                credentials: "include",
-                body: JSON.stringify({
-                    projectId,
+        streaming.startGeneration({
+            projectId,
+            deckStructureId: selectedDeck.id,
+            customization,
+            onSlideGenerated: (slide, progress) => {
+                logger.info(
+                    { slideNumber: slide.slideNumber, progress },
+                    "Slide generated in real-time"
+                );
+            },
+            onComplete: (presentationId, slides) => {
+                // Create presentation record for local state
+                const newPresentation: Presentation = {
+                    id: presentationId,
+                    title: `${selectedDeck.title} - Generated`,
+                    slides: slides as GeneratedSlide[],
+                    status: "completed",
                     deckStructureId: selectedDeck.id,
+                    created_at: new Date().toISOString(),
                     customization,
-                }),
-            });
+                };
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || "Failed to generate presentation");
-            }
+                setPresentations((prev) => [newPresentation, ...prev]);
 
-            const result = await response.json();
+                toast({
+                    title: "Presentation Generated",
+                    description: `Successfully created ${slides.length} slides with real-time streaming.`,
+                });
 
-            // Update progress to 100%
-            setGenerationProgress(100);
-            setCurrentGeneratingSlide(result.slideCount);
-            setGeneratedSlides(result.slides);
-
-            // Create presentation record for local state
-            const newPresentation: Presentation = {
-                id: result.presentationId,
-                title: `${selectedDeck.title} - Generated`,
-                slides: result.slides,
-                status: "completed",
-                deckStructureId: selectedDeck.id,
-                created_at: new Date().toISOString(),
-                customization,
-            };
-
-            setPresentations((prev) => [newPresentation, ...prev]);
-
-            toast({
-                title: "Presentation Generated",
-                description: `Successfully created ${result.slideCount} slides. You can now edit and download your presentation.`,
-            });
-
-            logger.info(
-                {
-                    projectId,
-                    deckId: selectedDeck.id,
-                    slideCount: result.slideCount,
-                    generationTime: result.generationTime,
-                },
-                "Presentation generated successfully"
-            );
-        } catch (error) {
-            logger.error({ error }, "Failed to generate presentation");
-            toast({
-                title: "Generation Failed",
-                description:
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to generate presentation. Please try again.",
-                variant: "destructive",
-            });
-        } finally {
-            setIsGenerating(false);
-        }
-    }, [canGenerate, selectedDeck, customization, projectId, toast]);
+                logger.info(
+                    { projectId, deckId: selectedDeck.id, slideCount: slides.length },
+                    "Presentation generated with streaming"
+                );
+            },
+            onError: (error) => {
+                toast({
+                    title: "Generation Failed",
+                    description: error,
+                    variant: "destructive",
+                });
+            },
+        });
+    }, [canGenerate, selectedDeck, customization, projectId, streaming, toast]);
 
     // Handle slide actions
     const handleDuplicateSlide = useCallback(
@@ -518,28 +473,75 @@ export default function Step5Page({
         [selectedPresentation, selectedSlideIndex, toast]
     );
 
-    const handleQuickAction = useCallback(
-        async (action: string) => {
+    // Handle slide reordering with backend persistence (Issue #327)
+    const handleSlideReorder = useCallback(
+        async (newOrder: number[]) => {
             if (!selectedPresentation) return;
 
-            setIsEditingSlide(true);
+            try {
+                const response = await fetch(
+                    `/api/presentations/${selectedPresentation.id}/reorder`,
+                    {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: "include",
+                        body: JSON.stringify({ newOrder }),
+                    }
+                );
 
-            // Simulate AI edit action
-            await new Promise((resolve) => setTimeout(resolve, 1500));
+                if (!response.ok) {
+                    throw new Error("Failed to reorder slides");
+                }
 
-            setIsEditingSlide(false);
+                const result = await response.json();
 
-            toast({
-                title: "Action Applied",
-                description: `${action.replace("_", " ")} applied to slide ${selectedSlideIndex + 1}.`,
-            });
+                const updatedPresentation = {
+                    ...selectedPresentation,
+                    slides: result.slides,
+                };
 
-            logger.info(
-                { action, slideNumber: selectedSlideIndex + 1 },
-                "Quick action applied"
+                setSelectedPresentation(updatedPresentation);
+                setPresentations((prev) =>
+                    prev.map((p) =>
+                        p.id === updatedPresentation.id ? updatedPresentation : p
+                    )
+                );
+
+                logger.info({ newOrder }, "Slides reordered successfully");
+            } catch (error) {
+                logger.error({ error }, "Failed to reorder slides");
+                toast({
+                    title: "Reorder Failed",
+                    description: "Failed to save slide order. Please try again.",
+                    variant: "destructive",
+                });
+            }
+        },
+        [selectedPresentation, toast]
+    );
+
+    // Handle slide update from editor panel (Issue #327)
+    const handleSlideUpdate = useCallback(
+        (updatedSlide: GeneratedSlide) => {
+            if (!selectedPresentation) return;
+
+            const updatedSlides = selectedPresentation.slides.map((s) =>
+                s.slideNumber === updatedSlide.slideNumber ? updatedSlide : s
+            );
+
+            const updatedPresentation = {
+                ...selectedPresentation,
+                slides: updatedSlides,
+            };
+
+            setSelectedPresentation(updatedPresentation);
+            setPresentations((prev) =>
+                prev.map((p) =>
+                    p.id === updatedPresentation.id ? updatedPresentation : p
+                )
             );
         },
-        [selectedPresentation, selectedSlideIndex, toast]
+        [selectedPresentation]
     );
 
     const handleDeletePresentation = useCallback(
@@ -695,8 +697,24 @@ export default function Step5Page({
                     </div>
                 )}
 
+                {/* Generation Banner - Shows during streaming (Issue #327) */}
+                {showGenerationBanner && (
+                    <GenerationBanner
+                        isGenerating={streaming.isGenerating}
+                        progress={streaming.progress}
+                        currentSlide={streaming.currentSlide}
+                        totalSlides={streaming.totalSlides}
+                        error={streaming.error}
+                        onCancel={() => {
+                            streaming.stopGeneration();
+                            setShowGenerationBanner(false);
+                        }}
+                        onDismiss={() => setShowGenerationBanner(false)}
+                    />
+                )}
+
                 {/* Generation Interface */}
-                {!isGenerating && !isEditorOpen && (
+                {!streaming.isGenerating && !isEditorOpen && (
                     <>
                         {/* Deck Structure Selector */}
                         <Card>
@@ -1106,43 +1124,39 @@ export default function Step5Page({
                     </>
                 )}
 
-                {/* Progressive Generation UI */}
-                {isGenerating && (
-                    <Card className="border-primary/20 bg-primary/5">
+                {/* Live Streaming Slide Grid - Shows slides as they generate (Issue #327) */}
+                {streaming.isGenerating && streaming.slides.length > 0 && (
+                    <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
-                                <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                                Generating Your Presentation...
+                                <Sparkles className="h-5 w-5 text-primary" />
+                                Slides Generated
                             </CardTitle>
                             <CardDescription>
-                                AI is creating {selectedDeck?.slideCount} slides with
-                                images and speaker notes. Please do not close this page.
+                                Click on any completed slide to preview it
                             </CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-6">
-                            {/* Progress Bar */}
-                            <div>
-                                <div className="mb-2 flex items-center justify-between text-sm">
-                                    <span>
-                                        Slide {currentGeneratingSlide} of{" "}
-                                        {selectedDeck?.slideCount}
-                                    </span>
-                                    <span>{generationProgress}%</span>
-                                </div>
-                                <div className="h-3 w-full rounded-full bg-primary/20">
-                                    <div
-                                        className="h-3 rounded-full bg-primary transition-all duration-500"
-                                        style={{ width: `${generationProgress}%` }}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Live Slide Preview Grid */}
+                        <CardContent>
                             <div className="grid grid-cols-4 gap-3 md:grid-cols-6 lg:grid-cols-8">
-                                {generatedSlides.map((slide, index) => (
+                                {streaming.slides.map((slide, index) => (
                                     <div
                                         key={index}
-                                        className="aspect-[16/9] rounded-lg border border-green-500 bg-white p-2 shadow-sm"
+                                        className="aspect-[16/9] cursor-pointer rounded-lg border border-green-500 bg-white p-2 shadow-sm transition-transform hover:scale-105"
+                                        onClick={() => {
+                                            // Create a temporary presentation for preview
+                                            const tempPresentation: Presentation = {
+                                                id: streaming.presentationId || "temp",
+                                                title: "Generating...",
+                                                slides: streaming.slides as GeneratedSlide[],
+                                                status: "generating",
+                                                deckStructureId: selectedDeck?.id || "",
+                                                created_at: new Date().toISOString(),
+                                                customization,
+                                            };
+                                            setSelectedPresentation(tempPresentation);
+                                            setSelectedSlideIndex(index);
+                                            setIsEditorOpen(true);
+                                        }}
                                     >
                                         <div className="flex h-full flex-col justify-between">
                                             <div className="truncate text-xs font-medium">
@@ -1152,21 +1166,12 @@ export default function Step5Page({
                                         </div>
                                     </div>
                                 ))}
-                                {/* Generating placeholder */}
-                                {currentGeneratingSlide <=
-                                    (selectedDeck?.slideCount || 0) && (
-                                    <div className="aspect-[16/9] animate-pulse rounded-lg border border-primary bg-primary/10 p-2">
-                                        <div className="flex h-full items-center justify-center">
-                                            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                                        </div>
-                                    </div>
-                                )}
                             </div>
                         </CardContent>
                     </Card>
                 )}
 
-                {/* Three-Panel Editor */}
+                {/* Enhanced Three-Panel Editor (Issue #327) */}
                 {isEditorOpen && selectedPresentation && (
                     <div className="fixed inset-0 z-50 bg-background">
                         {/* Editor Header */}
@@ -1182,6 +1187,11 @@ export default function Step5Page({
                                 <h2 className="font-semibold">
                                     {selectedPresentation.title}
                                 </h2>
+                                {selectedPresentation.status === "generating" && (
+                                    <span className="text-sm text-primary animate-pulse">
+                                        Generating...
+                                    </span>
+                                )}
                             </div>
                             <div className="flex items-center gap-2">
                                 <Button
@@ -1191,6 +1201,7 @@ export default function Step5Page({
                                         selectedPresentation &&
                                         handleDownloadPptx(selectedPresentation)
                                     }
+                                    disabled={selectedPresentation.status === "generating"}
                                 >
                                     <Download className="mr-1 h-4 w-4" />
                                     Export PPTX
@@ -1205,347 +1216,66 @@ export default function Step5Page({
                             </div>
                         </div>
 
-                        {/* Three-Panel Layout */}
+                        {/* Three-Panel Layout with Enhanced Components */}
                         <div className="flex h-[calc(100vh-3.5rem)]">
-                            {/* Left Panel - Thumbnail Navigator (~20%) */}
+                            {/* Left Panel - Draggable Thumbnail Navigator (~20%) */}
                             <div className="w-[20%] overflow-y-auto border-r border-border bg-muted/30 p-3">
-                                <div className="space-y-2">
-                                    {selectedPresentation.slides.map((slide, index) => (
-                                        <div
-                                            key={index}
-                                            className={`group relative cursor-pointer rounded-lg border-2 p-2 transition-all ${
-                                                index === selectedSlideIndex
-                                                    ? "border-primary bg-white shadow-md"
-                                                    : "border-transparent bg-white hover:border-border"
-                                            }`}
-                                            onClick={() => setSelectedSlideIndex(index)}
-                                        >
-                                            {/* Drag Handle */}
-                                            <div className="absolute left-1 top-1/2 -translate-y-1/2 cursor-grab opacity-0 group-hover:opacity-100">
-                                                <GripVertical className="h-4 w-4 text-muted-foreground" />
-                                            </div>
-
-                                            {/* Slide Thumbnail */}
-                                            <div className="ml-4">
-                                                <div
-                                                    className="aspect-[16/9] rounded border bg-muted/50 p-1"
-                                                    style={{
-                                                        backgroundColor:
-                                                            brandDesign?.background_color ||
-                                                            "#fff",
-                                                    }}
-                                                >
-                                                    <div
-                                                        className="truncate text-[8px] font-medium"
-                                                        style={{
-                                                            color:
-                                                                brandDesign?.text_color ||
-                                                                "#000",
-                                                        }}
-                                                    >
-                                                        {slide.title}
-                                                    </div>
-                                                </div>
-                                                <div className="mt-1 flex items-center justify-between">
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {index + 1}
-                                                    </span>
-                                                    <div className="flex gap-1 opacity-0 group-hover:opacity-100">
-                                                        <button
-                                                            className="rounded p-0.5 hover:bg-muted"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleDuplicateSlide(
-                                                                    index
-                                                                );
-                                                            }}
-                                                        >
-                                                            <Copy className="h-3 w-3" />
-                                                        </button>
-                                                        <button
-                                                            className="rounded p-0.5 hover:bg-red-50"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleDeleteSlide(
-                                                                    index
-                                                                );
-                                                            }}
-                                                        >
-                                                            <Trash2 className="h-3 w-3 text-red-500" />
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    {/* Add Slide Button */}
-                                    <button className="flex w-full items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border p-4 text-sm text-muted-foreground hover:border-primary hover:text-primary">
-                                        <Plus className="h-4 w-4" />
-                                        Add Slide
-                                    </button>
-                                </div>
+                                <DraggableSlides
+                                    slides={selectedPresentation.slides}
+                                    selectedIndex={selectedSlideIndex}
+                                    brandDesign={brandDesign as BrandDesignType | null}
+                                    generatingSlideNumber={
+                                        streaming.isGenerating
+                                            ? streaming.currentSlide
+                                            : undefined
+                                    }
+                                    totalSlidesToGenerate={
+                                        streaming.isGenerating
+                                            ? streaming.totalSlides
+                                            : undefined
+                                    }
+                                    onSlideSelect={setSelectedSlideIndex}
+                                    onSlideReorder={handleSlideReorder}
+                                    onSlideDuplicate={handleDuplicateSlide}
+                                    onSlideDelete={handleDeleteSlide}
+                                    onAddSlide={() => {
+                                        toast({
+                                            title: "Coming Soon",
+                                            description: "Add slide functionality will be available soon.",
+                                        });
+                                    }}
+                                />
                             </div>
 
-                            {/* Center Panel - WYSIWYG Preview (~55%) */}
-                            <div className="flex w-[55%] flex-col overflow-hidden">
-                                {/* Navigation */}
-                                <div className="flex items-center justify-between border-b border-border bg-card px-4 py-2">
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        disabled={selectedSlideIndex === 0}
-                                        onClick={() =>
-                                            setSelectedSlideIndex((prev) =>
-                                                Math.max(0, prev - 1)
-                                            )
-                                        }
-                                    >
-                                        <ChevronLeft className="h-4 w-4" />
-                                        Previous
-                                    </Button>
-                                    <span className="text-sm text-muted-foreground">
-                                        Slide {selectedSlideIndex + 1} of{" "}
-                                        {selectedPresentation.slides.length}
-                                    </span>
-                                    <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        disabled={
-                                            selectedSlideIndex ===
-                                            selectedPresentation.slides.length - 1
-                                        }
-                                        onClick={() =>
-                                            setSelectedSlideIndex((prev) =>
-                                                Math.min(
-                                                    selectedPresentation.slides.length -
-                                                        1,
-                                                    prev + 1
-                                                )
-                                            )
-                                        }
-                                    >
-                                        Next
-                                        <ChevronRight className="h-4 w-4" />
-                                    </Button>
-                                </div>
+                            {/* Center Panel - Premium Slide Preview (~55%) */}
+                            <SlidePreview
+                                slide={selectedPresentation.slides[selectedSlideIndex]}
+                                slideIndex={selectedSlideIndex}
+                                totalSlides={selectedPresentation.slides.length}
+                                brandDesign={brandDesign as BrandDesignType | null}
+                                onPrevious={() =>
+                                    setSelectedSlideIndex((prev) =>
+                                        Math.max(0, prev - 1)
+                                    )
+                                }
+                                onNext={() =>
+                                    setSelectedSlideIndex((prev) =>
+                                        Math.min(
+                                            selectedPresentation.slides.length - 1,
+                                            prev + 1
+                                        )
+                                    )
+                                }
+                                className="w-[55%]"
+                            />
 
-                                {/* Slide Preview */}
-                                <div className="flex flex-1 items-center justify-center overflow-auto bg-muted/50 p-8">
-                                    <div
-                                        className="aspect-[16/9] w-full max-w-4xl rounded-lg border shadow-xl"
-                                        style={{
-                                            backgroundColor:
-                                                brandDesign?.background_color ||
-                                                "#ffffff",
-                                        }}
-                                    >
-                                        <div className="flex h-full flex-col p-8">
-                                            {/* Slide Title */}
-                                            <h2
-                                                className="mb-4 text-3xl font-bold"
-                                                style={{
-                                                    color:
-                                                        brandDesign?.primary_color ||
-                                                        "#1f2937",
-                                                }}
-                                            >
-                                                {
-                                                    selectedPresentation.slides[
-                                                        selectedSlideIndex
-                                                    ]?.title
-                                                }
-                                            </h2>
-
-                                            {/* Slide Content */}
-                                            <div className="flex-1">
-                                                <ul
-                                                    className="space-y-3"
-                                                    style={{
-                                                        color:
-                                                            brandDesign?.text_color ||
-                                                            "#374151",
-                                                    }}
-                                                >
-                                                    {selectedPresentation.slides[
-                                                        selectedSlideIndex
-                                                    ]?.content.map((point, idx) => (
-                                                        <li
-                                                            key={idx}
-                                                            className="flex items-start gap-2 text-lg"
-                                                        >
-                                                            <span
-                                                                className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full"
-                                                                style={{
-                                                                    backgroundColor:
-                                                                        brandDesign?.accent_color ||
-                                                                        "#3b82f6",
-                                                                }}
-                                                            />
-                                                            {point}
-                                                        </li>
-                                                    ))}
-                                                </ul>
-                                            </div>
-
-                                            {/* Slide Footer */}
-                                            <div
-                                                className="flex items-center justify-between text-sm"
-                                                style={{
-                                                    color:
-                                                        brandDesign?.secondary_color ||
-                                                        "#6b7280",
-                                                }}
-                                            >
-                                                <span>
-                                                    {brandDesign?.brand_name || ""}
-                                                </span>
-                                                <span>
-                                                    {selectedSlideIndex + 1} /{" "}
-                                                    {selectedPresentation.slides.length}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Right Panel - AI Editor (~25%) */}
+                            {/* Right Panel - AI Editor with Quick Actions & Voice Input (~25%) */}
                             <div className="w-[25%] overflow-y-auto border-l border-border bg-card p-4">
-                                <div className="space-y-6">
-                                    {/* Quick Actions */}
-                                    <div>
-                                        <h3 className="mb-3 font-semibold">
-                                            Quick Actions
-                                        </h3>
-                                        <div className="grid grid-cols-2 gap-2">
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="justify-start"
-                                                onClick={() =>
-                                                    handleQuickAction(
-                                                        "regenerate_image"
-                                                    )
-                                                }
-                                                disabled={isEditingSlide}
-                                            >
-                                                <RefreshCw className="mr-1 h-3 w-3" />
-                                                New Image
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="justify-start"
-                                                onClick={() =>
-                                                    handleQuickAction("make_concise")
-                                                }
-                                                disabled={isEditingSlide}
-                                            >
-                                                <Type className="mr-1 h-3 w-3" />
-                                                Make Concise
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="justify-start"
-                                                onClick={() =>
-                                                    handleQuickAction("better_headline")
-                                                }
-                                                disabled={isEditingSlide}
-                                            >
-                                                <Wand2 className="mr-1 h-3 w-3" />
-                                                Better Title
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                size="sm"
-                                                className="justify-start"
-                                                onClick={() =>
-                                                    handleQuickAction("change_layout")
-                                                }
-                                                disabled={isEditingSlide}
-                                            >
-                                                <LayoutGrid className="mr-1 h-3 w-3" />
-                                                Layout
-                                            </Button>
-                                        </div>
-                                    </div>
-
-                                    {/* AI Edit Input */}
-                                    <div>
-                                        <h3 className="mb-3 font-semibold">
-                                            Edit with AI
-                                        </h3>
-                                        <div className="space-y-3">
-                                            <textarea
-                                                value={editPrompt}
-                                                onChange={(e) =>
-                                                    setEditPrompt(e.target.value)
-                                                }
-                                                placeholder="Describe how you want to change this slide..."
-                                                className="h-24 w-full resize-none rounded-lg border border-border bg-background p-3 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                                            />
-                                            <div className="flex gap-2">
-                                                <Button
-                                                    size="sm"
-                                                    className="flex-1"
-                                                    disabled={
-                                                        !editPrompt.trim() ||
-                                                        isEditingSlide
-                                                    }
-                                                >
-                                                    <MessageSquare className="mr-1 h-4 w-4" />
-                                                    Apply
-                                                </Button>
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    disabled={isEditingSlide}
-                                                >
-                                                    <Mic className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Speaker Notes */}
-                                    <div>
-                                        <h3 className="mb-3 font-semibold">
-                                            Speaker Notes
-                                        </h3>
-                                        <div className="rounded-lg border border-border bg-muted/30 p-3">
-                                            <p className="text-sm text-muted-foreground">
-                                                {selectedPresentation.slides[
-                                                    selectedSlideIndex
-                                                ]?.speakerNotes ||
-                                                    "No speaker notes for this slide."}
-                                            </p>
-                                        </div>
-                                        <Button
-                                            variant="link"
-                                            size="sm"
-                                            className="mt-2 h-auto p-0 text-xs"
-                                        >
-                                            Regenerate Notes
-                                        </Button>
-                                    </div>
-
-                                    {/* Layout Type */}
-                                    <div>
-                                        <h3 className="mb-3 font-semibold">
-                                            Layout Type
-                                        </h3>
-                                        <div className="rounded-lg border border-border bg-muted/30 p-3">
-                                            <p className="text-sm capitalize">
-                                                {selectedPresentation.slides[
-                                                    selectedSlideIndex
-                                                ]?.layoutType.replace("_", " ") ||
-                                                    "Default"}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
+                                <SlideEditorPanel
+                                    slide={selectedPresentation.slides[selectedSlideIndex]}
+                                    presentationId={selectedPresentation.id}
+                                    onSlideUpdate={handleSlideUpdate}
+                                />
                             </div>
                         </div>
                     </div>

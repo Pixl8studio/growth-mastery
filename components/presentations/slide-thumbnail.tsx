@@ -87,6 +87,11 @@ export const SlideThumbnail = memo(function SlideThumbnail({
     dragHandleProps,
     className,
 }: SlideThumbnailProps) {
+    // Guard against undefined slide - can happen during streaming generation (Issue #331)
+    if (!slide) {
+        return <SlideThumbnailSkeleton className={className} />;
+    }
+
     const layoutStyle = LAYOUT_STYLES[slide.layoutType] || LAYOUT_STYLES.bullets;
 
     // Get brand colors with fallbacks

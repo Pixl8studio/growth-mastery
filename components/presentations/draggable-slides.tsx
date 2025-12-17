@@ -124,6 +124,12 @@ export function DraggableSlides({
 }: DraggableSlidesProps) {
     const [activeId, setActiveId] = useState<number | null>(null);
 
+    // Filter out any undefined or invalid slides to prevent crashes during streaming (Issue #331)
+    const validSlides = slides.filter(
+        (slide): slide is SlideData =>
+            slide != null && typeof slide.slideNumber === "number"
+    );
+
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
@@ -144,11 +150,15 @@ export function DraggableSlides({
             const { active, over } = event;
 
             if (over && active.id !== over.id) {
-                const oldIndex = slides.findIndex((s) => s.slideNumber === active.id);
-                const newIndex = slides.findIndex((s) => s.slideNumber === over.id);
+                const oldIndex = validSlides.findIndex(
+                    (s) => s.slideNumber === active.id
+                );
+                const newIndex = validSlides.findIndex(
+                    (s) => s.slideNumber === over.id
+                );
 
                 if (oldIndex !== -1 && newIndex !== -1) {
-                    const reorderedSlides = arrayMove(slides, oldIndex, newIndex);
+                    const reorderedSlides = arrayMove(validSlides, oldIndex, newIndex);
                     const newOrder = reorderedSlides.map((s) => s.slideNumber);
                     onSlideReorder(newOrder);
                 }
@@ -156,7 +166,7 @@ export function DraggableSlides({
 
             setActiveId(null);
         },
-        [slides, onSlideReorder]
+        [validSlides, onSlideReorder]
     );
 
     const handleDragCancel = useCallback(() => {
@@ -164,16 +174,16 @@ export function DraggableSlides({
     }, []);
 
     const activeSlide = activeId
-        ? slides.find((s) => s.slideNumber === activeId)
+        ? validSlides.find((s) => s.slideNumber === activeId)
         : null;
     const activeIndex = activeId
-        ? slides.findIndex((s) => s.slideNumber === activeId)
+        ? validSlides.findIndex((s) => s.slideNumber === activeId)
         : -1;
 
     // Calculate remaining slots to show during generation
     const remainingGeneratingSlots =
         generatingSlideNumber && totalSlidesToGenerate
-            ? Math.max(0, totalSlidesToGenerate - slides.length)
+            ? Math.max(0, totalSlidesToGenerate - validSlides.length)
             : 0;
 
     return (
@@ -186,10 +196,10 @@ export function DraggableSlides({
                 onDragCancel={handleDragCancel}
             >
                 <SortableContext
-                    items={slides.map((s) => s.slideNumber)}
+                    items={validSlides.map((s) => s.slideNumber)}
                     strategy={verticalListSortingStrategy}
                 >
-                    {slides.map((slide, index) => (
+                    {validSlides.map((slide, index) => (
                         <SortableSlide
                             key={slide.slideNumber}
                             slide={slide}
@@ -223,11 +233,12 @@ export function DraggableSlides({
             {remainingGeneratingSlots > 0 && (
                 <>
                     {/* Currently generating slide */}
-                    {generatingSlideNumber && generatingSlideNumber > slides.length && (
-                        <GeneratingSlotPlaceholder
-                            slideNumber={generatingSlideNumber}
-                        />
-                    )}
+                    {generatingSlideNumber &&
+                        generatingSlideNumber > validSlides.length && (
+                            <GeneratingSlotPlaceholder
+                                slideNumber={generatingSlideNumber}
+                            />
+                        )}
 
                     {/* Pending slots */}
                     {Array.from({
@@ -240,7 +251,7 @@ export function DraggableSlides({
                             <div className="aspect-[16/9] rounded-lg bg-muted/30" />
                             <div className="mt-1.5">
                                 <span className="text-[10px] text-muted-foreground/50">
-                                    {slides.length + idx + 2}
+                                    {validSlides.length + idx + 2}
                                 </span>
                             </div>
                         </div>

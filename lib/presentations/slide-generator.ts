@@ -372,16 +372,34 @@ Business Context:
         : "";
 
     const styleGuidance = `
-Style Guidelines:
+Style Guidelines (Per PRESENTATION_DESIGN_SYSTEM.md):
 - Text Density: ${customization.textDensity} (${bulletCount.min}-${bulletCount.max} bullet points per slide)
 - Visual Style: ${customization.visualStyle}
 - Emphasis: ${customization.emphasisPreference === "text" ? "Focus on clear, impactful text" : customization.emphasisPreference === "visuals" ? "Keep text minimal, suggest strong visuals" : "Balance text and visual elements"}
+
+DESIGN PRINCIPLES - Follow these strictly:
+1. Each slide communicates ONE clear idea (readable in 3 seconds)
+2. Maximum 5 bullet points per list, maximum 12 words per bullet
+3. Create emotional impact, not just convey information
+4. Titles should be concise and impactful (6-10 words max)
+5. Speaker notes provide the "why" and context, not just repeat content
+`;
+
+    const imageStyleGuidance = `
+Image Style: ${customization.imageStyle}
+Create image prompts that are:
+- Specific about style (${customization.imageStyle === "photography" ? "professional photography, high quality" : customization.imageStyle === "illustration" ? "modern digital illustration, clean lines" : customization.imageStyle === "abstract" ? "abstract geometric shapes, modern design" : "clean iconography, flat design"})
+- Aligned with brand colors if provided
+- Conceptual/metaphorical rather than literal
+- Avoiding cliches (no handshakes, people pointing at screens, generic business imagery)
+- Suitable for a 16:9 slide format
 `;
 
     const prompt = `Generate compelling slide content for a presentation slide.
 
 ${businessContext}
 ${styleGuidance}
+${imageStyleGuidance}
 
 Slide Information:
 - Title: ${deckSlide.title}
@@ -389,17 +407,23 @@ Slide Information:
 - Section: ${deckSlide.section}
 
 Generate the following for this slide:
-1. A refined title (keep it concise and impactful)
-2. ${bulletCount.min}-${bulletCount.max} bullet points that support the slide's purpose
-3. Speaker notes (2-3 sentences of what the presenter should say)
-4. An image prompt describing a relevant visual (for AI image generation)
+1. A refined title (concise, impactful, 6-10 words max)
+2. ${bulletCount.min}-${bulletCount.max} bullet points (max 12 words each, action-oriented)
+3. Speaker notes (2-3 sentences of what the presenter should say, explaining the "why")
+4. An image prompt describing a relevant visual for AI image generation
+
+ANTI-PATTERNS TO AVOID:
+- Generic corporate jargon
+- Starting every bullet with the same word
+- Vague or abstract statements without specifics
+- Overly long sentences
 
 Respond in JSON format:
 {
   "title": "Refined slide title",
   "content": ["Bullet point 1", "Bullet point 2", ...],
   "speakerNotes": "Speaker notes text",
-  "imagePrompt": "Description for AI image generation"
+  "imagePrompt": "Detailed description for AI image generation"
 }`;
 
     const anthropic = getAnthropicClient();
@@ -411,7 +435,22 @@ Respond in JSON format:
                     model: AI_CONFIG.models.default,
                     max_tokens: 1000,
                     temperature: 0.7,
-                    system: "You are an expert presentation designer creating content for a professional business presentation. Generate clear, compelling content that engages the audience. Always respond with valid JSON only, no markdown code blocks.",
+                    system: `You are an expert presentation designer following the PRESENTATION_DESIGN_SYSTEM.md guidelines.
+
+Your core mandate:
+1. Create VISUALLY DISTINCTIVE content - not generic "AI-generated" looking
+2. Each slide should be readable in 3 seconds with ONE clear idea
+3. Create emotional impact, not just convey information
+4. Use restraint - if everything is emphasized, nothing is emphasized
+5. Generate image prompts that are conceptual, avoiding stock photo cliches
+
+NEVER use:
+- Generic blue gradient descriptions
+- Corporate jargon like "synergy", "leverage", "paradigm shift"
+- Weak verbs like "utilize" (use "use"), "implement" (use "build/create")
+- Bullet points starting with the same word
+
+Always respond with valid JSON only, no markdown code blocks.`,
                     messages: [{ role: "user", content: prompt }],
                 });
             },

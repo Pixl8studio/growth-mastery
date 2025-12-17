@@ -63,10 +63,23 @@ interface Message {
     content: string;
 }
 
-// Input message type - flexible to accept OpenAI-style messages
+// Content part type for structured message content (e.g., OpenAI's ChatCompletionContentPartText)
+interface ContentPart {
+    type?: string;
+    text?: string;
+}
+
+// Input message type - supports both simple string content and structured content arrays
+type MessageContent =
+    | string
+    | null
+    | undefined
+    | ContentPart[]
+    | Array<string | ContentPart>;
+
 type InputMessage = {
     role: string;
-    content?: string | null | unknown;
+    content?: MessageContent;
 };
 
 /**

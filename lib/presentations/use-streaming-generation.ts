@@ -69,8 +69,16 @@ export function useStreamingGeneration() {
 
     const eventSourceRef = useRef<EventSource | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
+    const isClosingRef = useRef<boolean>(false);
 
-    const stopGeneration = useCallback(() => {
+    // Consolidated cleanup function to prevent double-close and memory leaks
+    const closeConnection = useCallback(() => {
+        // Guard against multiple simultaneous close attempts
+        if (isClosingRef.current) {
+            return;
+        }
+        isClosingRef.current = true;
+
         if (eventSourceRef.current) {
             eventSourceRef.current.close();
             eventSourceRef.current = null;
@@ -79,8 +87,15 @@ export function useStreamingGeneration() {
             abortControllerRef.current.abort();
             abortControllerRef.current = null;
         }
-        setState((prev) => ({ ...prev, isGenerating: false }));
+
+        // Reset the closing flag after cleanup
+        isClosingRef.current = false;
     }, []);
+
+    const stopGeneration = useCallback(() => {
+        closeConnection();
+        setState((prev) => ({ ...prev, isGenerating: false }));
+    }, [closeConnection]);
 
     const startGeneration = useCallback(
         async (options: StreamingGenerationOptions) => {
@@ -172,8 +187,7 @@ export function useStreamingGeneration() {
                         onComplete(presentationId, slides);
                     }
 
-                    eventSource.close();
-                    eventSourceRef.current = null;
+                    closeConnection();
 
                     logger.info(
                         { presentationId, slideCount: slides.length },
@@ -206,13 +220,19 @@ export function useStreamingGeneration() {
                         onError(errorMessage, isTimeout);
                     }
 
-                    eventSource.close();
-                    eventSourceRef.current = null;
+                    closeConnection();
 
                     logger.error({ error: errorMessage, isTimeout }, "Presentation generation failed");
                 });
 
+                // Single consolidated error handler for EventSource errors
+                // Using onerror only (not addEventListener) to prevent double handling
                 eventSource.onerror = (event) => {
+                    // Guard against handling errors after intentional close
+                    if (isClosingRef.current || !eventSourceRef.current) {
+                        return;
+                    }
+
                     // Determine error type for better user feedback
                     let errorMsg: string;
                     let isNetworkError = false;
@@ -227,10 +247,8 @@ export function useStreamingGeneration() {
                         isNetworkError = true;
                     } else if (eventSource.readyState === EventSource.CONNECTING) {
                         // Still trying to reconnect
-                        errorMsg = "Connection interrupted, attempting to reconnect...";
-                        // Don't close yet, let it try to reconnect
                         logger.warn({}, "SSE connection interrupted, attempting reconnect");
-                        return;
+                        return; // Don't close yet, let it try to reconnect
                     } else {
                         // Generic server error
                         errorMsg = "Server error during generation";
@@ -251,11 +269,10 @@ export function useStreamingGeneration() {
                         return prev;
                     });
 
-                    eventSource.close();
-                    eventSourceRef.current = null;
+                    closeConnection();
 
                     logger.error(
-                        { error: errorMsg, isNetworkError, readyState: eventSource.readyState },
+                        { error: errorMsg, isNetworkError },
                         "SSE connection error"
                     );
                 };
@@ -275,7 +292,7 @@ export function useStreamingGeneration() {
                 logger.error({ error }, "Failed to initialize SSE connection");
             }
         },
-        []
+        [closeConnection]
     );
 
     return {

@@ -20,6 +20,7 @@ import {
 } from "@/lib/errors";
 import { regenerateSlide } from "@/lib/presentations/slide-generator";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
+import { parseSlidesFromDB, type Slide } from "@/lib/presentations/schemas";
 
 // Quick action types
 const QuickActionSchema = z.enum([
@@ -32,10 +33,13 @@ const QuickActionSchema = z.enum([
     "simplify_language",
 ]);
 
+// Maximum length for custom prompts to prevent abuse
+const MAX_CUSTOM_PROMPT_LENGTH = 1000;
+
 // Request schema
 const SlideUpdateSchema = z.object({
     action: QuickActionSchema.optional(),
-    customPrompt: z.string().optional(),
+    customPrompt: z.string().max(MAX_CUSTOM_PROMPT_LENGTH).optional(),
     layoutType: z
         .enum([
             "title",
@@ -144,7 +148,8 @@ export async function PATCH(
             throw new ForbiddenError("You do not have access to this presentation");
         }
 
-        const slides = Array.isArray(presentation.slides) ? presentation.slides : [];
+        // Parse and validate slides from JSONB with type safety
+        const slides = parseSlidesFromDB(presentation.slides);
         const slideIndex = slideNumber - 1;
 
         if (slideIndex < 0 || slideIndex >= slides.length) {
@@ -152,7 +157,10 @@ export async function PATCH(
         }
 
         const currentSlide = slides[slideIndex];
-        let updatedSlide = { ...currentSlide };
+        if (!currentSlide) {
+            throw new NotFoundError("Slide");
+        }
+        let updatedSlide: Slide = { ...currentSlide };
 
         // Handle direct updates (manual editing)
         if (title !== undefined || content !== undefined || speakerNotes !== undefined) {
@@ -177,7 +185,15 @@ export async function PATCH(
         }
         // Handle quick action or custom AI prompt
         else if (action || customPrompt) {
-            const instruction = customPrompt || ACTION_PROMPTS[action!];
+            // Build instruction with safety framing for custom prompts
+            // This prevents prompt injection by wrapping user input
+            let instruction: string;
+            if (customPrompt) {
+                // Frame user prompt to maintain context and prevent injection
+                instruction = `Apply the following user-requested modification to the slide while maintaining appropriate professional business presentation content. User request: "${customPrompt}"`;
+            } else {
+                instruction = ACTION_PROMPTS[action!];
+            }
 
             // Fetch business profile and brand design for context
             const [businessProfileResult, brandDesignResult] = await Promise.all([

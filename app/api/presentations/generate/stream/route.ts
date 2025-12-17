@@ -282,12 +282,22 @@ export async function GET(request: NextRequest) {
                             );
 
                             // Update database progress (fire-and-forget to avoid slowing generation)
+                            // Uses GREATEST() to prevent backward progress updates from race conditions
                             void supabase
-                                .from("presentations")
-                                .update({ generation_progress: progress })
-                                .eq("id", presentation.id)
+                                .rpc("update_presentation_progress", {
+                                    p_presentation_id: presentation.id,
+                                    p_progress: progress,
+                                })
                                 .then(({ error }) => {
                                     if (error) {
+                                        // Fall back to regular update if RPC doesn't exist
+                                        if (error.code === "42883") {
+                                            // Function not found
+                                            return supabase
+                                                .from("presentations")
+                                                .update({ generation_progress: progress })
+                                                .eq("id", presentation.id);
+                                        }
                                         logger.warn(
                                             { error, presentationId: presentation.id, progress },
                                             "Failed to update generation progress"

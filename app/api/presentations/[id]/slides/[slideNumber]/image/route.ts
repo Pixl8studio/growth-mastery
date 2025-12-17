@@ -19,6 +19,7 @@ import {
     AIGenerationError,
 } from "@/lib/errors";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
+import { parseSlidesFromDB } from "@/lib/presentations/schemas";
 
 // Lazy OpenAI client initialization
 let openaiClient: OpenAI | null = null;
@@ -88,7 +89,8 @@ export async function POST(
             throw new ForbiddenError("You do not have access to this presentation");
         }
 
-        const slides = Array.isArray(presentation.slides) ? presentation.slides : [];
+        // Parse and validate slides from JSONB with type safety
+        const slides = parseSlidesFromDB(presentation.slides);
         const slideIndex = slideNumber - 1;
 
         if (slideIndex < 0 || slideIndex >= slides.length) {
@@ -96,6 +98,9 @@ export async function POST(
         }
 
         const currentSlide = slides[slideIndex];
+        if (!currentSlide) {
+            throw new NotFoundError("Slide");
+        }
 
         if (!currentSlide.imagePrompt) {
             throw new ValidationError(
@@ -141,19 +146,72 @@ export async function POST(
                 style: "natural",
             });
 
-            const imageUrl = response.data?.[0]?.url;
+            const tempImageUrl = response.data?.[0]?.url;
 
-            if (!imageUrl) {
+            if (!tempImageUrl) {
                 throw new AIGenerationError("No image URL returned from OpenAI", {
                     retryable: true,
                     errorCode: "NO_IMAGE_URL",
                 });
             }
 
-            // Update slide with image URL
+            // Download image and upload to permanent storage
+            // OpenAI temporary URLs expire after 1 hour
+            let permanentImageUrl: string;
+            try {
+                const imageResponse = await fetch(tempImageUrl);
+                if (!imageResponse.ok) {
+                    throw new Error(`Failed to download image: ${imageResponse.status}`);
+                }
+
+                const imageBlob = await imageResponse.blob();
+                const imageBuffer = await imageBlob.arrayBuffer();
+
+                // Generate storage path for the image
+                const timestamp = Date.now();
+                const storagePath = `presentations/${presentationId}/slide-${slideNumber}-${timestamp}.png`;
+
+                // Upload to Supabase Storage
+                const { error: uploadError } = await supabase.storage
+                    .from("presentation-media")
+                    .upload(storagePath, imageBuffer, {
+                        contentType: "image/png",
+                        cacheControl: "31536000", // 1 year cache
+                        upsert: true,
+                    });
+
+                if (uploadError) {
+                    logger.error(
+                        { error: uploadError, storagePath, presentationId },
+                        "Failed to upload image to storage, falling back to temporary URL"
+                    );
+                    // Fall back to temporary URL if storage fails
+                    permanentImageUrl = tempImageUrl;
+                } else {
+                    // Get public URL
+                    const { data: urlData } = supabase.storage
+                        .from("presentation-media")
+                        .getPublicUrl(storagePath);
+                    permanentImageUrl = urlData.publicUrl;
+
+                    logger.info(
+                        { storagePath, presentationId, slideNumber },
+                        "Image uploaded to permanent storage"
+                    );
+                }
+            } catch (downloadError) {
+                logger.error(
+                    { error: downloadError, presentationId, slideNumber },
+                    "Failed to download and store image, using temporary URL"
+                );
+                // Fall back to temporary URL if download fails
+                permanentImageUrl = tempImageUrl;
+            }
+
+            // Update slide with permanent image URL
             const updatedSlide = {
                 ...currentSlide,
-                imageUrl,
+                imageUrl: permanentImageUrl,
                 imageGeneratedAt: new Date().toISOString(),
             };
 
@@ -186,7 +244,7 @@ export async function POST(
 
             return NextResponse.json({
                 success: true,
-                imageUrl,
+                imageUrl: permanentImageUrl,
                 slideNumber,
                 generationTime: totalTime,
             });

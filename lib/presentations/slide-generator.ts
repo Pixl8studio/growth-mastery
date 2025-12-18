@@ -406,8 +406,329 @@ function getBulletCount(textDensity: "minimal" | "balanced" | "detailed"): {
     }
 }
 
+// ============================================================================
+// Premium Design System - Signature Moves & Visual Identity
+// ============================================================================
+
+/**
+ * Signature moves are recurring visual elements that create cohesive identity.
+ * Auto-selected based on visual style preference.
+ */
+type SignatureMove =
+    | "gradient_accent_bar"
+    | "colored_left_border"
+    | "circular_elements"
+    | "diagonal_sections"
+    | "corner_accents"
+    | "large_numbers"
+    | "consistent_icons"
+    | "color_blocking"
+    | "serif_sans_pairing"
+    | "dramatic_shadows";
+
+const SIGNATURE_MOVE_BY_STYLE: Record<
+    PresentationCustomization["visualStyle"],
+    SignatureMove
+> = {
+    professional: "colored_left_border",
+    creative: "diagonal_sections",
+    minimal: "large_numbers",
+    bold: "color_blocking",
+};
+
+const SIGNATURE_MOVE_DESCRIPTIONS: Record<SignatureMove, string> = {
+    gradient_accent_bar:
+        "A subtle gradient bar at the top or bottom of each slide using brand colors",
+    colored_left_border:
+        "A bold colored vertical bar on the left side of content cards/sections",
+    circular_elements:
+        "Rounded corners and circular decorative elements throughout",
+    diagonal_sections:
+        "Angled section dividers and diagonal cuts for dynamic energy",
+    corner_accents:
+        "Decorative corner elements that frame content consistently",
+    large_numbers:
+        "Oversized, stylized numbers for sequences and statistics",
+    consistent_icons:
+        "A unified icon style (outlined or filled) used throughout",
+    color_blocking:
+        "Bold blocks of solid color to create visual sections",
+    serif_sans_pairing:
+        "Elegant serif fonts for headlines paired with clean sans-serif body text",
+    dramatic_shadows:
+        "Deep, consistent drop shadows on cards and elevated elements",
+};
+
+function getSignatureMove(
+    visualStyle: PresentationCustomization["visualStyle"]
+): { move: SignatureMove; description: string } {
+    const move = SIGNATURE_MOVE_BY_STYLE[visualStyle];
+    return { move, description: SIGNATURE_MOVE_DESCRIPTIONS[move] };
+}
+
+// ============================================================================
+// Layout Variation Enforcement
+// ============================================================================
+
+const LAYOUT_TYPES: SlideData["layoutType"][] = [
+    "title",
+    "section",
+    "bullets",
+    "quote",
+    "statistics",
+    "comparison",
+    "process",
+    "content_left",
+    "content_right",
+    "cta",
+];
+
+/**
+ * Ensures no two consecutive slides have the same layout type.
+ * Returns an alternative layout if needed.
+ */
+function enforceLayoutVariation(
+    proposedLayout: SlideData["layoutType"],
+    previousLayout: SlideData["layoutType"] | undefined,
+    slideIndex: number,
+    totalSlides: number
+): SlideData["layoutType"] {
+    // First slide must be title, last slide should be CTA
+    if (slideIndex === 0) return "title";
+    if (slideIndex === totalSlides - 1) return "cta";
+
+    // If different from previous, keep it
+    if (proposedLayout !== previousLayout) return proposedLayout;
+
+    // Need to pick an alternative - choose based on content suitability
+    const alternatives = LAYOUT_TYPES.filter(
+        (l) => l !== proposedLayout && l !== "title" && l !== "cta"
+    );
+
+    // Rotate through alternatives based on slide position
+    return alternatives[slideIndex % alternatives.length];
+}
+
+// ============================================================================
+// Premium Design System Prompt Builder
+// ============================================================================
+
+function buildPremiumSystemPrompt(
+    customization: PresentationCustomization,
+    signatureMove: { move: SignatureMove; description: string }
+): string {
+    return `You are an ELITE presentation designer creating slides that rival top design agencies.
+
+## YOUR CORE MANDATE - PREMIUM QUALITY ONLY
+
+You create slides that are:
+1. VISUALLY DISTINCTIVE - Never generic "AI-generated" looking
+2. EMOTIONALLY IMPACTFUL - Each slide creates a feeling, not just conveys info
+3. INSTANTLY READABLE - 3-second rule: one clear idea per slide
+4. PROFESSIONALLY POLISHED - Like a $10,000 custom presentation
+
+## DESIGN PHILOSOPHY (Non-Negotiable)
+
+### Commit to Bold Aesthetic Direction
+- Every presentation needs a DISTINCTIVE visual identity
+- One dominant color owns 60-70% of visual weight (60-30-10 rule)
+- Your signature move for this presentation: ${signatureMove.description}
+
+### Design for Moments, Not Pages
+- Each slide = ONE powerful idea
+- Clear focal point that draws the eye
+- Create anticipation for the next slide
+
+### Restraint Creates Impact
+- Maximum 3 font sizes per slide
+- Maximum 3 colors per slide
+- Maximum 5 bullet points (fewer is better)
+- Maximum 2 sentences per paragraph
+- If everything is emphasized, nothing is emphasized
+
+### Visual Hierarchy is Non-Negotiable
+- PRIMARY: What the eye sees first (large, bold, contrasting)
+- SECONDARY: Supporting information (medium, readable)
+- TERTIARY: Details, sources (small, muted)
+
+## ANTI-PATTERNS - ABSOLUTELY FORBIDDEN
+
+### Content Anti-Patterns
+- Generic corporate jargon ("synergy", "leverage", "paradigm shift", "utilize")
+- Starting consecutive bullets with the same word
+- Vague statements without specifics ("improve results", "drive growth")
+- Walls of text or paragraphs longer than 2 sentences
+- Weak verbs: use "build" not "implement", use "use" not "utilize"
+
+### Visual Description Anti-Patterns (for imagePrompt)
+- Generic blue gradients
+- Purple-to-pink gradients (overused)
+- Rainbow gradients
+- Stock photo clichés (handshakes, people pointing at screens, arrows hitting targets)
+- Generic "business people in meeting" imagery
+
+### Layout Anti-Patterns
+- Centering ALL elements on every slide
+- Using the same layout for 2+ consecutive slides
+- Content touching slide edges (need 40px+ padding)
+
+## STYLE PARAMETERS FOR THIS PRESENTATION
+
+- Visual Style: ${customization.visualStyle.toUpperCase()}
+- Text Density: ${customization.textDensity}
+- Emphasis: ${customization.emphasisPreference}
+- Image Style: ${customization.imageStyle}
+- Signature Move: ${signatureMove.move.replace(/_/g, " ")}
+
+## OUTPUT FORMAT
+
+Always respond with valid JSON only. No markdown code blocks, no explanations.
+Make every word count. Every bullet point should spark curiosity or drive action.`;
+}
+
+function buildPremiumUserPrompt(
+    deckSlide: DeckStructureSlide,
+    customization: PresentationCustomization,
+    bulletCount: { min: number; max: number },
+    businessContext: string,
+    previousSlides: SlideData[] | undefined,
+    signatureMove: { move: SignatureMove; description: string }
+): string {
+    const previousLayoutsInfo =
+        previousSlides && previousSlides.length > 0
+            ? `\nPREVIOUS SLIDE LAYOUTS (do NOT repeat consecutively):
+${previousSlides
+    .slice(-3)
+    .map((s) => `- Slide ${s.slideNumber}: ${s.layoutType}`)
+    .join("\n")}`
+            : "";
+
+    const layoutRecommendation = getLayoutRecommendation(
+        deckSlide,
+        previousSlides
+    );
+
+    return `Create PREMIUM slide content that would impress a Fortune 500 CEO.
+
+${businessContext}
+
+## SLIDE BRIEF
+- Slide Number: ${deckSlide.slideNumber}
+- Title Theme: ${deckSlide.title}
+- Purpose: ${deckSlide.description}
+- Section: ${deckSlide.section}
+${previousLayoutsInfo}
+
+## RECOMMENDED LAYOUT: ${layoutRecommendation}
+(Choose this or a suitable alternative - but NEVER repeat the previous slide's layout)
+
+## SIGNATURE MOVE TO INCORPORATE
+${signatureMove.description}
+When creating the imagePrompt, suggest how this signature element could appear visually.
+
+## DELIVERABLES
+
+Create JSON with these fields:
+
+1. **title**: Punchy, specific headline (6-10 words max)
+   - Use power words that create emotion
+   - Be specific, not vague
+   - Example: "3 Hidden Mistakes Costing You $10K Monthly" not "Common Business Mistakes"
+
+2. **content**: Array of ${bulletCount.min}-${bulletCount.max} bullet points
+   - Each bullet: max 12 words, starts with different word
+   - Use concrete numbers/examples when possible
+   - Action-oriented language
+   - Build momentum - each point should flow to the next
+
+3. **speakerNotes**: 2-3 sentences for the presenter
+   - Explain the "why" behind the content
+   - Include a transition hint to the next topic
+   - Conversational, not robotic
+
+4. **imagePrompt**: Detailed AI image generation prompt
+   - Style: ${customization.imageStyle}
+   - Include mood, lighting, color direction (aligned with brand)
+   - Be conceptual/metaphorical, not literal
+   - Mention the signature element: ${signatureMove.move.replace(/_/g, " ")}
+   - Avoid: handshakes, pointing at screens, generic office scenes
+
+5. **layoutType**: One of: title, section, bullets, quote, statistics, comparison, process, content_left, content_right, cta
+   - Must be different from previous slide
+   - Match the content type
+
+{
+  "title": "...",
+  "content": ["...", "..."],
+  "speakerNotes": "...",
+  "imagePrompt": "...",
+  "layoutType": "..."
+}`;
+}
+
+function getLayoutRecommendation(
+    slide: DeckStructureSlide,
+    previousSlides: SlideData[] | undefined
+): string {
+    const title = slide.title.toLowerCase();
+    const section = slide.section?.toLowerCase() || "";
+    const prevLayout = previousSlides?.[previousSlides.length - 1]?.layoutType;
+
+    // Determine best layout based on content
+    let recommended: SlideData["layoutType"] = "bullets";
+
+    if (slide.slideNumber === 1) {
+        recommended = "title";
+    } else if (
+        title.includes("quote") ||
+        title.includes("testimonial") ||
+        title.includes("said")
+    ) {
+        recommended = "quote";
+    } else if (
+        title.includes("step") ||
+        title.includes("process") ||
+        title.includes("how")
+    ) {
+        recommended = "process";
+    } else if (
+        title.includes("vs") ||
+        title.includes("before") ||
+        title.includes("after") ||
+        title.includes("comparison")
+    ) {
+        recommended = "comparison";
+    } else if (
+        title.includes("stat") ||
+        title.includes("number") ||
+        title.includes("data") ||
+        title.includes("%")
+    ) {
+        recommended = "statistics";
+    } else if (section === "hook" || section === "connect") {
+        recommended = slide.slideNumber % 2 === 0 ? "content_left" : "quote";
+    } else if (section === "offer" || section === "invite") {
+        recommended = slide.slideNumber % 2 === 0 ? "cta" : "content_right";
+    }
+
+    // Ensure we don't recommend the same as previous
+    if (recommended === prevLayout) {
+        const alternatives: SlideData["layoutType"][] = [
+            "content_left",
+            "content_right",
+            "bullets",
+            "statistics",
+        ];
+        recommended =
+            alternatives[slide.slideNumber % alternatives.length];
+    }
+
+    return recommended;
+}
+
 /**
  * Generate content for a single slide using AI
+ * Uses premium design system prompts for professional-quality output
  */
 export async function generateSlideContent(
     options: GenerateSlideOptions
@@ -416,76 +737,34 @@ export async function generateSlideContent(
         deckSlide,
         customization,
         businessProfile,
-        brandDesign: _brandDesign,
+        brandDesign,
+        previousSlides,
     } = options;
 
     const bulletCount = getBulletCount(customization.textDensity);
+    const signatureMove = getSignatureMove(customization.visualStyle);
 
+    // Build rich business context for personalization
     const businessContext = businessProfile
-        ? `
-Business Context:
+        ? `## BUSINESS CONTEXT (Use this to personalize content)
 - Business Name: ${businessProfile.business_name || "Not specified"}
 - Target Audience: ${businessProfile.target_audience || "Not specified"}
 - Main Offer: ${businessProfile.main_offer || "Not specified"}
 - Unique Mechanism: ${businessProfile.unique_mechanism || "Not specified"}
 - Brand Voice: ${businessProfile.brand_voice || "Professional and engaging"}
-`
+${brandDesign ? `\n## BRAND COLORS (Reference for imagePrompt)\n- Primary: ${brandDesign.primary_color || "Not set"}\n- Secondary: ${brandDesign.secondary_color || "Not set"}\n- Accent: ${brandDesign.accent_color || "Not set"}` : ""}`
         : "";
 
-    const styleGuidance = `
-Style Guidelines (Per PRESENTATION_DESIGN_SYSTEM.md):
-- Text Density: ${customization.textDensity} (${bulletCount.min}-${bulletCount.max} bullet points per slide)
-- Visual Style: ${customization.visualStyle}
-- Emphasis: ${customization.emphasisPreference === "text" ? "Focus on clear, impactful text" : customization.emphasisPreference === "visuals" ? "Keep text minimal, suggest strong visuals" : "Balance text and visual elements"}
-
-DESIGN PRINCIPLES - Follow these strictly:
-1. Each slide communicates ONE clear idea (readable in 3 seconds)
-2. Maximum 5 bullet points per list, maximum 12 words per bullet
-3. Create emotional impact, not just convey information
-4. Titles should be concise and impactful (6-10 words max)
-5. Speaker notes provide the "why" and context, not just repeat content
-`;
-
-    const imageStyleGuidance = `
-Image Style: ${customization.imageStyle}
-Create image prompts that are:
-- Specific about style (${customization.imageStyle === "photography" ? "professional photography, high quality" : customization.imageStyle === "illustration" ? "modern digital illustration, clean lines" : customization.imageStyle === "abstract" ? "abstract geometric shapes, modern design" : "clean iconography, flat design"})
-- Aligned with brand colors if provided
-- Conceptual/metaphorical rather than literal
-- Avoiding cliches (no handshakes, people pointing at screens, generic business imagery)
-- Suitable for a 16:9 slide format
-`;
-
-    const prompt = `Generate compelling slide content for a presentation slide.
-
-${businessContext}
-${styleGuidance}
-${imageStyleGuidance}
-
-Slide Information:
-- Title: ${deckSlide.title}
-- Description/Purpose: ${deckSlide.description}
-- Section: ${deckSlide.section}
-
-Generate the following for this slide:
-1. A refined title (concise, impactful, 6-10 words max)
-2. ${bulletCount.min}-${bulletCount.max} bullet points (max 12 words each, action-oriented)
-3. Speaker notes (2-3 sentences of what the presenter should say, explaining the "why")
-4. An image prompt describing a relevant visual for AI image generation
-
-ANTI-PATTERNS TO AVOID:
-- Generic corporate jargon
-- Starting every bullet with the same word
-- Vague or abstract statements without specifics
-- Overly long sentences
-
-Respond in JSON format:
-{
-  "title": "Refined slide title",
-  "content": ["Bullet point 1", "Bullet point 2", ...],
-  "speakerNotes": "Speaker notes text",
-  "imagePrompt": "Detailed description for AI image generation"
-}`;
+    // Build premium prompts using the design system
+    const systemPrompt = buildPremiumSystemPrompt(customization, signatureMove);
+    const userPrompt = buildPremiumUserPrompt(
+        deckSlide,
+        customization,
+        bulletCount,
+        businessContext,
+        previousSlides,
+        signatureMove
+    );
 
     const anthropic = getAnthropicClient();
 
@@ -494,25 +773,10 @@ Respond in JSON format:
             async () => {
                 return await anthropic.messages.create({
                     model: AI_CONFIG.models.default,
-                    max_tokens: 1000,
-                    temperature: 0.7,
-                    system: `You are an expert presentation designer following the PRESENTATION_DESIGN_SYSTEM.md guidelines.
-
-Your core mandate:
-1. Create VISUALLY DISTINCTIVE content - not generic "AI-generated" looking
-2. Each slide should be readable in 3 seconds with ONE clear idea
-3. Create emotional impact, not just convey information
-4. Use restraint - if everything is emphasized, nothing is emphasized
-5. Generate image prompts that are conceptual, avoiding stock photo cliches
-
-NEVER use:
-- Generic blue gradient descriptions
-- Corporate jargon like "synergy", "leverage", "paradigm shift"
-- Weak verbs like "utilize" (use "use"), "implement" (use "build/create")
-- Bullet points starting with the same word
-
-Always respond with valid JSON only, no markdown code blocks.`,
-                    messages: [{ role: "user", content: prompt }],
+                    max_tokens: 1500,
+                    temperature: 0.8, // Slightly higher for more creative output
+                    system: systemPrompt,
+                    messages: [{ role: "user", content: userPrompt }],
                 });
             },
             { operationName: `generateSlide_${deckSlide.slideNumber}` }
@@ -547,6 +811,7 @@ Always respond with valid JSON only, no markdown code blocks.`,
                 content?: string[];
                 speakerNotes?: string;
                 imagePrompt?: string;
+                layoutType?: SlideData["layoutType"];
             }>(content);
 
             if (recovered.success && recovered.data !== undefined) {
@@ -570,17 +835,44 @@ Always respond with valid JSON only, no markdown code blocks.`,
             }
         }
 
+        // Get the layout from AI or determine it, then enforce variation
+        const previousLayout = previousSlides?.[previousSlides.length - 1]?.layoutType;
+        const aiLayout =
+            generated.layoutType && LAYOUT_TYPES.includes(generated.layoutType)
+                ? generated.layoutType
+                : determineLayoutType(
+                      deckSlide,
+                      deckSlide.slideNumber - 1,
+                      previousSlides?.length || 60
+                  );
+
+        // Apply post-generation validation to ensure no consecutive identical layouts
+        const finalLayout = enforceLayoutVariation(
+            aiLayout,
+            previousLayout,
+            deckSlide.slideNumber - 1,
+            previousSlides?.length || 60
+        );
+
+        if (finalLayout !== aiLayout) {
+            logger.info(
+                {
+                    slideNumber: deckSlide.slideNumber,
+                    originalLayout: aiLayout,
+                    enforcedLayout: finalLayout,
+                    previousLayout,
+                },
+                "Layout adjusted to prevent consecutive duplicates"
+            );
+        }
+
         return {
             slideNumber: deckSlide.slideNumber,
             title: generated.title || deckSlide.title,
             content: generated.content || [deckSlide.description],
             speakerNotes: generated.speakerNotes || "",
             imagePrompt: generated.imagePrompt,
-            layoutType: determineLayoutType(
-                deckSlide,
-                deckSlide.slideNumber - 1,
-                options.previousSlides?.length || 10
-            ),
+            layoutType: finalLayout,
             section: deckSlide.section,
         };
     } catch (error) {

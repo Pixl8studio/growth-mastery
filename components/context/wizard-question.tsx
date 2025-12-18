@@ -9,6 +9,106 @@ import { cn } from "@/lib/utils";
 import { Bot, X, Plus, Trash2, RefreshCw, Loader2 } from "lucide-react";
 import type { Objection, Pricing } from "@/types/business-profile";
 
+/**
+ * Safely convert a value to a displayable string
+ * Handles objects and arrays that might slip through normalization
+ */
+function safeStringValue(value: unknown): string {
+    if (value === null || value === undefined) {
+        return "";
+    }
+
+    if (typeof value === "string") {
+        // Check for [Object] placeholders
+        if (value === "[Object]" || value === "[object Object]") {
+            return "";
+        }
+        return value;
+    }
+
+    if (typeof value === "number" || typeof value === "boolean") {
+        return String(value);
+    }
+
+    if (Array.isArray(value)) {
+        // Format array items as readable text
+        return value
+            .map((item, index) => {
+                if (typeof item === "string") {
+                    if (item === "[Object]" || item === "[object Object]") {
+                        return null;
+                    }
+                    return item;
+                }
+                if (typeof item === "object" && item !== null) {
+                    return formatObjectForDisplay(item as Record<string, unknown>, index + 1);
+                }
+                return String(item);
+            })
+            .filter((item): item is string => item !== null && item !== "")
+            .join("\n\n");
+    }
+
+    if (typeof value === "object") {
+        return formatObjectForDisplay(value as Record<string, unknown>);
+    }
+
+    return String(value);
+}
+
+/**
+ * Format an object for display in a text field
+ */
+function formatObjectForDisplay(
+    obj: Record<string, unknown>,
+    itemNumber?: number
+): string {
+    const titleFields = ["title", "name", "heading", "label"];
+    const contentFields = ["description", "content", "text", "quote", "response", "value", "details", "body"];
+
+    let title = "";
+    for (const field of titleFields) {
+        if (obj[field] && typeof obj[field] === "string") {
+            title = obj[field] as string;
+            break;
+        }
+    }
+
+    let content = "";
+    for (const field of contentFields) {
+        if (obj[field] && typeof obj[field] === "string") {
+            content = obj[field] as string;
+            break;
+        }
+    }
+
+    const parts: string[] = [];
+    if (title) {
+        parts.push(itemNumber ? `${itemNumber}. ${title}` : title);
+    }
+    if (content) {
+        parts.push(parts.length > 0 ? `- ${content}` : content);
+    }
+
+    // Fallback to key-value pairs if no structured content found
+    if (parts.length === 0) {
+        const fallbackParts: string[] = [];
+        for (const [key, val] of Object.entries(obj)) {
+            if (val !== null && val !== undefined && val !== "" && val !== "[Object]") {
+                if (typeof val === "string" || typeof val === "number") {
+                    fallbackParts.push(`${key}: ${val}`);
+                }
+            }
+        }
+        if (itemNumber && fallbackParts.length > 0) {
+            return `${itemNumber}. ${fallbackParts.join(" | ")}`;
+        }
+        return fallbackParts.join(" | ");
+    }
+
+    return parts.join(" ");
+}
+
 interface WizardQuestionProps {
     fieldKey: string;
     label: string;
@@ -147,7 +247,7 @@ export function WizardQuestion({
             {type === "textarea" ? (
                 <Textarea
                     id={fieldKey}
-                    value={(value as string) || ""}
+                    value={safeStringValue(value)}
                     onChange={(e) => handleChange(e.target.value)}
                     placeholder={`Enter ${label.toLowerCase()}...`}
                     className={cn("min-h-[100px] resize-y", {
@@ -158,7 +258,7 @@ export function WizardQuestion({
             ) : (
                 <Input
                     id={fieldKey}
-                    value={(value as string) || ""}
+                    value={safeStringValue(value)}
                     onChange={(e) => handleChange(e.target.value)}
                     placeholder={`Enter ${label.toLowerCase()}...`}
                     className={cn({
@@ -617,7 +717,7 @@ function BeliefShiftField({
                                 {subfield.label}
                             </Label>
                             <Textarea
-                                value={(subValue as string) || ""}
+                                value={safeStringValue(subValue)}
                                 onChange={(e) =>
                                     handleSubfieldChange(subfield.key, e.target.value)
                                 }

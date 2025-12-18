@@ -113,6 +113,12 @@ export function SlideEditorPanel({
 
     const executeQuickAction = useCallback(
         async (action: QuickAction) => {
+            // Guard against undefined slide (Issue #338)
+            if (!slide?.slideNumber) {
+                showFeedback("error", "No slide selected");
+                return;
+            }
+
             setIsProcessing(true);
             setActiveAction(action);
 
@@ -151,11 +157,17 @@ export function SlideEditorPanel({
                 setActiveAction(null);
             }
         },
-        [presentationId, slide.slideNumber, onSlideUpdate, showFeedback]
+        [presentationId, slide?.slideNumber, onSlideUpdate, showFeedback]
     );
 
     const executeCustomEdit = useCallback(async () => {
         if (!editPrompt.trim()) return;
+
+        // Guard against undefined slide (Issue #338)
+        if (!slide?.slideNumber) {
+            showFeedback("error", "No slide selected");
+            return;
+        }
 
         setIsProcessing(true);
         setActiveAction("custom");
@@ -192,11 +204,18 @@ export function SlideEditorPanel({
             setIsProcessing(false);
             setActiveAction(null);
         }
-    }, [presentationId, slide.slideNumber, editPrompt, onSlideUpdate, showFeedback]);
+    }, [presentationId, slide?.slideNumber, editPrompt, onSlideUpdate, showFeedback]);
 
     const changeLayout = useCallback(
         async (layoutType: LayoutType) => {
             setShowLayoutDropdown(false);
+
+            // Guard against undefined slide (Issue #338)
+            if (!slide?.slideNumber) {
+                showFeedback("error", "No slide selected");
+                return;
+            }
+
             setIsProcessing(true);
             setActiveAction("layout");
 
@@ -235,10 +254,16 @@ export function SlideEditorPanel({
                 setActiveAction(null);
             }
         },
-        [presentationId, slide.slideNumber, onSlideUpdate, showFeedback]
+        [presentationId, slide?.slideNumber, onSlideUpdate, showFeedback]
     );
 
     const generateImage = useCallback(async () => {
+        // Guard against undefined slide (Issue #338)
+        if (!slide?.slideNumber) {
+            showFeedback("error", "No slide selected");
+            return;
+        }
+
         setIsProcessing(true);
         setActiveAction("image");
 
@@ -275,7 +300,7 @@ export function SlideEditorPanel({
             setIsProcessing(false);
             setActiveAction(null);
         }
-    }, [presentationId, slide, onSlideUpdate, showFeedback]);
+    }, [presentationId, slide?.slideNumber, slide, onSlideUpdate, showFeedback]);
 
     // Voice-to-text functionality
     const toggleVoiceInput = useCallback(() => {

@@ -9,6 +9,7 @@ import {
     coerceToStringArray,
     normalizeObjections,
     normalizePricing,
+    formatValueAsText,
 } from "@/lib/ai/json-recovery";
 import type {
     SectionId,
@@ -345,6 +346,11 @@ Return as JSON object. The pricing field should be: {"regular": number, "webinar
         { maxTokens: 4000, temperature: 0.7 }
     );
 
+    // Normalize the result to ensure all fields are properly formatted
+    const normalizedResult = normalizeSection3Data(
+        result as unknown as Record<string, unknown>
+    ) as unknown as Section3Data;
+
     const generatedFields = [
         "offer_name",
         "offer_type",
@@ -360,7 +366,7 @@ Return as JSON object. The pricing field should be: {"regular": number, "webinar
 
     return {
         success: true,
-        data: { ...result, section3_context: userContext },
+        data: { ...normalizedResult, section3_context: userContext },
         generatedFields,
     };
 }
@@ -501,6 +507,11 @@ Return as JSON. The top_objections should be an array of {objection: string, res
         { maxTokens: 3000, temperature: 0.7 }
     );
 
+    // Normalize the result to ensure all fields are properly formatted
+    const normalizedResult = normalizeSection5Data(
+        result as unknown as Record<string, unknown>
+    ) as unknown as Section5Response;
+
     const generatedFields = [
         "call_to_action",
         "incentive",
@@ -511,7 +522,7 @@ Return as JSON. The top_objections should be an array of {objection: string, res
 
     return {
         success: true,
-        data: { ...result, section5_context: userContext },
+        data: { ...normalizedResult, section5_context: userContext },
         generatedFields,
     };
 }
@@ -737,7 +748,7 @@ function normalizeSection5Data(data: Record<string, unknown>): Record<string, un
         normalized.top_objections = normalizeObjections(normalized.top_objections);
     }
 
-    // Clean any [Object] placeholders from string fields
+    // Convert any object/array fields to formatted text strings
     const stringFields = [
         "call_to_action",
         "incentive",
@@ -745,9 +756,9 @@ function normalizeSection5Data(data: Record<string, unknown>): Record<string, un
         "path_options",
     ];
     for (const field of stringFields) {
-        if (normalized[field]) {
-            const cleaned = cleanObjectPlaceholder(normalized[field]);
-            normalized[field] = cleaned === null ? "" : cleaned;
+        if (normalized[field] !== undefined && normalized[field] !== null) {
+            // Use formatValueAsText to convert any objects/arrays to readable text
+            normalized[field] = formatValueAsText(normalized[field]);
         }
     }
 
@@ -765,7 +776,7 @@ function normalizeSection3Data(data: Record<string, unknown>): Record<string, un
         normalized.pricing = normalizePricing(normalized.pricing);
     }
 
-    // Clean any [Object] placeholders from string fields
+    // Convert any object/array fields to formatted text strings
     const stringFields = [
         "offer_name",
         "offer_type",
@@ -779,9 +790,9 @@ function normalizeSection3Data(data: Record<string, unknown>): Record<string, un
     ];
 
     for (const field of stringFields) {
-        if (normalized[field]) {
-            const cleaned = cleanObjectPlaceholder(normalized[field]);
-            normalized[field] = cleaned === null ? "" : cleaned;
+        if (normalized[field] !== undefined && normalized[field] !== null) {
+            // Use formatValueAsText to convert any objects/arrays to readable text
+            normalized[field] = formatValueAsText(normalized[field]);
         }
     }
 

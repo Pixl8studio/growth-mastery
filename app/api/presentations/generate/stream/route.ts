@@ -4,16 +4,134 @@
  * Streams slide generation progress via Server-Sent Events (SSE)
  *
  * Related: GitHub Issue #327 - Real-time Streaming Editor
+ * Enhanced: Auto-generates images per slide during streaming
  */
 
 import * as Sentry from "@sentry/nextjs";
 import { NextRequest } from "next/server";
 import { z } from "zod";
+import OpenAI from "openai";
 
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { generatePresentation } from "@/lib/presentations/slide-generator";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
+
+// Lazy OpenAI client initialization for image generation
+let openaiClient: OpenAI | null = null;
+
+function getOpenAIClient(): OpenAI {
+    if (!openaiClient) {
+        if (!process.env.OPENAI_API_KEY) {
+            throw new Error("OPENAI_API_KEY environment variable is required");
+        }
+        openaiClient = new OpenAI({
+            apiKey: process.env.OPENAI_API_KEY,
+        });
+    }
+    return openaiClient;
+}
+
+/**
+ * Generate an image for a slide using DALL-E 3
+ * Returns the permanent Supabase storage URL or null on failure
+ */
+async function generateSlideImage(
+    presentationId: string,
+    slideNumber: number,
+    imagePrompt: string,
+    brandPrimaryColor: string | null,
+    supabase: Awaited<ReturnType<typeof createClient>>
+): Promise<string | null> {
+    try {
+        const openai = getOpenAIClient();
+
+        // Enhance prompt with brand context
+        const styleContext = [
+            "Professional business presentation slide image.",
+            brandPrimaryColor ? `Color scheme inspired by ${brandPrimaryColor}.` : "",
+            "Clean, modern design suitable for presentations.",
+            "High quality, no text overlays.",
+        ]
+            .filter(Boolean)
+            .join(" ");
+
+        const enhancedPrompt = `${styleContext} ${imagePrompt}`;
+
+        logger.info(
+            { presentationId, slideNumber, promptLength: enhancedPrompt.length },
+            "Generating AI image for slide during streaming"
+        );
+
+        const response = await openai.images.generate({
+            model: "dall-e-3",
+            prompt: enhancedPrompt,
+            n: 1,
+            size: "1792x1024", // 16:9 aspect ratio for slides
+            quality: "standard",
+            style: "natural",
+        });
+
+        const tempImageUrl = response.data?.[0]?.url;
+        if (!tempImageUrl) {
+            logger.warn(
+                { presentationId, slideNumber },
+                "No image URL returned from OpenAI"
+            );
+            return null;
+        }
+
+        // Download and upload to permanent storage
+        const imageResponse = await fetch(tempImageUrl);
+        if (!imageResponse.ok) {
+            logger.warn(
+                { presentationId, slideNumber },
+                "Failed to download image from OpenAI"
+            );
+            return null;
+        }
+
+        const imageBlob = await imageResponse.blob();
+        const imageBuffer = await imageBlob.arrayBuffer();
+
+        const timestamp = Date.now();
+        const storagePath = `presentations/${presentationId}/slide-${slideNumber}-${timestamp}.png`;
+
+        const { error: uploadError } = await supabase.storage
+            .from("presentation-media")
+            .upload(storagePath, imageBuffer, {
+                contentType: "image/png",
+                cacheControl: "31536000",
+                upsert: true,
+            });
+
+        if (uploadError) {
+            logger.warn(
+                { error: uploadError, presentationId, slideNumber },
+                "Failed to upload image to storage"
+            );
+            return null;
+        }
+
+        const { data: urlData } = supabase.storage
+            .from("presentation-media")
+            .getPublicUrl(storagePath);
+
+        logger.info(
+            { presentationId, slideNumber, storagePath },
+            "Image generated and uploaded successfully during streaming"
+        );
+
+        return urlData.publicUrl;
+    } catch (error) {
+        // Log but don't throw - image generation failure shouldn't stop slide generation
+        logger.error(
+            { error, presentationId, slideNumber },
+            "Failed to generate image during streaming - slide will show placeholder"
+        );
+        return null;
+    }
+}
 
 // Zod schema for presentation customization
 const PresentationCustomizationSchema = z.object({
@@ -71,6 +189,14 @@ export async function GET(request: NextRequest) {
     const projectId = searchParams.get("projectId");
     const deckStructureId = searchParams.get("deckStructureId");
     const customizationParam = searchParams.get("customization");
+
+    // Resume parameters (optional)
+    const resumePresentationId = searchParams.get("resumePresentationId");
+    const resumeFromSlideParam = searchParams.get("resumeFromSlide");
+    const resumeFromSlide = resumeFromSlideParam
+        ? parseInt(resumeFromSlideParam, 10)
+        : null;
+    const isResuming = !!resumePresentationId && !!resumeFromSlide;
 
     // Validate required params
     if (!projectId || !deckStructureId) {
@@ -195,41 +321,115 @@ export async function GET(request: NextRequest) {
             return { title: `Slide ${index + 1}`, description: "", section: "" };
         });
 
-        // Create presentation record
-        const { data: presentation, error: createError } = await supabase
-            .from("presentations")
-            .insert({
-                user_id: user.id,
-                funnel_project_id: projectId,
-                deck_structure_id: deckStructureId,
-                title: deckStructure.title || "Untitled Presentation",
-                customization: customization,
-                status: "generating",
-                slides: [],
-                generation_progress: 0,
-            })
-            .select()
-            .single();
+        // Create or resume presentation record
+        const totalExpectedSlides = validatedSlides.length;
+        let presentation: any;
+        let startFromSlideNumber = 1;
 
-        if (createError) {
-            logger.error(
-                { error: createError, projectId },
-                "Failed to create presentation record"
+        if (isResuming && resumePresentationId) {
+            // Resume mode: fetch existing presentation and validate ownership
+            const { data: existingPresentation, error: fetchError } = await supabase
+                .from("presentations")
+                .select("*")
+                .eq("id", resumePresentationId)
+                .single();
+
+            if (fetchError || !existingPresentation) {
+                logger.error(
+                    { error: fetchError, resumePresentationId },
+                    "Failed to fetch presentation for resume"
+                );
+                return new Response(
+                    JSON.stringify({ error: "Presentation not found for resume" }),
+                    { status: 404, headers: { "Content-Type": "application/json" } }
+                );
+            }
+
+            if (existingPresentation.user_id !== user.id) {
+                return new Response(
+                    JSON.stringify({
+                        error: "Not authorized to resume this presentation",
+                    }),
+                    { status: 403, headers: { "Content-Type": "application/json" } }
+                );
+            }
+
+            // Update presentation status to generating
+            const { error: updateError } = await supabase
+                .from("presentations")
+                .update({
+                    status: "generating",
+                    error_message: null,
+                })
+                .eq("id", resumePresentationId);
+
+            if (updateError) {
+                logger.error(
+                    { error: updateError, resumePresentationId },
+                    "Failed to update presentation status for resume"
+                );
+            }
+
+            presentation = existingPresentation;
+            startFromSlideNumber = resumeFromSlide || 1;
+
+            logger.info(
+                {
+                    userId: user.id,
+                    projectId,
+                    presentationId: presentation.id,
+                    resumeFromSlide: startFromSlideNumber,
+                    existingSlideCount: Array.isArray(presentation.slides)
+                        ? presentation.slides.length
+                        : 0,
+                },
+                "Resuming presentation generation"
             );
-            return new Response(
-                JSON.stringify({ error: "Failed to create presentation" }),
-                { status: 500, headers: { "Content-Type": "application/json" } }
+        } else {
+            // New presentation mode
+            const { data: newPresentation, error: createError } = await supabase
+                .from("presentations")
+                .insert({
+                    user_id: user.id,
+                    funnel_project_id: projectId,
+                    deck_structure_id: deckStructureId,
+                    title: deckStructure.title || "Untitled Presentation",
+                    customization: customization,
+                    status: "generating",
+                    slides: [],
+                    generation_progress: 0,
+                    total_expected_slides: totalExpectedSlides,
+                })
+                .select()
+                .single();
+
+            if (createError) {
+                logger.error(
+                    { error: createError, projectId },
+                    "Failed to create presentation record"
+                );
+                return new Response(
+                    JSON.stringify({ error: "Failed to create presentation" }),
+                    { status: 500, headers: { "Content-Type": "application/json" } }
+                );
+            }
+
+            presentation = newPresentation;
+
+            logger.info(
+                {
+                    userId: user.id,
+                    projectId,
+                    deckStructureId,
+                    presentationId: presentation.id,
+                },
+                "Starting new streaming presentation generation"
             );
         }
 
-        logger.info(
-            {
-                userId: user.id,
-                projectId,
-                deckStructureId,
-                presentationId: presentation.id,
-            },
-            "Starting streaming presentation generation"
+        // Filter slides to generate (skip already generated ones in resume mode)
+        const slidesToGenerate = validatedSlides.filter(
+            (_: unknown, index: number) => index + 1 >= startFromSlideNumber
         );
 
         // Create SSE stream
@@ -237,7 +437,7 @@ export async function GET(request: NextRequest) {
 
         const stream = new ReadableStream({
             async start(controller) {
-                // Send connected event
+                // Send connected event with resume info
                 controller.enqueue(
                     encoder.encode(
                         formatSSE({
@@ -245,6 +445,9 @@ export async function GET(request: NextRequest) {
                             data: {
                                 presentationId: presentation.id,
                                 totalSlides: validatedSlides.length,
+                                isResuming,
+                                startFromSlide: startFromSlideNumber,
+                                slidesToGenerate: slidesToGenerate.length,
                             },
                         })
                     )
@@ -253,18 +456,21 @@ export async function GET(request: NextRequest) {
                 try {
                     // Wrap generation in timeout to prevent hung connections
                     // This protects against OpenAI API hangs and ensures resources are released
+                    // Generate only the slides that need to be generated (filtered for resume)
                     const generationPromise = generatePresentation({
                         deckStructure: {
                             id: deckStructure.id,
                             title: deckStructure.title || "Presentation",
-                            slideCount: validatedSlides.length,
-                            slides: validatedSlides.map(
+                            slideCount: validatedSlides.length, // Total expected
+                            slides: slidesToGenerate.map(
                                 (
                                     s: z.infer<typeof DeckStructureSlideSchema>,
                                     i: number
                                 ) => ({
-                                    slideNumber: i + 1,
-                                    title: s.title || `Slide ${i + 1}`,
+                                    // Use actual slide numbers for resume continuity
+                                    slideNumber: startFromSlideNumber + i,
+                                    title:
+                                        s.title || `Slide ${startFromSlideNumber + i}`,
                                     description: s.description || "",
                                     section: s.section || "",
                                 })
@@ -274,14 +480,36 @@ export async function GET(request: NextRequest) {
                         businessProfile: businessProfile || undefined,
                         brandDesign: brandDesign || undefined,
                         onSlideGenerated: async (slide, progress) => {
-                            // Send slide generated event
+                            // Generate image for the slide if it has an imagePrompt
+                            // This happens BEFORE sending the slide to the client
+                            let slideWithImage = { ...slide };
+
+                            if (slide.imagePrompt && !slide.imageUrl) {
+                                const imageUrl = await generateSlideImage(
+                                    presentation.id,
+                                    slide.slideNumber,
+                                    slide.imagePrompt,
+                                    brandDesign?.primary_color || null,
+                                    supabase
+                                );
+
+                                if (imageUrl) {
+                                    slideWithImage = {
+                                        ...slide,
+                                        imageUrl,
+                                        imageGeneratedAt: new Date().toISOString(),
+                                    };
+                                }
+                            }
+
+                            // Send slide generated event with the complete slide (including image)
                             controller.enqueue(
                                 encoder.encode(
                                     formatSSE({
                                         type: "slide_generated",
                                         data: {
-                                            slide,
-                                            slideNumber: slide.slideNumber,
+                                            slide: slideWithImage,
+                                            slideNumber: slideWithImage.slideNumber,
                                             progress,
                                         },
                                     })
@@ -295,41 +523,63 @@ export async function GET(request: NextRequest) {
                                         type: "progress",
                                         data: {
                                             progress,
-                                            currentSlide: slide.slideNumber,
+                                            currentSlide: slideWithImage.slideNumber,
                                         },
                                     })
                                 )
                             );
 
-                            // Update database progress (fire-and-forget to avoid slowing generation)
-                            // Uses GREATEST() to prevent backward progress updates from race conditions
-                            void supabase
-                                .rpc("update_presentation_progress", {
-                                    p_presentation_id: presentation.id,
-                                    p_progress: progress,
-                                })
-                                .then(({ error }) => {
-                                    if (error) {
-                                        // Fall back to regular update if RPC doesn't exist
-                                        if (error.code === "42883") {
-                                            // Function not found
-                                            return supabase
-                                                .from("presentations")
-                                                .update({
-                                                    generation_progress: progress,
-                                                })
-                                                .eq("id", presentation.id);
-                                        }
-                                        logger.warn(
-                                            {
-                                                error,
-                                                presentationId: presentation.id,
-                                                progress,
-                                            },
-                                            "Failed to update generation progress"
-                                        );
-                                    }
-                                });
+                            // CRITICAL: Save slide to database immediately for persistence
+                            // This ensures slides are saved even if user cancels or navigates away
+                            try {
+                                // Fetch current slides and append the new one
+                                const { data: currentPresentation } = await supabase
+                                    .from("presentations")
+                                    .select("slides")
+                                    .eq("id", presentation.id)
+                                    .single();
+
+                                const currentSlides = Array.isArray(
+                                    currentPresentation?.slides
+                                )
+                                    ? currentPresentation.slides
+                                    : [];
+
+                                // Append the new slide (with image URL if generated)
+                                const updatedSlides = [
+                                    ...currentSlides,
+                                    slideWithImage,
+                                ];
+
+                                await supabase
+                                    .from("presentations")
+                                    .update({
+                                        slides: updatedSlides,
+                                        generation_progress: progress,
+                                        updated_at: new Date().toISOString(),
+                                    })
+                                    .eq("id", presentation.id);
+
+                                logger.info(
+                                    {
+                                        presentationId: presentation.id,
+                                        slideNumber: slideWithImage.slideNumber,
+                                        totalSlides: updatedSlides.length,
+                                        progress,
+                                        hasImage: !!slideWithImage.imageUrl,
+                                    },
+                                    "Slide saved to database during generation"
+                                );
+                            } catch (saveError) {
+                                logger.error(
+                                    {
+                                        error: saveError,
+                                        presentationId: presentation.id,
+                                        slideNumber: slideWithImage.slideNumber,
+                                    },
+                                    "Failed to save slide during generation"
+                                );
+                            }
                         },
                     });
 
@@ -395,16 +645,42 @@ export async function GET(request: NextRequest) {
                             : "Streaming generation failed"
                     );
 
-                    // Mark presentation as failed
+                    // Check how many slides were generated before the error
+                    const { data: currentState } = await supabase
+                        .from("presentations")
+                        .select("slides")
+                        .eq("id", presentation.id)
+                        .single();
+
+                    const currentSlides = Array.isArray(currentState?.slides)
+                        ? currentState.slides
+                        : [];
+
+                    // If some slides were generated, mark as draft (resumable)
+                    // Only mark as failed if no slides were generated at all
+                    const newStatus = currentSlides.length > 0 ? "draft" : "failed";
+
                     await supabase
                         .from("presentations")
                         .update({
-                            status: "failed",
-                            error_message: errorMessage,
+                            status: newStatus,
+                            error_message:
+                                currentSlides.length > 0
+                                    ? `Generation stopped at slide ${currentSlides.length}. ${errorMessage}`
+                                    : errorMessage,
                         })
                         .eq("id", presentation.id);
 
-                    // Send error event with timeout flag
+                    logger.info(
+                        {
+                            presentationId: presentation.id,
+                            slidesGenerated: currentSlides.length,
+                            newStatus,
+                        },
+                        `Presentation marked as ${newStatus} after generation error`
+                    );
+
+                    // Send error event with timeout flag and slides info
                     controller.enqueue(
                         encoder.encode(
                             formatSSE({
@@ -413,6 +689,8 @@ export async function GET(request: NextRequest) {
                                     error: errorMessage,
                                     presentationId: presentation.id,
                                     isTimeout,
+                                    slidesGenerated: currentSlides.length,
+                                    status: newStatus,
                                 },
                             })
                         )
@@ -427,6 +705,7 @@ export async function GET(request: NextRequest) {
                         extra: {
                             presentationId: presentation.id,
                             timeoutMs: STREAM_TIMEOUT_MS,
+                            slidesGenerated: currentSlides.length,
                         },
                     });
 

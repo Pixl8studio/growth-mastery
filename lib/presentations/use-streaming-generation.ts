@@ -12,9 +12,10 @@ export interface GeneratedSlide {
     slideNumber: number;
     title: string;
     content: string[];
-    speakerNotes: string;
+    speakerNotes?: string;
     imagePrompt?: string;
     imageUrl?: string;
+    imageGeneratedAt?: string;
     layoutType:
         | "title"
         | "section"
@@ -26,7 +27,7 @@ export interface GeneratedSlide {
         | "comparison"
         | "process"
         | "cta";
-    section: string;
+    section?: string;
 }
 
 export interface PresentationCustomization {
@@ -51,6 +52,12 @@ interface StreamingGenerationOptions {
     projectId: string;
     deckStructureId: string;
     customization: PresentationCustomization;
+    /** Optional: existing presentation ID for resume mode */
+    resumePresentationId?: string;
+    /** Optional: start from this slide number (1-indexed) for resume mode */
+    resumeFromSlide?: number;
+    /** Optional: existing slides to preserve during resume */
+    existingSlides?: GeneratedSlide[];
     onSlideGenerated?: (slide: GeneratedSlide, progress: number) => void;
     onComplete?: (presentationId: string, slides: GeneratedSlide[]) => void;
     onError?: (error: string, isTimeout: boolean) => void;
@@ -103,28 +110,41 @@ export function useStreamingGeneration() {
                 projectId,
                 deckStructureId,
                 customization,
+                resumePresentationId,
+                resumeFromSlide,
+                existingSlides = [],
                 onSlideGenerated,
                 onComplete,
                 onError,
             } = options;
 
-            // Reset state
+            const isResuming = !!resumePresentationId && !!resumeFromSlide;
+
+            // Reset state - preserve existing slides if resuming
             setState({
                 isGenerating: true,
-                progress: 0,
-                currentSlide: 0,
+                progress: isResuming
+                    ? Math.round((existingSlides.length / 60) * 100)
+                    : 0,
+                currentSlide: isResuming ? existingSlides.length : 0,
                 totalSlides: 0,
-                slides: [],
-                presentationId: null,
+                slides: isResuming ? existingSlides : [],
+                presentationId: resumePresentationId || null,
                 error: null,
             });
 
-            // Build SSE URL
+            // Build SSE URL with optional resume parameters
             const params = new URLSearchParams({
                 projectId,
                 deckStructureId,
                 customization: JSON.stringify(customization),
             });
+
+            // Add resume parameters if resuming
+            if (isResuming) {
+                params.set("resumePresentationId", resumePresentationId);
+                params.set("resumeFromSlide", resumeFromSlide.toString());
+            }
 
             const url = `/api/presentations/generate/stream?${params.toString()}`;
 

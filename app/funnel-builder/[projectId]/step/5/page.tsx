@@ -11,6 +11,8 @@ import {
     Download,
     Pencil,
     Play,
+    Square,
+    RefreshCw,
     Loader2,
     Image as ImageIcon,
     Type,
@@ -21,6 +23,7 @@ import {
     CheckCircle2,
 } from "lucide-react";
 import { logger } from "@/lib/client-logger";
+import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { useIsMobile } from "@/lib/mobile-utils.client";
@@ -90,10 +93,12 @@ interface Presentation {
     id: string;
     title: string;
     slides: GeneratedSlide[];
-    status: "generating" | "completed" | "failed";
+    status: "draft" | "generating" | "completed" | "failed";
     deckStructureId: string;
     created_at: string;
     customization: PresentationCustomization;
+    total_expected_slides?: number;
+    error_message?: string;
 }
 
 interface PresentationCustomization {
@@ -279,6 +284,8 @@ export default function Step5Page({
                                     deckStructureId: p.deck_structure_id,
                                     created_at: p.created_at,
                                     customization: p.customization || {},
+                                    total_expected_slides: p.total_expected_slides,
+                                    error_message: p.error_message,
                                 }));
                             setPresentations(dbPresentations);
                         }
@@ -453,6 +460,135 @@ export default function Step5Page({
             },
         });
     }, [canGenerate, selectedDeck, customization, projectId, streaming, toast]);
+
+    // Handle resume generation for incomplete presentations
+    const handleResumeGeneration = useCallback(
+        (presentation: Presentation) => {
+            if (!presentation || !presentation.deckStructureId) return;
+
+            const existingSlides = presentation.slides || [];
+            const resumeFromSlide = existingSlides.length + 1;
+
+            // Update presentation status to generating
+            setSelectedPresentation({
+                ...presentation,
+                status: "generating",
+            });
+
+            streaming.startGeneration({
+                projectId,
+                deckStructureId: presentation.deckStructureId,
+                customization: presentation.customization || customization,
+                resumePresentationId: presentation.id,
+                resumeFromSlide,
+                existingSlides: existingSlides as GeneratedSlide[],
+                onSlideGenerated: (slide, progress) => {
+                    if (!slide || typeof slide.slideNumber !== "number") {
+                        logger.warn(
+                            { slide, progress },
+                            "Received invalid slide data from SSE"
+                        );
+                        return;
+                    }
+
+                    setSelectedPresentation((prev) => {
+                        if (!prev) return prev;
+                        const updatedSlides = [...prev.slides, slide as GeneratedSlide];
+                        return {
+                            ...prev,
+                            slides: updatedSlides,
+                        };
+                    });
+
+                    logger.info(
+                        { slideNumber: slide.slideNumber, progress },
+                        "Slide generated during resume"
+                    );
+                },
+                onComplete: (presentationId, slides) => {
+                    const completedPresentation: Presentation = {
+                        ...presentation,
+                        id: presentationId,
+                        slides: slides as GeneratedSlide[],
+                        status: "completed",
+                    };
+
+                    setSelectedPresentation(completedPresentation);
+                    setPresentations((prev) =>
+                        prev.map((p) =>
+                            p.id === presentation.id ? completedPresentation : p
+                        )
+                    );
+
+                    toast({
+                        title: "Resume Complete",
+                        description: `Presentation completed with ${slides.length} slides.`,
+                    });
+
+                    logger.info(
+                        { presentationId, slideCount: slides.length },
+                        "Resumed presentation generation complete"
+                    );
+                },
+                onError: (error, isTimeout) => {
+                    // Don't close editor on error - keep the partial presentation
+                    setSelectedPresentation((prev) => {
+                        if (!prev) return prev;
+
+                        toast({
+                            title: "Generation Paused",
+                            description: `Generation stopped. You can resume later. ${prev.slides.length} slides saved.`,
+                            variant: "destructive",
+                        });
+
+                        return { ...prev, status: "draft" };
+                    });
+                },
+            });
+        },
+        [projectId, customization, streaming, toast]
+    );
+
+    // Handle starting fresh - deletes existing slides and starts over
+    const handleStartFresh = useCallback(
+        async (presentation: Presentation) => {
+            if (!presentation || !presentation.deckStructureId) return;
+
+            const deck = deckStructures.find(
+                (d) => d.id === presentation.deckStructureId
+            );
+            if (!deck) {
+                toast({
+                    title: "Error",
+                    description: "Could not find the original deck structure.",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            // Delete the existing presentation
+            try {
+                await fetch(`/api/presentations/${presentation.id}`, {
+                    method: "DELETE",
+                    credentials: "include",
+                });
+
+                setPresentations((prev) =>
+                    prev.filter((p) => p.id !== presentation.id)
+                );
+            } catch (error) {
+                logger.error(
+                    { error },
+                    "Failed to delete presentation for fresh start"
+                );
+            }
+
+            // Start a new generation
+            setSelectedDeckId(deck.id);
+            handleGeneratePresentation();
+        },
+        [deckStructures, toast, handleGeneratePresentation]
+    );
 
     // Handle slide actions
     const handleDuplicateSlide = useCallback(
@@ -1096,64 +1232,135 @@ export default function Step5Page({
                                     </div>
                                 ) : (
                                     <div className="space-y-4">
-                                        {presentations.map((presentation) => (
-                                            <div
-                                                key={presentation.id}
-                                                className="flex items-center justify-between rounded-lg border border-border p-4 transition-colors hover:border-primary/40"
-                                            >
-                                                <div>
-                                                    <h4 className="font-semibold">
-                                                        {presentation.title}
-                                                    </h4>
-                                                    <p className="text-sm text-muted-foreground">
-                                                        {presentation.slides.length}{" "}
-                                                        slides •{" "}
-                                                        {new Date(
-                                                            presentation.created_at
-                                                        ).toLocaleDateString()}
-                                                    </p>
+                                        {presentations.map((presentation) => {
+                                            // Determine presentation status display
+                                            const isDraft =
+                                                presentation.status === "draft";
+                                            const isIncomplete =
+                                                isDraft &&
+                                                presentation.total_expected_slides &&
+                                                presentation.slides.length <
+                                                    presentation.total_expected_slides;
+                                            const isFailed =
+                                                presentation.status === "failed";
+                                            const isGenerating =
+                                                presentation.status === "generating";
+
+                                            // Build slide count text
+                                            const slideCountText = isIncomplete
+                                                ? `${presentation.slides.length} of ${presentation.total_expected_slides} slides`
+                                                : `${presentation.slides.length} slides`;
+
+                                            return (
+                                                <div
+                                                    key={presentation.id}
+                                                    className={cn(
+                                                        "flex items-center justify-between rounded-lg border p-4 transition-colors",
+                                                        isDraft &&
+                                                            "border-amber-300 bg-amber-50/30",
+                                                        isFailed &&
+                                                            "border-red-300 bg-red-50/30",
+                                                        isGenerating &&
+                                                            "border-primary/50 bg-primary/5",
+                                                        !isDraft &&
+                                                            !isFailed &&
+                                                            !isGenerating &&
+                                                            "border-border hover:border-primary/40"
+                                                    )}
+                                                >
+                                                    <div className="flex items-center gap-3">
+                                                        {/* Status badge */}
+                                                        {isDraft && (
+                                                            <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
+                                                                Draft
+                                                            </span>
+                                                        )}
+                                                        {isFailed && (
+                                                            <span className="inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-800">
+                                                                <AlertCircle className="mr-1 h-3 w-3" />
+                                                                Failed
+                                                            </span>
+                                                        )}
+                                                        {isGenerating && (
+                                                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
+                                                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                                                                Generating
+                                                            </span>
+                                                        )}
+                                                        {presentation.status ===
+                                                            "completed" && (
+                                                            <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
+                                                                <CheckCircle2 className="mr-1 h-3 w-3" />
+                                                                Complete
+                                                            </span>
+                                                        )}
+                                                        <div>
+                                                            <h4 className="font-semibold">
+                                                                {isDraft
+                                                                    ? `Draft - ${presentation.title}`
+                                                                    : presentation.title}
+                                                            </h4>
+                                                            <p className="text-sm text-muted-foreground">
+                                                                {slideCountText}
+                                                                {isIncomplete &&
+                                                                    " (incomplete)"}
+                                                                {" • "}
+                                                                {new Date(
+                                                                    presentation.created_at
+                                                                ).toLocaleDateString()}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() => {
+                                                                setSelectedPresentation(
+                                                                    presentation
+                                                                );
+                                                                setIsEditorOpen(true);
+                                                                setSelectedSlideIndex(
+                                                                    0
+                                                                );
+                                                            }}
+                                                        >
+                                                            <Pencil className="mr-1 h-4 w-4" />
+                                                            {isDraft
+                                                                ? "Resume"
+                                                                : "Edit"}
+                                                        </Button>
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            onClick={() =>
+                                                                handleDownloadPptx(
+                                                                    presentation
+                                                                )
+                                                            }
+                                                            disabled={
+                                                                presentation.slides
+                                                                    .length === 0
+                                                            }
+                                                        >
+                                                            <Download className="mr-1 h-4 w-4" />
+                                                            Download PPTX
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() =>
+                                                                handleDeletePresentation(
+                                                                    presentation.id
+                                                                )
+                                                            }
+                                                        >
+                                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                                        </Button>
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() => {
-                                                            setSelectedPresentation(
-                                                                presentation
-                                                            );
-                                                            setIsEditorOpen(true);
-                                                            setSelectedSlideIndex(0);
-                                                        }}
-                                                    >
-                                                        <Pencil className="mr-1 h-4 w-4" />
-                                                        Edit
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            handleDownloadPptx(
-                                                                presentation
-                                                            )
-                                                        }
-                                                    >
-                                                        <Download className="mr-1 h-4 w-4" />
-                                                        Download PPTX
-                                                    </Button>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() =>
-                                                            handleDeletePresentation(
-                                                                presentation.id
-                                                            )
-                                                        }
-                                                    >
-                                                        <Trash2 className="h-4 w-4 text-red-500" />
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </CardContent>
@@ -1215,16 +1422,58 @@ export default function Step5Page({
                                         Complete
                                     </span>
                                 )}
+                                {selectedPresentation.status === "draft" &&
+                                    !streaming.isGenerating && (
+                                        <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-sm font-medium text-amber-800">
+                                            Draft - {selectedPresentation.slides.length}{" "}
+                                            of{" "}
+                                            {selectedPresentation.total_expected_slides ||
+                                                "?"}{" "}
+                                            slides
+                                        </span>
+                                    )}
                             </div>
                             <div className="flex items-center gap-2">
+                                {/* Resume button for draft presentations */}
+                                {selectedPresentation.status === "draft" &&
+                                    !streaming.isGenerating && (
+                                        <>
+                                            <Button
+                                                variant="default"
+                                                size="sm"
+                                                onClick={() =>
+                                                    handleResumeGeneration(
+                                                        selectedPresentation
+                                                    )
+                                                }
+                                                className="bg-primary hover:bg-primary/90"
+                                            >
+                                                <Play className="mr-1 h-4 w-4" />
+                                                Resume Generation
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={() =>
+                                                    handleStartFresh(
+                                                        selectedPresentation
+                                                    )
+                                                }
+                                            >
+                                                <RefreshCw className="mr-1 h-4 w-4" />
+                                                Start Fresh
+                                            </Button>
+                                        </>
+                                    )}
                                 {streaming.isGenerating && (
                                     <Button
                                         variant="outline"
                                         size="sm"
                                         onClick={() => streaming.stopGeneration()}
-                                        className="text-red-600 hover:text-red-700"
+                                        className="text-amber-600 hover:text-amber-700"
                                     >
-                                        Cancel Generation
+                                        <Square className="mr-1 h-3 w-3 fill-current" />
+                                        Stop & Save
                                     </Button>
                                 )}
                                 <Button

@@ -190,7 +190,6 @@ export function BrandGuidelinesDisplay({
     const [showStartOverDialog, setShowStartOverDialog] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isSavingColors, setIsSavingColors] = useState(false);
-    const [isRegeneratingColors, setIsRegeneratingColors] = useState(false);
 
     // Local color state for editing
     const [colors, setColors] = useState<ColorState>({
@@ -298,55 +297,6 @@ export function BrandGuidelinesDisplay({
         }
     };
 
-    const handleRegenerateColors = async () => {
-        setIsRegeneratingColors(true);
-        try {
-            const response = await fetch("/api/brand-design/regenerate-colors", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ projectId }),
-            });
-
-            if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || "Failed to regenerate colors");
-            }
-
-            const data = await response.json();
-
-            // Update local state with new colors
-            const newColors = {
-                primary_color: data.primary_color,
-                secondary_color: data.secondary_color,
-                accent_color: data.accent_color,
-                background_color: data.background_color,
-                text_color: data.text_color,
-            };
-            setColors(newColors);
-            // Note: Not updating originalColors so user can see they're "unsaved"
-
-            toast({
-                title: "Colors regenerated",
-                description:
-                    "New colors have been generated. Click 'Save Colors' to keep them.",
-            });
-
-            // Call onRegenerate if provided
-            onRegenerate?.("colors");
-        } catch (error) {
-            toast({
-                title: "Regeneration failed",
-                description:
-                    error instanceof Error
-                        ? error.message
-                        : "Could not regenerate colors",
-                variant: "destructive",
-            });
-        } finally {
-            setIsRegeneratingColors(false);
-        }
-    };
-
     const handleStartOver = async () => {
         setIsDeleting(true);
         try {
@@ -414,9 +364,14 @@ export function BrandGuidelinesDisplay({
                                     {/* Color Palette - Editable */}
                                     <div>
                                         <div className="flex items-center justify-between mb-4">
-                                            <h4 className="font-medium">
-                                                Color Palette
-                                            </h4>
+                                            <div>
+                                                <h4 className="font-medium">
+                                                    Color Palette
+                                                </h4>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Click to edit your colors if you&apos;d like
+                                                </p>
+                                            </div>
                                             <div className="flex gap-2">
                                                 {hasUnsavedChanges && (
                                                     <Badge
@@ -427,20 +382,6 @@ export function BrandGuidelinesDisplay({
                                                         Unsaved changes
                                                     </Badge>
                                                 )}
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={handleRegenerateColors}
-                                                    disabled={
-                                                        isRegeneratingColors ||
-                                                        isRegenerating === "colors"
-                                                    }
-                                                >
-                                                    <RefreshCw
-                                                        className={`h-4 w-4 mr-2 ${isRegeneratingColors ? "animate-spin" : ""}`}
-                                                    />
-                                                    Regenerate
-                                                </Button>
                                                 <Button
                                                     size="sm"
                                                     onClick={handleSaveColors}
@@ -554,9 +495,9 @@ export function BrandGuidelinesDisplay({
                                                             Color Rationale
                                                         </h4>
                                                         <p className="text-sm text-muted-foreground">
-                                                            Regenerate colors to see AI
-                                                            explanation for your color
-                                                            choices.
+                                                            Color rationale is generated
+                                                            when your brand design is
+                                                            created.
                                                         </p>
                                                     </div>
                                                 </div>

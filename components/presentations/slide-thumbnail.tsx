@@ -1,15 +1,22 @@
 /**
  * SlideThumbnail Component
  * Premium styled mini-preview for presentation slides
+ * Uses shared gradient utilities to match SlidePreview appearance
  *
  * Related: GitHub Issue #327 - Live Thumbnail Renderer
  */
 
 "use client";
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import { Copy, Trash2, CheckCircle2, Loader2, ImageIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import {
+    generateBrandGradient,
+    getBrandTextColors,
+    FALLBACK_GRADIENTS,
+    FALLBACK_TEXT_COLORS,
+} from "./slide-design-utils";
 
 export interface SlideData {
     slideNumber: number;
@@ -56,21 +63,18 @@ interface SlideThumbnailProps {
     className?: string;
 }
 
-// Layout type icons and styles
-const LAYOUT_STYLES: Record<
-    SlideData["layoutType"],
-    { gradient: string; icon: string }
-> = {
-    title: { gradient: "from-amber-500/20 to-orange-500/20", icon: "T" },
-    section: { gradient: "from-blue-500/20 to-indigo-500/20", icon: "S" },
-    content_left: { gradient: "from-emerald-500/20 to-teal-500/20", icon: "L" },
-    content_right: { gradient: "from-purple-500/20 to-pink-500/20", icon: "R" },
-    bullets: { gradient: "from-sky-500/20 to-blue-500/20", icon: "B" },
-    quote: { gradient: "from-rose-500/20 to-red-500/20", icon: "Q" },
-    statistics: { gradient: "from-cyan-500/20 to-teal-500/20", icon: "#" },
-    comparison: { gradient: "from-violet-500/20 to-purple-500/20", icon: "C" },
-    process: { gradient: "from-lime-500/20 to-green-500/20", icon: "P" },
-    cta: { gradient: "from-orange-500/20 to-red-500/20", icon: "!" },
+// Layout type icons for badge display
+const LAYOUT_ICONS: Record<SlideData["layoutType"], string> = {
+    title: "T",
+    section: "S",
+    content_left: "L",
+    content_right: "R",
+    bullets: "B",
+    quote: "Q",
+    statistics: "#",
+    comparison: "C",
+    process: "P",
+    cta: "!",
 };
 
 export const SlideThumbnail = memo(function SlideThumbnail({
@@ -87,18 +91,36 @@ export const SlideThumbnail = memo(function SlideThumbnail({
     dragHandleProps,
     className,
 }: SlideThumbnailProps) {
+    // Use shared gradient utilities for consistency with SlidePreview
+    // Hooks must be called before any conditional returns
+    const hasBrandColors = Boolean(brandDesign?.primary_color);
+    const dynamicGradientStyle = useMemo(
+        () => (slide ? generateBrandGradient(slide.layoutType, brandDesign) : {}),
+        [slide, brandDesign]
+    );
+
+    const textColors = useMemo(
+        () =>
+            slide
+                ? getBrandTextColors(slide.layoutType, brandDesign)
+                : { title: "#1a1a2e", body: "#4a4a5e" },
+        [slide, brandDesign]
+    );
+
     // Guard against undefined slide - can happen during streaming generation (Issue #331)
     if (!slide) {
         return <SlideThumbnailSkeleton className={className} />;
     }
 
-    const layoutStyle = LAYOUT_STYLES[slide.layoutType] || LAYOUT_STYLES.bullets;
+    const layoutIcon = LAYOUT_ICONS[slide.layoutType] || LAYOUT_ICONS.bullets;
+    const fallbackGradient =
+        FALLBACK_GRADIENTS[slide.layoutType] || FALLBACK_GRADIENTS.bullets;
+    const fallbackTextColors =
+        FALLBACK_TEXT_COLORS[slide.layoutType] || FALLBACK_TEXT_COLORS.bullets;
 
-    // Get brand colors with fallbacks
-    const bgColor = brandDesign?.background_color || "#ffffff";
-    const textColor = brandDesign?.text_color || "#1f2937";
-    const primaryColor = brandDesign?.primary_color || "#3b82f6";
-    const accentColor = brandDesign?.accent_color || "#8b5cf6";
+    // Accent color for bullet points
+    const accentColor =
+        brandDesign?.accent_color || brandDesign?.primary_color || "#8b5cf6";
 
     return (
         <div
@@ -129,20 +151,27 @@ export const SlideThumbnail = memo(function SlideThumbnail({
                 </div>
             )}
 
-            {/* Slide Preview */}
+            {/* Slide Preview - Now using same gradients as SlidePreview */}
             <div
                 className={cn(
                     "relative aspect-[16/9] overflow-hidden rounded-lg border shadow-inner",
-                    `bg-gradient-to-br ${layoutStyle.gradient}`
+                    // Only use fallback Tailwind gradients when no brand colors
+                    !hasBrandColors && `bg-gradient-to-br ${fallbackGradient}`
                 )}
-                style={{ backgroundColor: bgColor }}
+                style={
+                    // Use dynamic brand gradients when available (matches SlidePreview)
+                    hasBrandColors ? dynamicGradientStyle : undefined
+                }
             >
-                {/* Mini slide content */}
+                {/* Mini slide content with layout-appropriate text colors */}
                 <div className="absolute inset-0 p-2">
                     {/* Title */}
                     <div
-                        className="mb-1 truncate text-[7px] font-bold leading-tight"
-                        style={{ color: primaryColor }}
+                        className={cn(
+                            "mb-1 truncate text-[7px] font-bold leading-tight",
+                            !hasBrandColors && fallbackTextColors.title
+                        )}
+                        style={hasBrandColors ? { color: textColors.title } : undefined}
                     >
                         {slide.title}
                     </div>
@@ -156,8 +185,15 @@ export const SlideThumbnail = memo(function SlideThumbnail({
                                     style={{ backgroundColor: accentColor }}
                                 />
                                 <span
-                                    className="line-clamp-1 text-[5px] leading-tight"
-                                    style={{ color: textColor }}
+                                    className={cn(
+                                        "line-clamp-1 text-[5px] leading-tight",
+                                        !hasBrandColors && fallbackTextColors.body
+                                    )}
+                                    style={
+                                        hasBrandColors
+                                            ? { color: textColors.body }
+                                            : undefined
+                                    }
                                 >
                                     {point}
                                 </span>
@@ -168,7 +204,7 @@ export const SlideThumbnail = memo(function SlideThumbnail({
                     {/* Image indicator */}
                     {slide.imageUrl && (
                         <div className="absolute bottom-1 right-1">
-                            <ImageIcon className="h-2.5 w-2.5 text-muted-foreground/50" />
+                            <ImageIcon className="h-2.5 w-2.5 text-white/50" />
                         </div>
                     )}
                 </div>
@@ -176,7 +212,7 @@ export const SlideThumbnail = memo(function SlideThumbnail({
                 {/* Layout type badge */}
                 <div className="absolute bottom-1 left-1 rounded bg-black/20 px-1 py-0.5">
                     <span className="text-[6px] font-bold text-white/80">
-                        {layoutStyle.icon}
+                        {layoutIcon}
                     </span>
                 </div>
             </div>

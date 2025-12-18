@@ -70,6 +70,7 @@ interface BrandDesign {
     brand_voice?: BrandVoice;
     messaging_framework?: MessagingFramework;
     brand_application?: BrandApplication;
+    color_rationale?: string | null;
 }
 
 export default function Step3BrandDesignPage({
@@ -503,7 +504,51 @@ export default function Step3BrandDesignPage({
         if (section === "comprehensive") {
             setShowWizard(true);
         }
-        // Future: Add section-specific regeneration
+        // Color regeneration is handled by the BrandGuidelinesDisplay component
+    };
+
+    const handleStartOver = () => {
+        // Reset all brand design state
+        setBrandDesign(null);
+        setBrandName("");
+        setPrimaryColor("#3b82f6");
+        setSecondaryColor("#8b5cf6");
+        setAccentColor("#ec4899");
+        setBackgroundColor("#ffffff");
+        setTextColor("#1f2937");
+        setScrapedUrl("");
+        setDesignStyle("modern");
+        setTone("professional");
+        setMood("confident");
+        setEnergy("dynamic");
+        setActiveTab("wizard");
+    };
+
+    const handleColorsUpdate = (colors: {
+        primary_color: string;
+        secondary_color: string;
+        accent_color: string;
+        background_color: string;
+        text_color: string;
+    }) => {
+        // Update local state when colors are saved
+        setPrimaryColor(colors.primary_color);
+        setSecondaryColor(colors.secondary_color);
+        setAccentColor(colors.accent_color);
+        setBackgroundColor(colors.background_color);
+        setTextColor(colors.text_color);
+
+        // Update brand design state
+        if (brandDesign) {
+            setBrandDesign({
+                ...brandDesign,
+                primary_color: colors.primary_color,
+                secondary_color: colors.secondary_color,
+                accent_color: colors.accent_color,
+                background_color: colors.background_color,
+                text_color: colors.text_color,
+            });
+        }
     };
 
     const hasBrandDesign = !!brandDesign;
@@ -591,7 +636,10 @@ export default function Step3BrandDesignPage({
                                 {/* Brand Guidelines Display */}
                                 <BrandGuidelinesDisplay
                                     guidelines={brandDesign}
+                                    projectId={projectId}
                                     onRegenerate={handleRegenerate}
+                                    onStartOver={handleStartOver}
+                                    onColorsUpdate={handleColorsUpdate}
                                 />
                             </div>
                         )}

@@ -530,41 +530,25 @@ export async function GET(request: NextRequest) {
                             );
 
                             // CRITICAL: Save slide to database immediately for persistence
-                            // This ensures slides are saved even if user cancels or navigates away
+                            // Uses atomic RPC to prevent race conditions with parallel slides
                             try {
-                                // Fetch current slides and append the new one
-                                const { data: currentPresentation } = await supabase
-                                    .from("presentations")
-                                    .select("slides")
-                                    .eq("id", presentation.id)
-                                    .single();
+                                const { error: appendError } = await supabase.rpc(
+                                    "append_slide_to_presentation",
+                                    {
+                                        p_presentation_id: presentation.id,
+                                        p_slide: slideWithImage,
+                                        p_progress: progress,
+                                    }
+                                );
 
-                                const currentSlides = Array.isArray(
-                                    currentPresentation?.slides
-                                )
-                                    ? currentPresentation.slides
-                                    : [];
-
-                                // Append the new slide (with image URL if generated)
-                                const updatedSlides = [
-                                    ...currentSlides,
-                                    slideWithImage,
-                                ];
-
-                                await supabase
-                                    .from("presentations")
-                                    .update({
-                                        slides: updatedSlides,
-                                        generation_progress: progress,
-                                        updated_at: new Date().toISOString(),
-                                    })
-                                    .eq("id", presentation.id);
+                                if (appendError) {
+                                    throw appendError;
+                                }
 
                                 logger.info(
                                     {
                                         presentationId: presentation.id,
                                         slideNumber: slideWithImage.slideNumber,
-                                        totalSlides: updatedSlides.length,
                                         progress,
                                         hasImage: !!slideWithImage.imageUrl,
                                     },

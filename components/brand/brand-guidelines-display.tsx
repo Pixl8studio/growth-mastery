@@ -337,7 +337,9 @@ export function BrandGuidelinesDisplay({
             toast({
                 title: "Regeneration failed",
                 description:
-                    error instanceof Error ? error.message : "Could not regenerate colors",
+                    error instanceof Error
+                        ? error.message
+                        : "Could not regenerate colors",
                 variant: "destructive",
             });
         } finally {
@@ -348,12 +350,9 @@ export function BrandGuidelinesDisplay({
     const handleStartOver = async () => {
         setIsDeleting(true);
         try {
-            const response = await fetch(
-                `/api/brand-design?projectId=${projectId}`,
-                {
-                    method: "DELETE",
-                }
-            );
+            const response = await fetch(`/api/brand-design?projectId=${projectId}`, {
+                method: "DELETE",
+            });
 
             if (!response.ok) {
                 const data = await response.json();
@@ -401,7 +400,9 @@ export function BrandGuidelinesDisplay({
                                         <Palette className="h-5 w-5 text-primary" />
                                     </div>
                                     <div className="text-left">
-                                        <h3 className="font-semibold">Visual Identity</h3>
+                                        <h3 className="font-semibold">
+                                            Visual Identity
+                                        </h3>
                                         <p className="text-sm text-muted-foreground font-normal">
                                             Colors, fonts, and design preferences
                                         </p>
@@ -413,7 +414,9 @@ export function BrandGuidelinesDisplay({
                                     {/* Color Palette - Editable */}
                                     <div>
                                         <div className="flex items-center justify-between mb-4">
-                                            <h4 className="font-medium">Color Palette</h4>
+                                            <h4 className="font-medium">
+                                                Color Palette
+                                            </h4>
                                             <div className="flex gap-2">
                                                 {hasUnsavedChanges && (
                                                     <Badge
@@ -442,7 +445,8 @@ export function BrandGuidelinesDisplay({
                                                     size="sm"
                                                     onClick={handleSaveColors}
                                                     disabled={
-                                                        !hasUnsavedChanges || isSavingColors
+                                                        !hasUnsavedChanges ||
+                                                        isSavingColors
                                                     }
                                                 >
                                                     <Save className="h-4 w-4 mr-2" />
@@ -457,7 +461,9 @@ export function BrandGuidelinesDisplay({
                                             <EditableColorSwatch
                                                 color={colors.primary_color}
                                                 label="Primary"
-                                                onChange={handleColorChange("primary_color")}
+                                                onChange={handleColorChange(
+                                                    "primary_color"
+                                                )}
                                                 onCopy={copyToClipboard}
                                                 hasUnsavedChanges={
                                                     colors.primary_color !==
@@ -467,7 +473,9 @@ export function BrandGuidelinesDisplay({
                                             <EditableColorSwatch
                                                 color={colors.secondary_color}
                                                 label="Secondary"
-                                                onChange={handleColorChange("secondary_color")}
+                                                onChange={handleColorChange(
+                                                    "secondary_color"
+                                                )}
                                                 onCopy={copyToClipboard}
                                                 hasUnsavedChanges={
                                                     colors.secondary_color !==
@@ -477,7 +485,9 @@ export function BrandGuidelinesDisplay({
                                             <EditableColorSwatch
                                                 color={colors.accent_color}
                                                 label="Accent"
-                                                onChange={handleColorChange("accent_color")}
+                                                onChange={handleColorChange(
+                                                    "accent_color"
+                                                )}
                                                 onCopy={copyToClipboard}
                                                 hasUnsavedChanges={
                                                     colors.accent_color !==
@@ -487,7 +497,9 @@ export function BrandGuidelinesDisplay({
                                             <EditableColorSwatch
                                                 color={colors.background_color}
                                                 label="Background"
-                                                onChange={handleColorChange("background_color")}
+                                                onChange={handleColorChange(
+                                                    "background_color"
+                                                )}
                                                 onCopy={copyToClipboard}
                                                 hasUnsavedChanges={
                                                     colors.background_color !==
@@ -497,7 +509,9 @@ export function BrandGuidelinesDisplay({
                                             <EditableColorSwatch
                                                 color={colors.text_color}
                                                 label="Text"
-                                                onChange={handleColorChange("text_color")}
+                                                onChange={handleColorChange(
+                                                    "text_color"
+                                                )}
                                                 onCopy={copyToClipboard}
                                                 hasUnsavedChanges={
                                                     colors.text_color !==
@@ -541,7 +555,8 @@ export function BrandGuidelinesDisplay({
                                                         </h4>
                                                         <p className="text-sm text-muted-foreground">
                                                             Regenerate colors to see AI
-                                                            explanation for your color choices.
+                                                            explanation for your color
+                                                            choices.
                                                         </p>
                                                     </div>
                                                 </div>
@@ -552,7 +567,9 @@ export function BrandGuidelinesDisplay({
                                     {/* Typography */}
                                     {guidelines.fonts && (
                                         <div>
-                                            <h4 className="font-medium mb-4">Typography</h4>
+                                            <h4 className="font-medium mb-4">
+                                                Typography
+                                            </h4>
                                             <div className="grid gap-4 sm:grid-cols-2">
                                                 <Card>
                                                     <CardContent className="pt-4">
@@ -567,7 +584,10 @@ export function BrandGuidelinesDisplay({
                                                                         .primary_font,
                                                             }}
                                                         >
-                                                            {guidelines.fonts.primary_font}
+                                                            {
+                                                                guidelines.fonts
+                                                                    .primary_font
+                                                            }
                                                         </p>
                                                     </CardContent>
                                                 </Card>
@@ -584,7 +604,10 @@ export function BrandGuidelinesDisplay({
                                                                         .secondary_font,
                                                             }}
                                                         >
-                                                            {guidelines.fonts.secondary_font}
+                                                            {
+                                                                guidelines.fonts
+                                                                    .secondary_font
+                                                            }
                                                         </p>
                                                     </CardContent>
                                                 </Card>
@@ -594,7 +617,9 @@ export function BrandGuidelinesDisplay({
 
                                     {/* Design Style & Preferences */}
                                     <div>
-                                        <h4 className="font-medium mb-4">Design Style</h4>
+                                        <h4 className="font-medium mb-4">
+                                            Design Style
+                                        </h4>
                                         <div className="flex flex-wrap gap-2">
                                             {guidelines.design_style && (
                                                 <Badge
@@ -605,24 +630,36 @@ export function BrandGuidelinesDisplay({
                                                 </Badge>
                                             )}
                                             {guidelines.personality_traits?.tone && (
-                                                <Badge variant="outline" className="text-sm">
+                                                <Badge
+                                                    variant="outline"
+                                                    className="text-sm"
+                                                >
                                                     {guidelines.personality_traits.tone}
                                                 </Badge>
                                             )}
                                             {guidelines.personality_traits?.mood && (
-                                                <Badge variant="outline" className="text-sm">
+                                                <Badge
+                                                    variant="outline"
+                                                    className="text-sm"
+                                                >
                                                     {guidelines.personality_traits.mood}
                                                 </Badge>
                                             )}
                                             {guidelines.personality_traits?.energy && (
-                                                <Badge variant="outline" className="text-sm">
-                                                    {guidelines.personality_traits.energy}
+                                                <Badge
+                                                    variant="outline"
+                                                    className="text-sm"
+                                                >
+                                                    {
+                                                        guidelines.personality_traits
+                                                            .energy
+                                                    }
                                                 </Badge>
                                             )}
                                         </div>
                                         {guidelines.personality_traits?.values &&
-                                            guidelines.personality_traits.values.length >
-                                                0 && (
+                                            guidelines.personality_traits.values
+                                                .length > 0 && (
                                                 <div className="mt-4">
                                                     <p className="text-sm text-muted-foreground mb-2">
                                                         Brand Values
@@ -656,7 +693,8 @@ export function BrandGuidelinesDisplay({
                                                     </span>
                                                     <span>
                                                         {
-                                                            guidelines.design_preferences
+                                                            guidelines
+                                                                .design_preferences
                                                                 .imagery_style
                                                         }
                                                     </span>
@@ -667,7 +705,8 @@ export function BrandGuidelinesDisplay({
                                                     </span>
                                                     <span>
                                                         {
-                                                            guidelines.design_preferences
+                                                            guidelines
+                                                                .design_preferences
                                                                 .icon_style
                                                         }
                                                     </span>
@@ -678,7 +717,8 @@ export function BrandGuidelinesDisplay({
                                                     </span>
                                                     <span>
                                                         {
-                                                            guidelines.design_preferences
+                                                            guidelines
+                                                                .design_preferences
                                                                 .visual_density
                                                         }
                                                     </span>
@@ -719,7 +759,10 @@ export function BrandGuidelinesDisplay({
                                             <div className="flex flex-wrap gap-2">
                                                 {guidelines.brand_voice.personality_descriptors.map(
                                                     (descriptor, i) => (
-                                                        <Badge key={i} className="text-sm">
+                                                        <Badge
+                                                            key={i}
+                                                            className="text-sm"
+                                                        >
                                                             {descriptor}
                                                         </Badge>
                                                     )
@@ -746,14 +789,15 @@ export function BrandGuidelinesDisplay({
                                                             Secondary:{" "}
                                                             {
                                                                 guidelines.brand_voice
-                                                                    .archetypes.secondary
+                                                                    .archetypes
+                                                                    .secondary
                                                             }
                                                         </Badge>
                                                     </div>
                                                     <p className="text-sm text-muted-foreground">
                                                         {
-                                                            guidelines.brand_voice.archetypes
-                                                                .description
+                                                            guidelines.brand_voice
+                                                                .archetypes.description
                                                         }
                                                     </p>
                                                 </CardContent>
@@ -774,7 +818,9 @@ export function BrandGuidelinesDisplay({
                                                             lowEnd={spectrum.low_end}
                                                             highEnd={spectrum.high_end}
                                                             position={spectrum.position}
-                                                            description={spectrum.description}
+                                                            description={
+                                                                spectrum.description
+                                                            }
                                                         />
                                                     )
                                                 )}
@@ -838,7 +884,9 @@ export function BrandGuidelinesDisplay({
 
                                         {/* Word Lists */}
                                         <div>
-                                            <h4 className="font-medium mb-3">Word Lists</h4>
+                                            <h4 className="font-medium mb-3">
+                                                Word Lists
+                                            </h4>
                                             <div className="grid gap-4 sm:grid-cols-3">
                                                 <div>
                                                     <p className="text-sm font-medium text-green-600 mb-2">
@@ -914,7 +962,8 @@ export function BrandGuidelinesDisplay({
                                                 Messaging Framework
                                             </h3>
                                             <p className="text-sm text-muted-foreground font-normal">
-                                                Positioning, tagline, and value propositions
+                                                Positioning, tagline, and value
+                                                propositions
                                             </p>
                                         </div>
                                     </div>
@@ -938,7 +987,9 @@ export function BrandGuidelinesDisplay({
 
                                         {/* Tagline */}
                                         <div>
-                                            <h4 className="font-medium mb-2">Tagline</h4>
+                                            <h4 className="font-medium mb-2">
+                                                Tagline
+                                            </h4>
                                             <p className="text-2xl font-bold text-primary">
                                                 &ldquo;
                                                 {guidelines.messaging_framework.tagline}
@@ -955,7 +1006,8 @@ export function BrandGuidelinesDisplay({
                                                 <CardContent className="pt-4">
                                                     <p className="text-sm">
                                                         {
-                                                            guidelines.messaging_framework
+                                                            guidelines
+                                                                .messaging_framework
                                                                 .elevator_pitch
                                                         }
                                                     </p>
@@ -1022,14 +1074,19 @@ export function BrandGuidelinesDisplay({
                                                             </CardHeader>
                                                             <CardContent>
                                                                 <p className="text-sm font-medium mb-2">
-                                                                    {msg.primary_message}
+                                                                    {
+                                                                        msg.primary_message
+                                                                    }
                                                                 </p>
                                                                 <p className="text-xs text-muted-foreground mb-2">
                                                                     Emotion:{" "}
-                                                                    {msg.emotional_trigger}
+                                                                    {
+                                                                        msg.emotional_trigger
+                                                                    }
                                                                 </p>
                                                                 <p className="text-xs text-primary">
-                                                                    CTA: {msg.call_to_action}
+                                                                    CTA:{" "}
+                                                                    {msg.call_to_action}
                                                                 </p>
                                                             </CardContent>
                                                         </Card>
@@ -1046,7 +1103,10 @@ export function BrandGuidelinesDisplay({
                                             <div className="flex flex-wrap gap-2">
                                                 {guidelines.messaging_framework.key_differentiators.map(
                                                     (diff, i) => (
-                                                        <Badge key={i} variant="secondary">
+                                                        <Badge
+                                                            key={i}
+                                                            variant="secondary"
+                                                        >
                                                             {diff}
                                                         </Badge>
                                                     )
@@ -1081,7 +1141,9 @@ export function BrandGuidelinesDisplay({
                                     <div className="space-y-6 pt-4">
                                         {/* Logo Usage */}
                                         <div>
-                                            <h4 className="font-medium mb-3">Logo Usage</h4>
+                                            <h4 className="font-medium mb-3">
+                                                Logo Usage
+                                            </h4>
                                             <div className="grid gap-4 sm:grid-cols-2">
                                                 <div className="space-y-2">
                                                     <p className="text-sm text-muted-foreground">
@@ -1113,7 +1175,9 @@ export function BrandGuidelinesDisplay({
                                                 <ul className="text-sm space-y-1">
                                                     {guidelines.brand_application.logo_usage.placement_guidelines.map(
                                                         (guideline, i) => (
-                                                            <li key={i}>• {guideline}</li>
+                                                            <li key={i}>
+                                                                • {guideline}
+                                                            </li>
                                                         )
                                                     )}
                                                 </ul>
@@ -1172,7 +1236,9 @@ export function BrandGuidelinesDisplay({
 
                                         {/* Icon Style */}
                                         <div>
-                                            <h4 className="font-medium mb-3">Icon Style</h4>
+                                            <h4 className="font-medium mb-3">
+                                                Icon Style
+                                            </h4>
                                             <div className="grid gap-4 sm:grid-cols-4 text-sm">
                                                 <div>
                                                     <p className="text-muted-foreground">
@@ -1192,7 +1258,8 @@ export function BrandGuidelinesDisplay({
                                                     <p>
                                                         {
                                                             guidelines.brand_application
-                                                                .icon_style.stroke_weight
+                                                                .icon_style
+                                                                .stroke_weight
                                                         }
                                                     </p>
                                                 </div>
@@ -1286,9 +1353,9 @@ export function BrandGuidelinesDisplay({
                         <Card className="border-dashed">
                             <CardContent className="pt-6 text-center">
                                 <p className="text-muted-foreground mb-4">
-                                    Generate comprehensive brand guidelines to unlock Voice
-                                    & Tone, Messaging Framework, and Brand Application
-                                    sections.
+                                    Generate comprehensive brand guidelines to unlock
+                                    Voice & Tone, Messaging Framework, and Brand
+                                    Application sections.
                                 </p>
                                 {onRegenerate && (
                                     <Button
@@ -1324,8 +1391,9 @@ export function BrandGuidelinesDisplay({
                         <DialogTitle>Clear Brand Guidelines?</DialogTitle>
                         <DialogDescription>
                             This will permanently delete all your brand guidelines
-                            including colors, voice, messaging, and application rules. You
-                            will need to start the brand design process from scratch.
+                            including colors, voice, messaging, and application rules.
+                            You will need to start the brand design process from
+                            scratch.
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>

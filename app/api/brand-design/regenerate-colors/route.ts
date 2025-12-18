@@ -139,10 +139,7 @@ export async function POST(request: NextRequest) {
 
         const { projectId } = validationResult.data;
 
-        requestLogger.info(
-            { userId: user.id, projectId },
-            "Regenerating brand colors"
-        );
+        requestLogger.info({ userId: user.id, projectId }, "Regenerating brand colors");
 
         // Get existing brand design
         const { data: brandDesign, error: brandError } = await supabase

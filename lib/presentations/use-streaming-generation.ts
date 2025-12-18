@@ -99,13 +99,28 @@ export function useStreamingGeneration() {
         isClosingRef.current = false;
     }, []);
 
+    // Track if generation is in progress to prevent multiple simultaneous calls
+    const isGeneratingRef = useRef<boolean>(false);
+
     const stopGeneration = useCallback(() => {
+        isGeneratingRef.current = false;
         closeConnection();
         setState((prev) => ({ ...prev, isGenerating: false }));
     }, [closeConnection]);
 
     const startGeneration = useCallback(
         async (options: StreamingGenerationOptions) => {
+            // CRITICAL: Prevent multiple simultaneous generations (Issue #345)
+            // This guards against stale closures and rapid re-calls creating duplicate presentations
+            if (isGeneratingRef.current) {
+                logger.warn(
+                    {},
+                    "Generation already in progress, ignoring duplicate request"
+                );
+                return;
+            }
+            isGeneratingRef.current = true;
+
             const {
                 projectId,
                 deckStructureId,
@@ -210,6 +225,7 @@ export function useStreamingGeneration() {
                     const slides = data.slides as GeneratedSlide[];
                     const presentationId = data.presentationId as string;
 
+                    isGeneratingRef.current = false;
                     setState((prev) => ({
                         ...prev,
                         isGenerating: false,
@@ -258,6 +274,7 @@ export function useStreamingGeneration() {
                         return;
                     }
 
+                    isGeneratingRef.current = false;
                     setState((prev) => ({
                         ...prev,
                         isGenerating: false,
@@ -309,6 +326,7 @@ export function useStreamingGeneration() {
                     }
 
                     // Only handle if we were still generating
+                    isGeneratingRef.current = false;
                     setState((prev) => {
                         if (prev.isGenerating) {
                             if (onError) {
@@ -336,6 +354,7 @@ export function useStreamingGeneration() {
                         ? error.message
                         : "Failed to start generation";
 
+                isGeneratingRef.current = false;
                 setState((prev) => ({
                     ...prev,
                     isGenerating: false,

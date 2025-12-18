@@ -55,10 +55,7 @@ export async function PUT(request: NextRequest) {
             text_color,
         } = validationResult.data;
 
-        requestLogger.info(
-            { userId: user.id, projectId },
-            "Updating brand colors"
-        );
+        requestLogger.info({ userId: user.id, projectId }, "Updating brand colors");
 
         // Verify user owns the project
         const { data: project, error: projectError } = await supabase

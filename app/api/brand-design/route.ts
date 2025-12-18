@@ -40,10 +40,7 @@ export async function DELETE(request: NextRequest) {
             );
         }
 
-        requestLogger.info(
-            { userId: user.id, projectId },
-            "Deleting brand design"
-        );
+        requestLogger.info({ userId: user.id, projectId }, "Deleting brand design");
 
         // Verify user owns the project
         const { data: project, error: projectError } = await supabase

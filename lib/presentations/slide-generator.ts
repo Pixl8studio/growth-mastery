@@ -142,28 +142,44 @@ async function withRetry<T>(
         } catch (error) {
             lastError = error instanceof Error ? error : new Error(String(error));
 
-            // Parse Anthropic-specific errors
-            const { retryable, errorType } = parseAnthropicError(error);
+            // Parse Anthropic-specific errors with full details
+            const { retryable, errorType, originalMessage, statusCode } =
+                parseAnthropicError(error);
 
             if (!retryable || attempt === maxRetries) {
                 logger.error(
-                    { error, attempt, maxRetries, operationName, errorType },
-                    `${operationName} failed after ${attempt + 1} attempts`
+                    {
+                        error,
+                        attempt,
+                        maxRetries,
+                        operationName,
+                        errorType,
+                        originalMessage,
+                        statusCode,
+                    },
+                    `${operationName} failed after ${attempt + 1} attempts: ${originalMessage}`
                 );
                 throw error;
             }
 
             const delay = initialDelayMs * Math.pow(2, attempt);
             logger.warn(
-                { error: lastError.message, attempt, delay, operationName, errorType },
-                `${operationName} failed, retrying in ${delay}ms`
+                {
+                    errorMessage: originalMessage,
+                    attempt,
+                    delay,
+                    operationName,
+                    errorType,
+                    statusCode,
+                },
+                `${operationName} failed, retrying in ${delay}ms: ${originalMessage}`
             );
 
             Sentry.addBreadcrumb({
                 category: "anthropic.retry",
-                message: `Retrying ${operationName} (attempt ${attempt + 1}/${maxRetries})`,
+                message: `Retrying ${operationName} (attempt ${attempt + 1}/${maxRetries}): ${originalMessage}`,
                 level: "warning",
-                data: { delay, errorType },
+                data: { delay, errorType, originalMessage, statusCode },
             });
 
             await new Promise((resolve) => setTimeout(resolve, delay));
@@ -190,86 +206,131 @@ interface ParsedAnthropicError {
     retryable: boolean;
     errorType: AnthropicErrorType;
     message: string;
+    /** Original error message from Anthropic SDK for debugging */
+    originalMessage: string;
+    /** HTTP status code if available */
+    statusCode?: number;
 }
 
+/**
+ * Parse Anthropic SDK errors to extract useful information
+ * Preserves original error message for debugging while categorizing error type
+ *
+ * @see https://docs.claude.com/en/api/errors
+ */
 function parseAnthropicError(error: unknown): ParsedAnthropicError {
     if (!(error instanceof Error)) {
-        return { retryable: false, errorType: "unknown", message: String(error) };
+        const errorString = String(error);
+        return {
+            retryable: false,
+            errorType: "unknown",
+            message: errorString,
+            originalMessage: errorString,
+        };
     }
 
-    const message = error.message.toLowerCase();
+    // Preserve the original error message for debugging
+    const originalMessage = error.message;
+    const messageLower = originalMessage.toLowerCase();
+
+    // Extract status code from Anthropic APIError if available
+    // The SDK sets 'status' property on APIError subclasses
+    const statusCode =
+        "status" in error && typeof error.status === "number"
+            ? error.status
+            : undefined;
 
     // Rate limit errors (retryable)
     if (
-        message.includes("rate limit") ||
-        message.includes("429") ||
-        message.includes("too many requests")
+        statusCode === 429 ||
+        messageLower.includes("rate limit") ||
+        messageLower.includes("429") ||
+        messageLower.includes("too many requests")
     ) {
         return {
             retryable: true,
             errorType: "rate_limit",
-            message: "Anthropic rate limit exceeded",
+            message: `Rate limit exceeded: ${originalMessage}`,
+            originalMessage,
+            statusCode,
         };
     }
 
     // Token limit errors (not retryable - need different approach)
     if (
-        message.includes("maximum context length") ||
-        message.includes("token limit") ||
-        message.includes("max_tokens")
+        messageLower.includes("maximum context length") ||
+        messageLower.includes("token limit") ||
+        messageLower.includes("max_tokens")
     ) {
         return {
             retryable: false,
             errorType: "token_limit",
-            message: "Content too long for AI processing",
+            message: `Token limit exceeded: ${originalMessage}`,
+            originalMessage,
+            statusCode,
         };
     }
 
     // Invalid request errors (not retryable)
+    // Important: Preserve the original message to help debug the actual issue
     if (
-        message.includes("invalid") ||
-        message.includes("400") ||
-        message.includes("bad request")
+        statusCode === 400 ||
+        messageLower.includes("invalid") ||
+        messageLower.includes("400") ||
+        messageLower.includes("bad request")
     ) {
         return {
             retryable: false,
             errorType: "invalid_request",
-            message: "Invalid request to Anthropic",
+            message: `Invalid request: ${originalMessage}`,
+            originalMessage,
+            statusCode,
         };
     }
 
     // Timeout errors (retryable)
     if (
-        message.includes("timeout") ||
-        message.includes("timed out") ||
-        message.includes("ETIMEDOUT")
+        messageLower.includes("timeout") ||
+        messageLower.includes("timed out") ||
+        messageLower.includes("ETIMEDOUT".toLowerCase())
     ) {
         return {
             retryable: true,
             errorType: "timeout",
-            message: "Anthropic request timed out",
+            message: `Request timed out: ${originalMessage}`,
+            originalMessage,
+            statusCode,
         };
     }
 
     // Server errors (retryable)
     if (
-        message.includes("500") ||
-        message.includes("502") ||
-        message.includes("503") ||
-        message.includes("internal server error")
+        statusCode === 500 ||
+        statusCode === 502 ||
+        statusCode === 503 ||
+        statusCode === 529 ||
+        messageLower.includes("500") ||
+        messageLower.includes("502") ||
+        messageLower.includes("503") ||
+        messageLower.includes("internal server error") ||
+        messageLower.includes("overloaded")
     ) {
         return {
             retryable: true,
             errorType: "api_error",
-            message: "Anthropic API error",
+            message: `API error: ${originalMessage}`,
+            originalMessage,
+            statusCode,
         };
     }
 
-    // Default to retryable for unknown errors
+    // Default to retryable for unknown errors, preserve original message
     return {
         retryable: true,
         errorType: "unknown",
-        message: error.message,
+        message: originalMessage,
+        originalMessage,
+        statusCode,
     };
 }
 
@@ -523,11 +584,25 @@ Always respond with valid JSON only, no markdown code blocks.`,
             section: deckSlide.section,
         };
     } catch (error) {
-        const { errorType, message: errorMessage } = parseAnthropicError(error);
+        const {
+            errorType,
+            message: errorMessage,
+            originalMessage,
+            statusCode,
+        } = parseAnthropicError(error);
 
+        // Log with full context including original error message for debugging
         logger.error(
-            { error, slideNumber: deckSlide.slideNumber, errorType },
-            "Failed to generate slide content"
+            {
+                error,
+                slideNumber: deckSlide.slideNumber,
+                slideTitle: deckSlide.title,
+                errorType,
+                originalMessage,
+                statusCode,
+                model: AI_CONFIG.models.default,
+            },
+            `Failed to generate slide content: ${originalMessage}`
         );
 
         Sentry.captureException(error, {
@@ -537,16 +612,22 @@ Always respond with valid JSON only, no markdown code blocks.`,
                 errorType,
                 slideNumber: deckSlide.slideNumber.toString(),
             },
+            extra: {
+                originalMessage,
+                statusCode,
+                model: AI_CONFIG.models.default,
+                slideTitle: deckSlide.title,
+            },
         });
 
-        // For rate limit errors, throw specific error
+        // For rate limit errors, throw specific error with original message
         if (errorType === "rate_limit") {
             throw new RateLimitError(
-                "Anthropic rate limit exceeded during slide generation"
+                `Anthropic rate limit exceeded during slide generation: ${originalMessage}`
             );
         }
 
-        // For non-recoverable errors, throw AI error
+        // For non-recoverable errors, throw AI error with detailed message
         if (errorType === "token_limit" || errorType === "invalid_request") {
             throw new AIGenerationError(errorMessage, {
                 retryable: false,
@@ -556,7 +637,7 @@ Always respond with valid JSON only, no markdown code blocks.`,
 
         // Fallback to basic content for other errors
         logger.warn(
-            { slideNumber: deckSlide.slideNumber },
+            { slideNumber: deckSlide.slideNumber, errorType, originalMessage },
             "Using fallback content due to AI generation failure"
         );
 
@@ -800,11 +881,19 @@ Generate updated content in JSON format:
             imagePrompt: generated.imagePrompt,
         };
     } catch (error) {
-        const { errorType } = parseAnthropicError(error);
+        const { errorType, originalMessage, statusCode } = parseAnthropicError(error);
 
         logger.error(
-            { error, slideNumber: slide.slideNumber, errorType },
-            "Failed to regenerate slide"
+            {
+                error,
+                slideNumber: slide.slideNumber,
+                slideTitle: slide.title,
+                errorType,
+                originalMessage,
+                statusCode,
+                model: AI_CONFIG.models.default,
+            },
+            `Failed to regenerate slide: ${originalMessage}`
         );
 
         Sentry.captureException(error, {
@@ -813,6 +902,12 @@ Generate updated content in JSON format:
                 action: "regenerate_slide",
                 errorType,
                 slideNumber: slide.slideNumber.toString(),
+            },
+            extra: {
+                originalMessage,
+                statusCode,
+                model: AI_CONFIG.models.default,
+                slideTitle: slide.title,
             },
         });
 

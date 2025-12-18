@@ -153,6 +153,12 @@ export function useStreamingGeneration() {
                     const slide = data.slide as GeneratedSlide;
                     const progress = data.progress as number;
 
+                    // Guard against undefined or invalid slides (Issue #331)
+                    if (!slide || typeof slide.slideNumber !== "number") {
+                        logger.warn({ data }, "Received invalid slide data from SSE");
+                        return;
+                    }
+
                     setState((prev) => ({
                         ...prev,
                         slides: [...prev.slides, slide],

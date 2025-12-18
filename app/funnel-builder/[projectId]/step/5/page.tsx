@@ -383,6 +383,15 @@ export default function Step5Page({
             deckStructureId: selectedDeck.id,
             customization,
             onSlideGenerated: (slide, progress) => {
+                // Guard against undefined or invalid slides from SSE (Issue #331)
+                if (!slide || typeof slide.slideNumber !== "number") {
+                    logger.warn(
+                        { slide, progress },
+                        "Received invalid slide data from SSE"
+                    );
+                    return;
+                }
+
                 // Update the temporary presentation with new slide (Issue #331)
                 setSelectedPresentation((prev) => {
                     if (!prev) return prev;

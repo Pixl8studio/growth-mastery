@@ -367,6 +367,11 @@ export default function Step5Page({
     // Handle generation with real-time streaming (Issue #327, Issue #331)
     // Now immediately opens editor with skeleton loading - no intermediate screen
     const handleGeneratePresentation = useCallback(async () => {
+        // CRITICAL: Prevent duplicate generation calls (Issue #345)
+        if (streaming.isGenerating) {
+            logger.warn({}, "Generation already in progress, ignoring duplicate click");
+            return;
+        }
         if (!canGenerate || !selectedDeck) return;
 
         // Create a temporary presentation object for immediate editor display (Issue #331)
@@ -459,11 +464,16 @@ export default function Step5Page({
                 }
             },
         });
-    }, [canGenerate, selectedDeck, customization, projectId, streaming, toast]);
+    }, [canGenerate, selectedDeck, customization, projectId, streaming.isGenerating, toast]);
 
     // Handle resume generation for incomplete presentations
     const handleResumeGeneration = useCallback(
         (presentation: Presentation) => {
+            // CRITICAL: Prevent duplicate generation calls (Issue #345)
+            if (streaming.isGenerating) {
+                logger.warn({}, "Generation already in progress, ignoring resume request");
+                return;
+            }
             if (!presentation || !presentation.deckStructureId) return;
 
             const existingSlides = presentation.slides || [];
@@ -546,7 +556,7 @@ export default function Step5Page({
                 },
             });
         },
-        [projectId, customization, streaming, toast]
+        [projectId, customization, streaming.isGenerating, toast]
     );
 
     // Handle starting fresh - deletes existing slides and starts over

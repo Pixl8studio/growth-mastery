@@ -441,27 +441,21 @@ const SIGNATURE_MOVE_DESCRIPTIONS: Record<SignatureMove, string> = {
         "A subtle gradient bar at the top or bottom of each slide using brand colors",
     colored_left_border:
         "A bold colored vertical bar on the left side of content cards/sections",
-    circular_elements:
-        "Rounded corners and circular decorative elements throughout",
-    diagonal_sections:
-        "Angled section dividers and diagonal cuts for dynamic energy",
-    corner_accents:
-        "Decorative corner elements that frame content consistently",
-    large_numbers:
-        "Oversized, stylized numbers for sequences and statistics",
-    consistent_icons:
-        "A unified icon style (outlined or filled) used throughout",
-    color_blocking:
-        "Bold blocks of solid color to create visual sections",
+    circular_elements: "Rounded corners and circular decorative elements throughout",
+    diagonal_sections: "Angled section dividers and diagonal cuts for dynamic energy",
+    corner_accents: "Decorative corner elements that frame content consistently",
+    large_numbers: "Oversized, stylized numbers for sequences and statistics",
+    consistent_icons: "A unified icon style (outlined or filled) used throughout",
+    color_blocking: "Bold blocks of solid color to create visual sections",
     serif_sans_pairing:
         "Elegant serif fonts for headlines paired with clean sans-serif body text",
-    dramatic_shadows:
-        "Deep, consistent drop shadows on cards and elevated elements",
+    dramatic_shadows: "Deep, consistent drop shadows on cards and elevated elements",
 };
 
-function getSignatureMove(
-    visualStyle: PresentationCustomization["visualStyle"]
-): { move: SignatureMove; description: string } {
+function getSignatureMove(visualStyle: PresentationCustomization["visualStyle"]): {
+    move: SignatureMove;
+    description: string;
+} {
     const move = SIGNATURE_MOVE_BY_STYLE[visualStyle];
     return { move, description: SIGNATURE_MOVE_DESCRIPTIONS[move] };
 }
@@ -603,10 +597,7 @@ ${previousSlides
     .join("\n")}`
             : "";
 
-    const layoutRecommendation = getLayoutRecommendation(
-        deckSlide,
-        previousSlides
-    );
+    const layoutRecommendation = getLayoutRecommendation(deckSlide, previousSlides);
 
     return `Create PREMIUM slide content that would impress a Fortune 500 CEO.
 
@@ -719,8 +710,7 @@ function getLayoutRecommendation(
             "bullets",
             "statistics",
         ];
-        recommended =
-            alternatives[slide.slideNumber % alternatives.length];
+        recommended = alternatives[slide.slideNumber % alternatives.length];
     }
 
     return recommended;
@@ -733,13 +723,8 @@ function getLayoutRecommendation(
 export async function generateSlideContent(
     options: GenerateSlideOptions
 ): Promise<SlideData> {
-    const {
-        deckSlide,
-        customization,
-        businessProfile,
-        brandDesign,
-        previousSlides,
-    } = options;
+    const { deckSlide, customization, businessProfile, brandDesign, previousSlides } =
+        options;
 
     const bulletCount = getBulletCount(customization.textDensity);
     const signatureMove = getSignatureMove(customization.visualStyle);

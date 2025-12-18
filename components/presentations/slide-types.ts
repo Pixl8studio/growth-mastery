@@ -31,6 +31,7 @@ export interface SlideData {
     speakerNotes?: string;
     imagePrompt?: string;
     imageUrl?: string;
+    imageGeneratedAt?: string;
     layoutType: SlideLayoutType;
     section?: string;
 }

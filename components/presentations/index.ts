@@ -9,8 +9,9 @@ export {
     SlideThumbnailSkeleton,
     GeneratingSlotPlaceholder,
 } from "./slide-thumbnail";
-export type { SlideData, BrandDesign } from "./slide-thumbnail";
+export type { SlideData, BrandDesign, SlideLayoutType } from "./slide-thumbnail";
 
+export { SlideContentRenderer } from "./slide-content-renderer";
 export { DraggableSlides } from "./draggable-slides";
 export { SlideEditorPanel } from "./slide-editor-panel";
 export { SlidePreview } from "./slide-preview";

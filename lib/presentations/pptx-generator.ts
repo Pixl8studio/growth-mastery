@@ -38,6 +38,7 @@ export const SlideDataSchema = z.object({
     section: z.string(),
     imagePrompt: z.string().optional(),
     imageUrl: z.string().url().optional(),
+    imageGeneratedAt: z.string().optional(),
 });
 
 export type SlideData = z.infer<typeof SlideDataSchema>;

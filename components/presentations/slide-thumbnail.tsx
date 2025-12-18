@@ -17,36 +17,10 @@ import {
     FALLBACK_GRADIENTS,
     FALLBACK_TEXT_COLORS,
 } from "./slide-design-utils";
+import type { SlideData, BrandDesign, SlideLayoutType } from "./slide-types";
 
-export interface SlideData {
-    slideNumber: number;
-    title: string;
-    content: string[];
-    speakerNotes?: string;
-    imagePrompt?: string;
-    imageUrl?: string;
-    layoutType:
-        | "title"
-        | "section"
-        | "content_left"
-        | "content_right"
-        | "bullets"
-        | "quote"
-        | "statistics"
-        | "comparison"
-        | "process"
-        | "cta";
-    section?: string;
-}
-
-export interface BrandDesign {
-    primary_color: string;
-    secondary_color?: string | null;
-    accent_color?: string | null;
-    background_color: string;
-    text_color: string;
-    brand_name?: string | null;
-}
+// Re-export types for backward compatibility
+export type { SlideData, BrandDesign, SlideLayoutType };
 
 interface SlideThumbnailProps {
     slide: SlideData;

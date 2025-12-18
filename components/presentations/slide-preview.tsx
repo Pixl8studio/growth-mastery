@@ -13,7 +13,7 @@ import { memo, useMemo } from "react";
 import { ChevronLeft, ChevronRight, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import type { SlideData, BrandDesign } from "./slide-thumbnail";
+import type { SlideData, BrandDesign } from "./slide-types";
 import {
     generateBrandGradient,
     getBrandTextColors,

@@ -28,6 +28,12 @@ import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { useIsMobile } from "@/lib/mobile-utils.client";
+import {
+    PRESENTATION_LIMIT,
+    PresentationStatus,
+    type PresentationStatusType,
+    countsTowardQuota,
+} from "@/lib/constants/presentations";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -94,7 +100,7 @@ interface Presentation {
     id: string;
     title: string;
     slides: GeneratedSlide[];
-    status: "draft" | "generating" | "completed" | "failed" | "paused";
+    status: PresentationStatusType;
     deckStructureId: string;
     created_at: string;
     customization: PresentationCustomization;
@@ -313,12 +319,12 @@ export default function Step5Page({
         [deckStructures, selectedDeckId]
     );
 
-    // Presentation generation limit
-    const PRESENTATION_LIMIT = 3;
-
     // Count non-failed presentations (failed ones don't count against quota)
+    // Uses shared countsTowardQuota function for consistency with backend
     const presentationCount = useMemo(() => {
-        return presentations.filter((p) => p.status !== "failed").length;
+        return presentations.filter((p) =>
+            countsTowardQuota(p.status as PresentationStatusType)
+        ).length;
     }, [presentations]);
 
     const hasReachedLimit = presentationCount >= PRESENTATION_LIMIT;
@@ -418,6 +424,7 @@ export default function Step5Page({
     const handleEditorClose = useCallback(async () => {
         const wasGenerating = streaming.isGenerating;
         const currentPresentationId = selectedPresentation?.id;
+        const slideCount = selectedPresentation?.slides.length || 0;
 
         // Stop generation if in progress
         if (wasGenerating) {
@@ -434,23 +441,38 @@ export default function Step5Page({
             !currentPresentationId.startsWith("generating-")
         ) {
             try {
-                await fetch("/api/presentations", {
+                const response = await fetch("/api/presentations", {
                     method: "PATCH",
                     headers: { "Content-Type": "application/json" },
                     credentials: "include",
                     body: JSON.stringify({
                         presentationId: currentPresentationId,
-                        status: "paused",
+                        status: PresentationStatus.PAUSED,
                     }),
                 });
+
+                if (response.ok) {
+                    toast({
+                        title: "Presentation Paused",
+                        description: `Saved ${slideCount} slides. You can resume generation later.`,
+                    });
+                } else {
+                    throw new Error("Failed to update status");
+                }
             } catch (error) {
                 logger.error({ error }, "Failed to pause presentation");
+                toast({
+                    title: "Warning",
+                    description:
+                        "Could not save pause status. Your slides are saved, but you may need to refresh to see the correct status.",
+                    variant: "destructive",
+                });
             }
         }
 
         // Refresh presentations to get latest status from database
         await refreshPresentations();
-    }, [streaming, selectedPresentation, refreshPresentations]);
+    }, [streaming, selectedPresentation, refreshPresentations, toast]);
 
     // Handle generation with real-time streaming (Issue #327, Issue #331)
     // Now immediately opens editor with skeleton loading - no intermediate screen
@@ -467,7 +489,7 @@ export default function Step5Page({
             id: "generating-" + Date.now(),
             title: `${selectedDeck.title} - Generating...`,
             slides: [], // Start empty, slides will appear as they generate
-            status: "generating",
+            status: PresentationStatus.GENERATING,
             deckStructureId: selectedDeck.id,
             created_at: new Date().toISOString(),
             customization,
@@ -524,7 +546,7 @@ export default function Step5Page({
                     id: presentationId,
                     title: `${selectedDeck.title} - Generated`,
                     slides: slides as GeneratedSlide[],
-                    status: "completed",
+                    status: PresentationStatus.COMPLETED,
                     deckStructureId: selectedDeck.id,
                     created_at: new Date().toISOString(),
                     customization,
@@ -587,7 +609,7 @@ export default function Step5Page({
             // Update presentation status to generating
             setSelectedPresentation({
                 ...presentation,
-                status: "generating",
+                status: PresentationStatus.GENERATING,
             });
 
             streaming.startGeneration({
@@ -625,7 +647,7 @@ export default function Step5Page({
                         ...presentation,
                         id: presentationId,
                         slides: slides as GeneratedSlide[],
-                        status: "completed",
+                        status: PresentationStatus.COMPLETED,
                     };
 
                     setSelectedPresentation(completedPresentation);
@@ -656,7 +678,7 @@ export default function Step5Page({
                             variant: "destructive",
                         });
 
-                        return { ...prev, status: "draft" };
+                        return { ...prev, status: PresentationStatus.DRAFT };
                     });
                 },
             });
@@ -951,7 +973,7 @@ export default function Step5Page({
     }
 
     const hasCompletedPresentation = presentations.some(
-        (p) => p.status === "completed"
+        (p) => p.status === PresentationStatus.COMPLETED
     );
 
     // Render main page
@@ -1414,18 +1436,22 @@ export default function Step5Page({
                                         {presentations.map((presentation) => {
                                             // Determine presentation status display
                                             const isDraft =
-                                                presentation.status === "draft";
+                                                presentation.status ===
+                                                PresentationStatus.DRAFT;
                                             const isPaused =
-                                                presentation.status === "paused";
+                                                presentation.status ===
+                                                PresentationStatus.PAUSED;
                                             const isIncomplete =
                                                 (isDraft || isPaused) &&
                                                 presentation.total_expected_slides &&
                                                 presentation.slides.length <
                                                     presentation.total_expected_slides;
                                             const isFailed =
-                                                presentation.status === "failed";
+                                                presentation.status ===
+                                                PresentationStatus.FAILED;
                                             const isGenerating =
-                                                presentation.status === "generating";
+                                                presentation.status ===
+                                                PresentationStatus.GENERATING;
 
                                             // Build slide count text
                                             const slideCountText = isIncomplete
@@ -1476,7 +1502,7 @@ export default function Step5Page({
                                                             </span>
                                                         )}
                                                         {presentation.status ===
-                                                            "completed" && (
+                                                            PresentationStatus.COMPLETED && (
                                                             <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
                                                                 <CheckCircle2 className="mr-1 h-3 w-3" />
                                                                 Complete
@@ -1572,7 +1598,8 @@ export default function Step5Page({
                                     <X className="h-4 w-4" />
                                 </Button>
                                 <h2 className="font-semibold">
-                                    {selectedPresentation.status === "generating"
+                                    {selectedPresentation.status ===
+                                    PresentationStatus.GENERATING
                                         ? `Generating Presentation...`
                                         : selectedPresentation.title}
                                 </h2>
@@ -1599,17 +1626,21 @@ export default function Step5Page({
                                         </span>
                                     </div>
                                 )}
-                                {selectedPresentation.status === "completed" && (
+                                {selectedPresentation.status ===
+                                    PresentationStatus.COMPLETED && (
                                     <span className="flex items-center gap-1 text-sm text-green-600">
                                         <CheckCircle2 className="h-4 w-4" />
                                         Complete
                                     </span>
                                 )}
-                                {(selectedPresentation.status === "draft" ||
-                                    selectedPresentation.status === "paused") &&
+                                {(selectedPresentation.status ===
+                                    PresentationStatus.DRAFT ||
+                                    selectedPresentation.status ===
+                                        PresentationStatus.PAUSED) &&
                                     !streaming.isGenerating && (
                                         <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-sm font-medium text-amber-800">
-                                            {selectedPresentation.status === "paused"
+                                            {selectedPresentation.status ===
+                                            PresentationStatus.PAUSED
                                                 ? "Paused"
                                                 : "Draft"}{" "}
                                             - {selectedPresentation.slides.length} of{" "}
@@ -1621,8 +1652,10 @@ export default function Step5Page({
                             </div>
                             <div className="flex items-center gap-2">
                                 {/* Resume button for draft/paused presentations */}
-                                {(selectedPresentation.status === "draft" ||
-                                    selectedPresentation.status === "paused") &&
+                                {(selectedPresentation.status ===
+                                    PresentationStatus.DRAFT ||
+                                    selectedPresentation.status ===
+                                        PresentationStatus.PAUSED) &&
                                     !streaming.isGenerating && (
                                         <>
                                             <Button

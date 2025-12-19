@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { generatePresentation } from "@/lib/presentations/slide-generator";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
+import { PRESENTATION_LIMIT, PresentationStatus } from "@/lib/constants/presentations";
 
 // Lazy OpenAI client initialization for image generation
 let openaiClient: OpenAI | null = null;
@@ -330,7 +331,7 @@ export async function GET(request: NextRequest) {
                 .from("presentations")
                 .select("*", { count: "exact", head: true })
                 .eq("funnel_project_id", projectId)
-                .neq("status", "failed"); // Failed presentations don't count against quota
+                .neq("status", PresentationStatus.FAILED); // Failed presentations don't count against quota
 
             if (countError) {
                 logger.error(
@@ -339,7 +340,6 @@ export async function GET(request: NextRequest) {
                 );
             }
 
-            const PRESENTATION_LIMIT = 3;
             if ((count ?? 0) >= PRESENTATION_LIMIT) {
                 logger.warn(
                     { projectId, count, limit: PRESENTATION_LIMIT },

@@ -73,7 +73,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
         switch (slide.layoutType) {
             case "title":
                 return (
-                    <div className="flex h-full flex-col items-center justify-center text-center p-12">
+                    <div className="flex h-full flex-col items-center justify-center text-center p-12 overflow-hidden">
                         {hasBrandColors && (
                             <div
                                 className="absolute left-0 top-1/4 bottom-1/4 w-1.5 rounded-r-full"
@@ -82,7 +82,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         )}
                         <h1
                             className={cn(
-                                "text-5xl font-bold leading-tight mb-6",
+                                "text-5xl font-bold leading-tight mb-6 line-clamp-3",
                                 !hasBrandColors && fallbackTextColors.title
                             )}
                             style={getTitleStyle()}
@@ -92,7 +92,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         {slide.content[0] && (
                             <p
                                 className={cn(
-                                    "text-xl max-w-2xl",
+                                    "text-xl max-w-2xl line-clamp-3",
                                     !hasBrandColors && fallbackTextColors.body
                                 )}
                                 style={getBodyStyle()}
@@ -113,14 +113,14 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
 
             case "section":
                 return (
-                    <div className="flex h-full flex-col items-center justify-center text-center p-12">
+                    <div className="flex h-full flex-col items-center justify-center text-center p-12 overflow-hidden">
                         <div
-                            className="mb-4 h-1 w-24 rounded-full"
+                            className="mb-4 h-1 w-24 rounded-full flex-shrink-0"
                             style={{ backgroundColor: accentColor || "#fff" }}
                         />
                         <h2
                             className={cn(
-                                "text-4xl font-bold",
+                                "text-4xl font-bold line-clamp-2",
                                 !hasBrandColors && fallbackTextColors.title
                             )}
                             style={getTitleStyle()}
@@ -130,7 +130,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         {slide.content[0] && (
                             <p
                                 className={cn(
-                                    "mt-4 text-lg max-w-xl",
+                                    "mt-4 text-lg max-w-xl line-clamp-3",
                                     !hasBrandColors && fallbackTextColors.body
                                 )}
                                 style={getBodyStyle()}
@@ -143,7 +143,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
 
             case "quote":
                 return (
-                    <div className="flex h-full flex-col items-center justify-center p-12">
+                    <div className="flex h-full flex-col items-center justify-center p-12 overflow-hidden">
                         <div className="relative max-w-3xl text-center">
                             <div
                                 className="absolute -left-8 -top-8 text-8xl opacity-20 font-serif"
@@ -153,7 +153,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                             </div>
                             <blockquote
                                 className={cn(
-                                    "text-2xl italic leading-relaxed",
+                                    "text-2xl italic leading-relaxed line-clamp-5",
                                     !hasBrandColors && fallbackTextColors.title
                                 )}
                                 style={getTitleStyle()}
@@ -163,7 +163,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                             {slide.content[1] && (
                                 <p
                                     className={cn(
-                                        "mt-6 text-lg font-medium",
+                                        "mt-6 text-lg font-medium line-clamp-1",
                                         !hasBrandColors && fallbackTextColors.body
                                     )}
                                     style={getBodyStyle()}
@@ -177,7 +177,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
 
             case "statistics":
                 return (
-                    <div className="flex h-full flex-col p-12">
+                    <div className="flex h-full flex-col p-12 overflow-hidden">
                         {hasBrandColors && (
                             <div
                                 className="absolute left-0 top-12 bottom-12 w-1.5 rounded-r-full"
@@ -186,16 +186,16 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         )}
                         <h2
                             className={cn(
-                                "text-3xl font-bold mb-8",
+                                "text-3xl font-bold mb-8 line-clamp-2 flex-shrink-0",
                                 !hasBrandColors && fallbackTextColors.title
                             )}
                             style={getTitleStyle()}
                         >
                             {slide.title}
                         </h2>
-                        <div className="grid grid-cols-3 gap-8 flex-1 items-center">
+                        <div className="grid grid-cols-3 gap-8 flex-1 items-center min-h-0">
                             {slide.content.slice(0, 3).map((stat, idx) => (
-                                <div key={idx} className="text-center">
+                                <div key={idx} className="text-center overflow-hidden">
                                     <div
                                         className="text-5xl font-bold mb-2"
                                         style={{ color: accentColor }}
@@ -204,7 +204,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                                     </div>
                                     <p
                                         className={cn(
-                                            "text-sm",
+                                            "text-sm line-clamp-2",
                                             !hasBrandColors && fallbackTextColors.body
                                         )}
                                         style={getBodyStyle()}
@@ -219,19 +219,19 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
 
             case "comparison":
                 return (
-                    <div className="flex h-full flex-col p-12">
+                    <div className="flex h-full flex-col p-12 overflow-hidden">
                         <h2
                             className={cn(
-                                "text-3xl font-bold mb-8 text-center",
+                                "text-3xl font-bold mb-8 text-center line-clamp-2 flex-shrink-0",
                                 !hasBrandColors && fallbackTextColors.title
                             )}
                             style={getTitleStyle()}
                         >
                             {slide.title}
                         </h2>
-                        <div className="grid grid-cols-2 gap-8 flex-1">
+                        <div className="grid grid-cols-2 gap-8 flex-1 min-h-0">
                             <div
-                                className="rounded-2xl p-6 shadow-sm"
+                                className="rounded-2xl p-6 shadow-sm overflow-hidden flex flex-col"
                                 style={{
                                     backgroundColor: hasBrandColors
                                         ? lightenColor(
@@ -241,15 +241,23 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                                         : "rgba(255,255,255,0.5)",
                                 }}
                             >
-                                <h3 className="text-lg font-semibold mb-4">Before</h3>
-                                <ul className="space-y-2">
+                                <h3 className="text-lg font-semibold mb-4 flex-shrink-0">
+                                    Before
+                                </h3>
+                                <ul className="space-y-2 overflow-hidden">
                                     {slide.content
-                                        .slice(0, Math.ceil(slide.content.length / 2))
+                                        .slice(
+                                            0,
+                                            Math.min(
+                                                3,
+                                                Math.ceil(slide.content.length / 2)
+                                            )
+                                        )
                                         .map((point, idx) => (
                                             <li
                                                 key={idx}
                                                 className={cn(
-                                                    "text-sm",
+                                                    "text-sm line-clamp-2",
                                                     !hasBrandColors &&
                                                         fallbackTextColors.body
                                                 )}
@@ -261,7 +269,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                                 </ul>
                             </div>
                             <div
-                                className="rounded-2xl p-6 shadow-sm border-l-4"
+                                className="rounded-2xl p-6 shadow-sm border-l-4 overflow-hidden flex flex-col"
                                 style={{
                                     backgroundColor: hasBrandColors
                                         ? lightenColor(
@@ -274,15 +282,20 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                                     borderColor: accentColor || "transparent",
                                 }}
                             >
-                                <h3 className="text-lg font-semibold mb-4">After</h3>
-                                <ul className="space-y-2">
+                                <h3 className="text-lg font-semibold mb-4 flex-shrink-0">
+                                    After
+                                </h3>
+                                <ul className="space-y-2 overflow-hidden">
                                     {slide.content
-                                        .slice(Math.ceil(slide.content.length / 2))
+                                        .slice(
+                                            Math.ceil(slide.content.length / 2),
+                                            Math.ceil(slide.content.length / 2) + 3
+                                        )
                                         .map((point, idx) => (
                                             <li
                                                 key={idx}
                                                 className={cn(
-                                                    "text-sm",
+                                                    "text-sm line-clamp-2",
                                                     !hasBrandColors &&
                                                         fallbackTextColors.body
                                                 )}
@@ -299,29 +312,32 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
 
             case "process":
                 return (
-                    <div className="flex h-full flex-col p-12">
+                    <div className="flex h-full flex-col p-12 overflow-hidden">
                         <h2
                             className={cn(
-                                "text-3xl font-bold mb-8",
+                                "text-3xl font-bold mb-8 line-clamp-2 flex-shrink-0",
                                 !hasBrandColors && fallbackTextColors.title
                             )}
                             style={getTitleStyle()}
                         >
                             {slide.title}
                         </h2>
-                        <div className="flex-1 flex items-center">
+                        <div className="flex-1 flex items-center min-h-0">
                             <div className="grid grid-cols-4 gap-4 w-full">
                                 {slide.content.slice(0, 4).map((step, idx) => (
-                                    <div key={idx} className="text-center">
+                                    <div
+                                        key={idx}
+                                        className="text-center overflow-hidden"
+                                    >
                                         <div
-                                            className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full text-white text-xl font-bold shadow-lg"
+                                            className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full text-white text-xl font-bold shadow-lg flex-shrink-0"
                                             style={{ backgroundColor: accentColor }}
                                         >
                                             {idx + 1}
                                         </div>
                                         <p
                                             className={cn(
-                                                "text-sm",
+                                                "text-sm line-clamp-3",
                                                 !hasBrandColors &&
                                                     fallbackTextColors.body
                                             )}
@@ -338,10 +354,10 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
 
             case "cta":
                 return (
-                    <div className="flex h-full flex-col items-center justify-center text-center p-12">
+                    <div className="flex h-full flex-col items-center justify-center text-center p-12 overflow-hidden">
                         <h2
                             className={cn(
-                                "text-4xl font-bold mb-6",
+                                "text-4xl font-bold mb-6 line-clamp-2",
                                 !hasBrandColors && fallbackTextColors.title
                             )}
                             style={getTitleStyle()}
@@ -351,7 +367,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         {slide.content[0] && (
                             <p
                                 className={cn(
-                                    "text-xl mb-8 max-w-2xl",
+                                    "text-xl mb-8 max-w-2xl line-clamp-3",
                                     !hasBrandColors && fallbackTextColors.body
                                 )}
                                 style={getBodyStyle()}
@@ -360,7 +376,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                             </p>
                         )}
                         <div
-                            className="rounded-full px-10 py-5 text-lg font-semibold shadow-xl"
+                            className="rounded-full px-10 py-5 text-lg font-semibold shadow-xl flex-shrink-0"
                             style={{
                                 backgroundColor: "#fff",
                                 color: accentColor || "#1a1a2e",
@@ -384,8 +400,12 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                 const isContentLeft = slide.layoutType === "content_left";
                 const isContentRight = slide.layoutType === "content_right";
 
+                // Limit bullet points to prevent overflow - max 5 points for readability
+                const maxBulletPoints = showImageArea ? 4 : 5;
+                const displayedContent = slide.content.slice(0, maxBulletPoints);
+
                 return (
-                    <div className="flex h-full flex-col p-12">
+                    <div className="flex h-full flex-col p-12 overflow-hidden">
                         {hasBrandColors && (
                             <div
                                 className="absolute left-0 top-12 bottom-12 w-1.5 rounded-r-full"
@@ -394,7 +414,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         )}
                         <h2
                             className={cn(
-                                "text-3xl font-bold mb-6",
+                                "text-3xl font-bold mb-6 line-clamp-2",
                                 !hasBrandColors && fallbackTextColors.title
                             )}
                             style={getTitleStyle()}
@@ -403,13 +423,13 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         </h2>
                         <div
                             className={cn(
-                                "flex-1 grid gap-8",
+                                "flex-1 grid gap-8 min-h-0 overflow-hidden",
                                 showImageArea && "grid-cols-2"
                             )}
                         >
                             {/* Image on left for content_right */}
                             {isContentRight && (hasImage || showImageArea) && (
-                                <div className="rounded-2xl overflow-hidden bg-muted/30 shadow-lg flex items-center justify-center">
+                                <div className="rounded-2xl overflow-hidden bg-muted/30 shadow-lg flex items-center justify-center min-h-0">
                                     {hasImage ? (
                                         <img
                                             src={slide.imageUrl}
@@ -427,9 +447,9 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                                 </div>
                             )}
 
-                            {/* Bullet content */}
-                            <ul className="space-y-4">
-                                {slide.content.map((point, idx) => (
+                            {/* Bullet content with overflow handling */}
+                            <ul className="space-y-3 overflow-hidden">
+                                {displayedContent.map((point, idx) => (
                                     <li
                                         key={idx}
                                         className="flex items-start gap-3 text-lg"
@@ -439,11 +459,11 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                                             style={{ backgroundColor: accentColor }}
                                         />
                                         <span
-                                            className={
-                                                !hasBrandColors
-                                                    ? fallbackTextColors.body
-                                                    : undefined
-                                            }
+                                            className={cn(
+                                                "line-clamp-2",
+                                                !hasBrandColors &&
+                                                    fallbackTextColors.body
+                                            )}
                                             style={getBodyStyle()}
                                         >
                                             {point}
@@ -454,7 +474,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
 
                             {/* Image on right for content_left */}
                             {isContentLeft && (hasImage || showImageArea) && (
-                                <div className="rounded-2xl overflow-hidden bg-muted/30 shadow-lg flex items-center justify-center">
+                                <div className="rounded-2xl overflow-hidden bg-muted/30 shadow-lg flex items-center justify-center min-h-0">
                                     {hasImage ? (
                                         <img
                                             src={slide.imageUrl}

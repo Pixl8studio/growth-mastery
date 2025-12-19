@@ -407,11 +407,18 @@ export default function Step5Page({
                 // Update the temporary presentation with new slide (Issue #331)
                 setSelectedPresentation((prev) => {
                     if (!prev) return prev;
-                    const updatedSlides = [...prev.slides, slide as GeneratedSlide];
-                    // Auto-select first slide when it arrives
-                    if (updatedSlides.length === 1) {
-                        setSelectedSlideIndex(0);
+
+                    // Guard against duplicate slides (can happen on SSE reconnection)
+                    const slideExists = prev.slides.some(
+                        (s) => s.slideNumber === slide.slideNumber
+                    );
+                    if (slideExists) {
+                        return prev;
                     }
+
+                    const updatedSlides = [...prev.slides, slide as GeneratedSlide];
+                    // Auto-select the newest slide as it arrives to show real-time progress
+                    setSelectedSlideIndex(updatedSlides.length - 1);
                     return {
                         ...prev,
                         slides: updatedSlides,
@@ -1567,6 +1574,7 @@ export default function Step5Page({
                                 slideIndex={selectedSlideIndex}
                                 totalSlides={selectedPresentation.slides.length}
                                 brandDesign={brandDesign as BrandDesignType | null}
+                                isGenerating={streaming.isGenerating}
                                 onPrevious={() =>
                                     setSelectedSlideIndex((prev) =>
                                         Math.max(0, prev - 1)

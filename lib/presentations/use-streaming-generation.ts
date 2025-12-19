@@ -77,6 +77,10 @@ export function useStreamingGeneration() {
     const eventSourceRef = useRef<EventSource | null>(null);
     const abortControllerRef = useRef<AbortController | null>(null);
     const isClosingRef = useRef<boolean>(false);
+    // Track if we've received the initial connection to prevent reconnection issues
+    const hasConnectedRef = useRef<boolean>(false);
+    // Store the presentation ID to prevent duplicate creation on reconnection
+    const currentPresentationIdRef = useRef<string | null>(null);
 
     // Consolidated cleanup function to prevent double-close and memory leaks
     const closeConnection = useCallback(() => {
@@ -104,6 +108,8 @@ export function useStreamingGeneration() {
 
     const stopGeneration = useCallback(() => {
         isGeneratingRef.current = false;
+        hasConnectedRef.current = false;
+        currentPresentationIdRef.current = null;
         closeConnection();
         setState((prev) => ({ ...prev, isGenerating: false }));
     }, [closeConnection]);
@@ -120,6 +126,8 @@ export function useStreamingGeneration() {
                 return;
             }
             isGeneratingRef.current = true;
+            hasConnectedRef.current = false;
+            currentPresentationIdRef.current = null;
 
             const {
                 projectId,
@@ -169,6 +177,33 @@ export function useStreamingGeneration() {
 
                 eventSource.addEventListener("connected", (event) => {
                     const data = JSON.parse(event.data);
+
+                    // Guard against processing multiple connected events (e.g., on reconnection)
+                    // Only process the first connection to prevent progress reset
+                    if (hasConnectedRef.current) {
+                        logger.warn(
+                            { presentationId: data.presentationId },
+                            "SSE reconnected, ignoring duplicate connected event"
+                        );
+                        // If we get a different presentation ID on reconnect, something went wrong
+                        if (
+                            currentPresentationIdRef.current &&
+                            data.presentationId !== currentPresentationIdRef.current
+                        ) {
+                            logger.error(
+                                {
+                                    expected: currentPresentationIdRef.current,
+                                    received: data.presentationId,
+                                },
+                                "Presentation ID mismatch on reconnection - possible duplicate creation"
+                            );
+                        }
+                        return;
+                    }
+
+                    hasConnectedRef.current = true;
+                    currentPresentationIdRef.current = data.presentationId;
+
                     setState((prev) => ({
                         ...prev,
                         presentationId: data.presentationId,
@@ -194,12 +229,29 @@ export function useStreamingGeneration() {
                         return;
                     }
 
-                    setState((prev) => ({
-                        ...prev,
-                        slides: [...prev.slides, slide],
-                        currentSlide: slide.slideNumber,
-                        progress,
-                    }));
+                    setState((prev) => {
+                        // Guard against duplicate slides or progress going backwards
+                        const existingSlide = prev.slides.find(
+                            (s) => s.slideNumber === slide.slideNumber
+                        );
+                        if (existingSlide) {
+                            logger.warn(
+                                { slideNumber: slide.slideNumber },
+                                "Duplicate slide received, ignoring"
+                            );
+                            return prev;
+                        }
+
+                        // Don't allow progress to go backwards (indicates something went wrong)
+                        const newProgress = Math.max(prev.progress, progress);
+
+                        return {
+                            ...prev,
+                            slides: [...prev.slides, slide],
+                            currentSlide: slide.slideNumber,
+                            progress: newProgress,
+                        };
+                    });
 
                     if (onSlideGenerated) {
                         onSlideGenerated(slide, progress);

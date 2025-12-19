@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
     DndContext,
     closestCenter,
@@ -58,6 +58,7 @@ interface SortableSlideProps {
     onSelect: () => void;
     onDuplicate: () => void;
     onDelete: () => void;
+    onRefSet?: (slideNumber: number, element: HTMLDivElement | null) => void;
 }
 
 function SortableSlide({
@@ -68,6 +69,7 @@ function SortableSlide({
     onSelect,
     onDuplicate,
     onDelete,
+    onRefSet,
 }: SortableSlideProps) {
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
         useSortable({ id: slide.slideNumber });
@@ -79,8 +81,17 @@ function SortableSlide({
         zIndex: isDragging ? 50 : "auto",
     };
 
+    // Combined ref handler for both dnd-kit and scroll tracking
+    const handleRef = useCallback(
+        (element: HTMLDivElement | null) => {
+            setNodeRef(element);
+            onRefSet?.(slide.slideNumber, element);
+        },
+        [setNodeRef, onRefSet, slide.slideNumber]
+    );
+
     return (
-        <div ref={setNodeRef} style={style} className="relative">
+        <div ref={handleRef} style={style} className="relative">
             {/* Drag handle */}
             <div
                 className={cn(
@@ -123,12 +134,32 @@ export function DraggableSlides({
     className,
 }: DraggableSlidesProps) {
     const [activeId, setActiveId] = useState<number | null>(null);
+    const slideRefs = useRef<Map<number, HTMLDivElement>>(new Map());
+    const previousSlideCount = useRef<number>(0);
 
     // Filter out any undefined or invalid slides to prevent crashes during streaming (Issue #331)
     const validSlides = slides.filter(
         (slide): slide is SlideData =>
             slide != null && typeof slide.slideNumber === "number"
     );
+
+    // Auto-scroll to newest slide when generating - scroll to the selected slide
+    useEffect(() => {
+        // Only scroll if slides were added (not removed) and we're generating
+        if (validSlides.length > previousSlideCount.current && generatingSlideNumber) {
+            const selectedSlide = validSlides[selectedIndex];
+            if (selectedSlide) {
+                const slideElement = slideRefs.current.get(selectedSlide.slideNumber);
+                if (slideElement) {
+                    slideElement.scrollIntoView({
+                        behavior: "smooth",
+                        block: "nearest",
+                    });
+                }
+            }
+        }
+        previousSlideCount.current = validSlides.length;
+    }, [validSlides.length, selectedIndex, generatingSlideNumber, validSlides]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, {
@@ -209,6 +240,13 @@ export function DraggableSlides({
                             onSelect={() => onSlideSelect(index)}
                             onDuplicate={() => onSlideDuplicate(index)}
                             onDelete={() => onSlideDelete(index)}
+                            onRefSet={(slideNumber, element) => {
+                                if (element) {
+                                    slideRefs.current.set(slideNumber, element);
+                                } else {
+                                    slideRefs.current.delete(slideNumber);
+                                }
+                            }}
                         />
                     ))}
                 </SortableContext>

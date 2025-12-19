@@ -464,14 +464,24 @@ export default function Step5Page({
                 }
             },
         });
-    }, [canGenerate, selectedDeck, customization, projectId, streaming.isGenerating, toast]);
+    }, [
+        canGenerate,
+        selectedDeck,
+        customization,
+        projectId,
+        streaming.isGenerating,
+        toast,
+    ]);
 
     // Handle resume generation for incomplete presentations
     const handleResumeGeneration = useCallback(
         (presentation: Presentation) => {
             // CRITICAL: Prevent duplicate generation calls (Issue #345)
             if (streaming.isGenerating) {
-                logger.warn({}, "Generation already in progress, ignoring resume request");
+                logger.warn(
+                    {},
+                    "Generation already in progress, ignoring resume request"
+                );
                 return;
             }
             if (!presentation || !presentation.deckStructureId) return;

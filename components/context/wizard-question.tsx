@@ -41,7 +41,10 @@ function safeStringValue(value: unknown): string {
                     return item;
                 }
                 if (typeof item === "object" && item !== null) {
-                    return formatObjectForDisplay(item as Record<string, unknown>, index + 1);
+                    return formatObjectForDisplay(
+                        item as Record<string, unknown>,
+                        index + 1
+                    );
                 }
                 return String(item);
             })
@@ -64,7 +67,16 @@ function formatObjectForDisplay(
     itemNumber?: number
 ): string {
     const titleFields = ["title", "name", "heading", "label"];
-    const contentFields = ["description", "content", "text", "quote", "response", "value", "details", "body"];
+    const contentFields = [
+        "description",
+        "content",
+        "text",
+        "quote",
+        "response",
+        "value",
+        "details",
+        "body",
+    ];
 
     let title = "";
     for (const field of titleFields) {

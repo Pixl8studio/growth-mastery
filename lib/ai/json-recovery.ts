@@ -509,7 +509,10 @@ export function formatValueAsText(value: unknown): string {
                     return item;
                 }
                 if (typeof item === "object" && item !== null) {
-                    return formatObjectToText(item as Record<string, unknown>, index + 1);
+                    return formatObjectToText(
+                        item as Record<string, unknown>,
+                        index + 1
+                    );
                 }
                 return String(item);
             })
@@ -529,10 +532,7 @@ export function formatValueAsText(value: unknown): string {
  * Format an object as human-readable text
  * Intelligently extracts meaningful content from structured objects
  */
-function formatObjectToText(
-    obj: Record<string, unknown>,
-    itemNumber?: number
-): string {
+function formatObjectToText(obj: Record<string, unknown>, itemNumber?: number): string {
     // Common field names for different object types
     const titleFields = ["title", "name", "heading", "label"];
     const contentFields = [
@@ -612,9 +612,7 @@ function formatObjectToText(
                 if (typeof val === "string" || typeof val === "number") {
                     fallbackParts.push(`${key}: ${val}`);
                 } else if (Array.isArray(val)) {
-                    const items = val.filter(
-                        (v) => v !== null && v !== "[Object]"
-                    );
+                    const items = val.filter((v) => v !== null && v !== "[Object]");
                     if (items.length > 0) {
                         fallbackParts.push(`${key}: ${items.join(", ")}`);
                     }

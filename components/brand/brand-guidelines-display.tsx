@@ -368,7 +368,8 @@ export function BrandGuidelinesDisplay({
                                                     Color Palette
                                                 </h4>
                                                 <p className="text-sm text-muted-foreground">
-                                                    Click to edit your colors if you&apos;d like
+                                                    Click to edit your colors if
+                                                    you&apos;d like
                                                 </p>
                                             </div>
                                             <div className="flex gap-2">

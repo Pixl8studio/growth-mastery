@@ -13,7 +13,6 @@ import {
     Save,
     AlertTriangle,
     Trash2,
-    Lightbulb,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -461,49 +460,6 @@ export function BrandGuidelinesDisplay({
                                             />
                                         </div>
                                     </div>
-
-                                    {/* AI Rationale Section */}
-                                    {guidelines.color_rationale && (
-                                        <Card className="bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-900">
-                                            <CardContent className="pt-4">
-                                                <div className="flex items-start gap-3">
-                                                    <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/50">
-                                                        <Lightbulb className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="font-medium text-blue-900 dark:text-blue-100 mb-1">
-                                                            Why These Colors?
-                                                        </h4>
-                                                        <p className="text-sm text-blue-800 dark:text-blue-200">
-                                                            {guidelines.color_rationale}
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    )}
-
-                                    {!guidelines.color_rationale && (
-                                        <Card className="bg-muted/30 border-dashed">
-                                            <CardContent className="pt-4">
-                                                <div className="flex items-start gap-3">
-                                                    <div className="p-2 rounded-lg bg-muted">
-                                                        <Lightbulb className="h-4 w-4 text-muted-foreground" />
-                                                    </div>
-                                                    <div>
-                                                        <h4 className="font-medium text-muted-foreground mb-1">
-                                                            Color Rationale
-                                                        </h4>
-                                                        <p className="text-sm text-muted-foreground">
-                                                            Color rationale is generated
-                                                            when your brand design is
-                                                            created.
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    )}
 
                                     {/* Typography */}
                                     {guidelines.fonts && (

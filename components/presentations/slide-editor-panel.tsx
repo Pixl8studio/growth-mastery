@@ -614,12 +614,23 @@ export function SlideEditorPanel({
                             </span>
                         </div>
                     )}
-                    {slide.imageUrl && (
+                    {/* Only show image status for layouts that support images:
+                        - content_left and content_right always have image slots
+                        - bullets can have images if imagePrompt exists */}
+                    {(slide.layoutType === "content_left" ||
+                        slide.layoutType === "content_right" ||
+                        (slide.layoutType === "bullets" && slide.imagePrompt)) && (
                         <div className="flex items-center justify-between rounded-lg bg-muted/30 px-3 py-2">
                             <span className="text-muted-foreground">Image</span>
-                            <span className="font-medium text-green-600">
-                                Generated
-                            </span>
+                            {slide.imageUrl ? (
+                                <span className="font-medium text-green-600">
+                                    Generated
+                                </span>
+                            ) : (
+                                <span className="font-medium text-amber-600">
+                                    Ready to generate
+                                </span>
+                            )}
                         </div>
                     )}
                 </div>

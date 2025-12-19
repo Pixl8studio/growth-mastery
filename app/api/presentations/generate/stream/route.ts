@@ -323,6 +323,39 @@ export async function GET(request: NextRequest) {
             });
         }
 
+        // Check generation limit (3 presentations per funnel)
+        // Only applies to new presentations, not resuming
+        if (!isResuming) {
+            const { count, error: countError } = await supabase
+                .from("presentations")
+                .select("*", { count: "exact", head: true })
+                .eq("funnel_project_id", projectId)
+                .neq("status", "failed"); // Failed presentations don't count against quota
+
+            if (countError) {
+                logger.error(
+                    { error: countError, projectId },
+                    "Failed to check presentation count"
+                );
+            }
+
+            const PRESENTATION_LIMIT = 3;
+            if ((count ?? 0) >= PRESENTATION_LIMIT) {
+                logger.warn(
+                    { projectId, count, limit: PRESENTATION_LIMIT },
+                    "Presentation generation limit reached"
+                );
+                return new Response(
+                    JSON.stringify({
+                        error: "Presentation limit reached",
+                        message: `You have reached the limit of ${PRESENTATION_LIMIT} presentations per funnel. This limit cannot be reset by deleting presentations.`,
+                        code: "PRESENTATION_LIMIT_REACHED",
+                    }),
+                    { status: 429, headers: { "Content-Type": "application/json" } }
+                );
+            }
+        }
+
         // Validate slides
         const rawSlides = Array.isArray(deckStructure.slides)
             ? deckStructure.slides

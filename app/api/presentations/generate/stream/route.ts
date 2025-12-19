@@ -198,6 +198,19 @@ export async function GET(request: NextRequest) {
         : null;
     const isResuming = !!resumePresentationId && !!resumeFromSlide;
 
+    // Diagnostic logging - request received
+    logger.debug(
+        {
+            projectId,
+            deckStructureId,
+            hasCustomization: !!customizationParam,
+            isResuming,
+            resumePresentationId,
+            resumeFromSlide,
+        },
+        "SSE stream request received"
+    );
+
     // Validate required params
     if (!projectId || !deckStructureId) {
         return new Response(
@@ -208,6 +221,7 @@ export async function GET(request: NextRequest) {
 
     try {
         const supabase = await createClient();
+        logger.debug({}, "Supabase client created");
 
         const {
             data: { user },
@@ -387,29 +401,85 @@ export async function GET(request: NextRequest) {
             );
         } else {
             // New presentation mode
-            const { data: newPresentation, error: createError } = await supabase
-                .from("presentations")
-                .insert({
-                    user_id: user.id,
-                    funnel_project_id: projectId,
-                    deck_structure_id: deckStructureId,
-                    title: deckStructure.title || "Untitled Presentation",
-                    customization: customization,
-                    status: "generating",
-                    slides: [],
-                    generation_progress: 0,
-                    total_expected_slides: totalExpectedSlides,
-                })
-                .select()
-                .single();
+            // First try with total_expected_slides (requires migration 20251218000002)
+            // If that fails, fall back to without the column for backward compatibility
+            let newPresentation;
+            let createError;
 
-            if (createError) {
+            try {
+                const result = await supabase
+                    .from("presentations")
+                    .insert({
+                        user_id: user.id,
+                        funnel_project_id: projectId,
+                        deck_structure_id: deckStructureId,
+                        title: deckStructure.title || "Untitled Presentation",
+                        customization: customization,
+                        status: "generating",
+                        slides: [],
+                        generation_progress: 0,
+                        total_expected_slides: totalExpectedSlides,
+                    })
+                    .select()
+                    .single();
+
+                newPresentation = result.data;
+                createError = result.error;
+
+                // If error mentions the column doesn't exist, try without it
+                if (
+                    createError &&
+                    createError.message?.includes("total_expected_slides")
+                ) {
+                    logger.warn(
+                        { error: createError },
+                        "total_expected_slides column not found, retrying without it"
+                    );
+
+                    const fallbackResult = await supabase
+                        .from("presentations")
+                        .insert({
+                            user_id: user.id,
+                            funnel_project_id: projectId,
+                            deck_structure_id: deckStructureId,
+                            title: deckStructure.title || "Untitled Presentation",
+                            customization: customization,
+                            status: "generating",
+                            slides: [],
+                            generation_progress: 0,
+                        })
+                        .select()
+                        .single();
+
+                    newPresentation = fallbackResult.data;
+                    createError = fallbackResult.error;
+                }
+            } catch (insertException) {
                 logger.error(
-                    { error: createError, projectId },
+                    { error: insertException, projectId, userId: user.id },
+                    "Exception during presentation INSERT"
+                );
+                createError = insertException;
+            }
+
+            if (createError || !newPresentation) {
+                logger.error(
+                    {
+                        error: createError,
+                        projectId,
+                        userId: user.id,
+                        deckStructureId,
+                    },
                     "Failed to create presentation record"
                 );
                 return new Response(
-                    JSON.stringify({ error: "Failed to create presentation" }),
+                    JSON.stringify({
+                        error: "Failed to create presentation",
+                        details:
+                            createError instanceof Error
+                                ? createError.message
+                                : String(createError),
+                    }),
                     { status: 500, headers: { "Content-Type": "application/json" } }
                 );
             }
@@ -707,17 +777,31 @@ export async function GET(request: NextRequest) {
             },
         });
     } catch (error) {
-        logger.error({ error }, "Failed to initialize streaming generation");
+        // Enhanced error logging for debugging
+        const errorDetails = {
+            message: error instanceof Error ? error.message : String(error),
+            name: error instanceof Error ? error.name : "Unknown",
+            stack: error instanceof Error ? error.stack : undefined,
+        };
+
+        logger.error(
+            { error, errorDetails },
+            "Failed to initialize streaming generation"
+        );
 
         Sentry.captureException(error, {
             tags: {
                 component: "api",
                 action: "stream_presentation_init",
             },
+            extra: errorDetails,
         });
 
         return new Response(
-            JSON.stringify({ error: "Failed to initialize generation" }),
+            JSON.stringify({
+                error: "Failed to initialize generation",
+                details: errorDetails.message,
+            }),
             { status: 500, headers: { "Content-Type": "application/json" } }
         );
     }

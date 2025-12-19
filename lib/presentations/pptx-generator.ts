@@ -132,6 +132,54 @@ function hexToRgb(hex: string): string {
     return hex.replace("#", "").toUpperCase();
 }
 
+// Parse hex color to RGB components
+function parseHexToRgb(hex: string): { r: number; g: number; b: number } | null {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result
+        ? {
+              r: parseInt(result[1], 16),
+              g: parseInt(result[2], 16),
+              b: parseInt(result[3], 16),
+          }
+        : null;
+}
+
+// Convert RGB to hex string for PPTX
+function rgbToHex(r: number, g: number, b: number): string {
+    const toHex = (n: number) =>
+        Math.max(0, Math.min(255, Math.round(n)))
+            .toString(16)
+            .padStart(2, "0")
+            .toUpperCase();
+    return `${toHex(r)}${toHex(g)}${toHex(b)}`;
+}
+
+// Lighten a hex color by a percentage
+function lightenColor(hex: string, percent: number): string {
+    const rgb = parseHexToRgb(hex);
+    if (!rgb) return hexToRgb(hex);
+
+    const factor = percent / 100;
+    const r = Math.min(255, Math.round(rgb.r + (255 - rgb.r) * factor));
+    const g = Math.min(255, Math.round(rgb.g + (255 - rgb.g) * factor));
+    const b = Math.min(255, Math.round(rgb.b + (255 - rgb.b) * factor));
+
+    return rgbToHex(r, g, b);
+}
+
+// Darken a hex color by a percentage
+function darkenColor(hex: string, percent: number): string {
+    const rgb = parseHexToRgb(hex);
+    if (!rgb) return hexToRgb(hex);
+
+    const factor = 1 - percent / 100;
+    const r = Math.round(rgb.r * factor);
+    const g = Math.round(rgb.g * factor);
+    const b = Math.round(rgb.b * factor);
+
+    return rgbToHex(r, g, b);
+}
+
 // Escape XML special characters
 function escapeXml(text: string): string {
     return text
@@ -140,6 +188,258 @@ function escapeXml(text: string): string {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&apos;");
+}
+
+// ============================================================================
+// Gradient Background Generation for PPTX
+// Mirrors slide-design-utils.ts generateBrandGradient() for web preview parity
+// ============================================================================
+
+// Color shift constants matching slide-design-utils.ts
+const COLOR_SHIFT = {
+    SECONDARY_DARKEN: 20,
+    ACCENT_LIGHTEN: 30,
+    TITLE_DEEP_DARKEN: 30,
+    TITLE_MID_DARKEN: 20,
+    CTA_ACCENT_LIGHTEN: 20,
+    QUOTE_VERY_LIGHT: 92,
+    QUOTE_LIGHT: 85,
+    STATISTICS_ULTRA_LIGHT: 95,
+    STATISTICS_SECONDARY_LIGHT: 90,
+    COMPARISON_PRIMARY_LIGHT: 94,
+    COMPARISON_ACCENT_LIGHT: 92,
+    PROCESS_PRIMARY_LIGHT: 93,
+    PROCESS_ACCENT_LIGHT: 95,
+    CONTENT_BRAND_TINT: 96,
+} as const;
+
+// Convert CSS angle (degrees) to PPTX angle (60,000ths of a degree)
+// PPTX angles: 0 = right, 90 = down, 180 = left, 270 = up
+// CSS angles: 0 = up, 90 = right, 180 = down, 270 = left
+// Conversion: PPTX angle = (90 - CSS angle) * 60000, then normalize
+function cssAngleToPptx(cssAngle: number): number {
+    // CSS 135deg (diagonal top-left to bottom-right) = PPTX (90 - 135 + 360) * 60000 = 315 * 60000
+    // But PPTX uses different convention: we need to map correctly
+    // For a 135deg CSS gradient (top-left to bottom-right):
+    // PPTX equivalent is approximately 2700000 (45 degrees in PPTX = bottom-left to top-right)
+    // Actually PPTX: 0 = left-to-right, 5400000 = top-to-bottom, etc.
+    // CSS 135deg = diagonal from top-left to bottom-right
+    // In PPTX: 135 degrees from the right axis going counterclockwise = 135 * 60000 = 8100000
+    return cssAngle * 60000;
+}
+
+interface GradientStop {
+    position: number; // 0-100000 (0% to 100%)
+    color: string; // RRGGBB format
+}
+
+interface GradientConfig {
+    angle: number; // In PPTX units (60,000ths of a degree)
+    stops: GradientStop[];
+}
+
+// Generate gradient configuration based on layout type and brand colors
+// This mirrors generateBrandGradient() from slide-design-utils.ts
+function getSlideGradient(
+    layoutType: SlideData["layoutType"],
+    colors: BrandColors
+): GradientConfig {
+    const primary = colors.primary;
+    const secondary =
+        colors.secondary || darkenColor(primary, COLOR_SHIFT.SECONDARY_DARKEN);
+    const accent = colors.accent || lightenColor(primary, COLOR_SHIFT.ACCENT_LIGHTEN);
+    const background = colors.background || "FFFFFF";
+
+    switch (layoutType) {
+        case "title":
+            // Bold, immersive gradient for title slides (CSS 135deg)
+            return {
+                angle: cssAngleToPptx(135),
+                stops: [
+                    {
+                        position: 0,
+                        color: darkenColor(primary, COLOR_SHIFT.TITLE_DEEP_DARKEN),
+                    },
+                    { position: 50000, color: hexToRgb(primary) },
+                    {
+                        position: 100000,
+                        color: darkenColor(primary, COLOR_SHIFT.TITLE_MID_DARKEN),
+                    },
+                ],
+            };
+
+        case "section":
+            // Section headers use primary with subtle secondary blend (CSS 120deg)
+            return {
+                angle: cssAngleToPptx(120),
+                stops: [
+                    {
+                        position: 0,
+                        color: darkenColor(primary, COLOR_SHIFT.TITLE_MID_DARKEN),
+                    },
+                    { position: 60000, color: hexToRgb(primary) },
+                    { position: 100000, color: hexToRgb(secondary) },
+                ],
+            };
+
+        case "cta":
+            // High-energy gradient for call-to-action (CSS 135deg)
+            return {
+                angle: cssAngleToPptx(135),
+                stops: [
+                    { position: 0, color: hexToRgb(primary) },
+                    { position: 50000, color: hexToRgb(accent) },
+                    {
+                        position: 100000,
+                        color: lightenColor(accent, COLOR_SHIFT.CTA_ACCENT_LIGHTEN),
+                    },
+                ],
+            };
+
+        case "quote":
+            // Warm, subtle gradient for testimonials (CSS 180deg = top to bottom)
+            return {
+                angle: cssAngleToPptx(180),
+                stops: [
+                    {
+                        position: 0,
+                        color: lightenColor(primary, COLOR_SHIFT.QUOTE_VERY_LIGHT),
+                    },
+                    {
+                        position: 100000,
+                        color: lightenColor(primary, COLOR_SHIFT.QUOTE_LIGHT),
+                    },
+                ],
+            };
+
+        case "statistics":
+            // Clean gradient that lets numbers pop (CSS 180deg)
+            return {
+                angle: cssAngleToPptx(180),
+                stops: [
+                    {
+                        position: 0,
+                        color: lightenColor(
+                            primary,
+                            COLOR_SHIFT.STATISTICS_ULTRA_LIGHT
+                        ),
+                    },
+                    {
+                        position: 100000,
+                        color: lightenColor(
+                            secondary,
+                            COLOR_SHIFT.STATISTICS_SECONDARY_LIGHT
+                        ),
+                    },
+                ],
+            };
+
+        case "comparison":
+            // Neutral base for before/after contrast (CSS 180deg)
+            return {
+                angle: cssAngleToPptx(180),
+                stops: [
+                    {
+                        position: 0,
+                        color: lightenColor(
+                            primary,
+                            COLOR_SHIFT.COMPARISON_PRIMARY_LIGHT
+                        ),
+                    },
+                    {
+                        position: 100000,
+                        color: lightenColor(
+                            accent,
+                            COLOR_SHIFT.COMPARISON_ACCENT_LIGHT
+                        ),
+                    },
+                ],
+            };
+
+        case "process":
+            // Progressive gradient suggesting forward movement (CSS 90deg = left to right)
+            return {
+                angle: cssAngleToPptx(90),
+                stops: [
+                    {
+                        position: 0,
+                        color: lightenColor(primary, COLOR_SHIFT.PROCESS_PRIMARY_LIGHT),
+                    },
+                    {
+                        position: 100000,
+                        color: lightenColor(accent, COLOR_SHIFT.PROCESS_ACCENT_LIGHT),
+                    },
+                ],
+            };
+
+        case "content_left":
+        case "content_right":
+        case "bullets":
+        default:
+            // Clean, professional background with subtle brand presence (CSS 180deg)
+            return {
+                angle: cssAngleToPptx(180),
+                stops: [
+                    { position: 0, color: hexToRgb(background) },
+                    {
+                        position: 100000,
+                        color: lightenColor(primary, COLOR_SHIFT.CONTENT_BRAND_TINT),
+                    },
+                ],
+            };
+    }
+}
+
+// Generate PPTX background XML with gradient fill
+function generateBackgroundXml(gradient: GradientConfig): string {
+    const gradientStops = gradient.stops
+        .map(
+            (stop) =>
+                `        <a:gs pos="${stop.position}"><a:srgbClr val="${stop.color}"/></a:gs>`
+        )
+        .join("\n");
+
+    return `  <p:bg>
+    <p:bgPr>
+      <a:gradFill rotWithShape="1">
+        <a:gsLst>
+${gradientStops}
+        </a:gsLst>
+        <a:lin ang="${gradient.angle}" scaled="0"/>
+      </a:gradFill>
+      <a:effectLst/>
+    </p:bgPr>
+  </p:bg>`;
+}
+
+// Get text colors based on layout type (dark bg = white text, light bg = dark text)
+function getTextColors(
+    layoutType: SlideData["layoutType"],
+    colors: BrandColors
+): {
+    title: string;
+    body: string;
+    accent: string;
+} {
+    const isDarkBg =
+        layoutType === "title" || layoutType === "section" || layoutType === "cta";
+
+    if (isDarkBg) {
+        return {
+            title: "FFFFFF",
+            body: "FFFFFF", // Slightly transparent would be ideal but PPTX solid fill works
+            accent: "FFFFFF",
+        };
+    }
+
+    // For light backgrounds, use brand text color or dark defaults
+    const textColor = hexToRgb(colors.text || "#1a1a2e");
+    const accentColor = hexToRgb(colors.accent || colors.primary);
+    return {
+        title: textColor,
+        body: textColor,
+        accent: accentColor,
+    };
 }
 
 // ============================================================================
@@ -152,14 +452,18 @@ function generateSlideXml(
     colors: BrandColors,
     brandName: string
 ): string {
-    const titleColor = hexToRgb(colors.primary);
-    const textColor = hexToRgb(colors.text);
-    const accentColor = hexToRgb(colors.accent);
+    // Get gradient background based on layout type - matches web preview exactly
+    const gradient = getSlideGradient(slide.layoutType, colors);
+    const backgroundXml = generateBackgroundXml(gradient);
 
-    // Build bullet points
+    // Get text colors appropriate for the background (dark bg = white text, light bg = dark text)
+    const textColors = getTextColors(slide.layoutType, colors);
+    const accentColor = hexToRgb(colors.accent || colors.primary);
+
+    // Build bullet points with layout-appropriate text colors
     const bulletPoints = slide.content
         .map(
-            (point) => `
+            (point: string) => `
       <a:p>
         <a:pPr marL="${BULLET_MARGIN_LEFT}" indent="${BULLET_INDENT}">
           <a:buFont typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
@@ -168,7 +472,7 @@ function generateSlideXml(
         <a:r>
           <a:rPr lang="en-US" sz="${FONT_SIZE_BODY}" dirty="0">
             <a:solidFill>
-              <a:srgbClr val="${textColor}"/>
+              <a:srgbClr val="${textColors.body}"/>
             </a:solidFill>
             <a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
           </a:rPr>
@@ -183,9 +487,11 @@ function generateSlideXml(
     const isSectionSlide = slide.layoutType === "section";
 
     if (isTitleSlide) {
+        // Title slide: gradient background with white text (matches web preview)
         return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:cSld>
+${backgroundXml}
     <p:spTree>
       <p:nvGrpSpPr>
         <p:cNvPr id="1" name=""/>
@@ -220,7 +526,7 @@ function generateSlideXml(
             <a:r>
               <a:rPr lang="en-US" sz="${FONT_SIZE_TITLE_LARGE}" b="1" dirty="0">
                 <a:solidFill>
-                  <a:srgbClr val="${titleColor}"/>
+                  <a:srgbClr val="${textColors.title}"/>
                 </a:solidFill>
                 <a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
               </a:rPr>
@@ -249,7 +555,7 @@ function generateSlideXml(
             <a:r>
               <a:rPr lang="en-US" sz="${FONT_SIZE_BODY}" dirty="0">
                 <a:solidFill>
-                  <a:srgbClr val="${textColor}"/>
+                  <a:srgbClr val="${textColors.body}"/>
                 </a:solidFill>
                 <a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
               </a:rPr>
@@ -278,7 +584,7 @@ function generateSlideXml(
             <a:r>
               <a:rPr lang="en-US" sz="${FONT_SIZE_FOOTER}" dirty="0">
                 <a:solidFill>
-                  <a:srgbClr val="${accentColor}"/>
+                  <a:srgbClr val="${textColors.body}"/>
                 </a:solidFill>
               </a:rPr>
               <a:t>${escapeXml(brandName)}</a:t>
@@ -293,17 +599,11 @@ function generateSlideXml(
     }
 
     if (isSectionSlide) {
+        // Section slide: gradient background with white text (matches web preview)
         return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:cSld>
-    <p:bg>
-      <p:bgPr>
-        <a:solidFill>
-          <a:srgbClr val="${titleColor}"/>
-        </a:solidFill>
-        <a:effectLst/>
-      </p:bgPr>
-    </p:bg>
+${backgroundXml}
     <p:spTree>
       <p:nvGrpSpPr>
         <p:cNvPr id="1" name=""/>
@@ -339,7 +639,7 @@ function generateSlideXml(
             <a:r>
               <a:rPr lang="en-US" sz="${FONT_SIZE_TITLE_SECTION}" b="1" dirty="0">
                 <a:solidFill>
-                  <a:srgbClr val="FFFFFF"/>
+                  <a:srgbClr val="${textColors.title}"/>
                 </a:solidFill>
                 <a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
               </a:rPr>
@@ -354,10 +654,12 @@ function generateSlideXml(
 </p:sld>`;
     }
 
-    // Default content slide
+    // Default content slide: gradient background matching the web preview
+    // This applies to: bullets, content_left, content_right, quote, statistics, comparison, process, cta
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <p:sld xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main">
   <p:cSld>
+${backgroundXml}
     <p:spTree>
       <p:nvGrpSpPr>
         <p:cNvPr id="1" name=""/>
@@ -391,7 +693,7 @@ function generateSlideXml(
             <a:r>
               <a:rPr lang="en-US" sz="${FONT_SIZE_TITLE_CONTENT}" b="1" dirty="0">
                 <a:solidFill>
-                  <a:srgbClr val="${titleColor}"/>
+                  <a:srgbClr val="${textColors.title}"/>
                 </a:solidFill>
                 <a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
               </a:rPr>

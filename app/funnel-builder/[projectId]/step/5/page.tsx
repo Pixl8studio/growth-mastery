@@ -21,12 +21,19 @@ import {
     LayoutGrid,
     AlertCircle,
     CheckCircle2,
+    Info,
 } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { cn } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { useIsMobile } from "@/lib/mobile-utils.client";
+import {
+    PRESENTATION_LIMIT,
+    PresentationStatus,
+    type PresentationStatusType,
+    countsTowardQuota,
+} from "@/lib/constants/presentations";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
@@ -93,7 +100,7 @@ interface Presentation {
     id: string;
     title: string;
     slides: GeneratedSlide[];
-    status: "draft" | "generating" | "completed" | "failed";
+    status: PresentationStatusType;
     deckStructureId: string;
     created_at: string;
     customization: PresentationCustomization;
@@ -312,6 +319,17 @@ export default function Step5Page({
         [deckStructures, selectedDeckId]
     );
 
+    // Count non-failed presentations (failed ones don't count against quota)
+    // Uses shared countsTowardQuota function for consistency with backend
+    const presentationCount = useMemo(() => {
+        return presentations.filter((p) =>
+            countsTowardQuota(p.status as PresentationStatusType)
+        ).length;
+    }, [presentations]);
+
+    const hasReachedLimit = presentationCount >= PRESENTATION_LIMIT;
+    const remainingGenerations = Math.max(0, PRESENTATION_LIMIT - presentationCount);
+
     // Check dependencies
     const hasBusinessProfile =
         businessProfile !== null &&
@@ -319,7 +337,11 @@ export default function Step5Page({
     const hasBrandDesign = brandDesign !== null;
     const hasDeckStructure = deckStructures.length > 0;
     const canGenerate =
-        hasBusinessProfile && hasBrandDesign && hasDeckStructure && selectedDeckId;
+        hasBusinessProfile &&
+        hasBrandDesign &&
+        hasDeckStructure &&
+        selectedDeckId &&
+        !hasReachedLimit;
 
     // Helper functions for slide generation
     const generateSlideContent = useCallback(
@@ -364,6 +386,94 @@ export default function Step5Page({
         []
     );
 
+    // Refresh presentations from database
+    const refreshPresentations = useCallback(async () => {
+        if (!projectId) return;
+
+        try {
+            const presentationsResponse = await fetch(
+                `/api/presentations?projectId=${projectId}`,
+                { credentials: "include" }
+            );
+
+            if (presentationsResponse.ok) {
+                const presentationsResult = await presentationsResponse.json();
+                if (presentationsResult.presentations) {
+                    const dbPresentations = presentationsResult.presentations.map(
+                        (p: any) => ({
+                            id: p.id,
+                            title: p.title,
+                            slides: p.slides || [],
+                            status: p.status,
+                            deckStructureId: p.deck_structure_id,
+                            created_at: p.created_at,
+                            customization: p.customization || {},
+                            total_expected_slides: p.total_expected_slides,
+                            error_message: p.error_message,
+                        })
+                    );
+                    setPresentations(dbPresentations);
+                }
+            }
+        } catch (error) {
+            logger.warn({ error }, "Failed to refresh presentations");
+        }
+    }, [projectId]);
+
+    // Handle editor close with status update
+    const handleEditorClose = useCallback(async () => {
+        const wasGenerating = streaming.isGenerating;
+        const currentPresentationId = selectedPresentation?.id;
+        const slideCount = selectedPresentation?.slides.length || 0;
+
+        // Stop generation if in progress
+        if (wasGenerating) {
+            streaming.stopGeneration();
+        }
+
+        // Close the editor
+        setIsEditorOpen(false);
+
+        // If we were generating, pause the presentation
+        if (
+            wasGenerating &&
+            currentPresentationId &&
+            !currentPresentationId.startsWith("generating-")
+        ) {
+            try {
+                const response = await fetch("/api/presentations", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        presentationId: currentPresentationId,
+                        status: PresentationStatus.PAUSED,
+                    }),
+                });
+
+                if (response.ok) {
+                    toast({
+                        title: "Presentation Paused",
+                        description: `Saved ${slideCount} slides. You can resume generation later.`,
+                    });
+                } else {
+                    throw new Error("Failed to update status");
+                }
+            } catch (error) {
+                logger.error({ error }, "Failed to pause presentation");
+                toast({
+                    title: "Warning",
+                    description:
+                        "Could not save pause status. Your slides are saved, but you may need to refresh to see the correct status.",
+                    variant: "destructive",
+                });
+            }
+        }
+
+        // Refresh presentations to get latest status from database
+        await refreshPresentations();
+    }, [streaming, selectedPresentation, refreshPresentations, toast]);
+
     // Handle generation with real-time streaming (Issue #327, Issue #331)
     // Now immediately opens editor with skeleton loading - no intermediate screen
     const handleGeneratePresentation = useCallback(async () => {
@@ -379,7 +489,7 @@ export default function Step5Page({
             id: "generating-" + Date.now(),
             title: `${selectedDeck.title} - Generating...`,
             slides: [], // Start empty, slides will appear as they generate
-            status: "generating",
+            status: PresentationStatus.GENERATING,
             deckStructureId: selectedDeck.id,
             created_at: new Date().toISOString(),
             customization,
@@ -436,7 +546,7 @@ export default function Step5Page({
                     id: presentationId,
                     title: `${selectedDeck.title} - Generated`,
                     slides: slides as GeneratedSlide[],
-                    status: "completed",
+                    status: PresentationStatus.COMPLETED,
                     deckStructureId: selectedDeck.id,
                     created_at: new Date().toISOString(),
                     customization,
@@ -499,7 +609,7 @@ export default function Step5Page({
             // Update presentation status to generating
             setSelectedPresentation({
                 ...presentation,
-                status: "generating",
+                status: PresentationStatus.GENERATING,
             });
 
             streaming.startGeneration({
@@ -537,7 +647,7 @@ export default function Step5Page({
                         ...presentation,
                         id: presentationId,
                         slides: slides as GeneratedSlide[],
-                        status: "completed",
+                        status: PresentationStatus.COMPLETED,
                     };
 
                     setSelectedPresentation(completedPresentation);
@@ -568,7 +678,7 @@ export default function Step5Page({
                             variant: "destructive",
                         });
 
-                        return { ...prev, status: "draft" };
+                        return { ...prev, status: PresentationStatus.DRAFT };
                     });
                 },
             });
@@ -760,6 +870,15 @@ export default function Step5Page({
 
     const handleDeletePresentation = useCallback(
         async (presentationId: string) => {
+            // Confirm deletion with warning about quota
+            const confirmed = window.confirm(
+                "Are you sure you want to delete this presentation?\n\n" +
+                    "Note: Deleting a presentation does NOT free up your generation quota. " +
+                    `You are limited to ${PRESENTATION_LIMIT} presentations per funnel regardless of deletions.`
+            );
+
+            if (!confirmed) return;
+
             try {
                 const response = await fetch(`/api/presentations/${presentationId}`, {
                     method: "DELETE",
@@ -854,7 +973,7 @@ export default function Step5Page({
     }
 
     const hasCompletedPresentation = presentations.some(
-        (p) => p.status === "completed"
+        (p) => p.status === PresentationStatus.COMPLETED
     );
 
     // Render main page
@@ -1215,6 +1334,54 @@ export default function Step5Page({
                                         </div>
                                     )}
 
+                                    {/* Pre-generation tips */}
+                                    <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                                        <div className="flex items-start gap-2">
+                                            <Info className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                                            <p>
+                                                Be sure your business profile on step 1,
+                                                your offer definition on step 2, your
+                                                brand guidelines on step 3, and your
+                                                presentation script on step 4 are
+                                                completed to your liking before
+                                                generating.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Generation limit info */}
+                                    {!hasReachedLimit && (
+                                        <div className="mb-4 text-center text-sm text-muted-foreground">
+                                            <span className="font-medium">
+                                                {remainingGenerations}
+                                            </span>{" "}
+                                            of {PRESENTATION_LIMIT} presentations
+                                            remaining
+                                        </div>
+                                    )}
+
+                                    {/* Limit reached warning */}
+                                    {hasReachedLimit && (
+                                        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                                            <div className="flex items-start gap-2">
+                                                <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
+                                                <div>
+                                                    <p className="font-medium">
+                                                        Generation limit reached
+                                                    </p>
+                                                    <p className="mt-1 text-amber-700">
+                                                        You have used all{" "}
+                                                        {PRESENTATION_LIMIT}{" "}
+                                                        presentations for this funnel.
+                                                        Edit your existing presentations
+                                                        or contact support for
+                                                        additional quota.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Generate Button */}
                                     <div className="flex justify-center pt-4">
                                         <Button
@@ -1222,9 +1389,16 @@ export default function Step5Page({
                                             disabled={!canGenerate}
                                             size="lg"
                                             className="px-8"
+                                            title={
+                                                hasReachedLimit
+                                                    ? `Limit of ${PRESENTATION_LIMIT} presentations reached`
+                                                    : undefined
+                                            }
                                         >
                                             <Sparkles className="mr-2 h-5 w-5" />
-                                            Generate My Presentation
+                                            {hasReachedLimit
+                                                ? "Generation Limit Reached"
+                                                : "Generate My Presentation"}
                                         </Button>
                                     </div>
 
@@ -1242,7 +1416,7 @@ export default function Step5Page({
                                 <div className="flex items-center justify-between">
                                     <CardTitle>My Presentations</CardTitle>
                                     <span className="text-sm text-muted-foreground">
-                                        {presentations.length} created
+                                        {presentationCount} of {PRESENTATION_LIMIT} used
                                     </span>
                                 </div>
                             </CardHeader>
@@ -1262,16 +1436,22 @@ export default function Step5Page({
                                         {presentations.map((presentation) => {
                                             // Determine presentation status display
                                             const isDraft =
-                                                presentation.status === "draft";
+                                                presentation.status ===
+                                                PresentationStatus.DRAFT;
+                                            const isPaused =
+                                                presentation.status ===
+                                                PresentationStatus.PAUSED;
                                             const isIncomplete =
-                                                isDraft &&
+                                                (isDraft || isPaused) &&
                                                 presentation.total_expected_slides &&
                                                 presentation.slides.length <
                                                     presentation.total_expected_slides;
                                             const isFailed =
-                                                presentation.status === "failed";
+                                                presentation.status ===
+                                                PresentationStatus.FAILED;
                                             const isGenerating =
-                                                presentation.status === "generating";
+                                                presentation.status ===
+                                                PresentationStatus.GENERATING;
 
                                             // Build slide count text
                                             const slideCountText = isIncomplete
@@ -1283,13 +1463,14 @@ export default function Step5Page({
                                                     key={presentation.id}
                                                     className={cn(
                                                         "flex items-center justify-between rounded-lg border p-4 transition-colors",
-                                                        isDraft &&
+                                                        (isDraft || isPaused) &&
                                                             "border-amber-300 bg-amber-50/30",
                                                         isFailed &&
                                                             "border-red-300 bg-red-50/30",
                                                         isGenerating &&
                                                             "border-primary/50 bg-primary/5",
                                                         !isDraft &&
+                                                            !isPaused &&
                                                             !isFailed &&
                                                             !isGenerating &&
                                                             "border-border hover:border-primary/40"
@@ -1300,6 +1481,12 @@ export default function Step5Page({
                                                         {isDraft && (
                                                             <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
                                                                 Draft
+                                                            </span>
+                                                        )}
+                                                        {isPaused && (
+                                                            <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800">
+                                                                <Square className="mr-1 h-3 w-3" />
+                                                                Paused
                                                             </span>
                                                         )}
                                                         {isFailed && (
@@ -1315,7 +1502,7 @@ export default function Step5Page({
                                                             </span>
                                                         )}
                                                         {presentation.status ===
-                                                            "completed" && (
+                                                            PresentationStatus.COMPLETED && (
                                                             <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-800">
                                                                 <CheckCircle2 className="mr-1 h-3 w-3" />
                                                                 Complete
@@ -1323,8 +1510,8 @@ export default function Step5Page({
                                                         )}
                                                         <div>
                                                             <h4 className="font-semibold">
-                                                                {isDraft
-                                                                    ? `Draft - ${presentation.title}`
+                                                                {isDraft || isPaused
+                                                                    ? `${isPaused ? "Paused" : "Draft"} - ${presentation.title}`
                                                                     : presentation.title}
                                                             </h4>
                                                             <p className="text-sm text-muted-foreground">
@@ -1353,7 +1540,7 @@ export default function Step5Page({
                                                             }}
                                                         >
                                                             <Pencil className="mr-1 h-4 w-4" />
-                                                            {isDraft
+                                                            {isDraft || isPaused
                                                                 ? "Resume"
                                                                 : "Edit"}
                                                         </Button>
@@ -1406,17 +1593,13 @@ export default function Step5Page({
                                 <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() => {
-                                        if (streaming.isGenerating) {
-                                            streaming.stopGeneration();
-                                        }
-                                        setIsEditorOpen(false);
-                                    }}
+                                    onClick={handleEditorClose}
                                 >
                                     <X className="h-4 w-4" />
                                 </Button>
                                 <h2 className="font-semibold">
-                                    {selectedPresentation.status === "generating"
+                                    {selectedPresentation.status ===
+                                    PresentationStatus.GENERATING
                                         ? `Generating Presentation...`
                                         : selectedPresentation.title}
                                 </h2>
@@ -1443,17 +1626,24 @@ export default function Step5Page({
                                         </span>
                                     </div>
                                 )}
-                                {selectedPresentation.status === "completed" && (
+                                {selectedPresentation.status ===
+                                    PresentationStatus.COMPLETED && (
                                     <span className="flex items-center gap-1 text-sm text-green-600">
                                         <CheckCircle2 className="h-4 w-4" />
                                         Complete
                                     </span>
                                 )}
-                                {selectedPresentation.status === "draft" &&
+                                {(selectedPresentation.status ===
+                                    PresentationStatus.DRAFT ||
+                                    selectedPresentation.status ===
+                                        PresentationStatus.PAUSED) &&
                                     !streaming.isGenerating && (
                                         <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-1 text-sm font-medium text-amber-800">
-                                            Draft - {selectedPresentation.slides.length}{" "}
-                                            of{" "}
+                                            {selectedPresentation.status ===
+                                            PresentationStatus.PAUSED
+                                                ? "Paused"
+                                                : "Draft"}{" "}
+                                            - {selectedPresentation.slides.length} of{" "}
                                             {selectedPresentation.total_expected_slides ||
                                                 "?"}{" "}
                                             slides
@@ -1461,8 +1651,11 @@ export default function Step5Page({
                                     )}
                             </div>
                             <div className="flex items-center gap-2">
-                                {/* Resume button for draft presentations */}
-                                {selectedPresentation.status === "draft" &&
+                                {/* Resume button for draft/paused presentations */}
+                                {(selectedPresentation.status ===
+                                    PresentationStatus.DRAFT ||
+                                    selectedPresentation.status ===
+                                        PresentationStatus.PAUSED) &&
                                     !streaming.isGenerating && (
                                         <>
                                             <Button
@@ -1518,19 +1711,10 @@ export default function Step5Page({
                                     <Download className="mr-1 h-4 w-4" />
                                     Export PPTX
                                 </Button>
-                                <Button
-                                    size="sm"
-                                    onClick={() => {
-                                        if (streaming.isGenerating) {
-                                            streaming.stopGeneration();
-                                        }
-                                        setIsEditorOpen(false);
-                                    }}
-                                    disabled={streaming.isGenerating}
-                                >
+                                <Button size="sm" onClick={handleEditorClose}>
                                     <CheckCircle2 className="mr-1 h-4 w-4" />
                                     {streaming.isGenerating
-                                        ? "Generating..."
+                                        ? "Save & Pause"
                                         : "Save & Close"}
                                 </Button>
                             </div>

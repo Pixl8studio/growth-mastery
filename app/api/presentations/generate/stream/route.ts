@@ -16,6 +16,7 @@ import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { generatePresentation } from "@/lib/presentations/slide-generator";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
+import { PRESENTATION_LIMIT, PresentationStatus } from "@/lib/constants/presentations";
 
 // Lazy OpenAI client initialization for image generation
 let openaiClient: OpenAI | null = null;
@@ -321,6 +322,38 @@ export async function GET(request: NextRequest) {
                 status: 404,
                 headers: { "Content-Type": "application/json" },
             });
+        }
+
+        // Check generation limit (3 presentations per funnel)
+        // Only applies to new presentations, not resuming
+        if (!isResuming) {
+            const { count, error: countError } = await supabase
+                .from("presentations")
+                .select("*", { count: "exact", head: true })
+                .eq("funnel_project_id", projectId)
+                .neq("status", PresentationStatus.FAILED); // Failed presentations don't count against quota
+
+            if (countError) {
+                logger.error(
+                    { error: countError, projectId },
+                    "Failed to check presentation count"
+                );
+            }
+
+            if ((count ?? 0) >= PRESENTATION_LIMIT) {
+                logger.warn(
+                    { projectId, count, limit: PRESENTATION_LIMIT },
+                    "Presentation generation limit reached"
+                );
+                return new Response(
+                    JSON.stringify({
+                        error: "Presentation limit reached",
+                        message: `You have reached the limit of ${PRESENTATION_LIMIT} presentations per funnel. This limit cannot be reset by deleting presentations.`,
+                        code: "PRESENTATION_LIMIT_REACHED",
+                    }),
+                    { status: 429, headers: { "Content-Type": "application/json" } }
+                );
+            }
         }
 
         // Validate slides

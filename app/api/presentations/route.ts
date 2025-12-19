@@ -1,7 +1,8 @@
 /**
- * Presentations API - List and Create
+ * Presentations API - List, Create, and Update
  * GET /api/presentations - List presentations for a project
  * POST /api/presentations - Create a new presentation
+ * PATCH /api/presentations - Update presentation status
  *
  * Related: GitHub Issue #325 - In-house PowerPoint Presentation Generator
  */
@@ -14,6 +15,15 @@ import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { ValidationError, NotFoundError } from "@/lib/errors";
 
+// Valid presentation statuses
+const VALID_STATUSES = [
+    "draft",
+    "generating",
+    "completed",
+    "failed",
+    "paused",
+] as const;
+
 // Zod schemas for input validation
 const ListPresentationsSchema = z.object({
     projectId: z.string().uuid("projectId must be a valid UUID"),
@@ -24,6 +34,12 @@ const CreatePresentationSchema = z.object({
     deckStructureId: z.string().uuid("deckStructureId must be a valid UUID").optional(),
     title: z.string().min(1, "title is required").max(500, "title too long"),
     customization: z.record(z.string(), z.unknown()).optional(),
+});
+
+const UpdatePresentationSchema = z.object({
+    presentationId: z.string().uuid("presentationId must be a valid UUID"),
+    status: z.enum(VALID_STATUSES).optional(),
+    title: z.string().min(1).max(500).optional(),
 });
 
 // GET - List presentations for a project
@@ -189,6 +205,107 @@ export async function POST(request: Request) {
 
         return NextResponse.json(
             { error: "Failed to create presentation" },
+            { status: 500 }
+        );
+    }
+}
+
+// PATCH - Update a presentation (status, title)
+export async function PATCH(request: Request) {
+    try {
+        const supabase = await createClient();
+
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // Parse and validate input with Zod
+        let body: unknown;
+        try {
+            body = await request.json();
+        } catch {
+            throw new ValidationError("Invalid JSON body");
+        }
+
+        const validation = UpdatePresentationSchema.safeParse(body);
+        if (!validation.success) {
+            const errorMessage = validation.error.issues
+                .map((issue) => `${issue.path.join(".")}: ${issue.message}`)
+                .join(", ");
+            throw new ValidationError(errorMessage);
+        }
+
+        const { presentationId, status, title } = validation.data;
+
+        // Verify user owns the presentation
+        const { data: existing, error: fetchError } = await supabase
+            .from("presentations")
+            .select("id, user_id, status")
+            .eq("id", presentationId)
+            .single();
+
+        if (fetchError || !existing) {
+            throw new NotFoundError("Presentation");
+        }
+
+        if (existing.user_id !== user.id) {
+            return NextResponse.json({ error: "Access denied" }, { status: 403 });
+        }
+
+        // Build update object
+        const updateData: Record<string, unknown> = {};
+        if (status !== undefined) {
+            updateData.status = status;
+        }
+        if (title !== undefined) {
+            updateData.title = title;
+        }
+
+        // Only update if there's something to update
+        if (Object.keys(updateData).length === 0) {
+            return NextResponse.json({ presentation: existing });
+        }
+
+        // Update presentation
+        const { data: presentation, error } = await supabase
+            .from("presentations")
+            .update(updateData)
+            .eq("id", presentationId)
+            .select()
+            .single();
+
+        if (error) {
+            logger.error({ error, presentationId }, "Failed to update presentation");
+            throw error;
+        }
+
+        logger.info(
+            { userId: user.id, presentationId, status, title },
+            "Presentation updated"
+        );
+
+        return NextResponse.json({ presentation });
+    } catch (error) {
+        if (error instanceof ValidationError) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+
+        if (error instanceof NotFoundError) {
+            return NextResponse.json({ error: error.message }, { status: 404 });
+        }
+
+        logger.error({ error }, "Failed to update presentation");
+
+        Sentry.captureException(error, {
+            tags: { component: "api", action: "update_presentation" },
+        });
+
+        return NextResponse.json(
+            { error: "Failed to update presentation" },
             { status: 500 }
         );
     }

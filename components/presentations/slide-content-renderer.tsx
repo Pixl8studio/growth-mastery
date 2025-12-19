@@ -153,24 +153,14 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                             </div>
                             <blockquote
                                 className={cn(
-                                    "text-2xl italic leading-relaxed line-clamp-5",
+                                    "text-2xl italic leading-relaxed",
                                     !hasBrandColors && fallbackTextColors.title
                                 )}
                                 style={getTitleStyle()}
                             >
                                 {slide.content[0] || slide.title}
                             </blockquote>
-                            {slide.content[1] && (
-                                <p
-                                    className={cn(
-                                        "mt-6 text-lg font-medium line-clamp-1",
-                                        !hasBrandColors && fallbackTextColors.body
-                                    )}
-                                    style={getBodyStyle()}
-                                >
-                                    — {slide.content[1]}
-                                </p>
-                            )}
+                            {/* Attribution line removed - quote stands alone */}
                         </div>
                     </div>
                 );
@@ -460,7 +450,6 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                                         />
                                         <span
                                             className={cn(
-                                                "line-clamp-2",
                                                 !hasBrandColors &&
                                                     fallbackTextColors.body
                                             )}

@@ -9,6 +9,7 @@ import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import { ValidationError } from "@/lib/errors";
+import { generateSlug } from "@/lib/utils";
 
 /**
  * Update project's current step
@@ -291,6 +292,353 @@ export async function getFunnelAnalytics(projectId: string) {
         };
     } catch (error) {
         requestLogger.error({ error }, "Failed to fetch analytics");
+        throw error;
+    }
+}
+
+/**
+ * Rename a funnel project
+ * Updates both name and slug (with warning that URLs will change)
+ */
+export async function renameFunnel(projectId: string, newName: string) {
+    const requestLogger = logger.child({
+        handler: "rename-funnel",
+        projectId,
+    });
+
+    try {
+        const supabase = await createClient();
+
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+            throw new ValidationError("Not authenticated");
+        }
+
+        const trimmedName = newName.trim();
+
+        if (!trimmedName) {
+            throw new ValidationError("Funnel name cannot be empty");
+        }
+
+        requestLogger.info({ userId: user.id, newName: trimmedName }, "Renaming funnel");
+
+        // Check for duplicate name (same user, different project, not deleted)
+        const { data: existing } = await supabase
+            .from("funnel_projects")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("name", trimmedName)
+            .is("deleted_at", null)
+            .neq("id", projectId)
+            .single();
+
+        if (existing) {
+            throw new ValidationError(
+                `You already have a funnel named "${trimmedName}"`
+            );
+        }
+
+        // Generate new slug from name
+        const newSlug = generateSlug(trimmedName);
+
+        // Update funnel name and slug
+        const { error } = await supabase
+            .from("funnel_projects")
+            .update({
+                name: trimmedName,
+                slug: newSlug,
+                updated_at: new Date().toISOString(),
+            })
+            .eq("id", projectId)
+            .eq("user_id", user.id);
+
+        if (error) {
+            throw error;
+        }
+
+        requestLogger.info({ newSlug }, "Funnel renamed successfully");
+
+        revalidatePath("/funnel-builder");
+        revalidatePath(`/funnel-builder/${projectId}`);
+
+        return { success: true, newSlug };
+    } catch (error) {
+        requestLogger.error({ error }, "Failed to rename funnel");
+        throw error;
+    }
+}
+
+/**
+ * Soft delete a funnel (move to trash)
+ * Sets deleted_at timestamp for 30-day recovery period
+ */
+export async function softDeleteFunnel(projectId: string) {
+    const requestLogger = logger.child({
+        handler: "soft-delete-funnel",
+        projectId,
+    });
+
+    try {
+        const supabase = await createClient();
+
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+            throw new ValidationError("Not authenticated");
+        }
+
+        requestLogger.info({ userId: user.id }, "Soft deleting funnel");
+
+        // Get current funnel status
+        const { data: funnel } = await supabase
+            .from("funnel_projects")
+            .select("status")
+            .eq("id", projectId)
+            .eq("user_id", user.id)
+            .single();
+
+        if (!funnel) {
+            throw new ValidationError("Funnel not found");
+        }
+
+        // If funnel is published, unpublish all pages first
+        if (funnel.status === "active") {
+            await Promise.all([
+                supabase
+                    .from("registration_pages")
+                    .update({ is_published: false })
+                    .eq("funnel_project_id", projectId),
+                supabase
+                    .from("watch_pages")
+                    .update({ is_published: false })
+                    .eq("funnel_project_id", projectId),
+                supabase
+                    .from("enrollment_pages")
+                    .update({ is_published: false })
+                    .eq("funnel_project_id", projectId),
+            ]);
+        }
+
+        // Set deleted_at timestamp
+        const { error } = await supabase
+            .from("funnel_projects")
+            .update({
+                deleted_at: new Date().toISOString(),
+                status: "draft", // Reset to draft
+                updated_at: new Date().toISOString(),
+            })
+            .eq("id", projectId)
+            .eq("user_id", user.id);
+
+        if (error) {
+            throw error;
+        }
+
+        requestLogger.info("Funnel soft deleted successfully");
+
+        revalidatePath("/funnel-builder");
+        revalidatePath("/settings/trash");
+
+        return { success: true };
+    } catch (error) {
+        requestLogger.error({ error }, "Failed to soft delete funnel");
+        throw error;
+    }
+}
+
+/**
+ * Restore a soft-deleted funnel from trash
+ */
+export async function restoreFunnel(projectId: string) {
+    const requestLogger = logger.child({
+        handler: "restore-funnel",
+        projectId,
+    });
+
+    try {
+        const supabase = await createClient();
+
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+            throw new ValidationError("Not authenticated");
+        }
+
+        requestLogger.info({ userId: user.id }, "Restoring funnel from trash");
+
+        // Clear deleted_at to restore
+        const { error } = await supabase
+            .from("funnel_projects")
+            .update({
+                deleted_at: null,
+                updated_at: new Date().toISOString(),
+            })
+            .eq("id", projectId)
+            .eq("user_id", user.id);
+
+        if (error) {
+            throw error;
+        }
+
+        requestLogger.info("Funnel restored successfully");
+
+        revalidatePath("/funnel-builder");
+        revalidatePath("/settings/trash");
+
+        return { success: true };
+    } catch (error) {
+        requestLogger.error({ error }, "Failed to restore funnel");
+        throw error;
+    }
+}
+
+/**
+ * Permanently delete a funnel
+ * Only works for funnels that are already in trash (deleted_at is set)
+ */
+export async function permanentlyDeleteFunnel(projectId: string) {
+    const requestLogger = logger.child({
+        handler: "permanently-delete-funnel",
+        projectId,
+    });
+
+    try {
+        const supabase = await createClient();
+
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+            throw new ValidationError("Not authenticated");
+        }
+
+        requestLogger.info({ userId: user.id }, "Permanently deleting funnel");
+
+        // Verify funnel is in trash (deleted_at is set)
+        const { data: funnel } = await supabase
+            .from("funnel_projects")
+            .select("deleted_at")
+            .eq("id", projectId)
+            .eq("user_id", user.id)
+            .single();
+
+        if (!funnel) {
+            throw new ValidationError("Funnel not found");
+        }
+
+        if (!funnel.deleted_at) {
+            throw new ValidationError(
+                "Funnel must be in trash before permanent deletion"
+            );
+        }
+
+        // Hard delete - cascade will handle related data
+        const { error } = await supabase
+            .from("funnel_projects")
+            .delete()
+            .eq("id", projectId)
+            .eq("user_id", user.id);
+
+        if (error) {
+            throw error;
+        }
+
+        requestLogger.info("Funnel permanently deleted");
+
+        revalidatePath("/settings/trash");
+
+        return { success: true };
+    } catch (error) {
+        requestLogger.error({ error }, "Failed to permanently delete funnel");
+        throw error;
+    }
+}
+
+/**
+ * Get soft-deleted funnels (trash)
+ */
+export async function getDeletedFunnels() {
+    const requestLogger = logger.child({ handler: "get-deleted-funnels" });
+
+    try {
+        const supabase = await createClient();
+
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+            throw new ValidationError("Not authenticated");
+        }
+
+        requestLogger.info({ userId: user.id }, "Fetching deleted funnels");
+
+        const { data: funnels, error } = await supabase
+            .from("funnel_projects")
+            .select("id, name, deleted_at, updated_at")
+            .eq("user_id", user.id)
+            .not("deleted_at", "is", null)
+            .order("deleted_at", { ascending: false });
+
+        if (error) {
+            throw error;
+        }
+
+        requestLogger.info({ count: funnels?.length }, "Deleted funnels fetched");
+
+        return { success: true, funnels: funnels || [] };
+    } catch (error) {
+        requestLogger.error({ error }, "Failed to fetch deleted funnels");
+        throw error;
+    }
+}
+
+/**
+ * Get funnel details for editing
+ */
+export async function getFunnelDetails(projectId: string) {
+    const requestLogger = logger.child({
+        handler: "get-funnel-details",
+        projectId,
+    });
+
+    try {
+        const supabase = await createClient();
+
+        const {
+            data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) {
+            throw new ValidationError("Not authenticated");
+        }
+
+        const { data: funnel, error } = await supabase
+            .from("funnel_projects")
+            .select("id, name, slug, description, status, deleted_at")
+            .eq("id", projectId)
+            .eq("user_id", user.id)
+            .single();
+
+        if (error) {
+            throw error;
+        }
+
+        if (!funnel) {
+            throw new ValidationError("Funnel not found");
+        }
+
+        return { success: true, funnel };
+    } catch (error) {
+        requestLogger.error({ error }, "Failed to fetch funnel details");
         throw error;
     }
 }

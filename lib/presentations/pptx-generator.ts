@@ -1076,7 +1076,9 @@ function generateComparisonColumnXml(
           }
         </p:spPr>
         <p:txBody>
-          <a:bodyPr lIns="182880" tIns="182880" rIns="182880" bIns="182880"/>
+          <a:bodyPr wrap="square" lIns="182880" tIns="182880" rIns="182880" bIns="182880">
+            <a:normAutofit fontScale="70000" lnSpcReduction="20000"/>
+          </a:bodyPr>
           <a:lstStyle/>
           <a:p>
             <a:r>
@@ -1749,7 +1751,9 @@ ${layoutSpecificShapes}
           </a:xfrm>
         </p:spPr>
         <p:txBody>
-          <a:bodyPr/>
+          <a:bodyPr wrap="square">
+            <a:normAutofit fontScale="75000" lnSpcReduction="10000"/>
+          </a:bodyPr>
           <a:lstStyle/>
           <a:p>
             <a:r>
@@ -1777,7 +1781,9 @@ ${layoutSpecificShapes}
           </a:xfrm>
         </p:spPr>
         <p:txBody>
-          <a:bodyPr/>
+          <a:bodyPr wrap="square">
+            <a:normAutofit fontScale="70000" lnSpcReduction="20000"/>
+          </a:bodyPr>
           <a:lstStyle/>
           ${bulletPoints}
         </p:txBody>
@@ -1880,7 +1886,9 @@ ${layoutSpecificShapes}
           </a:xfrm>
         </p:spPr>
         <p:txBody>
-          <a:bodyPr/>
+          <a:bodyPr wrap="square">
+            <a:normAutofit fontScale="75000" lnSpcReduction="10000"/>
+          </a:bodyPr>
           <a:lstStyle/>
           <a:p>
             <a:r>
@@ -1908,7 +1916,9 @@ ${layoutSpecificShapes}
           </a:xfrm>
         </p:spPr>
         <p:txBody>
-          <a:bodyPr/>
+          <a:bodyPr wrap="square">
+            <a:normAutofit fontScale="70000" lnSpcReduction="20000"/>
+          </a:bodyPr>
           <a:lstStyle/>
           ${bulletPoints}
         </p:txBody>
@@ -2542,7 +2552,7 @@ ${slideRelRefs}
             slideImages.set(img.slideIndex, {
                 slideIndex: img.slideIndex,
                 extension: img.extension,
-                rId: "rId2", // rId1 is layout, rId2 is image
+                rId: "rId3", // rId1 is layout, rId2 is notes, rId3 is image
             });
             imageCounter++;
         }
@@ -2608,14 +2618,16 @@ ${notesTypes}
             )
         );
 
-        // Slide relationships - include image relationship if applicable
+        // Slide relationships - include image and notes relationships
+        // rId1 = slideLayout, rId2 = notesSlide (always), rId3 = image (if present)
         let slideRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
-  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout${isTitleSlide ? "1" : "2"}.xml"/>`;
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout${isTitleSlide ? "1" : "2"}.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/notesSlide" Target="../notesSlides/notesSlide${i + 1}.xml"/>`;
 
         if (hasImage && slideImageInfo) {
             slideRels += `
-  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image${currentImageIndex}.${slideImageInfo.extension}"/>`;
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="../media/image${currentImageIndex}.${slideImageInfo.extension}"/>`;
             currentImageIndex++;
         }
 

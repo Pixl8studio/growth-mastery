@@ -112,6 +112,35 @@ describe("Slide Reorder API", () => {
         expect(reorderedSlides[2]?.title).toBe("Second");
         expect(reorderedSlides[2]?.slideNumber).toBe(3);
     });
+
+    it("should reorder slides with non-contiguous slide numbers (after duplicate/delete)", () => {
+        // Simulates slides after slide 3 was deleted: [1, 2, 4, 5]
+        const slides = [
+            { slideNumber: 1, title: "First" },
+            { slideNumber: 2, title: "Second" },
+            { slideNumber: 4, title: "Fourth" },
+            { slideNumber: 5, title: "Fifth" },
+        ];
+        // User drags slide 5 to first position
+        const newOrder = [5, 1, 2, 4];
+
+        const reorderedSlides = newOrder.map((slideNum, index) => {
+            const slide = slides.find((s) => s.slideNumber === slideNum);
+            return {
+                ...slide,
+                slideNumber: index + 1, // Renumber to new positions
+            };
+        });
+
+        expect(reorderedSlides[0]?.title).toBe("Fifth");
+        expect(reorderedSlides[0]?.slideNumber).toBe(1);
+        expect(reorderedSlides[1]?.title).toBe("First");
+        expect(reorderedSlides[1]?.slideNumber).toBe(2);
+        expect(reorderedSlides[2]?.title).toBe("Second");
+        expect(reorderedSlides[2]?.slideNumber).toBe(3);
+        expect(reorderedSlides[3]?.title).toBe("Fourth");
+        expect(reorderedSlides[3]?.slideNumber).toBe(4);
+    });
 });
 
 describe("Quick Actions API", () => {
@@ -391,6 +420,31 @@ describe("API Error Handling", () => {
                 status: 400,
             };
             expect(errorResponse.status).toBe(400);
+        });
+
+        it("should validate slide numbers exist when non-contiguous (after duplicate/delete)", () => {
+            // After duplicating/deleting, slides may have non-contiguous numbers
+            // e.g., slides [1, 2, 4, 5] if slide 3 was deleted
+            const currentSlides = [
+                { slideNumber: 1 },
+                { slideNumber: 2 },
+                { slideNumber: 4 },
+                { slideNumber: 5 },
+            ];
+            const existingSlideNumbers = new Set(
+                currentSlides.map((s) => s.slideNumber)
+            );
+
+            // Valid reorder of existing slides
+            const validOrder = [5, 1, 2, 4];
+            for (const num of validOrder) {
+                expect(existingSlideNumbers.has(num)).toBe(true);
+            }
+
+            // Invalid order with non-existent slide number
+            const invalidOrder = [1, 2, 3, 4]; // slide 3 doesn't exist
+            const invalidNum = invalidOrder.find((n) => !existingSlideNumbers.has(n));
+            expect(invalidNum).toBe(3);
         });
     });
 

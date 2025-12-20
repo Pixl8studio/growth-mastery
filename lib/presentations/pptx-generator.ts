@@ -1242,7 +1242,7 @@ ${backgroundXml}
                 </a:solidFill>
                 <a:latin typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
               </a:rPr>
-              <a:t>${escapeXml(slide.content.join(" "))}</a:t>
+              <a:t>${escapeXml(slide.content[0] || "")}</a:t>
             </a:r>
           </a:p>
         </p:txBody>
@@ -1781,7 +1781,7 @@ ${layoutSpecificShapes}
           </a:xfrm>
         </p:spPr>
         <p:txBody>
-          <a:bodyPr wrap="square">
+          <a:bodyPr wrap="square" anchor="ctr">
             <a:normAutofit fontScale="70000" lnSpcReduction="20000"/>
           </a:bodyPr>
           <a:lstStyle/>
@@ -1916,7 +1916,7 @@ ${layoutSpecificShapes}
           </a:xfrm>
         </p:spPr>
         <p:txBody>
-          <a:bodyPr wrap="square">
+          <a:bodyPr wrap="square" anchor="ctr">
             <a:normAutofit fontScale="70000" lnSpcReduction="20000"/>
           </a:bodyPr>
           <a:lstStyle/>

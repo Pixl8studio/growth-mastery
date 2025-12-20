@@ -3,6 +3,16 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+    Archive,
+    Check,
+    Copy,
+    MoreVertical,
+    Pencil,
+    Settings,
+    Trash2,
+    X,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,18 +24,19 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatDate } from "@/lib/utils";
+import { logger } from "@/lib/client-logger";
 import { getStepCompletionStatus } from "@/app/funnel-builder/completion-utils";
 import { calculateCompletionPercentage } from "@/app/funnel-builder/completion-types";
 import { renameFunnel } from "@/app/funnel-builder/actions";
 import { DeleteFunnelDialog } from "@/components/funnel/delete-funnel-dialog";
-import { MoreVertical, Pencil, Trash2, Check, X } from "lucide-react";
-import { logger } from "@/lib/client-logger";
+
+type ProjectStatus = "active" | "archived" | "draft";
 
 interface ProjectCardProps {
     project: {
         id: string;
         name: string;
-        status: string;
+        status: ProjectStatus;
         current_step: number;
         updated_at: string;
     };
@@ -49,7 +60,10 @@ export function ProjectCard({ project }: ProjectCardProps) {
                 const percentage = calculateCompletionPercentage(completionStatus);
                 setCompletionPercentage(percentage);
             } catch (error) {
-                logger.error({ error }, "Failed to load completion status");
+                logger.error(
+                    { error, projectId: project.id },
+                    "Failed to load completion status"
+                );
             } finally {
                 setIsLoading(false);
             }
@@ -102,7 +116,7 @@ export function ProjectCard({ project }: ProjectCardProps) {
             setIsEditing(false);
             router.refresh();
         } catch (err) {
-            logger.error({ error: err }, "Failed to rename funnel");
+            logger.error({ error: err, projectId: project.id }, "Failed to rename funnel");
             setError(err instanceof Error ? err.message : "Failed to rename");
         } finally {
             setIsSaving(false);
@@ -116,6 +130,28 @@ export function ProjectCard({ project }: ProjectCardProps) {
         } else if (e.key === "Escape") {
             handleCancelEditing();
         }
+    };
+
+    const handleDuplicate = async () => {
+        // TODO: Implement duplicate functionality
+        // - Call API to duplicate project
+        // - Navigate to new project or show success toast
+        logger.info({ projectId: project.id }, "Duplicate project clicked");
+    };
+
+    const handleArchive = async () => {
+        if (
+            !confirm(
+                `Archive "${project.name}"? You can restore it later from the archived projects list.`
+            )
+        ) {
+            return;
+        }
+
+        // TODO: Implement archive functionality
+        // - Call API to update project status to 'archived'
+        // - Refresh the project list or remove from current view
+        logger.info({ projectId: project.id }, "Archive project confirmed");
     };
 
     const handleDeleted = () => {
@@ -200,15 +236,39 @@ export function ProjectCard({ project }: ProjectCardProps) {
                                             variant="ghost"
                                             size="icon"
                                             className="h-8 w-8"
+                                            aria-label="Funnel options"
                                         >
                                             <MoreVertical className="h-4 w-4" />
                                             <span className="sr-only">Open menu</span>
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
+                                        <DropdownMenuItem asChild>
+                                            <Link
+                                                href={`/funnel-builder/${project.id}/settings`}
+                                                className="flex items-center gap-2"
+                                            >
+                                                <Settings className="h-4 w-4" />
+                                                Settings
+                                            </Link>
+                                        </DropdownMenuItem>
                                         <DropdownMenuItem onClick={handleStartEditing}>
                                             <Pencil className="mr-2 h-4 w-4" />
                                             Rename
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            className="flex items-center gap-2"
+                                            onClick={handleDuplicate}
+                                        >
+                                            <Copy className="h-4 w-4" />
+                                            Duplicate
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                            className="flex items-center gap-2"
+                                            onClick={handleArchive}
+                                        >
+                                            <Archive className="h-4 w-4" />
+                                            Archive
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem

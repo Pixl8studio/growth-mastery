@@ -27,7 +27,7 @@ import {
     verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Plus } from "lucide-react";
+import { GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
     SlideThumbnail,
@@ -35,6 +35,8 @@ import {
     type SlideData,
     type BrandDesign,
 } from "./slide-thumbnail";
+import type { SlideLayoutType } from "./slide-types";
+import { AddSlidePopover } from "./add-slide-popover";
 
 interface DraggableSlidesProps {
     slides: SlideData[];
@@ -46,7 +48,17 @@ interface DraggableSlidesProps {
     onSlideReorder: (newOrder: number[]) => void;
     onSlideDuplicate: (index: number) => void;
     onSlideDelete: (index: number) => void;
-    onAddSlide?: () => void;
+    /** Called when duplicating the currently selected slide via Add Slide menu */
+    onDuplicateCurrentSlide?: () => void;
+    /** Called when adding a blank slide with a specific layout */
+    onAddBlankSlide?: (layoutType: SlideLayoutType) => void;
+    /** Called when generating a slide with AI */
+    onGenerateSlideWithAI?: (
+        prompt: string,
+        layoutType?: SlideLayoutType
+    ) => Promise<void>;
+    /** Whether AI slide generation is in progress */
+    isGeneratingSlide?: boolean;
     className?: string;
 }
 
@@ -130,7 +142,10 @@ export function DraggableSlides({
     onSlideReorder,
     onSlideDuplicate,
     onSlideDelete,
-    onAddSlide,
+    onDuplicateCurrentSlide,
+    onAddBlankSlide,
+    onGenerateSlideWithAI,
+    isGeneratingSlide,
     className,
 }: DraggableSlidesProps) {
     const [activeId, setActiveId] = useState<number | null>(null);
@@ -312,16 +327,18 @@ export function DraggableSlides({
                 </>
             )}
 
-            {/* Add Slide Button */}
-            {onAddSlide && !generatingSlideNumber && (
-                <button
-                    className="flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-muted-foreground/30 p-4 text-sm text-muted-foreground transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary"
-                    onClick={onAddSlide}
-                >
-                    <Plus className="h-4 w-4" />
-                    Add Slide
-                </button>
-            )}
+            {/* Add Slide Button with Popover */}
+            {onDuplicateCurrentSlide &&
+                onAddBlankSlide &&
+                onGenerateSlideWithAI &&
+                !generatingSlideNumber && (
+                    <AddSlidePopover
+                        onDuplicateCurrent={onDuplicateCurrentSlide}
+                        onAddBlankSlide={onAddBlankSlide}
+                        onGenerateWithAI={onGenerateSlideWithAI}
+                        isGenerating={isGeneratingSlide}
+                    />
+                )}
         </div>
     );
 }

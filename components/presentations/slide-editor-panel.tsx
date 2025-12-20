@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
     RefreshCw,
     Type,
@@ -22,11 +22,15 @@ import {
     ChevronDown,
     CheckCircle2,
     AlertCircle,
+    Pencil,
+    Check,
+    X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logger } from "@/lib/client-logger";
 import { cn } from "@/lib/utils";
 import type { SlideData } from "./slide-thumbnail";
+import { SLIDE_CONTENT_LIMITS, countWords } from "@/lib/presentations/slide-constants";
 
 type QuickAction =
     | "regenerate_image"
@@ -59,6 +63,42 @@ const LAYOUT_OPTIONS: { value: LayoutType; label: string }[] = [
     { value: "cta", label: "Call to Action" },
 ];
 
+/**
+ * Check if slide content exceeds recommended limits
+ * Returns warnings for title and bullets that are too long
+ * Uses centralized SLIDE_CONTENT_LIMITS from slide-constants.ts
+ */
+function getContentWarnings(slide: SlideData | undefined): {
+    titleWarning: string | null;
+    bulletWarnings: string[];
+} {
+    // Handle undefined slide gracefully
+    if (!slide) {
+        return { titleWarning: null, bulletWarnings: [] };
+    }
+
+    const limits =
+        SLIDE_CONTENT_LIMITS[slide.layoutType] || SLIDE_CONTENT_LIMITS.bullets;
+    const titleWordCount = countWords(slide.title);
+
+    const titleWarning =
+        titleWordCount > limits.titleMax
+            ? `Title has ${titleWordCount} words (recommended: ${limits.titleMax} max)`
+            : null;
+
+    const bulletWarnings: string[] = [];
+    slide.content.forEach((bullet, idx) => {
+        const wordCount = countWords(bullet);
+        if (wordCount > limits.bulletMax) {
+            bulletWarnings.push(
+                `Bullet ${idx + 1}: ${wordCount} words (recommended: ${limits.bulletMax} max)`
+            );
+        }
+    });
+
+    return { titleWarning, bulletWarnings };
+}
+
 export function SlideEditorPanel({
     slide,
     presentationId,
@@ -72,6 +112,8 @@ export function SlideEditorPanel({
     const [isRecording, setIsRecording] = useState(false);
     const [showLayoutDropdown, setShowLayoutDropdown] = useState(false);
     const [isSpeechSupported, setIsSpeechSupported] = useState<boolean | null>(null);
+    const [isEditingNotes, setIsEditingNotes] = useState(false);
+    const [editedNotes, setEditedNotes] = useState(slide?.speakerNotes || "");
     const [feedback, setFeedback] = useState<{
         type: "success" | "error";
         message: string;
@@ -80,6 +122,13 @@ export function SlideEditorPanel({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const recognitionRef = useRef<any>(null);
     const feedbackTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const notesTextareaRef = useRef<HTMLTextAreaElement>(null);
+
+    // Sync edited notes when slide changes
+    useEffect(() => {
+        setEditedNotes(slide?.speakerNotes || "");
+        setIsEditingNotes(false);
+    }, [slide?.slideNumber, slide?.speakerNotes]);
 
     // Check for Speech Recognition support on mount
     useEffect(() => {
@@ -106,6 +155,13 @@ export function SlideEditorPanel({
             }
         };
     }, [feedback]);
+
+    // Memoize content warnings to avoid recalculating on every render
+    // Only recalculates when slide title, content, or layoutType changes
+    const contentWarnings = useMemo(
+        () => getContentWarnings(slide),
+        [slide?.title, slide?.content, slide?.layoutType]
+    );
 
     const showFeedback = useCallback((type: "success" | "error", message: string) => {
         setFeedback({ type, message });
@@ -301,6 +357,75 @@ export function SlideEditorPanel({
             setActiveAction(null);
         }
     }, [presentationId, slide?.slideNumber, slide, onSlideUpdate, showFeedback]);
+
+    const saveSpeakerNotes = useCallback(async () => {
+        if (!slide?.slideNumber) {
+            showFeedback("error", "No slide selected");
+            return;
+        }
+
+        // Skip if notes haven't changed
+        if (editedNotes === (slide.speakerNotes || "")) {
+            setIsEditingNotes(false);
+            return;
+        }
+
+        setIsProcessing(true);
+        setActiveAction("notes");
+
+        try {
+            const response = await fetch(
+                `/api/presentations/${presentationId}/slides/${slide.slideNumber}`,
+                {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({ speakerNotes: editedNotes }),
+                }
+            );
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || "Failed to save notes");
+            }
+
+            const result = await response.json();
+            onSlideUpdate(result.slide);
+            setIsEditingNotes(false);
+            showFeedback("success", "Notes saved");
+
+            logger.info({ slideNumber: slide.slideNumber }, "Speaker notes saved");
+        } catch (error) {
+            logger.error({ error }, "Failed to save speaker notes");
+            showFeedback(
+                "error",
+                error instanceof Error ? error.message : "Failed to save notes"
+            );
+        } finally {
+            setIsProcessing(false);
+            setActiveAction(null);
+        }
+    }, [
+        presentationId,
+        slide?.slideNumber,
+        slide?.speakerNotes,
+        editedNotes,
+        onSlideUpdate,
+        showFeedback,
+    ]);
+
+    const cancelNotesEdit = useCallback(() => {
+        setEditedNotes(slide?.speakerNotes || "");
+        setIsEditingNotes(false);
+    }, [slide?.speakerNotes]);
+
+    const startEditingNotes = useCallback(() => {
+        setIsEditingNotes(true);
+        // Focus the textarea after React updates the DOM
+        setTimeout(() => {
+            notesTextareaRef.current?.focus();
+        }, 0);
+    }, []);
 
     // Voice-to-text functionality
     const toggleVoiceInput = useCallback(() => {
@@ -588,12 +713,85 @@ export function SlideEditorPanel({
 
             {/* Speaker Notes */}
             <div>
-                <h3 className="mb-3 text-sm font-semibold">Speaker Notes</h3>
-                <div className="rounded-lg border bg-muted/30 p-3">
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                        {slide.speakerNotes || "No speaker notes for this slide."}
-                    </p>
+                <div className="mb-3 flex items-center justify-between">
+                    <h3 id="speaker-notes-label" className="text-sm font-semibold">
+                        Speaker Notes
+                    </h3>
+                    {!isEditingNotes && (
+                        <button
+                            className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                            onClick={startEditingNotes}
+                            aria-label="Edit speaker notes"
+                            disabled={isProcessing}
+                        >
+                            <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                    )}
                 </div>
+                {isEditingNotes ? (
+                    <div className="space-y-2">
+                        <textarea
+                            ref={notesTextareaRef}
+                            value={editedNotes}
+                            onChange={(e) => setEditedNotes(e.target.value)}
+                            placeholder="Add speaker notes for this slide..."
+                            className="h-32 w-full resize-none rounded-lg border bg-background p-3 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            disabled={isProcessing}
+                            aria-label="Speaker notes"
+                            aria-describedby="speaker-notes-help"
+                            onKeyDown={(e) => {
+                                if (e.key === "Escape") {
+                                    cancelNotesEdit();
+                                }
+                            }}
+                        />
+                        <span id="speaker-notes-help" className="sr-only">
+                            Press Escape to cancel editing
+                        </span>
+                        <div className="flex gap-2">
+                            <Button
+                                size="sm"
+                                className="flex-1"
+                                onClick={saveSpeakerNotes}
+                                disabled={isProcessing}
+                            >
+                                {activeAction === "notes" ? (
+                                    <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                    <Check className="mr-1.5 h-3.5 w-3.5" />
+                                )}
+                                Save
+                            </Button>
+                            <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={cancelNotesEdit}
+                                disabled={isProcessing}
+                            >
+                                <X className="mr-1.5 h-3.5 w-3.5" />
+                                Cancel
+                            </Button>
+                        </div>
+                    </div>
+                ) : (
+                    <div
+                        className="cursor-pointer rounded-lg border bg-muted/30 p-3 transition-colors hover:border-primary/50 hover:bg-muted/50"
+                        onClick={startEditingNotes}
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Click to edit speaker notes"
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                startEditingNotes();
+                            }
+                        }}
+                    >
+                        <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                            {slide.speakerNotes || "Click to add speaker notes..."}
+                        </p>
+                    </div>
+                )}
             </div>
 
             {/* Slide Info */}
@@ -635,6 +833,36 @@ export function SlideEditorPanel({
                     )}
                 </div>
             </div>
+
+            {/* Content Length Warnings */}
+            {(contentWarnings.titleWarning ||
+                contentWarnings.bulletWarnings.length > 0) && (
+                <div>
+                    <h3 className="mb-3 text-sm font-semibold flex items-center gap-2 text-amber-600">
+                        <AlertCircle className="h-4 w-4" />
+                        Content Length Warnings
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                        {contentWarnings.titleWarning && (
+                            <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-amber-700">
+                                {contentWarnings.titleWarning}
+                            </div>
+                        )}
+                        {contentWarnings.bulletWarnings.map((warning, idx) => (
+                            <div
+                                key={idx}
+                                className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-amber-700"
+                            >
+                                {warning}
+                            </div>
+                        ))}
+                        <p className="text-xs text-muted-foreground mt-2">
+                            Long content may display with smaller text. Use &quot;Make
+                            Concise&quot; to shorten automatically.
+                        </p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

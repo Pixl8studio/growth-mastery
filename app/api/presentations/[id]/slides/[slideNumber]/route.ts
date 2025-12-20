@@ -21,6 +21,7 @@ import {
 import { regenerateSlide } from "@/lib/presentations/slide-generator";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
 import { parseSlidesFromDB, type Slide } from "@/lib/presentations/schemas";
+import { SLIDE_CONTENT_LIMITS } from "@/lib/presentations/slide-constants";
 
 // Quick action types
 const QuickActionSchema = z.enum([
@@ -61,22 +62,23 @@ const SlideUpdateSchema = z.object({
     imagePrompt: z.string().optional(),
 });
 
-// Action prompts for AI
+// Action prompts for AI - all include length constraints to prevent truncation
+// Constraints are defined in SLIDE_CONTENT_LIMITS (lib/presentations/slide-constants.ts)
 const ACTION_PROMPTS: Record<z.infer<typeof QuickActionSchema>, string> = {
     regenerate_image:
         "Generate a new, more compelling image prompt for this slide that better captures the key message.",
     make_concise:
-        "Make the content more concise. Reduce word count while keeping the key points impactful.",
+        "Make the content more concise. Reduce word count while keeping the key points impactful. IMPORTANT: Title must be maximum 12 words. Each bullet point must be maximum 16 words. Content must fit on the slide without truncation.",
     better_title:
-        "Rewrite the title to be more engaging, memorable, and action-oriented while keeping the same meaning.",
+        "Rewrite the title to be more engaging, memorable, and action-oriented while keeping the same meaning. CRITICAL: The title MUST be 10 words or fewer. Do not exceed this limit under any circumstances. A punchy, short title is better than a long one that gets cut off.",
     change_layout:
-        "Restructure the content to work better with a different layout. Adjust bullet points and flow accordingly.",
+        "Restructure the content to work better with a different layout. Adjust bullet points and flow accordingly. IMPORTANT: Title must be maximum 12 words. Each bullet point must be maximum 16 words.",
     regenerate_notes:
         "Generate new speaker notes that are more engaging and provide better guidance for the presenter.",
     expand_content:
-        "Expand the content with more detail, examples, and supporting points while maintaining clarity.",
+        "Add richer detail and depth to the existing bullet points. Elaborate on each point with specific examples, data, or context. CRITICAL CONSTRAINTS: Title stays maximum 12 words. Each bullet point must be maximum 16 words - pack meaning into fewer words. Add depth through specificity, not length. If you need more detail, add 1-2 additional bullet points (maximum 5 total) rather than making existing ones longer.",
     simplify_language:
-        "Simplify the language to be more accessible. Use shorter sentences and common words.",
+        "Simplify the language to be more accessible. Use shorter sentences and common words. IMPORTANT: Title must be maximum 12 words. Each bullet point must be maximum 16 words.",
 };
 
 export async function PATCH(

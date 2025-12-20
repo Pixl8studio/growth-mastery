@@ -14,6 +14,7 @@ import { AIGenerationError, RateLimitError } from "@/lib/errors";
 import { env } from "@/lib/env";
 import { AI_CONFIG } from "@/lib/config";
 import { recoverJSON } from "@/lib/ai/json-recovery";
+import { SLIDE_CONTENT_LIMITS, getContentLimits } from "./slide-constants";
 
 import type { SlideData } from "./pptx-generator";
 
@@ -540,6 +541,12 @@ You create slides that are:
 - Maximum 2 sentences per paragraph
 - If everything is emphasized, nothing is emphasized
 
+### Content Length is Non-Negotiable
+- Titles: Maximum 12 words (ideally 6-10) - must fit on one line
+- Bullet points: Maximum 16 words each - no truncation allowed
+- Content MUST be readable without scrolling or text being cut off
+- Pack meaning into fewer words - specificity over verbosity
+
 ### Visual Hierarchy is Non-Negotiable
 - PRIMARY: What the eye sees first (large, bold, contrasting)
 - SECONDARY: Supporting information (medium, readable)
@@ -621,16 +628,19 @@ When creating the imagePrompt, suggest how this signature element could appear v
 
 Create JSON with these fields:
 
-1. **title**: Punchy, specific headline (6-10 words max)
+1. **title**: Punchy, specific headline (maximum 12 words, ideally 6-10)
    - Use power words that create emotion
    - Be specific, not vague
+   - MUST fit on one line - shorter is better
    - Example: "3 Hidden Mistakes Costing You $10K Monthly" not "Common Business Mistakes"
 
 2. **content**: Array of ${bulletCount.min}-${bulletCount.max} bullet points
-   - Each bullet: max 12 words, starts with different word
+   - CRITICAL: Each bullet maximum 16 words - no exceptions
+   - Each bullet starts with a different word
    - Use concrete numbers/examples when possible
    - Action-oriented language
    - Build momentum - each point should flow to the next
+   - If you need more detail, add another bullet point rather than making one longer
 
 3. **speakerNotes**: 2-3 sentences for the presenter
    - Explain the "why" behind the content
@@ -1061,6 +1071,7 @@ export async function generatePresentation(
 
 /**
  * Regenerate a single slide with AI
+ * Uses centralized SLIDE_CONTENT_LIMITS from slide-constants.ts
  */
 export async function regenerateSlide(
     slide: SlideData,
@@ -1070,14 +1081,23 @@ export async function regenerateSlide(
 ): Promise<SlideData> {
     const anthropic = getAnthropicClient();
 
+    // Get constraints for this layout type from shared constants
+    const constraints = getContentLimits(slide.layoutType);
+
     const prompt = `Modify this presentation slide based on the following instruction:
 
 Current Slide:
+- Layout Type: ${slide.layoutType}
 - Title: ${slide.title}
 - Content: ${slide.content.join("; ")}
 - Speaker Notes: ${slide.speakerNotes}
 
 User Instruction: ${instruction}
+
+CRITICAL LENGTH CONSTRAINTS (content must fit on slide without truncation):
+- Title: Maximum ${constraints.titleMax} words
+- Each bullet point: Maximum ${constraints.bulletMax} words
+- Maximum ${constraints.maxBullets} bullet points for this layout
 
 Generate updated content in JSON format:
 {
@@ -1087,6 +1107,18 @@ Generate updated content in JSON format:
   "imagePrompt": "Updated image description"
 }`;
 
+    const systemPrompt = `You are an expert presentation designer. Modify the slide content based on the user's instruction while maintaining professionalism.
+
+CRITICAL RULES FOR ALL CONTENT:
+1. Title must be ${constraints.titleMax} words or fewer - no exceptions
+2. Each bullet point must be ${constraints.bulletMax} words or fewer
+3. Maximum ${constraints.maxBullets} bullet points for this layout type
+4. Content MUST fit on the slide without being truncated
+5. If you cannot express an idea within the word limit, use multiple shorter bullet points
+6. Pack meaning into fewer words - be specific and concrete, not verbose
+
+Always respond with valid JSON only, no markdown code blocks.`;
+
     try {
         const response = await withRetry(
             async () => {
@@ -1094,7 +1126,7 @@ Generate updated content in JSON format:
                     model: AI_CONFIG.models.default,
                     max_tokens: 1000,
                     temperature: 0.7,
-                    system: "You are an expert presentation designer. Modify the slide content based on the user's instruction while maintaining professionalism. Always respond with valid JSON only, no markdown code blocks.",
+                    system: systemPrompt,
                     messages: [{ role: "user", content: prompt }],
                 });
             },

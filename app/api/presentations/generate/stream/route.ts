@@ -235,18 +235,27 @@ export async function GET(request: NextRequest) {
             });
         }
 
-        // Rate limiting - 5 requests per minute for expensive AI generation
-        const rateLimitIdentifier = getRateLimitIdentifier(request, user.id);
-        const rateLimitResponse = await checkRateLimit(
-            rateLimitIdentifier,
-            "presentation-generation"
-        );
-        if (rateLimitResponse) {
-            logger.warn(
-                { userId: user.id, endpoint: "presentation-generation-stream" },
-                "Rate limit exceeded for streaming presentation generation"
+        // Rate limiting - 10 requests per minute for expensive AI generation
+        // IMPORTANT: Resume requests bypass rate limiting to allow seamless reconnection
+        // This prevents users from being locked out when SSE connections drop mid-generation
+        if (!isResuming) {
+            const rateLimitIdentifier = getRateLimitIdentifier(request, user.id);
+            const rateLimitResponse = await checkRateLimit(
+                rateLimitIdentifier,
+                "presentation-generation"
             );
-            return rateLimitResponse;
+            if (rateLimitResponse) {
+                logger.warn(
+                    { userId: user.id, endpoint: "presentation-generation-stream" },
+                    "Rate limit exceeded for streaming presentation generation"
+                );
+                return rateLimitResponse;
+            }
+        } else {
+            logger.info(
+                { userId: user.id, resumePresentationId, resumeFromSlide },
+                "Bypassing rate limit for resume request"
+            );
         }
 
         // Parse customization

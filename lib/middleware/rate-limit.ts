@@ -32,11 +32,12 @@ const brandColorsRatelimit = new Ratelimit({
 
 /**
  * Rate limiter for presentation generation
- * Limits: 5 requests per minute per user (expensive AI operation)
+ * Limits: 10 requests per minute per user (expensive AI operation)
+ * Note: Resume requests bypass this limit entirely - see stream route
  */
 const presentationGenerationRatelimit = new Ratelimit({
     redis: kv,
-    limiter: Ratelimit.slidingWindow(5, "1 m"),
+    limiter: Ratelimit.slidingWindow(10, "1 m"),
     analytics: true,
     prefix: "ratelimit:presentation-generation",
 });

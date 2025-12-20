@@ -53,7 +53,10 @@ interface DraggableSlidesProps {
     /** Called when adding a blank slide with a specific layout */
     onAddBlankSlide?: (layoutType: SlideLayoutType) => void;
     /** Called when generating a slide with AI */
-    onGenerateSlideWithAI?: (prompt: string, layoutType?: SlideLayoutType) => Promise<void>;
+    onGenerateSlideWithAI?: (
+        prompt: string,
+        layoutType?: SlideLayoutType
+    ) => Promise<void>;
     /** Whether AI slide generation is in progress */
     isGeneratingSlide?: boolean;
     className?: string;

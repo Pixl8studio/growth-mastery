@@ -906,8 +906,29 @@ export default function Step5Page({
         [toast]
     );
 
+    // Helper to check if a presentation has been saved to the database
+    const isPresentationSaved = useCallback((presentation: Presentation) => {
+        // Temporary IDs start with "generating-" before the presentation is saved
+        return !presentation.id.startsWith("generating-");
+    }, []);
+
     const handleDownloadPptx = useCallback(
         async (presentation: Presentation) => {
+            // Guard against exporting unsaved presentations (Issue #XXX)
+            if (!isPresentationSaved(presentation)) {
+                toast({
+                    title: "Export Not Available",
+                    description:
+                        "Please wait for the presentation to finish saving before exporting.",
+                    variant: "destructive",
+                });
+                logger.warn(
+                    { presentationId: presentation.id },
+                    "Attempted to export unsaved presentation"
+                );
+                return;
+            }
+
             try {
                 toast({
                     title: "Exporting...",
@@ -960,7 +981,7 @@ export default function Step5Page({
                 });
             }
         },
-        [toast]
+        [isPresentationSaved, toast]
     );
 
     // Render loading state
@@ -1554,7 +1575,10 @@ export default function Step5Page({
                                                             }
                                                             disabled={
                                                                 presentation.slides
-                                                                    .length === 0
+                                                                    .length === 0 ||
+                                                                !isPresentationSaved(
+                                                                    presentation
+                                                                )
                                                             }
                                                         >
                                                             <Download className="mr-1 h-4 w-4" />
@@ -1705,7 +1729,13 @@ export default function Step5Page({
                                     }
                                     disabled={
                                         streaming.isGenerating ||
-                                        selectedPresentation.slides.length === 0
+                                        selectedPresentation.slides.length === 0 ||
+                                        !isPresentationSaved(selectedPresentation)
+                                    }
+                                    title={
+                                        !isPresentationSaved(selectedPresentation)
+                                            ? "Presentation is still being saved..."
+                                            : undefined
                                     }
                                 >
                                     <Download className="mr-1 h-4 w-4" />

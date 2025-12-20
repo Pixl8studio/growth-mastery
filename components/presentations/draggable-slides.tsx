@@ -138,10 +138,13 @@ export function DraggableSlides({
     const previousSlideCount = useRef<number>(0);
 
     // Filter out any undefined or invalid slides to prevent crashes during streaming (Issue #331)
-    const validSlides = slides.filter(
-        (slide): slide is SlideData =>
-            slide != null && typeof slide.slideNumber === "number"
-    );
+    // CRITICAL: Also sort by slideNumber to ensure slides always display in Step 4 presentation order
+    const validSlides = slides
+        .filter(
+            (slide): slide is SlideData =>
+                slide != null && typeof slide.slideNumber === "number"
+        )
+        .sort((a, b) => a.slideNumber - b.slideNumber);
 
     // Auto-scroll to newest slide when generating - scroll to the selected slide
     useEffect(() => {

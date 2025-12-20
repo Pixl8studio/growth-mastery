@@ -286,7 +286,13 @@ export default function Step5Page({
                                 presentationsResult.presentations.map((p: any) => ({
                                     id: p.id,
                                     title: p.title,
-                                    slides: p.slides || [],
+                                    // CRITICAL: Sort slides by slideNumber to maintain Step 4 presentation order
+                                    slides: (p.slides || [])
+                                        .slice()
+                                        .sort(
+                                            (a: GeneratedSlide, b: GeneratedSlide) =>
+                                                a.slideNumber - b.slideNumber
+                                        ),
                                     status: p.status,
                                     deckStructureId: p.deck_structure_id,
                                     created_at: p.created_at,
@@ -403,7 +409,13 @@ export default function Step5Page({
                         (p: any) => ({
                             id: p.id,
                             title: p.title,
-                            slides: p.slides || [],
+                            // CRITICAL: Sort slides by slideNumber to maintain Step 4 presentation order
+                            slides: (p.slides || [])
+                                .slice()
+                                .sort(
+                                    (a: GeneratedSlide, b: GeneratedSlide) =>
+                                        a.slideNumber - b.slideNumber
+                                ),
                             status: p.status,
                             deckStructureId: p.deck_structure_id,
                             created_at: p.created_at,
@@ -526,9 +538,19 @@ export default function Step5Page({
                         return prev;
                     }
 
-                    const updatedSlides = [...prev.slides, slide as GeneratedSlide];
-                    // Auto-select the newest slide as it arrives to show real-time progress
-                    setSelectedSlideIndex(updatedSlides.length - 1);
+                    // CRITICAL: Sort slides by slideNumber to maintain Step 4 presentation order
+                    // Slides may arrive out of order due to network conditions or async processing
+                    const updatedSlides = [
+                        ...prev.slides,
+                        slide as GeneratedSlide,
+                    ].sort((a, b) => a.slideNumber - b.slideNumber);
+                    // Auto-select the newest slide by slide number (not array position)
+                    const newSlideIndex = updatedSlides.findIndex(
+                        (s) => s.slideNumber === slide.slideNumber
+                    );
+                    setSelectedSlideIndex(
+                        newSlideIndex >= 0 ? newSlideIndex : updatedSlides.length - 1
+                    );
                     return {
                         ...prev,
                         slides: updatedSlides,
@@ -541,11 +563,16 @@ export default function Step5Page({
                 );
             },
             onComplete: (presentationId, slides) => {
+                // CRITICAL: Sort slides by slideNumber to maintain Step 4 presentation order
+                const sortedSlides = [...slides].sort(
+                    (a, b) => a.slideNumber - b.slideNumber
+                ) as GeneratedSlide[];
+
                 // Create final presentation record for local state
                 const newPresentation: Presentation = {
                     id: presentationId,
                     title: `${selectedDeck.title} - Generated`,
-                    slides: slides as GeneratedSlide[],
+                    slides: sortedSlides,
                     status: PresentationStatus.COMPLETED,
                     deckStructureId: selectedDeck.id,
                     created_at: new Date().toISOString(),
@@ -630,7 +657,20 @@ export default function Step5Page({
 
                     setSelectedPresentation((prev) => {
                         if (!prev) return prev;
-                        const updatedSlides = [...prev.slides, slide as GeneratedSlide];
+
+                        // Guard against duplicate slides
+                        const slideExists = prev.slides.some(
+                            (s) => s.slideNumber === slide.slideNumber
+                        );
+                        if (slideExists) {
+                            return prev;
+                        }
+
+                        // CRITICAL: Sort slides by slideNumber to maintain Step 4 presentation order
+                        const updatedSlides = [
+                            ...prev.slides,
+                            slide as GeneratedSlide,
+                        ].sort((a, b) => a.slideNumber - b.slideNumber);
                         return {
                             ...prev,
                             slides: updatedSlides,
@@ -643,10 +683,15 @@ export default function Step5Page({
                     );
                 },
                 onComplete: (presentationId, slides) => {
+                    // CRITICAL: Sort slides by slideNumber to maintain Step 4 presentation order
+                    const sortedSlides = [...slides].sort(
+                        (a, b) => a.slideNumber - b.slideNumber
+                    ) as GeneratedSlide[];
+
                     const completedPresentation: Presentation = {
                         ...presentation,
                         id: presentationId,
-                        slides: slides as GeneratedSlide[],
+                        slides: sortedSlides,
                         status: PresentationStatus.COMPLETED,
                     };
 

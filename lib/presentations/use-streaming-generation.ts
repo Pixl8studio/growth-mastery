@@ -245,9 +245,15 @@ export function useStreamingGeneration() {
                         // Don't allow progress to go backwards (indicates something went wrong)
                         const newProgress = Math.max(prev.progress, progress);
 
+                        // CRITICAL: Sort slides by slideNumber to maintain Step 4 presentation order
+                        // Slides may arrive out of order due to network conditions or async processing
+                        const updatedSlides = [...prev.slides, slide].sort(
+                            (a, b) => a.slideNumber - b.slideNumber
+                        );
+
                         return {
                             ...prev,
-                            slides: [...prev.slides, slide],
+                            slides: updatedSlides,
                             currentSlide: slide.slideNumber,
                             progress: newProgress,
                         };

@@ -404,7 +404,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         )}
                         <h2
                             className={cn(
-                                "text-3xl font-bold mb-6 line-clamp-2",
+                                "text-3xl font-bold mb-5 line-clamp-2 flex-shrink-0",
                                 !hasBrandColors && fallbackTextColors.title
                             )}
                             style={getTitleStyle()}
@@ -413,7 +413,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         </h2>
                         <div
                             className={cn(
-                                "flex-1 grid gap-8 min-h-0 overflow-hidden",
+                                "flex-1 grid gap-6 min-h-0",
                                 showImageArea && "grid-cols-2"
                             )}
                         >
@@ -438,11 +438,11 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                             )}
 
                             {/* Bullet content with overflow handling */}
-                            <ul className="space-y-3 overflow-hidden">
+                            <ul className="flex flex-col space-y-2 min-h-0">
                                 {displayedContent.map((point, idx) => (
                                     <li
                                         key={idx}
-                                        className="flex items-start gap-3 text-lg"
+                                        className="flex items-start gap-3 text-lg min-h-0"
                                     >
                                         <span
                                             className="mt-2 h-2.5 w-2.5 flex-shrink-0 rounded-full shadow-sm"
@@ -450,6 +450,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                                         />
                                         <span
                                             className={cn(
+                                                "line-clamp-2",
                                                 !hasBrandColors &&
                                                     fallbackTextColors.body
                                             )}

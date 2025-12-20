@@ -6,7 +6,15 @@
  */
 
 /**
- * Maximum number of presentations allowed per funnel.
+ * Feature flag to enable/disable the presentation generation limit.
+ * Set to `true` to enforce the limit, `false` to allow unlimited presentations.
+ *
+ * To re-enable the limit, simply change this to `true`.
+ */
+export const PRESENTATION_LIMIT_ENABLED = false;
+
+/**
+ * Maximum number of presentations allowed per funnel (when limit is enabled).
  * This limit helps manage resource usage and prevents abuse.
  */
 export const PRESENTATION_LIMIT = 3;

@@ -16,7 +16,11 @@ import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { generatePresentation } from "@/lib/presentations/slide-generator";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
-import { PRESENTATION_LIMIT, PresentationStatus } from "@/lib/constants/presentations";
+import {
+    PRESENTATION_LIMIT,
+    PRESENTATION_LIMIT_ENABLED,
+    PresentationStatus,
+} from "@/lib/constants/presentations";
 
 // Lazy OpenAI client initialization for image generation
 let openaiClient: OpenAI | null = null;
@@ -325,8 +329,8 @@ export async function GET(request: NextRequest) {
         }
 
         // Check generation limit (3 presentations per funnel)
-        // Only applies to new presentations, not resuming
-        if (!isResuming) {
+        // Only applies to new presentations, not resuming, and only when limit is enabled
+        if (PRESENTATION_LIMIT_ENABLED && !isResuming) {
             const { count, error: countError } = await supabase
                 .from("presentations")
                 .select("*", { count: "exact", head: true })

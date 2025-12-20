@@ -30,6 +30,7 @@ import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { useIsMobile } from "@/lib/mobile-utils.client";
 import {
     PRESENTATION_LIMIT,
+    PRESENTATION_LIMIT_ENABLED,
     PresentationStatus,
     type PresentationStatusType,
     countsTowardQuota,
@@ -333,7 +334,9 @@ export default function Step5Page({
         ).length;
     }, [presentations]);
 
-    const hasReachedLimit = presentationCount >= PRESENTATION_LIMIT;
+    // When limit is disabled, never block generation
+    const hasReachedLimit =
+        PRESENTATION_LIMIT_ENABLED && presentationCount >= PRESENTATION_LIMIT;
     const remainingGenerations = Math.max(0, PRESENTATION_LIMIT - presentationCount);
 
     // Check dependencies
@@ -930,12 +933,14 @@ export default function Step5Page({
 
     const handleDeletePresentation = useCallback(
         async (presentationId: string) => {
-            // Confirm deletion with warning about quota
-            const confirmed = window.confirm(
-                "Are you sure you want to delete this presentation?\n\n" +
-                    "Note: Deleting a presentation does NOT free up your generation quota. " +
-                    `You are limited to ${PRESENTATION_LIMIT} presentations per funnel regardless of deletions.`
-            );
+            // Confirm deletion - only warn about quota when limit is enabled
+            const confirmMessage = PRESENTATION_LIMIT_ENABLED
+                ? "Are you sure you want to delete this presentation?\n\n" +
+                  "Note: Deleting a presentation does NOT free up your generation quota. " +
+                  `You are limited to ${PRESENTATION_LIMIT} presentations per funnel regardless of deletions.`
+                : "Are you sure you want to delete this presentation?";
+
+            const confirmed = window.confirm(confirmMessage);
 
             if (!confirmed) return;
 
@@ -1437,8 +1442,8 @@ export default function Step5Page({
                                         </div>
                                     </div>
 
-                                    {/* Generation limit info */}
-                                    {!hasReachedLimit && (
+                                    {/* Generation limit info - only shown when limit is enabled */}
+                                    {PRESENTATION_LIMIT_ENABLED && !hasReachedLimit && (
                                         <div className="mb-4 text-center text-sm text-muted-foreground">
                                             <span className="font-medium">
                                                 {remainingGenerations}
@@ -1448,8 +1453,8 @@ export default function Step5Page({
                                         </div>
                                     )}
 
-                                    {/* Limit reached warning */}
-                                    {hasReachedLimit && (
+                                    {/* Limit reached warning - only shown when limit is enabled */}
+                                    {PRESENTATION_LIMIT_ENABLED && hasReachedLimit && (
                                         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
                                             <div className="flex items-start gap-2">
                                                 <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
@@ -1478,13 +1483,15 @@ export default function Step5Page({
                                             size="lg"
                                             className="px-8"
                                             title={
+                                                PRESENTATION_LIMIT_ENABLED &&
                                                 hasReachedLimit
                                                     ? `Limit of ${PRESENTATION_LIMIT} presentations reached`
                                                     : undefined
                                             }
                                         >
                                             <Sparkles className="mr-2 h-5 w-5" />
-                                            {hasReachedLimit
+                                            {PRESENTATION_LIMIT_ENABLED &&
+                                            hasReachedLimit
                                                 ? "Generation Limit Reached"
                                                 : "Generate My Presentation"}
                                         </Button>
@@ -1503,9 +1510,12 @@ export default function Step5Page({
                             <CardHeader>
                                 <div className="flex items-center justify-between">
                                     <CardTitle>My Presentations</CardTitle>
-                                    <span className="text-sm text-muted-foreground">
-                                        {presentationCount} of {PRESENTATION_LIMIT} used
-                                    </span>
+                                    {PRESENTATION_LIMIT_ENABLED && (
+                                        <span className="text-sm text-muted-foreground">
+                                            {presentationCount} of {PRESENTATION_LIMIT}{" "}
+                                            used
+                                        </span>
+                                    )}
                                 </div>
                             </CardHeader>
                             <CardContent>

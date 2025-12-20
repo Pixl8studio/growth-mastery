@@ -6,6 +6,7 @@
 import { describe, it, expect } from "vitest";
 import {
     PRESENTATION_LIMIT,
+    PRESENTATION_LIMIT_ENABLED,
     PresentationStatus,
     type PresentationStatusType,
     countsTowardQuota,
@@ -14,6 +15,17 @@ import {
 } from "@/lib/constants/presentations";
 
 describe("presentation constants", () => {
+    describe("PRESENTATION_LIMIT_ENABLED", () => {
+        it("should be a boolean", () => {
+            expect(typeof PRESENTATION_LIMIT_ENABLED).toBe("boolean");
+        });
+
+        it("should be false (limit currently disabled)", () => {
+            // This test documents the current state - update when re-enabling
+            expect(PRESENTATION_LIMIT_ENABLED).toBe(false);
+        });
+    });
+
     describe("PRESENTATION_LIMIT", () => {
         it("should be set to 3", () => {
             expect(PRESENTATION_LIMIT).toBe(3);

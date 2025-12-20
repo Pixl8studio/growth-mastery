@@ -1693,7 +1693,7 @@ export default function Step5Page({
                                         className="text-amber-600 hover:text-amber-700"
                                     >
                                         <Square className="mr-1 h-3 w-3 fill-current" />
-                                        Stop & Save
+                                        Stop
                                     </Button>
                                 )}
                                 <Button
@@ -1713,9 +1713,7 @@ export default function Step5Page({
                                 </Button>
                                 <Button size="sm" onClick={handleEditorClose}>
                                     <CheckCircle2 className="mr-1 h-4 w-4" />
-                                    {streaming.isGenerating
-                                        ? "Save & Pause"
-                                        : "Save & Close"}
+                                    Save & Close
                                 </Button>
                             </div>
                         </div>

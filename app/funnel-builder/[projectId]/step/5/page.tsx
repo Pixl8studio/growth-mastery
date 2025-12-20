@@ -516,6 +516,18 @@ export default function Step5Page({
             projectId,
             deckStructureId: selectedDeck.id,
             customization,
+            onReconnecting: () => {
+                toast({
+                    title: "Connection interrupted",
+                    description: "Resuming generation automatically...",
+                });
+            },
+            onReconnected: () => {
+                toast({
+                    title: "Connection restored",
+                    description: "Continuing slide generation.",
+                });
+            },
             onSlideGenerated: (slide, progress) => {
                 // Guard against undefined or invalid slides from SSE (Issue #331)
                 if (!slide || typeof slide.slideNumber !== "number") {
@@ -648,6 +660,18 @@ export default function Step5Page({
                 resumePresentationId: presentation.id,
                 resumeFromSlide,
                 existingSlides: existingSlides as GeneratedSlide[],
+                onReconnecting: () => {
+                    toast({
+                        title: "Connection interrupted",
+                        description: "Resuming generation automatically...",
+                    });
+                },
+                onReconnected: () => {
+                    toast({
+                        title: "Connection restored",
+                        description: "Continuing slide generation.",
+                    });
+                },
                 onSlideGenerated: (slide, progress) => {
                     if (!slide || typeof slide.slideNumber !== "number") {
                         logger.warn(
@@ -1711,6 +1735,9 @@ export default function Step5Page({
                                         </div>
                                         <span className="text-xs text-muted-foreground">
                                             {streaming.progress}%
+                                        </span>
+                                        <span className="ml-2 text-xs text-muted-foreground/70">
+                                            Please keep this page open
                                         </span>
                                     </div>
                                 )}

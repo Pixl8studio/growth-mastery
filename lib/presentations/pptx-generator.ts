@@ -77,37 +77,40 @@ export interface PresentationOptions {
 // Base conversion factor
 const EMU_PER_INCH = 914400;
 
-// Slide dimensions (standard 16:9 would be different)
+// Slide dimensions - Standard 16:9 widescreen format
+// Width: 10 inches, Height: 5.625 inches (10 / 16 * 9)
+// This matches the web preview aspect ratio and PowerPoint's widescreen template
 const SLIDE_WIDTH_INCHES = 10;
-const SLIDE_HEIGHT_INCHES = 7.5;
+const SLIDE_HEIGHT_INCHES = 5.625; // 16:9 ratio
 const SLIDE_WIDTH = SLIDE_WIDTH_INCHES * EMU_PER_INCH; // 9144000
-const SLIDE_HEIGHT = SLIDE_HEIGHT_INCHES * EMU_PER_INCH; // 6858000
+const SLIDE_HEIGHT = SLIDE_HEIGHT_INCHES * EMU_PER_INCH; // 5143500
 
 // Content positioning - Title slide
+// Y positions scaled by 0.75 (5.625/7.5) from original 4:3 layout
 const TITLE_SLIDE_TITLE_X = 685800; // 0.75 inches
-const TITLE_SLIDE_TITLE_Y = 2130425; // ~2.33 inches
+const TITLE_SLIDE_TITLE_Y = 1600200; // ~1.75 inches (centered for 16:9)
 const TITLE_SLIDE_TITLE_WIDTH = 7772400; // 8.5 inches
-const TITLE_SLIDE_TITLE_HEIGHT = 1470025; // ~1.6 inches
-const TITLE_SLIDE_SUBTITLE_Y = 3886200; // ~4.25 inches
-const TITLE_SLIDE_SUBTITLE_HEIGHT = 1752600; // ~1.92 inches
+const TITLE_SLIDE_TITLE_HEIGHT = 1143000; // ~1.25 inches
+const TITLE_SLIDE_SUBTITLE_Y = 2914650; // ~3.19 inches
+const TITLE_SLIDE_SUBTITLE_HEIGHT = 1314450; // ~1.44 inches
 
 // Content positioning - Section slide
 const SECTION_SLIDE_TITLE_X = 685800;
-const SECTION_SLIDE_TITLE_Y = 2743200; // 3 inches
+const SECTION_SLIDE_TITLE_Y = 2057400; // ~2.25 inches (centered for 16:9)
 const SECTION_SLIDE_TITLE_WIDTH = 7772400;
-const SECTION_SLIDE_TITLE_HEIGHT = 1371600; // 1.5 inches
+const SECTION_SLIDE_TITLE_HEIGHT = 1028700; // ~1.125 inches
 
 // Content positioning - Standard content slide
 const CONTENT_SLIDE_MARGIN_X = 457200; // 0.5 inches
-const CONTENT_SLIDE_TITLE_Y = 274638; // ~0.3 inches
+const CONTENT_SLIDE_TITLE_Y = 228600; // ~0.25 inches
 const CONTENT_SLIDE_TITLE_WIDTH = 8229600; // 9 inches
-const CONTENT_SLIDE_TITLE_HEIGHT = 1143000; // 1.25 inches
-const CONTENT_SLIDE_BODY_Y = 1600200; // ~1.75 inches
-const CONTENT_SLIDE_BODY_HEIGHT = 4525963; // ~4.95 inches
+const CONTENT_SLIDE_TITLE_HEIGHT = 914400; // 1 inch
+const CONTENT_SLIDE_BODY_Y = 1257300; // ~1.375 inches
+const CONTENT_SLIDE_BODY_HEIGHT = 3429000; // ~3.75 inches (fits in 16:9)
 
 // Footer positioning
-const FOOTER_Y = 6400800; // 7 inches
-const FOOTER_HEIGHT = 365125; // ~0.4 inches
+const FOOTER_Y = 4800600; // ~5.25 inches (near bottom of 5.625" slide)
+const FOOTER_HEIGHT = 274320; // ~0.3 inches
 const SLIDE_NUMBER_X = 6553200; // ~7.17 inches
 const SLIDE_NUMBER_WIDTH = 2133600; // ~2.33 inches
 const BRAND_WIDTH = 2743200; // 3 inches
@@ -702,7 +705,7 @@ function generatePictureXml(
 
     // Calculate positions - image takes up ~45% of slide width
     const imageWidth = 4114800; // ~4.5 inches
-    const imageHeight = 3657600; // ~4 inches
+    const imageHeight = 2743200; // ~3 inches (fits 16:9 slide height)
     const imageX = isImageOnLeft
         ? CONTENT_SLIDE_MARGIN_X
         : SLIDE_WIDTH - imageWidth - CONTENT_SLIDE_MARGIN_X;
@@ -785,7 +788,7 @@ function generateCtaButtonXml(buttonText: string, accentColor: string): string {
     const buttonWidth = 2743200; // ~3 inches
     const buttonHeight = 548640; // ~0.6 inches
     const buttonX = (SLIDE_WIDTH - buttonWidth) / 2;
-    const buttonY = 4800600; // Below main content
+    const buttonY = 3886200; // ~4.25 inches (fits in 16:9 slide)
 
     return `      <p:sp>
         <p:nvSpPr>
@@ -848,7 +851,7 @@ function generateStepCircleXml(
     const circleSize = 548640; // ~0.6 inches
     const columnWidth = SLIDE_WIDTH / 4;
     const circleX = columnWidth * (stepNumber - 1) + (columnWidth - circleSize) / 2;
-    const circleY = 2743200; // ~3 inches from top
+    const circleY = 1828800; // ~2 inches from top (fits 16:9 slide)
     const textY = circleY + circleSize + 228600; // Below circle
     const textWidth = columnWidth - 182880;
     const textX = columnWidth * (stepNumber - 1) + 91440;
@@ -936,7 +939,7 @@ function generateStatisticXml(
 ): string {
     const columnWidth = SLIDE_WIDTH / 3;
     const statX = columnWidth * statIndex + 91440;
-    const statY = 2743200;
+    const statY = 1828800; // ~2 inches from top (fits 16:9 slide)
     const width = columnWidth - 182880;
 
     // Extract number from stat text
@@ -1019,8 +1022,8 @@ function generateComparisonColumnXml(
 ): string {
     const columnWidth = 4114800; // ~4.5 inches
     const columnX = isAfter ? SLIDE_WIDTH / 2 + 182880 : 457200;
-    const columnY = 2057400;
-    const columnHeight = 4114800;
+    const columnY = 1600200; // ~1.75 inches from top
+    const columnHeight = 2971800; // ~3.25 inches (fits 16:9 slide)
 
     const bulletPoints = points
         .slice(0, 3)
@@ -1103,8 +1106,8 @@ function generateAccentBarXml(accentColor: string): string {
         </p:nvSpPr>
         <p:spPr>
           <a:xfrm>
-            <a:off x="0" y="914400"/>
-            <a:ext cx="91440" cy="5029200"/>
+            <a:off x="0" y="685800"/>
+            <a:ext cx="91440" cy="3771900"/>
           </a:xfrm>
           <a:prstGeom prst="roundRect">
             <a:avLst>
@@ -1377,8 +1380,8 @@ ${layoutSpecificShapes}
         </p:nvSpPr>
         <p:spPr>
           <a:xfrm>
-            <a:off x="1371600" y="2286000"/>
-            <a:ext cx="6400800" cy="2286000"/>
+            <a:off x="1371600" y="1600200"/>
+            <a:ext cx="6400800" cy="1828800"/>
           </a:xfrm>
           <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
         </p:spPr>

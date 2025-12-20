@@ -72,23 +72,30 @@ export async function POST(
 
         const slides = Array.isArray(presentation.slides) ? presentation.slides : [];
 
-        // Validate new order
+        // Get existing slide numbers from database
+        const existingSlideNumbers = new Set(
+            slides.map((s: { slideNumber: number }) => s.slideNumber)
+        );
+
+        // Validate new order length matches existing slides
         if (newOrder.length !== slides.length) {
             throw new ValidationError(
                 `New order must contain exactly ${slides.length} slide numbers`
             );
         }
 
-        // Check that all slide numbers are valid and unique
+        // Check for duplicates in newOrder
         const uniqueNumbers = new Set(newOrder);
         if (uniqueNumbers.size !== newOrder.length) {
             throw new ValidationError("Duplicate slide numbers in new order");
         }
 
+        // Verify all slide numbers in newOrder exist in the presentation
+        // (handles non-contiguous slideNumbers after duplicates/deletes)
         for (const num of newOrder) {
-            if (num < 1 || num > slides.length) {
+            if (!existingSlideNumbers.has(num)) {
                 throw new ValidationError(
-                    `Invalid slide number ${num}. Must be between 1 and ${slides.length}`
+                    `Invalid slide number ${num}. Slide does not exist in presentation`
                 );
             }
         }

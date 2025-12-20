@@ -259,7 +259,9 @@ export function AddSlidePopover({
                                     <DropdownMenuItem
                                         key={layout.type}
                                         className="flex cursor-pointer items-center gap-2"
-                                        onSelect={() => handleBlankSlideClick(layout.type)}
+                                        onSelect={() =>
+                                            handleBlankSlideClick(layout.type)
+                                        }
                                     >
                                         <Icon className="h-4 w-4 text-muted-foreground" />
                                         <div className="flex flex-col">
@@ -292,7 +294,9 @@ export function AddSlidePopover({
 
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
-                            <Label htmlFor="ai-prompt">What should this slide cover?</Label>
+                            <Label htmlFor="ai-prompt">
+                                What should this slide cover?
+                            </Label>
                             <Textarea
                                 id="ai-prompt"
                                 placeholder="Add a testimonial from Sarah about the transformation she experienced..."
@@ -322,7 +326,10 @@ export function AddSlidePopover({
                                         Auto-detect best layout
                                     </SelectItem>
                                     {LAYOUT_CONFIG.map((layout) => (
-                                        <SelectItem key={layout.type} value={layout.type}>
+                                        <SelectItem
+                                            key={layout.type}
+                                            value={layout.type}
+                                        >
                                             {layout.label}
                                         </SelectItem>
                                     ))}

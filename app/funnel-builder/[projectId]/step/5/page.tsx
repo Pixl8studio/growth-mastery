@@ -896,22 +896,27 @@ export default function Step5Page({
         (layoutType: SlideLayoutType) => {
             if (!selectedPresentation) return;
 
-            const newSlideNumber = selectedPresentation.slides.length + 1;
+            // Insert after current slide
+            const insertIndex = selectedSlideIndex + 1;
+
+            // Create placeholder slide - slideNumber will be set during renumbering
             const newSlide: GeneratedSlide = {
-                slideNumber: newSlideNumber,
+                slideNumber: insertIndex + 1, // Correct position-based number
                 title: "New Slide",
                 content: [],
                 layoutType,
                 speakerNotes: "",
             };
 
-            // Insert after current slide
-            const insertIndex = selectedSlideIndex + 1;
+            // Insert slide and renumber all slides to maintain consistency
             const updatedSlides = [
                 ...selectedPresentation.slides.slice(0, insertIndex),
                 newSlide,
                 ...selectedPresentation.slides.slice(insertIndex),
-            ];
+            ].map((slide, idx) => ({
+                ...slide,
+                slideNumber: idx + 1, // Renumber all slides based on array position
+            }));
 
             const updatedPresentation = {
                 ...selectedPresentation,
@@ -956,8 +961,14 @@ export default function Step5Page({
 
             setIsGeneratingSingleSlide(true);
 
-            // Create a placeholder slide first
-            const newSlideNumber = selectedPresentation.slides.length + 1;
+            // Store original slides for error recovery
+            const originalSlides = [...selectedPresentation.slides];
+
+            // Insert after current slide
+            const insertIndex = selectedSlideIndex + 1;
+            const newSlideNumber = insertIndex + 1; // Position-based number
+
+            // Create a placeholder slide
             const placeholderSlide: GeneratedSlide = {
                 slideNumber: newSlideNumber,
                 title: "Generating...",
@@ -966,13 +977,15 @@ export default function Step5Page({
                 speakerNotes: "",
             };
 
-            // Insert after current slide
-            const insertIndex = selectedSlideIndex + 1;
+            // Insert slide and renumber all slides to maintain consistency
             const updatedSlides = [
                 ...selectedPresentation.slides.slice(0, insertIndex),
                 placeholderSlide,
                 ...selectedPresentation.slides.slice(insertIndex),
-            ];
+            ].map((slide, idx) => ({
+                ...slide,
+                slideNumber: idx + 1, // Renumber all slides based on array position
+            }));
 
             const tempUpdatedPresentation = {
                 ...selectedPresentation,
@@ -983,7 +996,7 @@ export default function Step5Page({
             setSelectedSlideIndex(insertIndex);
 
             try {
-                // Call the API to generate slide content
+                // Call the API to generate slide content using the correct slide number
                 const response = await fetch(
                     `/api/presentations/${selectedPresentation.id}/slides/${newSlideNumber}`,
                     {
@@ -1004,12 +1017,15 @@ export default function Step5Page({
                 const result = await response.json();
                 const generatedSlide = result.slide as GeneratedSlide;
 
-                // Update with the generated content
+                // Update with the generated content and ensure proper numbering
                 const finalSlides = [
                     ...selectedPresentation.slides.slice(0, insertIndex),
                     { ...generatedSlide, slideNumber: newSlideNumber },
                     ...selectedPresentation.slides.slice(insertIndex),
-                ];
+                ].map((slide, idx) => ({
+                    ...slide,
+                    slideNumber: idx + 1, // Renumber all slides
+                }));
 
                 const finalPresentation = {
                     ...selectedPresentation,
@@ -1033,13 +1049,18 @@ export default function Step5Page({
                     "AI slide generated successfully"
                 );
             } catch (error) {
-                // Remove the placeholder slide on error
+                // Revert to original slides on error (removes placeholder)
                 const revertedPresentation = {
                     ...selectedPresentation,
-                    slides: selectedPresentation.slides,
+                    slides: originalSlides,
                 };
                 setSelectedPresentation(revertedPresentation);
-                setSelectedSlideIndex(Math.max(0, insertIndex - 1));
+                setPresentations((prev) =>
+                    prev.map((p) =>
+                        p.id === revertedPresentation.id ? revertedPresentation : p
+                    )
+                );
+                setSelectedSlideIndex(Math.max(0, selectedSlideIndex));
 
                 logger.error({ error }, "Failed to generate AI slide");
                 toast({

@@ -29,6 +29,7 @@ import {
     Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logger } from "@/lib/client-logger";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -167,13 +168,19 @@ export function AddSlidePopover({
             setIsDialogOpen(false);
             setAiPrompt("");
             setSelectedLayout("auto");
+        } catch (error) {
+            logger.error(
+                { error, aiPrompt, selectedLayout },
+                "AI slide generation failed in popover"
+            );
         } finally {
             setIsSubmitting(false);
         }
-    }, [aiPrompt, selectedLayout, onGenerateWithAI, isSubmitting]);
+    }, [aiPrompt, selectedLayout, onGenerateWithAI]); // isSubmitting not needed - checked inside
 
     const handleBlankSlideClick = useCallback(
         (layoutType: SlideLayoutType) => {
+            logger.info({ layoutType }, "Blank slide added via popover");
             onAddBlankSlide(layoutType);
         },
         [onAddBlankSlide]
@@ -333,8 +340,15 @@ export function AddSlidePopover({
                         >
                             {isSubmitting ? (
                                 <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Generating...
+                                    <Loader2
+                                        className="mr-2 h-4 w-4 animate-spin"
+                                        role="status"
+                                        aria-label="Generating slide"
+                                    />
+                                    <span>Generating...</span>
+                                    <span className="sr-only">
+                                        Generating slide with AI, please wait
+                                    </span>
                                 </>
                             ) : (
                                 <>

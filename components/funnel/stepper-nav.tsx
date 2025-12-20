@@ -32,7 +32,7 @@ const STEPS: Step[] = [
     { number: 2, title: "Define Offer", description: "7 P's framework" },
     { number: 3, title: "Brand Design", description: "Visual identity" },
     { number: 4, title: "Presentation Structure", description: "AI-generated outline" },
-    { number: 5, title: "Create Presentation", description: "Gamma AI slides" },
+    { number: 5, title: "Create Presentation", description: "Generate Slides" },
     { number: 6, title: "Enrollment Page", description: "AI sales copy" },
     { number: 7, title: "Talk Track", description: "Video script" },
     { number: 8, title: "Upload Video", description: "Pitch recording" },

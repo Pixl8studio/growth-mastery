@@ -5,11 +5,18 @@
 
 "use server";
 
+import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { logger } from "@/lib/logger";
 import { ValidationError } from "@/lib/errors";
 import { generateSlug } from "@/lib/utils";
+
+/**
+ * Trash retention period in days before funnels are eligible for permanent deletion.
+ * TODO: Implement automated cleanup via cron job or Supabase scheduled function
+ */
+export const TRASH_RETENTION_DAYS = 30;
 
 /**
  * Update project's current step
@@ -326,6 +333,7 @@ export async function renameFunnel(projectId: string, newName: string) {
         requestLogger.info({ userId: user.id, newName: trimmedName }, "Renaming funnel");
 
         // Check for duplicate name (same user, different project, not deleted)
+        // Using maybeSingle() to avoid throwing on multiple matches (race condition safety)
         const { data: existing } = await supabase
             .from("funnel_projects")
             .select("id")
@@ -333,7 +341,7 @@ export async function renameFunnel(projectId: string, newName: string) {
             .eq("name", trimmedName)
             .is("deleted_at", null)
             .neq("id", projectId)
-            .single();
+            .maybeSingle();
 
         if (existing) {
             throw new ValidationError(
@@ -367,13 +375,17 @@ export async function renameFunnel(projectId: string, newName: string) {
         return { success: true, newSlug };
     } catch (error) {
         requestLogger.error({ error }, "Failed to rename funnel");
+        Sentry.captureException(error, {
+            tags: { action: "rename-funnel" },
+            extra: { projectId, newName },
+        });
         throw error;
     }
 }
 
 /**
  * Soft delete a funnel (move to trash)
- * Sets deleted_at timestamp for 30-day recovery period
+ * Sets deleted_at timestamp for recovery period (see TRASH_RETENTION_DAYS)
  */
 export async function softDeleteFunnel(projectId: string) {
     const requestLogger = logger.child({
@@ -447,12 +459,17 @@ export async function softDeleteFunnel(projectId: string) {
         return { success: true };
     } catch (error) {
         requestLogger.error({ error }, "Failed to soft delete funnel");
+        Sentry.captureException(error, {
+            tags: { action: "soft-delete-funnel" },
+            extra: { projectId },
+        });
         throw error;
     }
 }
 
 /**
  * Restore a soft-deleted funnel from trash
+ * Checks for slug collision and auto-appends timestamp if needed
  */
 export async function restoreFunnel(projectId: string) {
     const requestLogger = logger.child({
@@ -473,11 +490,45 @@ export async function restoreFunnel(projectId: string) {
 
         requestLogger.info({ userId: user.id }, "Restoring funnel from trash");
 
-        // Clear deleted_at to restore
+        // Get the funnel being restored to check for slug collision
+        const { data: funnelToRestore } = await supabase
+            .from("funnel_projects")
+            .select("name, slug")
+            .eq("id", projectId)
+            .eq("user_id", user.id)
+            .single();
+
+        if (!funnelToRestore) {
+            throw new ValidationError("Funnel not found in trash");
+        }
+
+        // Check if an active funnel now exists with the same slug
+        const { data: existingFunnel } = await supabase
+            .from("funnel_projects")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("slug", funnelToRestore.slug)
+            .is("deleted_at", null)
+            .neq("id", projectId)
+            .maybeSingle();
+
+        // If slug collision, append timestamp to make unique
+        let finalSlug = funnelToRestore.slug;
+        if (existingFunnel) {
+            const timestamp = Date.now();
+            finalSlug = `${funnelToRestore.slug}-${timestamp}`;
+            requestLogger.info(
+                { originalSlug: funnelToRestore.slug, newSlug: finalSlug },
+                "Slug collision detected, appending timestamp"
+            );
+        }
+
+        // Clear deleted_at to restore (with potentially updated slug)
         const { error } = await supabase
             .from("funnel_projects")
             .update({
                 deleted_at: null,
+                slug: finalSlug,
                 updated_at: new Date().toISOString(),
             })
             .eq("id", projectId)
@@ -492,9 +543,13 @@ export async function restoreFunnel(projectId: string) {
         revalidatePath("/funnel-builder");
         revalidatePath("/settings/trash");
 
-        return { success: true };
+        return { success: true, slugChanged: finalSlug !== funnelToRestore.slug };
     } catch (error) {
         requestLogger.error({ error }, "Failed to restore funnel");
+        Sentry.captureException(error, {
+            tags: { action: "restore-funnel" },
+            extra: { projectId },
+        });
         throw error;
     }
 }
@@ -558,6 +613,10 @@ export async function permanentlyDeleteFunnel(projectId: string) {
         return { success: true };
     } catch (error) {
         requestLogger.error({ error }, "Failed to permanently delete funnel");
+        Sentry.captureException(error, {
+            tags: { action: "permanently-delete-funnel" },
+            extra: { projectId },
+        });
         throw error;
     }
 }
@@ -597,6 +656,9 @@ export async function getDeletedFunnels() {
         return { success: true, funnels: funnels || [] };
     } catch (error) {
         requestLogger.error({ error }, "Failed to fetch deleted funnels");
+        Sentry.captureException(error, {
+            tags: { action: "get-deleted-funnels" },
+        });
         throw error;
     }
 }
@@ -639,6 +701,10 @@ export async function getFunnelDetails(projectId: string) {
         return { success: true, funnel };
     } catch (error) {
         requestLogger.error({ error }, "Failed to fetch funnel details");
+        Sentry.captureException(error, {
+            tags: { action: "get-funnel-details" },
+            extra: { projectId },
+        });
         throw error;
     }
 }

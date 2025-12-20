@@ -11,7 +11,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Pencil, Check, X, Trash2, AlertTriangle } from "lucide-react";
-import { renameFunnel, getFunnelDetails } from "@/app/funnel-builder/actions";
+import { renameFunnel, getFunnelDetails, TRASH_RETENTION_DAYS } from "@/app/funnel-builder/actions";
 import { DeleteFunnelDialog } from "@/components/funnel/delete-funnel-dialog";
 import { logger } from "@/lib/client-logger";
 
@@ -224,7 +224,7 @@ export function GeneralSettings({ projectId }: GeneralSettingsProps) {
                             Danger Zone
                         </h3>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Deleting your funnel will move it to trash. You have 30 days to
+                            Deleting your funnel will move it to trash. You have {TRASH_RETENTION_DAYS} days to
                             recover it before permanent deletion.
                         </p>
                         <Button

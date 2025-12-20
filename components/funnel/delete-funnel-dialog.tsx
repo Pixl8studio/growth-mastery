@@ -18,7 +18,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { softDeleteFunnel } from "@/app/funnel-builder/actions";
+import { softDeleteFunnel, TRASH_RETENTION_DAYS } from "@/app/funnel-builder/actions";
 import { logger } from "@/lib/client-logger";
 
 interface DeleteFunnelDialogProps {
@@ -97,7 +97,7 @@ export function DeleteFunnelDialog({
                         <p className="text-sm text-destructive">
                             <strong>Warning:</strong> This will move your funnel to trash.
                             All pages, offers, presentations, and funnel data will be
-                            permanently deleted after 30 days.
+                            permanently deleted after {TRASH_RETENTION_DAYS} days.
                         </p>
                         {isPublished && (
                             <p className="mt-2 text-sm font-medium text-destructive">

@@ -2,7 +2,7 @@
  * Trash Page
  *
  * Shows soft-deleted funnels with options to restore or permanently delete.
- * Funnels in trash are automatically deleted after 30 days.
+ * Funnels in trash are eligible for permanent deletion after TRASH_RETENTION_DAYS.
  */
 
 "use client";
@@ -29,6 +29,7 @@ import {
     getDeletedFunnels,
     restoreFunnel,
     permanentlyDeleteFunnel,
+    TRASH_RETENTION_DAYS,
 } from "@/app/funnel-builder/actions";
 import { logger } from "@/lib/client-logger";
 
@@ -42,7 +43,7 @@ interface DeletedFunnel {
 function getDaysUntilPermanentDeletion(deletedAt: string): number {
     const deletedDate = new Date(deletedAt);
     const expirationDate = new Date(deletedDate);
-    expirationDate.setDate(expirationDate.getDate() + 30);
+    expirationDate.setDate(expirationDate.getDate() + TRASH_RETENTION_DAYS);
     const now = new Date();
     const diffTime = expirationDate.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -136,7 +137,7 @@ export default function TrashPage() {
                 <div>
                     <h1 className="text-2xl font-bold text-foreground">Trash</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Deleted funnels are kept for 30 days before permanent deletion
+                        Deleted funnels are kept for {TRASH_RETENTION_DAYS} days before permanent deletion
                     </p>
                 </div>
                 <div className="animate-pulse space-y-4">
@@ -156,7 +157,7 @@ export default function TrashPage() {
             <div>
                 <h1 className="text-2xl font-bold text-foreground">Trash</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                    Deleted funnels are kept for 30 days before permanent deletion
+                    Deleted funnels are kept for {TRASH_RETENTION_DAYS} days before permanent deletion
                 </p>
             </div>
 
@@ -168,7 +169,7 @@ export default function TrashPage() {
                             Trash is empty
                         </h3>
                         <p className="mt-2 text-sm text-muted-foreground">
-                            Deleted funnels will appear here for 30 days
+                            Deleted funnels will appear here for {TRASH_RETENTION_DAYS} days
                         </p>
                     </CardContent>
                 </Card>

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import * as Sentry from "@sentry/nextjs";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
 import {
@@ -1011,7 +1012,10 @@ export default function Step5Page({
                 );
 
                 if (!response.ok) {
-                    throw new Error("Failed to generate slide");
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(
+                        `Failed to generate slide: ${response.status} - ${errorData.error || response.statusText}`
+                    );
                 }
 
                 const result = await response.json();
@@ -1063,6 +1067,15 @@ export default function Step5Page({
                 setSelectedSlideIndex(Math.max(0, selectedSlideIndex));
 
                 logger.error({ error }, "Failed to generate AI slide");
+                Sentry.captureException(error, {
+                    tags: { component: "presentation-editor", action: "add_slide_ai" },
+                    extra: {
+                        presentationId: selectedPresentation.id,
+                        slideNumber: newSlideNumber,
+                        prompt,
+                        layoutType,
+                    },
+                });
                 toast({
                     title: "Generation Failed",
                     description: "Failed to generate slide. Please try again.",

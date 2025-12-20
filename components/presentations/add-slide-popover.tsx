@@ -11,6 +11,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import * as Sentry from "@sentry/nextjs";
 import {
     Plus,
     Sparkles,
@@ -173,6 +174,10 @@ export function AddSlidePopover({
                 { error, aiPrompt, selectedLayout },
                 "AI slide generation failed in popover"
             );
+            Sentry.captureException(error, {
+                tags: { component: "add-slide-popover", action: "generate_ai_slide" },
+                extra: { aiPrompt, selectedLayout },
+            });
         } finally {
             setIsSubmitting(false);
         }

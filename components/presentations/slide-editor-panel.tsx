@@ -361,7 +361,14 @@ export function SlideEditorPanel({
             setIsProcessing(false);
             setActiveAction(null);
         }
-    }, [presentationId, slide?.slideNumber, slide?.speakerNotes, editedNotes, onSlideUpdate, showFeedback]);
+    }, [
+        presentationId,
+        slide?.slideNumber,
+        slide?.speakerNotes,
+        editedNotes,
+        onSlideUpdate,
+        showFeedback,
+    ]);
 
     const cancelNotesEdit = useCallback(() => {
         setEditedNotes(slide?.speakerNotes || "");
@@ -663,12 +670,14 @@ export function SlideEditorPanel({
             {/* Speaker Notes */}
             <div>
                 <div className="mb-3 flex items-center justify-between">
-                    <h3 className="text-sm font-semibold">Speaker Notes</h3>
+                    <h3 id="speaker-notes-label" className="text-sm font-semibold">
+                        Speaker Notes
+                    </h3>
                     {!isEditingNotes && (
                         <button
                             className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                             onClick={startEditingNotes}
-                            title="Edit speaker notes"
+                            aria-label="Edit speaker notes"
                             disabled={isProcessing}
                         >
                             <Pencil className="h-3.5 w-3.5" />
@@ -684,12 +693,17 @@ export function SlideEditorPanel({
                             placeholder="Add speaker notes for this slide..."
                             className="h-32 w-full resize-none rounded-lg border bg-background p-3 text-sm transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                             disabled={isProcessing}
+                            aria-label="Speaker notes"
+                            aria-describedby="speaker-notes-help"
                             onKeyDown={(e) => {
                                 if (e.key === "Escape") {
                                     cancelNotesEdit();
                                 }
                             }}
                         />
+                        <span id="speaker-notes-help" className="sr-only">
+                            Press Escape to cancel editing
+                        </span>
                         <div className="flex gap-2">
                             <Button
                                 size="sm"
@@ -719,7 +733,15 @@ export function SlideEditorPanel({
                     <div
                         className="cursor-pointer rounded-lg border bg-muted/30 p-3 transition-colors hover:border-primary/50 hover:bg-muted/50"
                         onClick={startEditingNotes}
-                        title="Click to edit"
+                        role="button"
+                        tabIndex={0}
+                        aria-label="Click to edit speaker notes"
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                startEditingNotes();
+                            }
+                        }}
                     >
                         <p className="text-sm text-muted-foreground whitespace-pre-wrap">
                             {slide.speakerNotes || "Click to add speaker notes..."}

@@ -909,6 +909,18 @@ export default function Step5Page({
     const handleDownloadPptx = useCallback(
         async (presentation: Presentation) => {
             try {
+                // Validate presentation ID before making API call
+                // Temporary IDs start with "generating-" and are not valid UUIDs
+                if (presentation.id.startsWith("generating-")) {
+                    toast({
+                        title: "Export Not Available Yet",
+                        description:
+                            "Please wait for the presentation to finish generating before exporting.",
+                        variant: "destructive",
+                    });
+                    return;
+                }
+
                 toast({
                     title: "Exporting...",
                     description: "Generating your PowerPoint file.",
@@ -924,8 +936,16 @@ export default function Step5Page({
                 });
 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || "Failed to export presentation");
+                    // Handle non-JSON error responses gracefully
+                    let errorMessage = "Failed to export presentation";
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.error || errorMessage;
+                    } catch {
+                        // Response body is not JSON, use status text
+                        errorMessage = response.statusText || errorMessage;
+                    }
+                    throw new Error(errorMessage);
                 }
 
                 // Download the file
@@ -949,13 +969,21 @@ export default function Step5Page({
                     "PPTX downloaded successfully"
                 );
             } catch (error) {
-                logger.error({ error }, "Failed to download PPTX");
+                const errorMessage =
+                    error instanceof Error ? error.message : String(error);
+                logger.error(
+                    {
+                        error: errorMessage,
+                        presentationId: presentation.id,
+                        slideCount: presentation.slides.length,
+                    },
+                    "Failed to download PPTX"
+                );
                 toast({
                     title: "Export Failed",
                     description:
-                        error instanceof Error
-                            ? error.message
-                            : "Failed to export presentation. Please try again.",
+                        errorMessage ||
+                        "Failed to export presentation. Please try again.",
                     variant: "destructive",
                 });
             }
@@ -1705,7 +1733,17 @@ export default function Step5Page({
                                     }
                                     disabled={
                                         streaming.isGenerating ||
-                                        selectedPresentation.slides.length === 0
+                                        selectedPresentation.slides.length === 0 ||
+                                        selectedPresentation.id.startsWith(
+                                            "generating-"
+                                        )
+                                    }
+                                    title={
+                                        selectedPresentation.id.startsWith(
+                                            "generating-"
+                                        )
+                                            ? "Wait for presentation to finish generating"
+                                            : undefined
                                     }
                                 >
                                     <Download className="mr-1 h-4 w-4" />

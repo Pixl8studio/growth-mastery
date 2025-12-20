@@ -190,6 +190,30 @@ function escapeXml(text: string): string {
         .replace(/'/g, "&apos;");
 }
 
+/** Default fallback color when validation fails (neutral gray) */
+const FALLBACK_COLOR = "808080";
+
+/**
+ * Validate that a color string is a valid 6-character hex color (RRGGBB format)
+ * Returns the validated color or a fallback if invalid
+ *
+ * @param color - Color in RRGGBB format (without #)
+ * @returns Valid RRGGBB color string
+ */
+function validateHexColor(color: string): string {
+    // Remove # if present and convert to uppercase
+    const cleaned = color.replace(/^#/, "").toUpperCase();
+
+    // Check if it's a valid 6-character hex color
+    if (/^[0-9A-F]{6}$/.test(cleaned)) {
+        return cleaned;
+    }
+
+    // Log warning and return fallback
+    logger.warn({ color }, "Invalid hex color in PPTX generation, using fallback");
+    return FALLBACK_COLOR;
+}
+
 // ============================================================================
 // Gradient Background Generation for PPTX
 // Mirrors slide-design-utils.ts generateBrandGradient() for web preview parity
@@ -213,19 +237,28 @@ const COLOR_SHIFT = {
     CONTENT_BRAND_TINT: 96,
 } as const;
 
-// Convert CSS angle (degrees) to PPTX angle (60,000ths of a degree)
-// PPTX angles: 0 = right, 90 = down, 180 = left, 270 = up
-// CSS angles: 0 = up, 90 = right, 180 = down, 270 = left
-// Conversion: PPTX angle = (90 - CSS angle) * 60000, then normalize
+/**
+ * Convert CSS angle (degrees) to PPTX angle (60,000ths of a degree)
+ *
+ * Coordinate systems:
+ * - CSS: 0° = to-top (gradient goes up), 90° = to-right, 180° = to-bottom, 270° = to-left
+ * - PPTX: 0° = to-right (gradient goes right), 90° = to-bottom, 180° = to-left, 270° = to-top
+ *
+ * Examples:
+ * - CSS 0° (up) → PPTX 270° (up) = 16200000
+ * - CSS 90° (right) → PPTX 0° (right) = 0
+ * - CSS 135° (bottom-right) → PPTX 45° (bottom-right) = 2700000
+ * - CSS 180° (down) → PPTX 90° (down) = 5400000
+ *
+ * @param cssAngle - CSS gradient angle in degrees (0-360)
+ * @returns PPTX angle in 60,000ths of a degree
+ */
 function cssAngleToPptx(cssAngle: number): number {
-    // CSS 135deg (diagonal top-left to bottom-right) = PPTX (90 - 135 + 360) * 60000 = 315 * 60000
-    // But PPTX uses different convention: we need to map correctly
-    // For a 135deg CSS gradient (top-left to bottom-right):
-    // PPTX equivalent is approximately 2700000 (45 degrees in PPTX = bottom-left to top-right)
-    // Actually PPTX: 0 = left-to-right, 5400000 = top-to-bottom, etc.
-    // CSS 135deg = diagonal from top-left to bottom-right
-    // In PPTX: 135 degrees from the right axis going counterclockwise = 135 * 60000 = 8100000
-    return cssAngle * 60000;
+    // CSS 90° = PPTX 0°, so offset is -90° (or +270°)
+    // Formula: PPTX_degrees = (CSS_degrees - 90 + 360) % 360
+    const pptxDegrees = (cssAngle - 90 + 360) % 360;
+    // Convert to PPTX units (60,000ths of a degree)
+    return pptxDegrees * 60000;
 }
 
 interface GradientStop {
@@ -390,14 +423,26 @@ function getSlideGradient(
     }
 }
 
-// Generate PPTX background XML with gradient fill
+/**
+ * Generate PPTX background XML with gradient fill
+ * Validates all colors before inserting into XML to prevent malformed PPTX files
+ */
 function generateBackgroundXml(gradient: GradientConfig): string {
     const gradientStops = gradient.stops
-        .map(
-            (stop) =>
-                `        <a:gs pos="${stop.position}"><a:srgbClr val="${stop.color}"/></a:gs>`
-        )
+        .map((stop) => {
+            // Validate color and ensure it's in correct format
+            const validColor = validateHexColor(stop.color);
+            // Clamp position to valid range (0-100000)
+            const validPosition = Math.max(
+                0,
+                Math.min(100000, Math.round(stop.position))
+            );
+            return `        <a:gs pos="${validPosition}"><a:srgbClr val="${validColor}"/></a:gs>`;
+        })
         .join("\n");
+
+    // Validate angle (should be non-negative)
+    const validAngle = Math.max(0, Math.round(gradient.angle));
 
     return `  <p:bg>
     <p:bgPr>
@@ -405,7 +450,7 @@ function generateBackgroundXml(gradient: GradientConfig): string {
         <a:gsLst>
 ${gradientStops}
         </a:gsLst>
-        <a:lin ang="${gradient.angle}" scaled="0"/>
+        <a:lin ang="${validAngle}" scaled="0"/>
       </a:gradFill>
       <a:effectLst/>
     </p:bgPr>
@@ -446,6 +491,88 @@ function getTextColors(
 // Image Embedding Support
 // ============================================================================
 
+/** Maximum image size in bytes (10MB) */
+const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
+
+/** Image fetch timeout in milliseconds (10 seconds) */
+const IMAGE_FETCH_TIMEOUT_MS = 10000;
+
+/** Allowed image content types */
+const ALLOWED_IMAGE_TYPES = [
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/gif",
+    "image/webp",
+];
+
+/**
+ * Validate that an image URL is safe to fetch (SSRF prevention)
+ * Only allows HTTPS URLs from external hosts (not localhost/private IPs)
+ *
+ * @param url - The URL to validate
+ * @returns true if the URL is safe to fetch, false otherwise
+ */
+function isValidImageUrl(url: string): boolean {
+    try {
+        const parsed = new URL(url);
+
+        // Only allow HTTPS for security (except in development for localhost Supabase)
+        const isDevelopment = process.env.NODE_ENV === "development";
+        if (parsed.protocol !== "https:" && !isDevelopment) {
+            return false;
+        }
+
+        // In production, block HTTP entirely
+        if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
+            return false;
+        }
+
+        const hostname = parsed.hostname.toLowerCase();
+
+        // Block localhost and loopback addresses
+        if (
+            hostname === "localhost" ||
+            hostname === "127.0.0.1" ||
+            hostname === "::1" ||
+            hostname === "0.0.0.0"
+        ) {
+            // Allow Supabase storage in development
+            if (isDevelopment && parsed.pathname.includes("/storage/")) {
+                return true;
+            }
+            return false;
+        }
+
+        // Block private IP ranges (RFC 1918)
+        // 10.0.0.0/8
+        if (hostname.startsWith("10.")) {
+            return false;
+        }
+        // 172.16.0.0/12
+        if (/^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(hostname)) {
+            return false;
+        }
+        // 192.168.0.0/16
+        if (hostname.startsWith("192.168.")) {
+            return false;
+        }
+        // 169.254.0.0/16 (link-local)
+        if (hostname.startsWith("169.254.")) {
+            return false;
+        }
+
+        // Block internal cloud metadata endpoints
+        if (hostname === "metadata.google.internal" || hostname === "169.254.169.254") {
+            return false;
+        }
+
+        return true;
+    } catch {
+        return false;
+    }
+}
+
 interface EmbeddedImage {
     slideIndex: number;
     imageData: ArrayBuffer;
@@ -457,12 +584,27 @@ interface EmbeddedImage {
 /**
  * Fetch an image from URL and return its data for embedding
  * Returns null if fetch fails - images are optional
+ *
+ * Security features:
+ * - URL validation (SSRF prevention)
+ * - Content-type validation (only allows images)
+ * - Size limit (10MB max)
+ * - Timeout (10 seconds)
  */
 async function fetchImageForEmbedding(
     imageUrl: string
 ): Promise<{ data: ArrayBuffer; contentType: string } | null> {
     try {
-        const response = await fetch(imageUrl);
+        // Validate URL before fetching (SSRF prevention)
+        if (!isValidImageUrl(imageUrl)) {
+            logger.warn({ imageUrl }, "Rejected unsafe image URL for PPTX embedding");
+            return null;
+        }
+
+        const response = await fetch(imageUrl, {
+            signal: AbortSignal.timeout(IMAGE_FETCH_TIMEOUT_MS),
+        });
+
         if (!response.ok) {
             logger.warn(
                 { imageUrl, status: response.status },
@@ -471,11 +613,45 @@ async function fetchImageForEmbedding(
             return null;
         }
 
-        const contentType = response.headers.get("content-type") || "image/png";
+        // Validate content type
+        const contentType = response.headers.get("content-type") || "";
+        if (!ALLOWED_IMAGE_TYPES.some((t) => contentType.includes(t))) {
+            logger.warn(
+                { imageUrl, contentType },
+                "Invalid image content type for PPTX embedding"
+            );
+            return null;
+        }
+
+        // Check content-length before downloading (if available)
+        const contentLength = response.headers.get("content-length");
+        if (contentLength && parseInt(contentLength, 10) > MAX_IMAGE_SIZE) {
+            logger.warn(
+                { imageUrl, size: contentLength, maxSize: MAX_IMAGE_SIZE },
+                "Image too large for PPTX embedding"
+            );
+            return null;
+        }
+
         const data = await response.arrayBuffer();
+
+        // Double-check size after download (content-length may be missing/wrong)
+        if (data.byteLength > MAX_IMAGE_SIZE) {
+            logger.warn(
+                { imageUrl, size: data.byteLength, maxSize: MAX_IMAGE_SIZE },
+                "Downloaded image too large for PPTX embedding"
+            );
+            return null;
+        }
+
         return { data, contentType };
     } catch (error) {
-        logger.warn({ error, imageUrl }, "Error fetching image for PPTX embedding");
+        // Handle timeout specifically
+        if (error instanceof Error && error.name === "TimeoutError") {
+            logger.warn({ imageUrl }, "Image fetch timed out for PPTX embedding");
+        } else {
+            logger.warn({ error, imageUrl }, "Error fetching image for PPTX embedding");
+        }
         return null;
     }
 }

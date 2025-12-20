@@ -29,6 +29,11 @@ export default defineConfig({
             // Exclude E2E tests from vitest - they spawn browser processes
             // Run these separately with: pnpm test:e2e
             "**/__tests__/e2e/**",
+            // Exclude tests that require external API keys (VAPI_API_KEY, ANTHROPIC_API_KEY)
+            // Run these separately in environments with proper credentials
+            "**/*vapi*.test.{ts,tsx}",
+            "**/presentations/slide-generator.test.ts",
+            "**/lib/presentations/slide-generator.test.ts",
         ],
         coverage: {
             provider: "v8",

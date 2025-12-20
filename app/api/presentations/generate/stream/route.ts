@@ -197,7 +197,10 @@ export async function GET(request: NextRequest) {
     const resumeFromSlide = resumeFromSlideParam
         ? parseInt(resumeFromSlideParam, 10)
         : null;
-    const isResuming = !!resumePresentationId && !!resumeFromSlide;
+    // Type-safe resume check: slideNumber must be a positive integer (1-indexed)
+    // Using !== null instead of !! to handle edge case where resumeFromSlide=0 is passed
+    const isResuming =
+        !!resumePresentationId && resumeFromSlide !== null && resumeFromSlide > 0;
 
     // Diagnostic logging - request received
     logger.debug(

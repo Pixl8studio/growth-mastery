@@ -36,6 +36,9 @@ function createMockSlide(slideNumber: number): GeneratedSlide {
 // Mock EventSource for SSE simulation
 class MockEventSource {
     static instances: MockEventSource[] = [];
+    static CONNECTING = 0;
+    static OPEN = 1;
+    static CLOSED = 2;
 
     url: string;
     readyState: number = 0; // CONNECTING
@@ -45,7 +48,7 @@ class MockEventSource {
 
     constructor(url: string) {
         this.url = url;
-        this.readyState = 1; // OPEN
+        this.readyState = MockEventSource.OPEN;
         MockEventSource.instances.push(this);
     }
 
@@ -67,7 +70,7 @@ class MockEventSource {
     }
 
     close(): void {
-        this.readyState = 2; // CLOSED
+        this.readyState = MockEventSource.CLOSED;
     }
 
     // Test helper: simulate receiving an SSE event
@@ -77,6 +80,14 @@ class MockEventSource {
         });
         const typeListeners = this.listeners.get(type) || [];
         typeListeners.forEach((listener) => listener(event));
+    }
+
+    // Test helper: simulate connection drop (for reconnection tests)
+    simulateConnectionDrop(): void {
+        this.readyState = MockEventSource.CLOSED;
+        if (this.onerror) {
+            this.onerror(new Event("error"));
+        }
     }
 
     // Test helper: get the last instance
@@ -93,13 +104,19 @@ class MockEventSource {
 describe("useStreamingGeneration", () => {
     beforeEach(() => {
         MockEventSource.clearInstances();
-        // Replace global EventSource with mock
-        vi.stubGlobal("EventSource", MockEventSource);
+        // Replace global EventSource with mock, including static constants
+        const MockEventSourceWithConstants = Object.assign(MockEventSource, {
+            CONNECTING: 0,
+            OPEN: 1,
+            CLOSED: 2,
+        });
+        vi.stubGlobal("EventSource", MockEventSourceWithConstants);
     });
 
     afterEach(() => {
         vi.unstubAllGlobals();
         vi.clearAllMocks();
+        vi.useRealTimers();
     });
 
     describe("slide ordering", () => {
@@ -544,6 +561,327 @@ describe("useStreamingGeneration", () => {
                 "test-presentation-id",
                 finalSlides
             );
+        });
+    });
+
+    describe("automatic reconnection", () => {
+        beforeEach(() => {
+            vi.useFakeTimers();
+        });
+
+        it("should call onReconnecting callback when connection drops", async () => {
+            const onReconnecting = vi.fn();
+            const { result } = renderHook(() => useStreamingGeneration());
+
+            act(() => {
+                result.current.startGeneration({
+                    projectId: "test-project",
+                    deckStructureId: "test-deck",
+                    customization: {
+                        textDensity: "balanced",
+                        visualStyle: "professional",
+                        emphasisPreference: "balanced",
+                        animationLevel: "subtle",
+                        imageStyle: "photography",
+                    },
+                    onReconnecting,
+                });
+            });
+
+            const eventSource = MockEventSource.getLastInstance();
+            expect(eventSource).toBeDefined();
+
+            // Simulate connected event to set presentation ID
+            act(() => {
+                eventSource!.simulateEvent("connected", {
+                    presentationId: "test-presentation-id",
+                    totalSlides: 5,
+                });
+            });
+
+            // Generate a few slides first
+            act(() => {
+                eventSource!.simulateEvent("slide_generated", {
+                    slide: createMockSlide(1),
+                    progress: 20,
+                });
+            });
+
+            expect(result.current.slides.length).toBe(1);
+
+            // Simulate connection drop
+            act(() => {
+                eventSource!.simulateConnectionDrop();
+            });
+
+            // onReconnecting should be called
+            expect(onReconnecting).toHaveBeenCalled();
+        });
+
+        it("should schedule reconnection with exponential backoff", async () => {
+            const onReconnecting = vi.fn();
+            const { result } = renderHook(() => useStreamingGeneration());
+
+            act(() => {
+                result.current.startGeneration({
+                    projectId: "test-project",
+                    deckStructureId: "test-deck",
+                    customization: {
+                        textDensity: "balanced",
+                        visualStyle: "professional",
+                        emphasisPreference: "balanced",
+                        animationLevel: "subtle",
+                        imageStyle: "photography",
+                    },
+                    onReconnecting,
+                });
+            });
+
+            const eventSource = MockEventSource.getLastInstance();
+
+            // Simulate connected event
+            act(() => {
+                eventSource!.simulateEvent("connected", {
+                    presentationId: "test-presentation-id",
+                    totalSlides: 5,
+                });
+            });
+
+            // Generate a slide
+            act(() => {
+                eventSource!.simulateEvent("slide_generated", {
+                    slide: createMockSlide(1),
+                    progress: 20,
+                });
+            });
+
+            expect(result.current.slides.length).toBe(1);
+
+            const initialInstanceCount = MockEventSource.instances.length;
+
+            // Simulate connection drop
+            act(() => {
+                eventSource!.simulateConnectionDrop();
+            });
+
+            expect(onReconnecting).toHaveBeenCalledTimes(1);
+
+            // Advance timer by 1 second (first reconnection delay)
+            act(() => {
+                vi.advanceTimersByTime(1000);
+            });
+
+            // A new EventSource should have been created for reconnection
+            expect(MockEventSource.instances.length).toBe(initialInstanceCount + 1);
+
+            // The new EventSource URL should include resume parameters
+            const newEventSource = MockEventSource.getLastInstance();
+            expect(newEventSource!.url).toContain(
+                "resumePresentationId=test-presentation-id"
+            );
+            expect(newEventSource!.url).toContain("resumeFromSlide=2");
+        });
+
+        it("should preserve existing slides during reconnection", async () => {
+            const { result } = renderHook(() => useStreamingGeneration());
+
+            act(() => {
+                result.current.startGeneration({
+                    projectId: "test-project",
+                    deckStructureId: "test-deck",
+                    customization: {
+                        textDensity: "balanced",
+                        visualStyle: "professional",
+                        emphasisPreference: "balanced",
+                        animationLevel: "subtle",
+                        imageStyle: "photography",
+                    },
+                });
+            });
+
+            const eventSource = MockEventSource.getLastInstance();
+
+            // Simulate connected event
+            act(() => {
+                eventSource!.simulateEvent("connected", {
+                    presentationId: "test-presentation-id",
+                    totalSlides: 5,
+                });
+            });
+
+            // Generate two slides
+            act(() => {
+                eventSource!.simulateEvent("slide_generated", {
+                    slide: createMockSlide(1),
+                    progress: 20,
+                });
+            });
+
+            act(() => {
+                eventSource!.simulateEvent("slide_generated", {
+                    slide: createMockSlide(2),
+                    progress: 40,
+                });
+            });
+
+            expect(result.current.slides.length).toBe(2);
+
+            // Simulate connection drop
+            act(() => {
+                eventSource!.simulateConnectionDrop();
+            });
+
+            // Slides should still be preserved
+            expect(result.current.slides.length).toBe(2);
+            expect(result.current.slides.map((s) => s.slideNumber)).toEqual([1, 2]);
+
+            // Advance timer to trigger reconnection
+            act(() => {
+                vi.advanceTimersByTime(1000);
+            });
+
+            // Slides should still be preserved after reconnection attempt
+            expect(result.current.slides.length).toBe(2);
+        });
+
+        it("should call onError after max reconnection attempts", async () => {
+            const onError = vi.fn();
+            const onReconnecting = vi.fn();
+            const { result } = renderHook(() => useStreamingGeneration());
+
+            act(() => {
+                result.current.startGeneration({
+                    projectId: "test-project",
+                    deckStructureId: "test-deck",
+                    customization: {
+                        textDensity: "balanced",
+                        visualStyle: "professional",
+                        emphasisPreference: "balanced",
+                        animationLevel: "subtle",
+                        imageStyle: "photography",
+                    },
+                    onError,
+                    onReconnecting,
+                });
+            });
+
+            const eventSource = MockEventSource.getLastInstance();
+
+            // Simulate connected event
+            act(() => {
+                eventSource!.simulateEvent("connected", {
+                    presentationId: "test-presentation-id",
+                    totalSlides: 5,
+                });
+            });
+
+            // Generate a slide
+            act(() => {
+                eventSource!.simulateEvent("slide_generated", {
+                    slide: createMockSlide(1),
+                    progress: 20,
+                });
+            });
+
+            expect(result.current.slides.length).toBe(1);
+
+            // Simulate 11 connection drops (exceeds MAX_RECONNECT_ATTEMPTS of 10)
+            for (let i = 0; i < 11; i++) {
+                const currentEventSource = MockEventSource.getLastInstance();
+
+                act(() => {
+                    currentEventSource!.simulateConnectionDrop();
+                });
+
+                // Advance timer for exponential backoff (up to 30s max)
+                const delay = Math.min(1000 * Math.pow(2, i), 30000);
+                act(() => {
+                    vi.advanceTimersByTime(delay);
+                });
+            }
+
+            // onError should be called with max attempts message
+            expect(onError).toHaveBeenCalledWith(
+                expect.stringContaining("10 reconnection attempts"),
+                false
+            );
+
+            // Generation should be stopped
+            expect(result.current.isGenerating).toBe(false);
+            expect(result.current.error).toContain("10 reconnection attempts");
+        });
+    });
+
+    describe("callbacks", () => {
+        beforeEach(() => {
+            vi.useFakeTimers();
+        });
+
+        it("should call onReconnected when reconnection succeeds", async () => {
+            const onReconnecting = vi.fn();
+            const onReconnected = vi.fn();
+            const { result } = renderHook(() => useStreamingGeneration());
+
+            act(() => {
+                result.current.startGeneration({
+                    projectId: "test-project",
+                    deckStructureId: "test-deck",
+                    customization: {
+                        textDensity: "balanced",
+                        visualStyle: "professional",
+                        emphasisPreference: "balanced",
+                        animationLevel: "subtle",
+                        imageStyle: "photography",
+                    },
+                    onReconnecting,
+                    onReconnected,
+                });
+            });
+
+            const eventSource = MockEventSource.getLastInstance();
+
+            // Simulate connected event
+            act(() => {
+                eventSource!.simulateEvent("connected", {
+                    presentationId: "test-presentation-id",
+                    totalSlides: 5,
+                });
+            });
+
+            // Generate a slide
+            act(() => {
+                eventSource!.simulateEvent("slide_generated", {
+                    slide: createMockSlide(1),
+                    progress: 20,
+                });
+            });
+
+            expect(result.current.slides.length).toBe(1);
+
+            // Simulate connection drop
+            act(() => {
+                eventSource!.simulateConnectionDrop();
+            });
+
+            expect(onReconnecting).toHaveBeenCalled();
+
+            // Advance timer to trigger reconnection
+            act(() => {
+                vi.advanceTimersByTime(1000);
+            });
+
+            // Get the new EventSource and simulate successful reconnection
+            const newEventSource = MockEventSource.getLastInstance();
+
+            act(() => {
+                newEventSource!.simulateEvent("connected", {
+                    presentationId: "test-presentation-id",
+                    totalSlides: 5,
+                });
+            });
+
+            // onReconnected should be called
+            expect(onReconnected).toHaveBeenCalled();
         });
     });
 });

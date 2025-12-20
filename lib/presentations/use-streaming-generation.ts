@@ -12,6 +12,8 @@ import { logger } from "@/lib/client-logger";
 // Reconnection configuration
 const RECONNECT_BASE_DELAY_MS = 1000;
 const RECONNECT_MAX_DELAY_MS = 30000;
+// Maximum reconnection attempts before giving up (~5 minutes with exponential backoff)
+const MAX_RECONNECT_ATTEMPTS = 10;
 
 /**
  * Represents a single generated slide in a presentation.
@@ -92,6 +94,77 @@ interface StreamingGenerationOptions {
     onReconnecting?: () => void;
     /** Optional: callback when reconnection succeeds */
     onReconnected?: () => void;
+}
+
+/**
+ * Event handlers for SSE event listener setup
+ * Extracted to prevent code duplication between initial connection and reconnection
+ */
+interface SSEEventHandlers {
+    onConnected: (data: { presentationId: string; totalSlides: number }) => void;
+    onSlideGenerated: (slide: GeneratedSlide, progress: number) => void;
+    onCompleted: (data: { presentationId: string; slides: GeneratedSlide[] }) => void;
+    onServerError: (errorMessage: string, isTimeout: boolean) => void;
+    onConnectionError: () => void;
+}
+
+/**
+ * Attaches all SSE event listeners to an EventSource
+ * Used for both initial connection and reconnection to avoid code duplication
+ */
+function attachEventListeners(
+    eventSource: EventSource,
+    handlers: SSEEventHandlers
+): void {
+    eventSource.addEventListener("connected", (event) => {
+        const data = JSON.parse((event as MessageEvent).data);
+        handlers.onConnected(data);
+    });
+
+    eventSource.addEventListener("slide_generated", (event) => {
+        const data = JSON.parse((event as MessageEvent).data);
+        const slide = data.slide as GeneratedSlide;
+        const progress = data.progress as number;
+
+        // Guard against undefined or invalid slides
+        if (!slide || typeof slide.slideNumber !== "number") {
+            logger.warn({ data }, "Received invalid slide data from SSE");
+            return;
+        }
+
+        handlers.onSlideGenerated(slide, progress);
+    });
+
+    eventSource.addEventListener("progress", (event) => {
+        // Progress events are informational - handled by slide_generated
+        const _data = JSON.parse((event as MessageEvent).data);
+        // State update handled by the hook directly
+    });
+
+    eventSource.addEventListener("completed", (event) => {
+        const data = JSON.parse((event as MessageEvent).data);
+        handlers.onCompleted(data);
+    });
+
+    // Handle custom SSE "error" events sent by the server
+    eventSource.addEventListener("error", (event) => {
+        if (event instanceof MessageEvent && event.data) {
+            try {
+                const data = JSON.parse(event.data);
+                const errorMessage = data.error || "Generation failed";
+                const isTimeout =
+                    data.isTimeout === true || errorMessage === "AI_PROVIDER_TIMEOUT";
+                handlers.onServerError(errorMessage, isTimeout);
+            } catch {
+                // Not JSON, let onerror handle non-JSON errors
+            }
+        }
+    });
+
+    // Handle native EventSource connection errors
+    eventSource.onerror = () => {
+        handlers.onConnectionError();
+    };
 }
 
 export function useStreamingGeneration() {
@@ -448,6 +521,42 @@ export function useStreamingGeneration() {
 
                         // Calculate exponential backoff delay
                         reconnectAttemptRef.current += 1;
+
+                        // Check max reconnection attempts to prevent infinite loops
+                        if (reconnectAttemptRef.current > MAX_RECONNECT_ATTEMPTS) {
+                            logger.error(
+                                {
+                                    attempts: reconnectAttemptRef.current,
+                                    maxAttempts: MAX_RECONNECT_ATTEMPTS,
+                                    presentationId: currentPresentationIdRef.current,
+                                    slidesGenerated: currentSlidesRef.current.length,
+                                },
+                                "Max reconnection attempts reached, giving up"
+                            );
+
+                            isGeneratingRef.current = false;
+                            const slidesGenerated = currentSlidesRef.current.length;
+                            currentOptionsRef.current = null;
+                            currentSlidesRef.current = [];
+                            reconnectAttemptRef.current = 0;
+
+                            setState((prev) => ({
+                                ...prev,
+                                isGenerating: false,
+                                error: `Connection lost after ${MAX_RECONNECT_ATTEMPTS} reconnection attempts. ${slidesGenerated} slides were saved.`,
+                            }));
+
+                            if (onError) {
+                                onError(
+                                    `Connection lost after ${MAX_RECONNECT_ATTEMPTS} reconnection attempts`,
+                                    false
+                                );
+                            }
+
+                            closeConnection(true);
+                            return;
+                        }
+
                         const delay = Math.min(
                             RECONNECT_BASE_DELAY_MS *
                                 Math.pow(2, reconnectAttemptRef.current - 1),
@@ -457,6 +566,7 @@ export function useStreamingGeneration() {
                         logger.warn(
                             {
                                 attempt: reconnectAttemptRef.current,
+                                maxAttempts: MAX_RECONNECT_ATTEMPTS,
                                 delay,
                                 presentationId: currentPresentationIdRef.current,
                                 slidesGenerated: currentSlidesRef.current.length,
@@ -473,6 +583,15 @@ export function useStreamingGeneration() {
 
                         // Schedule reconnection
                         reconnectTimeoutRef.current = setTimeout(() => {
+                            // Race condition guard: check if stop was called while waiting
+                            if (isClosingRef.current) {
+                                logger.info(
+                                    {},
+                                    "Reconnection cancelled: connection is closing"
+                                );
+                                return;
+                            }
+
                             if (!isGeneratingRef.current) {
                                 // Generation was stopped while waiting
                                 return;
@@ -680,6 +799,45 @@ export function useStreamingGeneration() {
                                         // Trigger another reconnection attempt
                                         closeConnection(false);
                                         reconnectAttemptRef.current += 1;
+
+                                        // Check max attempts to prevent infinite loops
+                                        if (
+                                            reconnectAttemptRef.current >
+                                            MAX_RECONNECT_ATTEMPTS
+                                        ) {
+                                            logger.error(
+                                                {
+                                                    attempts:
+                                                        reconnectAttemptRef.current,
+                                                    maxAttempts: MAX_RECONNECT_ATTEMPTS,
+                                                },
+                                                "Max reconnection attempts reached in nested handler"
+                                            );
+
+                                            isGeneratingRef.current = false;
+                                            const slidesGenerated =
+                                                currentSlidesRef.current.length;
+                                            currentOptionsRef.current = null;
+                                            currentSlidesRef.current = [];
+                                            reconnectAttemptRef.current = 0;
+
+                                            setState((prev) => ({
+                                                ...prev,
+                                                isGenerating: false,
+                                                error: `Connection lost after ${MAX_RECONNECT_ATTEMPTS} reconnection attempts. ${slidesGenerated} slides were saved.`,
+                                            }));
+
+                                            if (onError) {
+                                                onError(
+                                                    `Connection lost after ${MAX_RECONNECT_ATTEMPTS} reconnection attempts`,
+                                                    false
+                                                );
+                                            }
+
+                                            closeConnection(true);
+                                            return;
+                                        }
+
                                         const nextDelay = Math.min(
                                             RECONNECT_BASE_DELAY_MS *
                                                 Math.pow(
@@ -691,6 +849,7 @@ export function useStreamingGeneration() {
                                         logger.warn(
                                             {
                                                 attempt: reconnectAttemptRef.current,
+                                                maxAttempts: MAX_RECONNECT_ATTEMPTS,
                                                 delay: nextDelay,
                                             },
                                             "Reconnected SSE lost, retrying"

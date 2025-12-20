@@ -154,7 +154,17 @@ function rgbToHex(r: number, g: number, b: number): string {
     return `${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
-// Lighten a hex color by a percentage
+/**
+ * Lighten a hex color by a percentage
+ *
+ * @param hex - Color in #RRGGBB or RRGGBB format
+ * @param percent - Percentage to lighten (0-100)
+ * @returns Color in RRGGBB format (without #) for PPTX/OOXML compatibility
+ *
+ * Note: This differs from slide-design-utils.ts lightenColor() which returns
+ * CSS rgb() format. Both use the same color math but different output formats
+ * for their respective rendering contexts (PPTX XML vs CSS).
+ */
 function lightenColor(hex: string, percent: number): string {
     const rgb = parseHexToRgb(hex);
     if (!rgb) return hexToRgb(hex);
@@ -167,7 +177,17 @@ function lightenColor(hex: string, percent: number): string {
     return rgbToHex(r, g, b);
 }
 
-// Darken a hex color by a percentage
+/**
+ * Darken a hex color by a percentage
+ *
+ * @param hex - Color in #RRGGBB or RRGGBB format
+ * @param percent - Percentage to darken (0-100)
+ * @returns Color in RRGGBB format (without #) for PPTX/OOXML compatibility
+ *
+ * Note: This differs from slide-design-utils.ts darkenColor() which returns
+ * CSS rgb() format. Both use the same color math but different output formats
+ * for their respective rendering contexts (PPTX XML vs CSS).
+ */
 function darkenColor(hex: string, percent: number): string {
     const rgb = parseHexToRgb(hex);
     if (!rgb) return hexToRgb(hex);

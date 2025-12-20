@@ -68,10 +68,15 @@ const LAYOUT_OPTIONS: { value: LayoutType; label: string }[] = [
  * Returns warnings for title and bullets that are too long
  * Uses centralized SLIDE_CONTENT_LIMITS from slide-constants.ts
  */
-function getContentWarnings(slide: SlideData): {
+function getContentWarnings(slide: SlideData | undefined): {
     titleWarning: string | null;
     bulletWarnings: string[];
 } {
+    // Handle undefined slide gracefully
+    if (!slide) {
+        return { titleWarning: null, bulletWarnings: [] };
+    }
+
     const limits =
         SLIDE_CONTENT_LIMITS[slide.layoutType] || SLIDE_CONTENT_LIMITS.bullets;
     const titleWordCount = countWords(slide.title);
@@ -155,10 +160,7 @@ export function SlideEditorPanel({
     // Only recalculates when slide title, content, or layoutType changes
     // Guard against undefined slide to prevent crash during initial generation
     const contentWarnings = useMemo(
-        () =>
-            slide
-                ? getContentWarnings(slide)
-                : { titleWarning: null, bulletWarnings: [] },
+        () => getContentWarnings(slide),
         [slide?.title, slide?.content, slide?.layoutType]
     );
 

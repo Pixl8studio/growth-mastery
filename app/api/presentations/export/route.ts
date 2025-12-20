@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
         const pptxBlob = await generatePptx({
             title: presentation.title,
             slides: validatedSlides,
-            brandName: brandDesign?.brand_name || "Presentation",
+            brandName: brandDesign?.brand_name || "",
             brandColors: brandDesign
                 ? {
                       primary: brandDesign.primary_color || "#1a365d",

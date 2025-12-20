@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import {
     DndContext,
     closestCenter,
@@ -138,9 +138,17 @@ export function DraggableSlides({
     const previousSlideCount = useRef<number>(0);
 
     // Filter out any undefined or invalid slides to prevent crashes during streaming (Issue #331)
-    const validSlides = slides.filter(
-        (slide): slide is SlideData =>
-            slide != null && typeof slide.slideNumber === "number"
+    // CRITICAL: Also sort by slideNumber to ensure slides always display in Step 4 presentation order
+    // Memoized to avoid O(n log n) sorting on every render - only recalculates when slides change
+    const validSlides = useMemo(
+        () =>
+            slides
+                .filter(
+                    (slide): slide is SlideData =>
+                        slide != null && typeof slide.slideNumber === "number"
+                )
+                .sort((a, b) => a.slideNumber - b.slideNumber),
+        [slides]
     );
 
     // Auto-scroll to newest slide when generating - scroll to the selected slide

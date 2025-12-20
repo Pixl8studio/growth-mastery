@@ -954,7 +954,8 @@ export default function Step5Page({
             if (selectedPresentation.id.startsWith("generating-")) {
                 toast({
                     title: "Please Wait",
-                    description: "Wait for the presentation to finish generating first.",
+                    description:
+                        "Wait for the presentation to finish generating first.",
                     variant: "destructive",
                 });
                 return;
@@ -1049,7 +1050,10 @@ export default function Step5Page({
                 });
 
                 logger.info(
-                    { presentationId: selectedPresentation.id, slideNumber: newSlideNumber },
+                    {
+                        presentationId: selectedPresentation.id,
+                        slideNumber: newSlideNumber,
+                    },
                     "AI slide generated successfully"
                 );
             } catch (error) {
@@ -2079,7 +2083,9 @@ export default function Step5Page({
                                     onSlideReorder={handleSlideReorder}
                                     onSlideDuplicate={handleDuplicateSlide}
                                     onSlideDelete={handleDeleteSlide}
-                                    onDuplicateCurrentSlide={handleDuplicateCurrentSlide}
+                                    onDuplicateCurrentSlide={
+                                        handleDuplicateCurrentSlide
+                                    }
                                     onAddBlankSlide={handleAddBlankSlide}
                                     onGenerateSlideWithAI={handleGenerateSlideWithAI}
                                     isGeneratingSlide={isGeneratingSingleSlide}

@@ -671,6 +671,17 @@ export default function Step5Page({
                             ...prev.slides,
                             slide as GeneratedSlide,
                         ].sort((a, b) => a.slideNumber - b.slideNumber);
+
+                        // Auto-select the newest slide by slide number (consistent with generate path)
+                        const newSlideIndex = updatedSlides.findIndex(
+                            (s) => s.slideNumber === slide.slideNumber
+                        );
+                        setSelectedSlideIndex(
+                            newSlideIndex >= 0
+                                ? newSlideIndex
+                                : updatedSlides.length - 1
+                        );
+
                         return {
                             ...prev,
                             slides: updatedSlides,

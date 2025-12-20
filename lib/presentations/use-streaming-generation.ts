@@ -8,8 +8,30 @@
 import { useState, useCallback, useRef } from "react";
 import { logger } from "@/lib/client-logger";
 
+/**
+ * Represents a single generated slide in a presentation.
+ *
+ * @remarks
+ * The `slideNumber` property is critical for ordering:
+ * - Must be a sequential positive integer starting from 1
+ * - Corresponds to the slide position defined in Step 4 deck structure
+ * - Used for sorting slides when they arrive out of order via SSE
+ * - Sorting is performed using numeric comparison: `(a, b) => a.slideNumber - b.slideNumber`
+ *
+ * Slides may arrive out of order during streaming due to:
+ * - Network latency variations
+ * - Async AI processing completing in non-sequential order
+ * - SSE reconnection scenarios
+ *
+ * All consumers should ensure slides are sorted by slideNumber before display.
+ */
 export interface GeneratedSlide {
+    /**
+     * Sequential position of this slide in the presentation (1-indexed).
+     * Used for ordering - slides are sorted by this value ascending.
+     */
     slideNumber: number;
+    /** The slide title displayed prominently */
     title: string;
     content: string[];
     speakerNotes?: string;

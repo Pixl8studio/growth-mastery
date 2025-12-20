@@ -20,6 +20,75 @@ import {
     FALLBACK_TEXT_COLORS,
 } from "./slide-design-utils";
 
+// Content length thresholds for dynamic text scaling
+// These ensure content fits without truncation while maintaining readability
+const TEXT_SCALE_CONFIG = {
+    title: {
+        baseSize: "text-3xl", // ~30px
+        mediumSize: "text-2xl", // ~24px
+        smallSize: "text-xl", // ~20px
+        mediumThreshold: 10, // words
+        smallThreshold: 14, // words
+    },
+    bullet: {
+        baseSize: "text-lg", // ~18px
+        mediumSize: "text-base", // ~16px
+        smallSize: "text-sm", // ~14px - minimum readable size
+        mediumThreshold: 12, // words per bullet
+        smallThreshold: 18, // words per bullet
+    },
+    // For layouts with less space (content_left, content_right, comparison)
+    compactBullet: {
+        baseSize: "text-base", // ~16px
+        mediumSize: "text-sm", // ~14px
+        smallSize: "text-xs", // ~12px - minimum for compact layouts
+        mediumThreshold: 10,
+        smallThreshold: 14,
+    },
+};
+
+/**
+ * Calculate appropriate text size class based on content length
+ * Returns a Tailwind text size class that ensures content fits without truncation
+ */
+function getScaledTextSize(
+    text: string,
+    config: (typeof TEXT_SCALE_CONFIG)["title" | "bullet" | "compactBullet"]
+): string {
+    const wordCount = text.split(/\s+/).filter(Boolean).length;
+
+    if (wordCount <= config.mediumThreshold) {
+        return config.baseSize;
+    } else if (wordCount <= config.smallThreshold) {
+        return config.mediumSize;
+    } else {
+        return config.smallSize;
+    }
+}
+
+/**
+ * Calculate text size for a list of bullet points
+ * Uses the longest bullet to determine the size for consistency
+ */
+function getScaledBulletSize(
+    bullets: string[],
+    config: (typeof TEXT_SCALE_CONFIG)["bullet" | "compactBullet"]
+): string {
+    if (bullets.length === 0) return config.baseSize;
+
+    const maxWordCount = Math.max(
+        ...bullets.map((b) => b.split(/\s+/).filter(Boolean).length)
+    );
+
+    if (maxWordCount <= config.mediumThreshold) {
+        return config.baseSize;
+    } else if (maxWordCount <= config.smallThreshold) {
+        return config.mediumSize;
+    } else {
+        return config.smallSize;
+    }
+}
+
 interface SlideContentRendererProps {
     slide: SlideData;
     slideIndex: number;
@@ -71,7 +140,21 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
 
     const renderSlideContent = () => {
         switch (slide.layoutType) {
-            case "title":
+            case "title": {
+                // Dynamic sizing for title slide - larger base sizes
+                const titleWords = slide.title.split(/\s+/).filter(Boolean).length;
+                const titleSize =
+                    titleWords <= 8
+                        ? "text-5xl"
+                        : titleWords <= 12
+                          ? "text-4xl"
+                          : "text-3xl";
+                const subtitleSize =
+                    slide.content[0] &&
+                    slide.content[0].split(/\s+/).filter(Boolean).length > 15
+                        ? "text-lg"
+                        : "text-xl";
+
                 return (
                     <div className="flex h-full flex-col items-center justify-center text-center p-12 overflow-hidden">
                         {hasBrandColors && (
@@ -82,7 +165,8 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         )}
                         <h1
                             className={cn(
-                                "text-5xl font-bold leading-tight mb-6 line-clamp-3",
+                                "font-bold leading-tight mb-6",
+                                titleSize,
                                 !hasBrandColors && fallbackTextColors.title
                             )}
                             style={getTitleStyle()}
@@ -92,7 +176,8 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         {slide.content[0] && (
                             <p
                                 className={cn(
-                                    "text-xl max-w-2xl line-clamp-3",
+                                    "max-w-2xl",
+                                    subtitleSize,
                                     !hasBrandColors && fallbackTextColors.body
                                 )}
                                 style={getBodyStyle()}
@@ -110,8 +195,24 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         )}
                     </div>
                 );
+            }
 
-            case "section":
+            case "section": {
+                const sectionTitleWords = slide.title
+                    .split(/\s+/)
+                    .filter(Boolean).length;
+                const sectionTitleSize =
+                    sectionTitleWords <= 6
+                        ? "text-4xl"
+                        : sectionTitleWords <= 10
+                          ? "text-3xl"
+                          : "text-2xl";
+                const sectionSubtitleSize =
+                    slide.content[0] &&
+                    slide.content[0].split(/\s+/).filter(Boolean).length > 20
+                        ? "text-base"
+                        : "text-lg";
+
                 return (
                     <div className="flex h-full flex-col items-center justify-center text-center p-12 overflow-hidden">
                         <div
@@ -120,7 +221,8 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         />
                         <h2
                             className={cn(
-                                "text-4xl font-bold line-clamp-2",
+                                "font-bold",
+                                sectionTitleSize,
                                 !hasBrandColors && fallbackTextColors.title
                             )}
                             style={getTitleStyle()}
@@ -130,7 +232,8 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         {slide.content[0] && (
                             <p
                                 className={cn(
-                                    "mt-4 text-lg max-w-xl line-clamp-3",
+                                    "mt-4 max-w-xl",
+                                    sectionSubtitleSize,
                                     !hasBrandColors && fallbackTextColors.body
                                 )}
                                 style={getBodyStyle()}
@@ -140,8 +243,18 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         )}
                     </div>
                 );
+            }
 
-            case "quote":
+            case "quote": {
+                const quoteText = slide.content[0] || slide.title;
+                const quoteWords = quoteText.split(/\s+/).filter(Boolean).length;
+                const quoteSize =
+                    quoteWords <= 20
+                        ? "text-2xl"
+                        : quoteWords <= 35
+                          ? "text-xl"
+                          : "text-lg";
+
                 return (
                     <div className="flex h-full flex-col items-center justify-center p-12 overflow-hidden">
                         <div className="relative max-w-3xl text-center">
@@ -153,19 +266,34 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                             </div>
                             <blockquote
                                 className={cn(
-                                    "text-2xl italic leading-relaxed",
+                                    "italic leading-relaxed",
+                                    quoteSize,
                                     !hasBrandColors && fallbackTextColors.title
                                 )}
                                 style={getTitleStyle()}
                             >
-                                {slide.content[0] || slide.title}
+                                {quoteText}
                             </blockquote>
                             {/* Attribution line removed - quote stands alone */}
                         </div>
                     </div>
                 );
+            }
 
-            case "statistics":
+            case "statistics": {
+                const statsTitleSize = getScaledTextSize(
+                    slide.title,
+                    TEXT_SCALE_CONFIG.title
+                );
+                // Calculate stat description size based on longest description
+                const statDescriptions = slide.content
+                    .slice(0, 3)
+                    .map((s) => s.replace(/\d+%?\s*/, ""));
+                const statDescSize = getScaledBulletSize(
+                    statDescriptions,
+                    TEXT_SCALE_CONFIG.compactBullet
+                );
+
                 return (
                     <div className="flex h-full flex-col p-12 overflow-hidden">
                         {hasBrandColors && (
@@ -176,7 +304,8 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         )}
                         <h2
                             className={cn(
-                                "text-3xl font-bold mb-8 line-clamp-2 flex-shrink-0",
+                                "font-bold mb-8 flex-shrink-0",
+                                statsTitleSize,
                                 !hasBrandColors && fallbackTextColors.title
                             )}
                             style={getTitleStyle()}
@@ -194,7 +323,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                                     </div>
                                     <p
                                         className={cn(
-                                            "text-sm line-clamp-2",
+                                            statDescSize,
                                             !hasBrandColors && fallbackTextColors.body
                                         )}
                                         style={getBodyStyle()}
@@ -206,13 +335,24 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         </div>
                     </div>
                 );
+            }
 
-            case "comparison":
+            case "comparison": {
+                const compTitleSize = getScaledTextSize(
+                    slide.title,
+                    TEXT_SCALE_CONFIG.title
+                );
+                const compBulletSize = getScaledBulletSize(
+                    slide.content,
+                    TEXT_SCALE_CONFIG.compactBullet
+                );
+
                 return (
                     <div className="flex h-full flex-col p-12 overflow-hidden">
                         <h2
                             className={cn(
-                                "text-3xl font-bold mb-8 text-center line-clamp-2 flex-shrink-0",
+                                "font-bold mb-8 text-center flex-shrink-0",
+                                compTitleSize,
                                 !hasBrandColors && fallbackTextColors.title
                             )}
                             style={getTitleStyle()}
@@ -234,7 +374,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                                 <h3 className="text-lg font-semibold mb-4 flex-shrink-0">
                                     Before
                                 </h3>
-                                <ul className="space-y-2 overflow-hidden">
+                                <ul className="space-y-2 overflow-y-auto">
                                     {slide.content
                                         .slice(
                                             0,
@@ -247,7 +387,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                                             <li
                                                 key={idx}
                                                 className={cn(
-                                                    "text-sm line-clamp-2",
+                                                    compBulletSize,
                                                     !hasBrandColors &&
                                                         fallbackTextColors.body
                                                 )}
@@ -275,7 +415,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                                 <h3 className="text-lg font-semibold mb-4 flex-shrink-0">
                                     After
                                 </h3>
-                                <ul className="space-y-2 overflow-hidden">
+                                <ul className="space-y-2 overflow-y-auto">
                                     {slide.content
                                         .slice(
                                             Math.ceil(slide.content.length / 2),
@@ -285,7 +425,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                                             <li
                                                 key={idx}
                                                 className={cn(
-                                                    "text-sm line-clamp-2",
+                                                    compBulletSize,
                                                     !hasBrandColors &&
                                                         fallbackTextColors.body
                                                 )}
@@ -299,13 +439,24 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         </div>
                     </div>
                 );
+            }
 
-            case "process":
+            case "process": {
+                const procTitleSize = getScaledTextSize(
+                    slide.title,
+                    TEXT_SCALE_CONFIG.title
+                );
+                const procStepSize = getScaledBulletSize(
+                    slide.content.slice(0, 4),
+                    TEXT_SCALE_CONFIG.compactBullet
+                );
+
                 return (
                     <div className="flex h-full flex-col p-12 overflow-hidden">
                         <h2
                             className={cn(
-                                "text-3xl font-bold mb-8 line-clamp-2 flex-shrink-0",
+                                "font-bold mb-8 flex-shrink-0",
+                                procTitleSize,
                                 !hasBrandColors && fallbackTextColors.title
                             )}
                             style={getTitleStyle()}
@@ -327,7 +478,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                                         </div>
                                         <p
                                             className={cn(
-                                                "text-sm line-clamp-3",
+                                                procStepSize,
                                                 !hasBrandColors &&
                                                     fallbackTextColors.body
                                             )}
@@ -341,13 +492,28 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         </div>
                     </div>
                 );
+            }
 
-            case "cta":
+            case "cta": {
+                const ctaTitleWords = slide.title.split(/\s+/).filter(Boolean).length;
+                const ctaTitleSize =
+                    ctaTitleWords <= 8
+                        ? "text-4xl"
+                        : ctaTitleWords <= 12
+                          ? "text-3xl"
+                          : "text-2xl";
+                const ctaSubtitleSize =
+                    slide.content[0] &&
+                    slide.content[0].split(/\s+/).filter(Boolean).length > 15
+                        ? "text-lg"
+                        : "text-xl";
+
                 return (
                     <div className="flex h-full flex-col items-center justify-center text-center p-12 overflow-hidden">
                         <h2
                             className={cn(
-                                "text-4xl font-bold mb-6 line-clamp-2",
+                                "font-bold mb-6",
+                                ctaTitleSize,
                                 !hasBrandColors && fallbackTextColors.title
                             )}
                             style={getTitleStyle()}
@@ -357,7 +523,8 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         {slide.content[0] && (
                             <p
                                 className={cn(
-                                    "text-xl mb-8 max-w-2xl line-clamp-3",
+                                    "mb-8 max-w-2xl",
+                                    ctaSubtitleSize,
                                     !hasBrandColors && fallbackTextColors.body
                                 )}
                                 style={getBodyStyle()}
@@ -376,11 +543,12 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         </div>
                     </div>
                 );
+            }
 
             case "content_left":
             case "content_right":
             case "bullets":
-            default:
+            default: {
                 // Determine if we should show image area based on layout
                 const showImageArea =
                     (slide.layoutType === "content_left" ||
@@ -394,6 +562,19 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                 const maxBulletPoints = showImageArea ? 4 : 5;
                 const displayedContent = slide.content.slice(0, maxBulletPoints);
 
+                // Calculate dynamic text sizes based on content length
+                const titleTextSize = getScaledTextSize(
+                    slide.title,
+                    TEXT_SCALE_CONFIG.title
+                );
+                const bulletConfig = showImageArea
+                    ? TEXT_SCALE_CONFIG.compactBullet
+                    : TEXT_SCALE_CONFIG.bullet;
+                const bulletTextSize = getScaledBulletSize(
+                    displayedContent,
+                    bulletConfig
+                );
+
                 return (
                     <div className="flex h-full flex-col p-12 overflow-hidden">
                         {hasBrandColors && (
@@ -404,7 +585,8 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         )}
                         <h2
                             className={cn(
-                                "text-3xl font-bold mb-5 line-clamp-2 flex-shrink-0",
+                                "font-bold mb-5 flex-shrink-0",
+                                titleTextSize,
                                 !hasBrandColors && fallbackTextColors.title
                             )}
                             style={getTitleStyle()}
@@ -437,20 +619,22 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                                 </div>
                             )}
 
-                            {/* Bullet content with overflow handling */}
-                            <ul className="flex flex-col space-y-2 min-h-0">
+                            {/* Bullet content with dynamic text scaling */}
+                            <ul className="flex flex-col space-y-2 min-h-0 overflow-y-auto">
                                 {displayedContent.map((point, idx) => (
                                     <li
                                         key={idx}
-                                        className="flex items-start gap-3 text-lg min-h-0"
+                                        className={cn(
+                                            "flex items-start gap-3 min-h-0",
+                                            bulletTextSize
+                                        )}
                                     >
                                         <span
-                                            className="mt-2 h-2.5 w-2.5 flex-shrink-0 rounded-full shadow-sm"
+                                            className="mt-1.5 h-2.5 w-2.5 flex-shrink-0 rounded-full shadow-sm"
                                             style={{ backgroundColor: accentColor }}
                                         />
                                         <span
                                             className={cn(
-                                                "line-clamp-2",
                                                 !hasBrandColors &&
                                                     fallbackTextColors.body
                                             )}
@@ -484,6 +668,7 @@ export const SlideContentRenderer = memo(function SlideContentRenderer({
                         </div>
                     </div>
                 );
+            }
         }
     };
 

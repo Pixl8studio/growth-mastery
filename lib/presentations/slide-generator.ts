@@ -14,6 +14,7 @@ import { AIGenerationError, RateLimitError } from "@/lib/errors";
 import { env } from "@/lib/env";
 import { AI_CONFIG } from "@/lib/config";
 import { recoverJSON } from "@/lib/ai/json-recovery";
+import { SLIDE_CONTENT_LIMITS, getContentLimits } from "./slide-constants";
 
 import type { SlideData } from "./pptx-generator";
 
@@ -1068,26 +1069,9 @@ export async function generatePresentation(
     );
 }
 
-// Content length constraints by layout type for regeneration
-// These ensure content fits within slide bounds without truncation
-const LAYOUT_CONSTRAINTS: Record<
-    SlideData["layoutType"],
-    { titleMax: number; bulletMax: number; maxBullets: number }
-> = {
-    title: { titleMax: 10, bulletMax: 20, maxBullets: 1 },
-    section: { titleMax: 8, bulletMax: 25, maxBullets: 1 },
-    bullets: { titleMax: 12, bulletMax: 16, maxBullets: 5 },
-    content_left: { titleMax: 12, bulletMax: 14, maxBullets: 4 },
-    content_right: { titleMax: 12, bulletMax: 14, maxBullets: 4 },
-    quote: { titleMax: 12, bulletMax: 30, maxBullets: 1 },
-    statistics: { titleMax: 10, bulletMax: 12, maxBullets: 3 },
-    comparison: { titleMax: 10, bulletMax: 12, maxBullets: 6 },
-    process: { titleMax: 10, bulletMax: 10, maxBullets: 4 },
-    cta: { titleMax: 10, bulletMax: 20, maxBullets: 2 },
-};
-
 /**
  * Regenerate a single slide with AI
+ * Uses centralized SLIDE_CONTENT_LIMITS from slide-constants.ts
  */
 export async function regenerateSlide(
     slide: SlideData,
@@ -1097,9 +1081,8 @@ export async function regenerateSlide(
 ): Promise<SlideData> {
     const anthropic = getAnthropicClient();
 
-    // Get constraints for this layout type
-    const constraints =
-        LAYOUT_CONSTRAINTS[slide.layoutType] || LAYOUT_CONSTRAINTS.bullets;
+    // Get constraints for this layout type from shared constants
+    const constraints = getContentLimits(slide.layoutType);
 
     const prompt = `Modify this presentation slide based on the following instruction:
 

@@ -7,7 +7,7 @@
 
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
     RefreshCw,
     Type,
@@ -27,6 +27,7 @@ import { Button } from "@/components/ui/button";
 import { logger } from "@/lib/client-logger";
 import { cn } from "@/lib/utils";
 import type { SlideData } from "./slide-thumbnail";
+import { SLIDE_CONTENT_LIMITS, countWords } from "@/lib/presentations/slide-constants";
 
 type QuickAction =
     | "regenerate_image"
@@ -59,34 +60,18 @@ const LAYOUT_OPTIONS: { value: LayoutType; label: string }[] = [
     { value: "cta", label: "Call to Action" },
 ];
 
-// Content length limits by layout type
-// These match the constraints in slide-generator.ts
-const CONTENT_LIMITS: Record<
-    LayoutType,
-    { titleMax: number; bulletMax: number; maxBullets: number }
-> = {
-    title: { titleMax: 10, bulletMax: 20, maxBullets: 1 },
-    section: { titleMax: 8, bulletMax: 25, maxBullets: 1 },
-    bullets: { titleMax: 12, bulletMax: 16, maxBullets: 5 },
-    content_left: { titleMax: 12, bulletMax: 14, maxBullets: 4 },
-    content_right: { titleMax: 12, bulletMax: 14, maxBullets: 4 },
-    quote: { titleMax: 12, bulletMax: 30, maxBullets: 1 },
-    statistics: { titleMax: 10, bulletMax: 12, maxBullets: 3 },
-    comparison: { titleMax: 10, bulletMax: 12, maxBullets: 6 },
-    process: { titleMax: 10, bulletMax: 10, maxBullets: 4 },
-    cta: { titleMax: 10, bulletMax: 20, maxBullets: 2 },
-};
-
 /**
  * Check if slide content exceeds recommended limits
  * Returns warnings for title and bullets that are too long
+ * Uses centralized SLIDE_CONTENT_LIMITS from slide-constants.ts
  */
 function getContentWarnings(slide: SlideData): {
     titleWarning: string | null;
     bulletWarnings: string[];
 } {
-    const limits = CONTENT_LIMITS[slide.layoutType] || CONTENT_LIMITS.bullets;
-    const titleWordCount = slide.title.split(/\s+/).filter(Boolean).length;
+    const limits =
+        SLIDE_CONTENT_LIMITS[slide.layoutType] || SLIDE_CONTENT_LIMITS.bullets;
+    const titleWordCount = countWords(slide.title);
 
     const titleWarning =
         titleWordCount > limits.titleMax
@@ -95,7 +80,7 @@ function getContentWarnings(slide: SlideData): {
 
     const bulletWarnings: string[] = [];
     slide.content.forEach((bullet, idx) => {
-        const wordCount = bullet.split(/\s+/).filter(Boolean).length;
+        const wordCount = countWords(bullet);
         if (wordCount > limits.bulletMax) {
             bulletWarnings.push(
                 `Bullet ${idx + 1}: ${wordCount} words (recommended: ${limits.bulletMax} max)`
@@ -153,6 +138,13 @@ export function SlideEditorPanel({
             }
         };
     }, [feedback]);
+
+    // Memoize content warnings to avoid recalculating on every render
+    // Only recalculates when slide title, content, or layoutType changes
+    const contentWarnings = useMemo(
+        () => getContentWarnings(slide),
+        [slide.title, slide.content, slide.layoutType]
+    );
 
     const showFeedback = useCallback((type: "success" | "error", message: string) => {
         setFeedback({ type, message });
@@ -684,40 +676,34 @@ export function SlideEditorPanel({
             </div>
 
             {/* Content Length Warnings */}
-            {(() => {
-                const { titleWarning, bulletWarnings } = getContentWarnings(slide);
-                const hasWarnings = titleWarning || bulletWarnings.length > 0;
-
-                if (!hasWarnings) return null;
-
-                return (
-                    <div>
-                        <h3 className="mb-3 text-sm font-semibold flex items-center gap-2 text-amber-600">
-                            <AlertCircle className="h-4 w-4" />
-                            Content Length Warnings
-                        </h3>
-                        <div className="space-y-2 text-sm">
-                            {titleWarning && (
-                                <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-amber-700">
-                                    {titleWarning}
-                                </div>
-                            )}
-                            {bulletWarnings.map((warning, idx) => (
-                                <div
-                                    key={idx}
-                                    className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-amber-700"
-                                >
-                                    {warning}
-                                </div>
-                            ))}
-                            <p className="text-xs text-muted-foreground mt-2">
-                                Long content may display with smaller text. Use
-                                &quot;Make Concise&quot; to shorten automatically.
-                            </p>
-                        </div>
+            {(contentWarnings.titleWarning ||
+                contentWarnings.bulletWarnings.length > 0) && (
+                <div>
+                    <h3 className="mb-3 text-sm font-semibold flex items-center gap-2 text-amber-600">
+                        <AlertCircle className="h-4 w-4" />
+                        Content Length Warnings
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                        {contentWarnings.titleWarning && (
+                            <div className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-amber-700">
+                                {contentWarnings.titleWarning}
+                            </div>
+                        )}
+                        {contentWarnings.bulletWarnings.map((warning, idx) => (
+                            <div
+                                key={idx}
+                                className="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2 text-amber-700"
+                            >
+                                {warning}
+                            </div>
+                        ))}
+                        <p className="text-xs text-muted-foreground mt-2">
+                            Long content may display with smaller text. Use &quot;Make
+                            Concise&quot; to shorten automatically.
+                        </p>
                     </div>
-                );
-            })()}
+                </div>
+            )}
         </div>
     );
 }

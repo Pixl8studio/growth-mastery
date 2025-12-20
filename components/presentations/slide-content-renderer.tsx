@@ -19,75 +19,11 @@ import {
     FALLBACK_GRADIENTS,
     FALLBACK_TEXT_COLORS,
 } from "./slide-design-utils";
-
-// Content length thresholds for dynamic text scaling
-// These ensure content fits without truncation while maintaining readability
-const TEXT_SCALE_CONFIG = {
-    title: {
-        baseSize: "text-3xl", // ~30px
-        mediumSize: "text-2xl", // ~24px
-        smallSize: "text-xl", // ~20px
-        mediumThreshold: 10, // words
-        smallThreshold: 14, // words
-    },
-    bullet: {
-        baseSize: "text-lg", // ~18px
-        mediumSize: "text-base", // ~16px
-        smallSize: "text-sm", // ~14px - minimum readable size
-        mediumThreshold: 12, // words per bullet
-        smallThreshold: 18, // words per bullet
-    },
-    // For layouts with less space (content_left, content_right, comparison)
-    compactBullet: {
-        baseSize: "text-base", // ~16px
-        mediumSize: "text-sm", // ~14px
-        smallSize: "text-xs", // ~12px - minimum for compact layouts
-        mediumThreshold: 10,
-        smallThreshold: 14,
-    },
-};
-
-/**
- * Calculate appropriate text size class based on content length
- * Returns a Tailwind text size class that ensures content fits without truncation
- */
-function getScaledTextSize(
-    text: string,
-    config: (typeof TEXT_SCALE_CONFIG)["title" | "bullet" | "compactBullet"]
-): string {
-    const wordCount = text.split(/\s+/).filter(Boolean).length;
-
-    if (wordCount <= config.mediumThreshold) {
-        return config.baseSize;
-    } else if (wordCount <= config.smallThreshold) {
-        return config.mediumSize;
-    } else {
-        return config.smallSize;
-    }
-}
-
-/**
- * Calculate text size for a list of bullet points
- * Uses the longest bullet to determine the size for consistency
- */
-function getScaledBulletSize(
-    bullets: string[],
-    config: (typeof TEXT_SCALE_CONFIG)["bullet" | "compactBullet"]
-): string {
-    if (bullets.length === 0) return config.baseSize;
-
-    const maxWordCount = Math.max(
-        ...bullets.map((b) => b.split(/\s+/).filter(Boolean).length)
-    );
-
-    if (maxWordCount <= config.mediumThreshold) {
-        return config.baseSize;
-    } else if (maxWordCount <= config.smallThreshold) {
-        return config.mediumSize;
-    } else {
-        return config.smallSize;
-    }
-}
+import {
+    TEXT_SCALE_CONFIG,
+    getScaledTextSize,
+    getScaledBulletSize,
+} from "@/lib/presentations/slide-constants";
 
 interface SlideContentRendererProps {
     slide: SlideData;

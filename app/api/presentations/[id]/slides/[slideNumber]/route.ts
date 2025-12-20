@@ -21,6 +21,7 @@ import {
 import { regenerateSlide } from "@/lib/presentations/slide-generator";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
 import { parseSlidesFromDB, type Slide } from "@/lib/presentations/schemas";
+import { SLIDE_CONTENT_LIMITS } from "@/lib/presentations/slide-constants";
 
 // Quick action types
 const QuickActionSchema = z.enum([
@@ -61,22 +62,8 @@ const SlideUpdateSchema = z.object({
     imagePrompt: z.string().optional(),
 });
 
-// Content length constraints by layout type
-// These ensure content fits within slide bounds without truncation
-const CONTENT_CONSTRAINTS = {
-    title: { titleMax: 10, bulletMax: 20 },
-    section: { titleMax: 8, bulletMax: 25 },
-    bullets: { titleMax: 12, bulletMax: 16 },
-    content_left: { titleMax: 12, bulletMax: 14 },
-    content_right: { titleMax: 12, bulletMax: 14 },
-    quote: { titleMax: 12, bulletMax: 30 },
-    statistics: { titleMax: 10, bulletMax: 12 },
-    comparison: { titleMax: 10, bulletMax: 12 },
-    process: { titleMax: 10, bulletMax: 10 },
-    cta: { titleMax: 10, bulletMax: 20 },
-} as const;
-
 // Action prompts for AI - all include length constraints to prevent truncation
+// Constraints are defined in SLIDE_CONTENT_LIMITS (lib/presentations/slide-constants.ts)
 const ACTION_PROMPTS: Record<z.infer<typeof QuickActionSchema>, string> = {
     regenerate_image:
         "Generate a new, more compelling image prompt for this slide that better captures the key message.",

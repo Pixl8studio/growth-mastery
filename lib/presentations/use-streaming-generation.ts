@@ -300,6 +300,9 @@ export function useStreamingGeneration() {
                     }));
                 });
 
+                // Server sends final slide array on completion. The order is not guaranteed
+                // to match slideNumber order - server may return slides in generation order.
+                // Consumers should sort by slideNumber before display.
                 eventSource.addEventListener("completed", (event) => {
                     const data = JSON.parse(event.data);
                     const slides = data.slides as GeneratedSlide[];

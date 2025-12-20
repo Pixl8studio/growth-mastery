@@ -564,6 +564,8 @@ export default function Step5Page({
             },
             onComplete: (presentationId, slides) => {
                 // CRITICAL: Sort slides by slideNumber to maintain Step 4 presentation order
+                // Note: The `slides` array comes from the server's completed event and may not
+                // be pre-sorted. This defensive sort ensures correct order regardless of server behavior.
                 const sortedSlides = [...slides].sort(
                     (a, b) => a.slideNumber - b.slideNumber
                 ) as GeneratedSlide[];
@@ -695,6 +697,8 @@ export default function Step5Page({
                 },
                 onComplete: (presentationId, slides) => {
                     // CRITICAL: Sort slides by slideNumber to maintain Step 4 presentation order
+                    // Note: The `slides` array comes from the server's completed event and may not
+                    // be pre-sorted. This defensive sort ensures correct order regardless of server behavior.
                     const sortedSlides = [...slides].sort(
                         (a, b) => a.slideNumber - b.slideNumber
                     ) as GeneratedSlide[];

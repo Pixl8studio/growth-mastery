@@ -18,11 +18,13 @@ import { logger } from "@/lib/client-logger";
 import { getStepCompletionStatus } from "@/app/funnel-builder/completion-utils";
 import { calculateCompletionPercentage } from "@/app/funnel-builder/completion-types";
 
+type ProjectStatus = "active" | "archived" | "draft";
+
 interface ProjectCardProps {
     project: {
         id: string;
         name: string;
-        status: string;
+        status: ProjectStatus;
         current_step: number;
         updated_at: string;
     };
@@ -51,6 +53,44 @@ export function ProjectCard({ project }: ProjectCardProps) {
         loadCompletion();
     }, [project.id]);
 
+    const handleDuplicate = async () => {
+        // TODO: Implement duplicate functionality
+        // - Call API to duplicate project
+        // - Navigate to new project or show success toast
+        logger.info({ projectId: project.id }, "Duplicate project clicked");
+    };
+
+    const handleArchive = async () => {
+        if (
+            !confirm(
+                `Archive "${project.name}"? You can restore it later from the archived projects list.`
+            )
+        ) {
+            return;
+        }
+
+        // TODO: Implement archive functionality
+        // - Call API to update project status to 'archived'
+        // - Refresh the project list or remove from current view
+        logger.info({ projectId: project.id }, "Archive project confirmed");
+    };
+
+    const handleDelete = async () => {
+        if (
+            !confirm(
+                `Are you sure you want to delete "${project.name}"? This action cannot be undone.`
+            )
+        ) {
+            return;
+        }
+
+        // TODO: Implement delete functionality
+        // - Call API to delete project
+        // - Handle cascading deletions (pages, analytics, etc.)
+        // - Refresh the project list
+        logger.info({ projectId: project.id }, "Delete project confirmed");
+    };
+
     return (
         <Card className="shadow-soft hover:shadow-float transition-smooth hover:-translate-y-2 border-border/50 bg-card/80 backdrop-blur-sm">
             <CardHeader>
@@ -72,12 +112,14 @@ export function ProjectCard({ project }: ProjectCardProps) {
                         </Badge>
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <button
-                                    className="p-1 rounded-md transition-colors text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8"
                                     aria-label="Funnel options"
                                 >
                                     <MoreVertical className="h-5 w-5" />
-                                </button>
+                                </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem asChild>
@@ -89,16 +131,25 @@ export function ProjectCard({ project }: ProjectCardProps) {
                                         Settings
                                     </Link>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="flex items-center gap-2">
+                                <DropdownMenuItem
+                                    className="flex items-center gap-2"
+                                    onClick={handleDuplicate}
+                                >
                                     <Copy className="h-4 w-4" />
                                     Duplicate
                                 </DropdownMenuItem>
-                                <DropdownMenuItem className="flex items-center gap-2">
+                                <DropdownMenuItem
+                                    className="flex items-center gap-2"
+                                    onClick={handleArchive}
+                                >
                                     <Archive className="h-4 w-4" />
                                     Archive
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="flex items-center gap-2 text-red-600 focus:text-red-600">
+                                <DropdownMenuItem
+                                    className="flex items-center gap-2 text-red-600 focus:text-red-600"
+                                    onClick={handleDelete}
+                                >
                                     <Trash2 className="h-4 w-4" />
                                     Delete
                                 </DropdownMenuItem>

@@ -17,3 +17,4 @@ export { SlideEditorPanel } from "./slide-editor-panel";
 export { SlidePreview } from "./slide-preview";
 export { GenerationBanner } from "./generation-banner";
 export { GenerationErrorDialog } from "./generation-error-dialog";
+export { AddSlidePopover } from "./add-slide-popover";

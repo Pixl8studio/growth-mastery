@@ -63,6 +63,7 @@ import {
     GenerationErrorDialog,
     type SlideData,
     type BrandDesign as BrandDesignType,
+    type SlideLayoutType,
 } from "@/components/presentations";
 import { useStreamingGeneration } from "@/lib/presentations/use-streaming-generation";
 
@@ -882,6 +883,175 @@ export default function Step5Page({
             });
         },
         [selectedPresentation, selectedSlideIndex, toast]
+    );
+
+    // Handle duplicating the currently selected slide via Add Slide menu
+    const handleDuplicateCurrentSlide = useCallback(() => {
+        if (!selectedPresentation || selectedSlideIndex < 0) return;
+        handleDuplicateSlide(selectedSlideIndex);
+    }, [selectedPresentation, selectedSlideIndex, handleDuplicateSlide]);
+
+    // Handle adding a blank slide with a specific layout
+    const handleAddBlankSlide = useCallback(
+        (layoutType: SlideLayoutType) => {
+            if (!selectedPresentation) return;
+
+            const newSlideNumber = selectedPresentation.slides.length + 1;
+            const newSlide: GeneratedSlide = {
+                slideNumber: newSlideNumber,
+                title: "New Slide",
+                content: [],
+                layoutType,
+                speakerNotes: "",
+            };
+
+            // Insert after current slide
+            const insertIndex = selectedSlideIndex + 1;
+            const updatedSlides = [
+                ...selectedPresentation.slides.slice(0, insertIndex),
+                newSlide,
+                ...selectedPresentation.slides.slice(insertIndex),
+            ];
+
+            const updatedPresentation = {
+                ...selectedPresentation,
+                slides: updatedSlides,
+            };
+
+            setSelectedPresentation(updatedPresentation);
+            setPresentations((prev) =>
+                prev.map((p) =>
+                    p.id === updatedPresentation.id ? updatedPresentation : p
+                )
+            );
+
+            // Select the new slide
+            setSelectedSlideIndex(insertIndex);
+
+            toast({
+                title: "Slide Added",
+                description: `New ${layoutType} slide created.`,
+            });
+        },
+        [selectedPresentation, selectedSlideIndex, toast]
+    );
+
+    // State for tracking single slide AI generation
+    const [isGeneratingSingleSlide, setIsGeneratingSingleSlide] = useState(false);
+
+    // Handle generating a slide with AI
+    const handleGenerateSlideWithAI = useCallback(
+        async (prompt: string, layoutType?: SlideLayoutType) => {
+            if (!selectedPresentation || isGeneratingSingleSlide) return;
+
+            // Don't generate if presentation hasn't been saved yet
+            if (selectedPresentation.id.startsWith("generating-")) {
+                toast({
+                    title: "Please Wait",
+                    description: "Wait for the presentation to finish generating first.",
+                    variant: "destructive",
+                });
+                return;
+            }
+
+            setIsGeneratingSingleSlide(true);
+
+            // Create a placeholder slide first
+            const newSlideNumber = selectedPresentation.slides.length + 1;
+            const placeholderSlide: GeneratedSlide = {
+                slideNumber: newSlideNumber,
+                title: "Generating...",
+                content: ["AI is creating your slide content..."],
+                layoutType: layoutType || "bullets",
+                speakerNotes: "",
+            };
+
+            // Insert after current slide
+            const insertIndex = selectedSlideIndex + 1;
+            const updatedSlides = [
+                ...selectedPresentation.slides.slice(0, insertIndex),
+                placeholderSlide,
+                ...selectedPresentation.slides.slice(insertIndex),
+            ];
+
+            const tempUpdatedPresentation = {
+                ...selectedPresentation,
+                slides: updatedSlides,
+            };
+
+            setSelectedPresentation(tempUpdatedPresentation);
+            setSelectedSlideIndex(insertIndex);
+
+            try {
+                // Call the API to generate slide content
+                const response = await fetch(
+                    `/api/presentations/${selectedPresentation.id}/slides/${newSlideNumber}`,
+                    {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: "include",
+                        body: JSON.stringify({
+                            customPrompt: `Create a new slide with the following request: ${prompt}`,
+                            ...(layoutType && { layoutType }),
+                        }),
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error("Failed to generate slide");
+                }
+
+                const result = await response.json();
+                const generatedSlide = result.slide as GeneratedSlide;
+
+                // Update with the generated content
+                const finalSlides = [
+                    ...selectedPresentation.slides.slice(0, insertIndex),
+                    { ...generatedSlide, slideNumber: newSlideNumber },
+                    ...selectedPresentation.slides.slice(insertIndex),
+                ];
+
+                const finalPresentation = {
+                    ...selectedPresentation,
+                    slides: finalSlides,
+                };
+
+                setSelectedPresentation(finalPresentation);
+                setPresentations((prev) =>
+                    prev.map((p) =>
+                        p.id === finalPresentation.id ? finalPresentation : p
+                    )
+                );
+
+                toast({
+                    title: "Slide Generated",
+                    description: "AI has created your new slide.",
+                });
+
+                logger.info(
+                    { presentationId: selectedPresentation.id, slideNumber: newSlideNumber },
+                    "AI slide generated successfully"
+                );
+            } catch (error) {
+                // Remove the placeholder slide on error
+                const revertedPresentation = {
+                    ...selectedPresentation,
+                    slides: selectedPresentation.slides,
+                };
+                setSelectedPresentation(revertedPresentation);
+                setSelectedSlideIndex(Math.max(0, insertIndex - 1));
+
+                logger.error({ error }, "Failed to generate AI slide");
+                toast({
+                    title: "Generation Failed",
+                    description: "Failed to generate slide. Please try again.",
+                    variant: "destructive",
+                });
+            } finally {
+                setIsGeneratingSingleSlide(false);
+            }
+        },
+        [selectedPresentation, selectedSlideIndex, isGeneratingSingleSlide, toast]
     );
 
     // Handle slide reordering with backend persistence (Issue #327)
@@ -1875,13 +2045,10 @@ export default function Step5Page({
                                     onSlideReorder={handleSlideReorder}
                                     onSlideDuplicate={handleDuplicateSlide}
                                     onSlideDelete={handleDeleteSlide}
-                                    onAddSlide={() => {
-                                        toast({
-                                            title: "Coming Soon",
-                                            description:
-                                                "Add slide functionality will be available soon.",
-                                        });
-                                    }}
+                                    onDuplicateCurrentSlide={handleDuplicateCurrentSlide}
+                                    onAddBlankSlide={handleAddBlankSlide}
+                                    onGenerateSlideWithAI={handleGenerateSlideWithAI}
+                                    isGeneratingSlide={isGeneratingSingleSlide}
                                 />
                             </div>
 

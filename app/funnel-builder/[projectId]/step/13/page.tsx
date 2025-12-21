@@ -1,87 +1,69 @@
-/**
- * Step 12: Marketing Content Engine
- *
- * Comprehensive organic social content generation and publishing system.
- * Features Echo Mode voice mirroring, multi-platform publishing, and analytics.
- */
-
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
-import { useStepCompletion } from "@/app/funnel-builder/use-completion";
-import { useIsMobile } from "@/lib/mobile-utils.client";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/components/ui/use-toast";
-import { logger } from "@/lib/client-logger";
 import {
+    Card,
+    CardHeader,
+    CardTitle,
+    CardDescription,
+    CardContent,
+} from "@/components/ui/card";
+import {
+    Target,
     Sparkles,
-    TrendingUp,
-    Calendar,
-    BarChart3,
-    Settings,
-    Lightbulb,
-    Share2,
+    Users,
+    DollarSign,
+    CheckCircle,
+    AlertCircle,
+    Loader2,
+    ArrowRight,
 } from "lucide-react";
-
-// Import enhanced components with comprehensive controls
-import { ProfileConfigForm } from "@/components/marketing/profile-config-form";
-import { ContentGenerator } from "@/components/marketing/content-generator";
-import { ContentCalendar } from "@/components/marketing/content-calendar";
-import { MarketingAnalyticsDashboard } from "@/components/marketing/marketing-analytics-dashboard";
-import { TrendExplorer } from "@/components/marketing/trend-explorer";
-import { MarketingSettings } from "@/components/marketing/marketing-settings";
-import { ApprovalWorkflowModal } from "@/components/marketing/approval-workflow-modal";
-import { ExperimentCreatorModal } from "@/components/marketing/experiment-creator-modal";
+import { logger } from "@/lib/client-logger";
+import { createClient } from "@/lib/supabase/client";
+import { useStepCompletion } from "@/app/funnel-builder/use-completion";
+import { useToast } from "@/components/ui/use-toast";
+import { MetaAccountSelector } from "@/components/ads/meta-account-selector";
+import { AdVariationsReview } from "@/components/ads/ad-variations-review";
+import { AudienceBuilder } from "@/components/ads/audience-builder";
+import { CampaignDeployer } from "@/components/ads/campaign-deployer";
 import { ComingSoonOverlay } from "@/components/ui/coming-soon-overlay";
 
-export default function Step12Page({
+type WizardSubStep = "connect" | "variations" | "audience" | "deploy";
+
+export default function Step14Page({
     params,
 }: {
     params: Promise<{ projectId: string }>;
 }) {
     const router = useRouter();
-    const isMobile = useIsMobile("lg");
     const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
-    const [marketingEnabled, setMarketingEnabled] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState("profile");
+    const [project, setProject] = useState<any>(null);
+    const [currentSubStep, setCurrentSubStep] = useState<WizardSubStep>("connect");
 
-    // Redirect mobile users to desktop-required page
-    useEffect(() => {
-        if (isMobile && projectId) {
-            const params = new URLSearchParams({
-                feature: "Marketing Content Engine",
-                description:
-                    "The Marketing Content Engine requires a desktop computer for generating content, managing campaigns, and analyzing performance across multiple platforms.",
-                returnPath: `/funnel-builder/${projectId}`,
-            });
-            router.push(`/desktop-required?${params.toString()}`);
-        }
-    }, [isMobile, projectId, router]);
+    // Step 1: Meta connection data
+    const [metaConnected, setMetaConnected] = useState(false);
+    const [selectedAdAccount, setSelectedAdAccount] = useState<string | null>(null);
+    const [checkingConnection, setCheckingConnection] = useState(true);
 
-    // State for marketing data
-    const [profile, setProfile] = useState<any>(null);
-    const [stats, setStats] = useState({
-        postsThisMonth: 0,
-        totalOptIns: 0,
-        scheduledPosts: 0,
-        activeExperiments: 0,
-        overallOI1000: 0,
-        pendingApprovals: 0,
-    });
+    // Step 2: Ad variations
+    const [adVariations, setAdVariations] = useState<any[]>([]);
+    const [generatingAds, setGeneratingAds] = useState(false);
+    const [selectedVariations, setSelectedVariations] = useState<string[]>([]);
 
-    // Modal states
-    const [showApprovalModal, setShowApprovalModal] = useState(false);
-    const [showExperimentModal, setShowExperimentModal] = useState(false);
+    // Step 3: Audience data
+    const [audienceConfig, setAudienceConfig] = useState<any>(null);
+    const [dailyBudget, setDailyBudget] = useState(1000); // in cents ($10)
+
+    // Step 4: Campaign deployment
+    const [deploying, setDeploying] = useState(false);
+    const [deployed, setDeployed] = useState(false);
 
     // Load completion status
-    const { completedSteps } = useStepCompletion(projectId);
+    const { completedSteps, refreshCompletion } = useStepCompletion(projectId);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -91,170 +73,230 @@ export default function Step12Page({
         resolveParams();
     }, [params]);
 
-    const loadStats = useCallback(async () => {
+    // Load project data
+    useEffect(() => {
         if (!projectId) return;
 
-        try {
-            // Get posts this month
-            const monthStart = new Date();
-            monthStart.setDate(1);
-            monthStart.setHours(0, 0, 0, 0);
-
-            const calendarRes = await fetch(
-                `/api/marketing/calendar?start=${monthStart.toISOString()}`
-            );
-
-            if (calendarRes.ok) {
-                const calendarData = await calendarRes.json();
-                const entries = calendarData.entries || [];
-
-                const published = entries.filter(
-                    (e: any) => e.publish_status === "published"
-                );
-                const scheduled = entries.filter(
-                    (e: any) => e.publish_status === "scheduled"
-                );
-
-                setStats((prev) => ({
-                    ...prev,
-                    postsThisMonth: published.length,
-                    scheduledPosts: scheduled.length,
-                }));
-            }
-
-            // Get analytics
-            const analyticsRes = await fetch(
-                `/api/marketing/analytics?funnel_project_id=${projectId}`
-            );
-
-            if (analyticsRes.ok) {
-                const analyticsData = await analyticsRes.json();
-                const dashboard = analyticsData.dashboard;
-
-                if (dashboard) {
-                    setStats((prev) => ({
-                        ...prev,
-                        totalOptIns: dashboard.overview?.total_opt_ins || 0,
-                        overallOI1000: dashboard.overview?.overall_oi_1000 || 0,
-                    }));
-                }
-            }
-
-            // Get experiments count
-            const experimentsRes = await fetch(
-                `/api/marketing/analytics/experiments?funnel_project_id=${projectId}&status=running`
-            );
-
-            if (experimentsRes.ok) {
-                const experimentsData = await experimentsRes.json();
-                setStats((prev) => ({
-                    ...prev,
-                    activeExperiments: experimentsData.experiments?.length || 0,
-                }));
-            }
-        } catch (error) {
-            logger.error({ error }, "Failed to load stats");
-        }
-    }, [projectId]);
-
-    // Load marketing data
-    useEffect(() => {
         const loadData = async () => {
-            if (!projectId) return;
-
             try {
-                setLoading(true);
+                const supabase = createClient();
 
-                // Load profile
-                const profileRes = await fetch(
-                    `/api/marketing/profiles?funnel_project_id=${projectId}`
-                );
+                // Load project
+                const { data: projectData } = await supabase
+                    .from("funnel_projects")
+                    .select("*")
+                    .eq("id", projectId)
+                    .single();
 
-                if (profileRes.ok) {
-                    const profileData = await profileRes.json();
-                    if (profileData.profiles && profileData.profiles.length > 0) {
-                        const loadedProfile = profileData.profiles[0];
-                        setProfile(loadedProfile);
-                        setMarketingEnabled(true);
-                        logger.info(
-                            { profileId: loadedProfile.id },
-                            "Marketing profile loaded"
-                        );
+                setProject(projectData);
 
-                        // Load stats after profile is loaded
-                        await loadStats();
-                    }
-                }
+                // Check if Meta is connected
+                await checkMetaConnection();
             } catch (error) {
-                logger.error({ error }, "Failed to load marketing data");
+                logger.error({ error, projectId }, "Error loading step 14 data");
             } finally {
-                setLoading(false);
+                setCheckingConnection(false);
             }
         };
 
         loadData();
-    }, [projectId, loadStats]);
+    }, [projectId]);
 
-    const handleEnableMarketing = async (enabled: boolean) => {
-        setMarketingEnabled(enabled);
+    const checkMetaConnection = async () => {
+        try {
+            const supabase = createClient();
 
-        if (enabled && !profile) {
-            try {
-                const response = await fetch("/api/marketing/profiles", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        funnel_project_id: projectId,
-                        name: "Main Marketing Profile",
-                    }),
-                });
+            // Check for Facebook/Meta OAuth connection in marketing_oauth_connections
+            const { data: connections } = await supabase
+                .from("marketing_oauth_connections")
+                .select("*")
+                .eq("platform", "facebook")
+                .eq("status", "active")
+                .limit(1);
 
-                const data = await response.json();
-
-                if (data.success && data.profile) {
-                    setProfile(data.profile);
-
-                    toast({
-                        title: "Marketing Content Engine Enabled",
-                        description:
-                            "Your profile has been created with auto-populated brand voice from your intake and offer data.",
-                    });
-
-                    logger.info(
-                        { profileId: data.profile.id },
-                        "Marketing profile created"
-                    );
-                } else {
-                    throw new Error(data.error || "Failed to create profile");
-                }
-            } catch (error) {
-                logger.error({ error }, "Failed to enable marketing");
-                toast({
-                    title: "Error",
-                    description: "Failed to enable marketing engine. Please try again.",
-                    variant: "destructive",
-                });
-                setMarketingEnabled(false);
-            }
+            setMetaConnected(Boolean(connections && connections.length > 0));
+        } catch (error) {
+            logger.error({ error }, "Error checking Meta connection");
+            setMetaConnected(false);
         }
     };
 
-    if (loading) {
+    const handleConnectMeta = () => {
+        // Redirect to marketing settings to connect Facebook
+        toast({
+            title: "Connect Facebook First",
+            description:
+                "You'll be redirected to connect your Facebook account for ads management.",
+        });
+        router.push(`/funnel-builder/${projectId}/settings?tab=marketing`);
+    };
+
+    const handleSelectAdAccount = (adAccountId: string) => {
+        setSelectedAdAccount(adAccountId);
+    };
+
+    const handleContinueToVariations = async () => {
+        if (!metaConnected) {
+            toast({
+                title: "Connect Facebook First",
+                description: "Connect your Facebook account to generate ads.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (!selectedAdAccount) {
+            toast({
+                title: "Select Ad Account",
+                description: "Please select a Meta Ad Account to continue.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setCurrentSubStep("variations");
+        await generateAdVariations();
+    };
+
+    const generateAdVariations = async () => {
+        setGeneratingAds(true);
+
+        try {
+            const response = await fetch("/api/ads/variations/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    funnel_project_id: projectId,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to generate ad variations");
+            }
+
+            const data = await response.json();
+            setAdVariations(data.variations || []);
+        } catch (error) {
+            logger.error({ error }, "Error generating ad variations");
+            toast({
+                title: "Generation Failed",
+                description: "Failed to generate ad variations. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setGeneratingAds(false);
+        }
+    };
+
+    const handleSelectVariations = (variationIds: string[]) => {
+        setSelectedVariations(variationIds);
+    };
+
+    const handleContinueToAudience = () => {
+        if (!metaConnected) {
+            setCurrentSubStep("audience");
+            return;
+        }
+
+        if (selectedVariations.length === 0) {
+            toast({
+                title: "Select Variations",
+                description: "Please select at least one ad variation to test.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setCurrentSubStep("audience");
+    };
+
+    const handleAudienceConfigured = (config: any, budget: number) => {
+        setAudienceConfig(config);
+        setDailyBudget(budget);
+    };
+
+    const handleContinueToDeploy = () => {
+        if (!metaConnected) {
+            setCurrentSubStep("deploy");
+            return;
+        }
+
+        if (!audienceConfig) {
+            toast({
+                title: "Configure Audience",
+                description: "Please configure your target audience and budget.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setCurrentSubStep("deploy");
+    };
+
+    const handleDeployCampaign = async () => {
+        if (!metaConnected) {
+            toast({
+                title: "Connect Facebook to Deploy",
+                description:
+                    "Connect your Facebook account to launch real ad campaigns.",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setDeploying(true);
+
+        try {
+            const response = await fetch("/api/ads/campaigns/create", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    funnel_project_id: projectId,
+                    ad_account_id: selectedAdAccount,
+                    variations: selectedVariations,
+                    audience_config: audienceConfig,
+                    daily_budget_cents: dailyBudget,
+                }),
+            });
+
+            if (!response.ok) {
+                throw new Error("Failed to create campaign");
+            }
+
+            const data = await response.json();
+
+            setDeployed(true);
+            await refreshCompletion();
+
+            toast({
+                title: "Campaign Created! 🎉",
+                description:
+                    "Your ads are now live and running. Your funnel is complete!",
+            });
+        } catch (error) {
+            logger.error({ error }, "Error deploying campaign");
+            toast({
+                title: "Deployment Failed",
+                description: "Failed to create campaign. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setDeploying(false);
+        }
+    };
+
+    if (checkingConnection) {
         return (
             <StepLayout
-                stepTitle="Marketing Content Engine"
-                stepDescription="Generate and publish organic social content"
                 currentStep={13}
                 projectId={projectId}
                 completedSteps={completedSteps}
+                funnelName={project?.name}
+                stepTitle="Ads Manager"
+                stepDescription="Generate and launch Meta/Instagram ads"
             >
                 <div className="flex items-center justify-center py-12">
-                    <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4" />
-                        <p className="text-muted-foreground">
-                            Loading marketing engine...
-                        </p>
-                    </div>
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
             </StepLayout>
         );
@@ -262,234 +304,399 @@ export default function Step12Page({
 
     return (
         <StepLayout
-            stepTitle="Marketing Content Engine"
-            stepDescription="AI-powered social content generation with Echo Mode voice mirroring"
             currentStep={13}
             projectId={projectId}
             completedSteps={completedSteps}
-            nextLabel="Continue to Ads Manager"
+            funnelName={project?.name}
+            stepTitle="Self-Optimizing Ads Manager"
+            stepDescription="Generate Meta/Instagram ads and launch campaigns with AI optimization"
         >
             <ComingSoonOverlay
-                featureName="Marketing Content Engine"
-                description="The Marketing Content Engine is currently in development. Soon you'll be able to generate platform-optimized content in your authentic founder voice."
+                featureName="Ads Manager"
+                description="The Ads Manager is currently in development. Soon you'll be able to generate Meta/Instagram ads and launch campaigns with AI-powered optimization."
             >
-                <div className="space-y-6">
-                    {/* Enable/Disable Section */}
-                    <Card className="p-6 bg-gradient-to-r from-primary/5 to-purple-50">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <Share2 className="h-6 w-6 text-primary-foreground0" />
-                                <div>
-                                    <h3 className="text-lg font-semibold">
-                                        Enable Marketing Content Engine
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground">
-                                        Generate platform-optimized content in your
-                                        authentic founder voice
-                                    </p>
-                                </div>
-                            </div>
-                            <Switch
-                                checked={marketingEnabled}
-                                onCheckedChange={handleEnableMarketing}
-                            />
-                        </div>
+                <div className="space-y-8">
+                    {/* Progress Indicator */}
+                    <div className="grid grid-cols-4 gap-4">
+                        {[
+                            { key: "connect", label: "Connect & Setup", icon: Target },
+                            {
+                                key: "variations",
+                                label: "Ad Variations",
+                                icon: Sparkles,
+                            },
+                            {
+                                key: "audience",
+                                label: "Audience & Budget",
+                                icon: Users,
+                            },
+                            { key: "deploy", label: "Deploy", icon: CheckCircle },
+                        ].map((step, index) => {
+                            const isActive = currentSubStep === step.key;
+                            const isCompleted =
+                                (step.key === "connect" &&
+                                    metaConnected &&
+                                    selectedAdAccount) ||
+                                (step.key === "variations" &&
+                                    selectedVariations.length > 0) ||
+                                (step.key === "audience" && audienceConfig) ||
+                                (step.key === "deploy" && deployed);
 
-                        {marketingEnabled && (
-                            <>
-                                <div className="mt-6 grid grid-cols-5 gap-4 text-sm">
-                                    <div className="text-center p-3 bg-card rounded-lg">
-                                        <div className="text-2xl font-bold text-primary">
-                                            {stats.postsThisMonth}
+                            const Icon = step.icon;
+
+                            return (
+                                <div
+                                    key={step.key}
+                                    className={`flex flex-col items-center rounded-lg border p-4 ${
+                                        isActive
+                                            ? "border-primary bg-primary/5"
+                                            : isCompleted
+                                              ? "border-green-500 bg-green-50"
+                                              : "border-border bg-card"
+                                    }`}
+                                >
+                                    <Icon
+                                        className={`mb-2 h-6 w-6 ${
+                                            isActive
+                                                ? "text-primary"
+                                                : isCompleted
+                                                  ? "text-green-600"
+                                                  : "text-muted-foreground"
+                                        }`}
+                                    />
+                                    <span className="text-center text-sm font-medium">
+                                        {step.label}
+                                    </span>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Sub-Step 1: Connect Meta & Setup */}
+                    {currentSubStep === "connect" && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Connect Your Meta Ad Account</CardTitle>
+                                <CardDescription>
+                                    Select the Meta Ad Account you want to use for this
+                                    campaign
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {!metaConnected ? (
+                                    <>
+                                        <div className="rounded-lg border border-orange-200 bg-orange-50 p-6">
+                                            <div className="flex items-start gap-4">
+                                                <AlertCircle className="h-6 w-6 text-orange-600" />
+                                                <div className="flex-1">
+                                                    <h3 className="font-semibold text-orange-900">
+                                                        Facebook/Meta Not Connected
+                                                    </h3>
+                                                    <p className="mt-2 text-sm text-orange-800">
+                                                        To launch real ad campaigns, you
+                                                        need to connect your Facebook
+                                                        account first. This will give us
+                                                        access to your Meta Ad Accounts.
+                                                    </p>
+                                                    <Button
+                                                        onClick={handleConnectMeta}
+                                                        className="mt-4"
+                                                        variant="default"
+                                                    >
+                                                        Connect Facebook
+                                                    </Button>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div className="text-muted-foreground">
-                                            Posts This Month
+
+                                        {/* Preview/Explore Mode */}
+                                        <div className="rounded-lg border border-primary/20 bg-primary/5 p-6">
+                                            <div className="flex items-start gap-4">
+                                                <Sparkles className="h-6 w-6 text-primary" />
+                                                <div className="flex-1">
+                                                    <h3 className="font-semibold text-primary">
+                                                        Preview the Ads Manager
+                                                    </h3>
+                                                    <p className="mt-2 text-sm text-muted-foreground">
+                                                        Want to see how the Ads Manager
+                                                        works before connecting? Click
+                                                        below to explore the wizard and
+                                                        see example ad variations.
+                                                    </p>
+                                                    <Button
+                                                        onClick={() =>
+                                                            setCurrentSubStep(
+                                                                "variations"
+                                                            )
+                                                        }
+                                                        className="mt-4"
+                                                        variant="outline"
+                                                    >
+                                                        Explore Ads Manager
+                                                        <ArrowRight className="h-4 w-4 ml-2" />
+                                                    </Button>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </div>
-                                    <div className="text-center p-3 bg-card rounded-lg">
-                                        <div className="text-2xl font-bold text-green-600">
-                                            {stats.totalOptIns}
-                                        </div>
-                                        <div className="text-muted-foreground">
-                                            Total Opt-ins
-                                        </div>
-                                        {stats.overallOI1000 > 0 && (
-                                            <div className="text-xs text-muted-foreground mt-1">
-                                                {stats.overallOI1000.toFixed(1)}{" "}
-                                                O/I-1000
+                                    </>
+                                ) : (
+                                    <>
+                                        <MetaAccountSelector
+                                            projectId={projectId}
+                                            onSelectAccount={handleSelectAdAccount}
+                                            selectedAccount={selectedAdAccount}
+                                        />
+
+                                        {selectedAdAccount && (
+                                            <div className="flex justify-end">
+                                                <Button
+                                                    onClick={handleContinueToVariations}
+                                                    className="gap-2"
+                                                >
+                                                    Generate Ads
+                                                    <ArrowRight className="h-4 w-4" />
+                                                </Button>
                                             </div>
                                         )}
-                                    </div>
-                                    <div className="text-center p-3 bg-card rounded-lg">
-                                        <div className="text-2xl font-bold text-purple-600">
-                                            {stats.scheduledPosts}
-                                        </div>
-                                        <div className="text-muted-foreground">
-                                            Scheduled
-                                        </div>
-                                    </div>
-                                    <div className="text-center p-3 bg-card rounded-lg">
-                                        <div className="text-2xl font-bold text-orange-600">
-                                            {stats.activeExperiments}
-                                        </div>
-                                        <div className="text-muted-foreground">
-                                            Active Tests
-                                        </div>
-                                    </div>
-                                    <div
-                                        className="text-center p-3 bg-card rounded-lg cursor-pointer hover:bg-yellow-50 transition-smooth"
-                                        onClick={() => setShowApprovalModal(true)}
-                                    >
-                                        <div className="text-2xl font-bold text-yellow-600">
-                                            {stats.pendingApprovals}
-                                        </div>
-                                        <div className="text-muted-foreground">
-                                            Pending
-                                        </div>
-                                    </div>
-                                </div>
+                                    </>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
 
-                                {/* Quick Action Buttons */}
-                                <div className="mt-4 flex justify-end gap-3">
+                    {/* Sub-Step 2: Review Generated Ad Variations */}
+                    {currentSubStep === "variations" && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Review Generated Ad Variations</CardTitle>
+                                <CardDescription>
+                                    Select 2-3 variations to test. We've generated 5
+                                    using proven frameworks
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {!metaConnected && adVariations.length === 0 && (
+                                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 mb-4">
+                                        <p className="text-sm text-muted-foreground">
+                                            <strong className="text-primary">
+                                                Preview Mode:
+                                            </strong>{" "}
+                                            Connect Facebook to generate real ads from
+                                            your funnel data. For now, click "Continue"
+                                            to explore the interface.
+                                        </p>
+                                    </div>
+                                )}
+
+                                {generatingAds ? (
+                                    <div className="flex flex-col items-center justify-center py-12">
+                                        <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                                        <p className="text-muted-foreground">
+                                            Generating ad variations using AI...
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <>
+                                        {adVariations.length > 0 ? (
+                                            <AdVariationsReview
+                                                variations={adVariations}
+                                                selectedVariations={selectedVariations}
+                                                onSelectVariations={
+                                                    handleSelectVariations
+                                                }
+                                            />
+                                        ) : (
+                                            <div className="text-center py-12 text-muted-foreground">
+                                                <p className="mb-4">
+                                                    Ad variations will appear here after
+                                                    generation
+                                                </p>
+                                                <p className="text-sm">
+                                                    Connect Facebook and select an ad
+                                                    account to generate 5 AI-powered ad
+                                                    variations
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        <div className="flex justify-between">
+                                            <Button
+                                                onClick={() =>
+                                                    setCurrentSubStep("connect")
+                                                }
+                                                variant="outline"
+                                            >
+                                                Back
+                                            </Button>
+                                            <Button
+                                                onClick={handleContinueToAudience}
+                                                className="gap-2"
+                                            >
+                                                Continue to Audience
+                                                <ArrowRight className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    </>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Sub-Step 3: Audience & Budget */}
+                    {currentSubStep === "audience" && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Target Audience & Budget</CardTitle>
+                                <CardDescription>
+                                    Define who will see your ads and how much to spend
+                                    daily
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {!metaConnected && (
+                                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                                        <p className="text-sm text-muted-foreground">
+                                            <strong className="text-primary">
+                                                Preview Mode:
+                                            </strong>{" "}
+                                            This is how you'll configure your target
+                                            audience and daily budget. Connect Facebook
+                                            to save real settings.
+                                        </p>
+                                    </div>
+                                )}
+
+                                <AudienceBuilder
+                                    projectId={projectId}
+                                    onConfigured={handleAudienceConfigured}
+                                    initialBudget={dailyBudget}
+                                />
+
+                                <div className="flex justify-between">
                                     <Button
-                                        onClick={() => setShowApprovalModal(true)}
+                                        onClick={() => setCurrentSubStep("variations")}
                                         variant="outline"
-                                        size="sm"
                                     >
-                                        Review Approvals
+                                        Back
                                     </Button>
                                     <Button
-                                        onClick={() => setShowExperimentModal(true)}
-                                        variant="outline"
-                                        size="sm"
+                                        onClick={handleContinueToDeploy}
+                                        className="gap-2"
                                     >
-                                        Create A/B Test
+                                        Review & Deploy
+                                        <ArrowRight className="h-4 w-4" />
                                     </Button>
                                 </div>
-                            </>
-                        )}
-                    </Card>
+                            </CardContent>
+                        </Card>
+                    )}
 
-                    {marketingEnabled && profile && (
-                        <Tabs
-                            value={activeTab}
-                            onValueChange={setActiveTab}
-                            className="w-full"
-                        >
-                            <TabsList className="grid w-full grid-cols-6">
-                                <TabsTrigger value="profile">
-                                    <Sparkles className="h-4 w-4 mr-2" />
-                                    Profile
-                                </TabsTrigger>
-                                <TabsTrigger value="generate">
-                                    <Lightbulb className="h-4 w-4 mr-2" />
-                                    Generate
-                                </TabsTrigger>
-                                <TabsTrigger value="calendar">
-                                    <Calendar className="h-4 w-4 mr-2" />
-                                    Calendar
-                                </TabsTrigger>
-                                <TabsTrigger value="analytics">
-                                    <BarChart3 className="h-4 w-4 mr-2" />
-                                    Analytics
-                                </TabsTrigger>
-                                <TabsTrigger value="trends">
-                                    <TrendingUp className="h-4 w-4 mr-2" />
-                                    Trends
-                                </TabsTrigger>
-                                <TabsTrigger value="settings">
-                                    <Settings className="h-4 w-4 mr-2" />
-                                    Settings
-                                </TabsTrigger>
-                            </TabsList>
+                    {/* Sub-Step 4: Deploy & Activate */}
+                    {currentSubStep === "deploy" && (
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Deploy Your Campaign</CardTitle>
+                                <CardDescription>
+                                    Review and launch your ads to start generating leads
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                {!metaConnected && (
+                                    <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
+                                        <div className="flex items-start gap-3">
+                                            <AlertCircle className="h-5 w-5 text-orange-600 mt-0.5" />
+                                            <div>
+                                                <p className="text-sm font-semibold text-orange-900">
+                                                    Connect Facebook to Deploy
+                                                </p>
+                                                <p className="text-sm text-orange-800 mt-1">
+                                                    You're in preview mode. Connect your
+                                                    Facebook account to launch real
+                                                    campaigns on Meta/Instagram.
+                                                </p>
+                                                <Button
+                                                    onClick={handleConnectMeta}
+                                                    className="mt-3"
+                                                    size="sm"
+                                                >
+                                                    Connect Now
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
 
-                            {/* Profile Tab */}
-                            <TabsContent value="profile" className="mt-6">
-                                <ProfileConfigForm
-                                    profile={profile}
-                                    onUpdate={async () => {
-                                        // Reload profile
-                                        const res = await fetch(
-                                            `/api/marketing/profiles?funnel_project_id=${projectId}`
-                                        );
-                                        if (res.ok) {
-                                            const data = await res.json();
-                                            if (data.profiles?.[0]) {
-                                                setProfile(data.profiles[0]);
-                                            }
+                                <CampaignDeployer
+                                    adAccountId={selectedAdAccount || "preview-mode"}
+                                    variations={adVariations.filter((v) =>
+                                        selectedVariations.includes(v.id)
+                                    )}
+                                    audienceConfig={
+                                        audienceConfig || {
+                                            type: "interest",
+                                            description: "Preview audience",
                                         }
-                                    }}
+                                    }
+                                    dailyBudget={dailyBudget}
+                                    onDeploy={handleDeployCampaign}
+                                    deploying={deploying}
+                                    deployed={deployed}
                                 />
-                            </TabsContent>
 
-                            {/* Generate Tab */}
-                            <TabsContent value="generate" className="mt-6">
-                                <ContentGenerator
-                                    profileId={profile.id}
-                                    funnelProjectId={projectId}
-                                    onContentGenerated={() => loadStats()}
-                                />
-                            </TabsContent>
+                                {!deployed && (
+                                    <div className="flex justify-between">
+                                        <Button
+                                            onClick={() =>
+                                                setCurrentSubStep("audience")
+                                            }
+                                            variant="outline"
+                                            disabled={deploying}
+                                        >
+                                            Back
+                                        </Button>
+                                        <Button
+                                            onClick={handleDeployCampaign}
+                                            className="gap-2"
+                                            disabled={deploying || !metaConnected}
+                                        >
+                                            {deploying ? (
+                                                <>
+                                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                                    Creating Campaign...
+                                                </>
+                                            ) : !metaConnected ? (
+                                                <>
+                                                    <Target className="h-4 w-4" />
+                                                    Connect to Launch
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Target className="h-4 w-4" />
+                                                    Launch Campaign
+                                                </>
+                                            )}
+                                        </Button>
+                                    </div>
+                                )}
 
-                            {/* Calendar Tab */}
-                            <TabsContent value="calendar" className="mt-6">
-                                <ContentCalendar
-                                    funnelProjectId={projectId}
-                                    onUpdate={() => loadStats()}
-                                />
-                            </TabsContent>
-
-                            {/* Analytics Tab */}
-                            <TabsContent value="analytics" className="mt-6">
-                                <MarketingAnalyticsDashboard
-                                    funnelProjectId={projectId}
-                                />
-                            </TabsContent>
-
-                            {/* Trends Tab */}
-                            <TabsContent value="trends" className="mt-6">
-                                <TrendExplorer
-                                    profileId={profile.id}
-                                    funnelProjectId={projectId}
-                                />
-                            </TabsContent>
-
-                            {/* Settings Tab */}
-                            <TabsContent value="settings" className="mt-6">
-                                <MarketingSettings
-                                    funnelProjectId={projectId}
-                                    profileId={profile.id}
-                                />
-                            </TabsContent>
-                        </Tabs>
+                                {deployed && (
+                                    <div className="rounded-lg border border-green-200 bg-green-50 p-6 text-center">
+                                        <CheckCircle className="mx-auto h-12 w-12 text-green-600 mb-4" />
+                                        <h3 className="text-xl font-bold text-green-900 mb-2">
+                                            Campaign Successfully Launched! 🎉
+                                        </h3>
+                                        <p className="text-green-800 mb-4">
+                                            Your ads are now running on Meta/Instagram.
+                                            Your complete funnel is ready! Track
+                                            performance from the main dashboard.
+                                        </p>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
                     )}
                 </div>
             </ComingSoonOverlay>
-
-            {/* Approval Workflow Modal */}
-            {marketingEnabled && (
-                <ApprovalWorkflowModal
-                    isOpen={showApprovalModal}
-                    onClose={() => setShowApprovalModal(false)}
-                    funnelProjectId={projectId}
-                    onApprovalComplete={() => {
-                        loadStats();
-                    }}
-                />
-            )}
-
-            {/* Experiment Creator Modal */}
-            {marketingEnabled && (
-                <ExperimentCreatorModal
-                    isOpen={showExperimentModal}
-                    onClose={() => setShowExperimentModal(false)}
-                    funnelProjectId={projectId}
-                    onExperimentCreated={() => {
-                        setShowExperimentModal(false);
-                        loadStats();
-                    }}
-                />
-            )}
         </StepLayout>
     );
 }

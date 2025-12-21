@@ -42,7 +42,7 @@ describe("StepperNav", () => {
     it("should display completion percentage", () => {
         render(<StepperNav {...defaultProps} completedSteps={[1, 2]} />);
 
-        expect(screen.getByText(/14%/)).toBeInTheDocument(); // 2/14 steps
+        expect(screen.getByText(/15%/)).toBeInTheDocument(); // 2/13 steps
     });
 
     it("should render step navigation", () => {

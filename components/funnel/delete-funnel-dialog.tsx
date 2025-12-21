@@ -95,14 +95,15 @@ export function DeleteFunnelDialog({
                     {/* Warning message */}
                     <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
                         <p className="text-sm text-destructive">
-                            <strong>Warning:</strong> This will move your funnel to trash.
-                            All pages, offers, presentations, and funnel data will be
-                            permanently deleted after {TRASH_RETENTION_DAYS} days.
+                            <strong>Warning:</strong> This will move your funnel to
+                            trash. All pages, offers, presentations, and funnel data
+                            will be permanently deleted after {TRASH_RETENTION_DAYS}{" "}
+                            days.
                         </p>
                         {isPublished && (
                             <p className="mt-2 text-sm font-medium text-destructive">
-                                This funnel is currently live. Deleting it will immediately
-                                unpublish all pages.
+                                This funnel is currently live. Deleting it will
+                                immediately unpublish all pages.
                             </p>
                         )}
                     </div>
@@ -128,9 +129,7 @@ export function DeleteFunnelDialog({
                         />
                     </div>
 
-                    {error && (
-                        <p className="text-sm text-destructive">{error}</p>
-                    )}
+                    {error && <p className="text-sm text-destructive">{error}</p>}
                 </div>
 
                 <DialogFooter className="gap-2 sm:gap-0">

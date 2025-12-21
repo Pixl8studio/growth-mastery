@@ -167,7 +167,7 @@ describe("ProjectCard", () => {
             );
         });
 
-        it("should show confirmation dialog when Delete is clicked", async () => {
+        it("should open delete dialog when Delete is clicked", async () => {
             const user = userEvent.setup();
             render(<ProjectCard {...defaultProps} />);
 
@@ -180,9 +180,10 @@ describe("ProjectCard", () => {
 
             await user.click(screen.getByText("Delete"));
 
-            expect(window.confirm).toHaveBeenCalledWith(
-                expect.stringContaining("delete")
-            );
+            // Delete now opens a dialog instead of using window.confirm
+            await waitFor(() => {
+                expect(screen.getByRole("dialog")).toBeInTheDocument();
+            });
         });
 
         it("should not proceed with Archive if confirmation is cancelled", async () => {
@@ -207,10 +208,7 @@ describe("ProjectCard", () => {
             );
         });
 
-        it("should not proceed with Delete if confirmation is cancelled", async () => {
-            const { logger } = await import("@/lib/client-logger");
-            vi.spyOn(window, "confirm").mockImplementation(() => false);
-
+        it("should close delete dialog when Cancel is clicked", async () => {
             const user = userEvent.setup();
             render(<ProjectCard {...defaultProps} />);
 
@@ -223,10 +221,19 @@ describe("ProjectCard", () => {
 
             await user.click(screen.getByText("Delete"));
 
-            expect(logger.info).not.toHaveBeenCalledWith(
-                expect.anything(),
-                "Delete project confirmed"
-            );
+            // Dialog should be open
+            await waitFor(() => {
+                expect(screen.getByRole("dialog")).toBeInTheDocument();
+            });
+
+            // Click cancel button in dialog
+            const cancelButton = screen.getByRole("button", { name: /cancel/i });
+            await user.click(cancelButton);
+
+            // Dialog should be closed
+            await waitFor(() => {
+                expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+            });
         });
     });
 

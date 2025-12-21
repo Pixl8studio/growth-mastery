@@ -110,13 +110,20 @@ export function ProjectCard({ project }: ProjectCardProps) {
         try {
             const result = await renameFunnel(project.id, trimmedName);
             logger.info(
-                { projectId: project.id, newName: trimmedName, newSlug: result.newSlug },
+                {
+                    projectId: project.id,
+                    newName: trimmedName,
+                    newSlug: result.newSlug,
+                },
                 "Funnel renamed"
             );
             setIsEditing(false);
             router.refresh();
         } catch (err) {
-            logger.error({ error: err, projectId: project.id }, "Failed to rename funnel");
+            logger.error(
+                { error: err, projectId: project.id },
+                "Failed to rename funnel"
+            );
             setError(err instanceof Error ? err.message : "Failed to rename");
         } finally {
             setIsSaving(false);
@@ -171,7 +178,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
                                             ref={inputRef}
                                             type="text"
                                             value={editedName}
-                                            onChange={(e) => setEditedName(e.target.value)}
+                                            onChange={(e) =>
+                                                setEditedName(e.target.value)
+                                            }
                                             onKeyDown={handleKeyDown}
                                             onBlur={() => {
                                                 if (!isSaving) {
@@ -206,7 +215,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
                                         </Button>
                                     </div>
                                     {error && (
-                                        <p className="text-xs text-destructive">{error}</p>
+                                        <p className="text-xs text-destructive">
+                                            {error}
+                                        </p>
                                     )}
                                 </div>
                             ) : (
@@ -289,7 +300,9 @@ export function ProjectCard({ project }: ProjectCardProps) {
                         {/* Completion Percentage */}
                         <div className="space-y-2">
                             <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">Completion</span>
+                                <span className="text-muted-foreground">
+                                    Completion
+                                </span>
                                 <span className="font-medium text-primary">
                                     {isLoading ? "..." : `${completionPercentage}%`}
                                 </span>

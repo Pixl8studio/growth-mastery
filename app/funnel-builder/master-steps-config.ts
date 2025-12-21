@@ -24,21 +24,21 @@ export const MASTER_STEPS: MasterStepConfig[] = [
         title: "Presentation Materials",
         description: "Create your pitch presentation and video content",
         icon: "presentation",
-        subSteps: [4, 5, 7, 8],
+        subSteps: [4, 5, 6],
     },
     {
         id: 3,
         title: "Funnel Pages",
         description: "Build enrollment, watch room, registration, and flow",
         icon: "layout",
-        subSteps: [6, 9, 10, 11],
+        subSteps: [7, 8, 9, 10],
     },
     {
         id: 4,
         title: "Traffic Agents",
         description: "Set up AI follow-up, content engine, and ads",
         icon: "users",
-        subSteps: [12, 13, 14],
+        subSteps: [11, 12, 13],
     },
 ];
 

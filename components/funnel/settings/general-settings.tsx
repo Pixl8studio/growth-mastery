@@ -11,7 +11,8 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Pencil, Check, X, Trash2, AlertTriangle } from "lucide-react";
-import { renameFunnel, getFunnelDetails, TRASH_RETENTION_DAYS } from "@/app/funnel-builder/actions";
+import { renameFunnel, getFunnelDetails } from "@/app/funnel-builder/actions";
+import { TRASH_RETENTION_DAYS } from "@/app/funnel-builder/constants";
 import { DeleteFunnelDialog } from "@/components/funnel/delete-funnel-dialog";
 import { logger } from "@/lib/client-logger";
 
@@ -189,7 +190,9 @@ export function GeneralSettings({ projectId }: GeneralSettingsProps) {
                                     <X className="h-4 w-4 text-muted-foreground" />
                                 </Button>
                             </div>
-                            {error && <p className="text-sm text-destructive">{error}</p>}
+                            {error && (
+                                <p className="text-sm text-destructive">{error}</p>
+                            )}
                             <p className="text-xs text-muted-foreground">
                                 Note: Renaming will also update the funnel URL slug
                             </p>
@@ -197,7 +200,9 @@ export function GeneralSettings({ projectId }: GeneralSettingsProps) {
                     ) : (
                         <div className="flex items-center justify-between">
                             <div>
-                                <p className="font-medium text-foreground">{funnel.name}</p>
+                                <p className="font-medium text-foreground">
+                                    {funnel.name}
+                                </p>
                                 <p className="text-sm text-muted-foreground">
                                     Slug: {funnel.slug}
                                 </p>
@@ -224,8 +229,9 @@ export function GeneralSettings({ projectId }: GeneralSettingsProps) {
                             Danger Zone
                         </h3>
                         <p className="mt-1 text-sm text-muted-foreground">
-                            Deleting your funnel will move it to trash. You have {TRASH_RETENTION_DAYS} days to
-                            recover it before permanent deletion.
+                            Deleting your funnel will move it to trash. You have{" "}
+                            {TRASH_RETENTION_DAYS} days to recover it before permanent
+                            deletion.
                         </p>
                         <Button
                             variant="destructive"

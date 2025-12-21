@@ -10,13 +10,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-    AlertTriangle,
-    Trash2,
-    RotateCcw,
-    Clock,
-    FolderOpen,
-} from "lucide-react";
+import { AlertTriangle, Trash2, RotateCcw, Clock, FolderOpen } from "lucide-react";
 import {
     Dialog,
     DialogContent,
@@ -29,8 +23,8 @@ import {
     getDeletedFunnels,
     restoreFunnel,
     permanentlyDeleteFunnel,
-    TRASH_RETENTION_DAYS,
 } from "@/app/funnel-builder/actions";
+import { TRASH_RETENTION_DAYS } from "@/app/funnel-builder/constants";
 import { logger } from "@/lib/client-logger";
 
 interface DeletedFunnel {
@@ -137,15 +131,13 @@ export default function TrashPage() {
                 <div>
                     <h1 className="text-2xl font-bold text-foreground">Trash</h1>
                     <p className="mt-1 text-sm text-muted-foreground">
-                        Deleted funnels are kept for {TRASH_RETENTION_DAYS} days before permanent deletion
+                        Deleted funnels are kept for {TRASH_RETENTION_DAYS} days before
+                        permanent deletion
                     </p>
                 </div>
                 <div className="animate-pulse space-y-4">
                     {[1, 2, 3].map((i) => (
-                        <div
-                            key={i}
-                            className="h-24 rounded-lg bg-muted"
-                        ></div>
+                        <div key={i} className="h-24 rounded-lg bg-muted"></div>
                     ))}
                 </div>
             </div>
@@ -157,7 +149,8 @@ export default function TrashPage() {
             <div>
                 <h1 className="text-2xl font-bold text-foreground">Trash</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
-                    Deleted funnels are kept for {TRASH_RETENTION_DAYS} days before permanent deletion
+                    Deleted funnels are kept for {TRASH_RETENTION_DAYS} days before
+                    permanent deletion
                 </p>
             </div>
 
@@ -169,14 +162,17 @@ export default function TrashPage() {
                             Trash is empty
                         </h3>
                         <p className="mt-2 text-sm text-muted-foreground">
-                            Deleted funnels will appear here for {TRASH_RETENTION_DAYS} days
+                            Deleted funnels will appear here for {TRASH_RETENTION_DAYS}{" "}
+                            days
                         </p>
                     </CardContent>
                 </Card>
             ) : (
                 <div className="space-y-4">
                     {funnels.map((funnel) => {
-                        const daysLeft = getDaysUntilPermanentDeletion(funnel.deleted_at);
+                        const daysLeft = getDaysUntilPermanentDeletion(
+                            funnel.deleted_at
+                        );
                         const isActionInProgress = actionInProgress === funnel.id;
 
                         return (
@@ -188,7 +184,8 @@ export default function TrashPage() {
                                                 {funnel.name}
                                             </CardTitle>
                                             <p className="mt-1 text-sm text-muted-foreground">
-                                                Deleted {formatDeletedDate(funnel.deleted_at)}
+                                                Deleted{" "}
+                                                {formatDeletedDate(funnel.deleted_at)}
                                             </p>
                                         </div>
                                         <div className="flex items-center gap-2 text-sm">
@@ -214,13 +211,17 @@ export default function TrashPage() {
                                             disabled={isActionInProgress}
                                         >
                                             <RotateCcw className="mr-2 h-4 w-4" />
-                                            {isActionInProgress ? "Restoring..." : "Restore"}
+                                            {isActionInProgress
+                                                ? "Restoring..."
+                                                : "Restore"}
                                         </Button>
                                         <Button
                                             variant="ghost"
                                             size="sm"
                                             className="text-destructive hover:text-destructive"
-                                            onClick={() => openPermanentDeleteDialog(funnel)}
+                                            onClick={() =>
+                                                openPermanentDeleteDialog(funnel)
+                                            }
                                             disabled={isActionInProgress}
                                         >
                                             <Trash2 className="mr-2 h-4 w-4" />
@@ -259,9 +260,9 @@ export default function TrashPage() {
                     <div className="space-y-4 py-4">
                         <div className="rounded-lg border border-destructive/20 bg-destructive/5 p-4">
                             <p className="text-sm text-destructive">
-                                <strong>This action cannot be undone.</strong> All pages,
-                                offers, presentations, and associated data will be permanently
-                                deleted.
+                                <strong>This action cannot be undone.</strong> All
+                                pages, offers, presentations, and associated data will
+                                be permanently deleted.
                             </p>
                         </div>
 
@@ -270,8 +271,8 @@ export default function TrashPage() {
                                 htmlFor="confirm-permanent-delete"
                                 className="text-sm text-muted-foreground"
                             >
-                                Type <span className="font-mono font-bold">DELETE</span> to
-                                confirm
+                                Type <span className="font-mono font-bold">DELETE</span>{" "}
+                                to confirm
                             </label>
                             <input
                                 id="confirm-permanent-delete"

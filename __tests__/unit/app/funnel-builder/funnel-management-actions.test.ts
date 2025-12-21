@@ -47,7 +47,7 @@ describe("Funnel Management Actions", () => {
     describe("TRASH_RETENTION_DAYS", () => {
         it("should export a constant for retention period", async () => {
             const { TRASH_RETENTION_DAYS } = await import(
-                "@/app/funnel-builder/actions"
+                "@/app/funnel-builder/constants"
             );
             expect(TRASH_RETENTION_DAYS).toBe(30);
         });
@@ -92,9 +92,9 @@ describe("Funnel Management Actions", () => {
 
             const { renameFunnel } = await import("@/app/funnel-builder/actions");
 
-            await expect(
-                renameFunnel("project-123", "Duplicate Name")
-            ).rejects.toThrow('You already have a funnel named "Duplicate Name"');
+            await expect(renameFunnel("project-123", "Duplicate Name")).rejects.toThrow(
+                'You already have a funnel named "Duplicate Name"'
+            );
         });
 
         it("should successfully rename funnel and update slug", async () => {
@@ -115,9 +115,7 @@ describe("Funnel Management Actions", () => {
             expect(result.success).toBe(true);
             expect(result.newSlug).toBe("my-new-funnel-name");
             expect(revalidatePath).toHaveBeenCalledWith("/funnel-builder");
-            expect(revalidatePath).toHaveBeenCalledWith(
-                "/funnel-builder/project-123"
-            );
+            expect(revalidatePath).toHaveBeenCalledWith("/funnel-builder/project-123");
         });
 
         it("should capture exception with Sentry on error", async () => {
@@ -144,9 +142,7 @@ describe("Funnel Management Actions", () => {
             const mockClient = createSupabaseMock({ user: null });
             vi.mocked(createClient).mockResolvedValue(mockClient as never);
 
-            const { softDeleteFunnel } = await import(
-                "@/app/funnel-builder/actions"
-            );
+            const { softDeleteFunnel } = await import("@/app/funnel-builder/actions");
 
             await expect(softDeleteFunnel("project-123")).rejects.toThrow(
                 "Not authenticated"
@@ -165,9 +161,7 @@ describe("Funnel Management Actions", () => {
             });
             vi.mocked(createClient).mockResolvedValue(mockClient as never);
 
-            const { softDeleteFunnel } = await import(
-                "@/app/funnel-builder/actions"
-            );
+            const { softDeleteFunnel } = await import("@/app/funnel-builder/actions");
 
             await expect(softDeleteFunnel("project-123")).rejects.toThrow(
                 "Funnel not found"
@@ -189,9 +183,7 @@ describe("Funnel Management Actions", () => {
             });
             vi.mocked(createClient).mockResolvedValue(mockClient as never);
 
-            const { softDeleteFunnel } = await import(
-                "@/app/funnel-builder/actions"
-            );
+            const { softDeleteFunnel } = await import("@/app/funnel-builder/actions");
             const result = await softDeleteFunnel("project-123");
 
             expect(result.success).toBe(true);
@@ -211,9 +203,7 @@ describe("Funnel Management Actions", () => {
             });
             vi.mocked(createClient).mockResolvedValue(mockClient as never);
 
-            const { softDeleteFunnel } = await import(
-                "@/app/funnel-builder/actions"
-            );
+            const { softDeleteFunnel } = await import("@/app/funnel-builder/actions");
             const result = await softDeleteFunnel("project-123");
 
             expect(result.success).toBe(true);
@@ -422,17 +412,25 @@ describe("Funnel Management Actions", () => {
             const mockClient = createSupabaseMock({ user: null });
             vi.mocked(createClient).mockResolvedValue(mockClient as never);
 
-            const { getDeletedFunnels } = await import(
-                "@/app/funnel-builder/actions"
-            );
+            const { getDeletedFunnels } = await import("@/app/funnel-builder/actions");
 
             await expect(getDeletedFunnels()).rejects.toThrow("Not authenticated");
         });
 
         it("should return list of deleted funnels", async () => {
             const deletedFunnels = [
-                { id: "1", name: "Funnel 1", deleted_at: "2025-01-01", updated_at: "2025-01-01" },
-                { id: "2", name: "Funnel 2", deleted_at: "2025-01-02", updated_at: "2025-01-02" },
+                {
+                    id: "1",
+                    name: "Funnel 1",
+                    deleted_at: "2025-01-01",
+                    updated_at: "2025-01-01",
+                },
+                {
+                    id: "2",
+                    name: "Funnel 2",
+                    deleted_at: "2025-01-02",
+                    updated_at: "2025-01-02",
+                },
             ];
 
             const mockClient = createSupabaseMock({
@@ -446,9 +444,7 @@ describe("Funnel Management Actions", () => {
             });
             vi.mocked(createClient).mockResolvedValue(mockClient as never);
 
-            const { getDeletedFunnels } = await import(
-                "@/app/funnel-builder/actions"
-            );
+            const { getDeletedFunnels } = await import("@/app/funnel-builder/actions");
             const result = await getDeletedFunnels();
 
             expect(result.success).toBe(true);
@@ -461,9 +457,7 @@ describe("Funnel Management Actions", () => {
             const mockClient = createSupabaseMock({ user: null });
             vi.mocked(createClient).mockResolvedValue(mockClient as never);
 
-            const { getFunnelDetails } = await import(
-                "@/app/funnel-builder/actions"
-            );
+            const { getFunnelDetails } = await import("@/app/funnel-builder/actions");
 
             await expect(getFunnelDetails("project-123")).rejects.toThrow(
                 "Not authenticated"
@@ -491,9 +485,7 @@ describe("Funnel Management Actions", () => {
             });
             vi.mocked(createClient).mockResolvedValue(mockClient as never);
 
-            const { getFunnelDetails } = await import(
-                "@/app/funnel-builder/actions"
-            );
+            const { getFunnelDetails } = await import("@/app/funnel-builder/actions");
             const result = await getFunnelDetails("project-123");
 
             expect(result.success).toBe(true);
@@ -512,9 +504,7 @@ describe("Funnel Management Actions", () => {
             });
             vi.mocked(createClient).mockResolvedValue(mockClient as never);
 
-            const { getFunnelDetails } = await import(
-                "@/app/funnel-builder/actions"
-            );
+            const { getFunnelDetails } = await import("@/app/funnel-builder/actions");
 
             await expect(getFunnelDetails("project-123")).rejects.toThrow(
                 "Funnel not found"

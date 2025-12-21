@@ -47,7 +47,7 @@ describe("Funnel Management Actions", () => {
     describe("TRASH_RETENTION_DAYS", () => {
         it("should export a constant for retention period", async () => {
             const { TRASH_RETENTION_DAYS } = await import(
-                "@/app/funnel-builder/actions"
+                "@/app/funnel-builder/constants"
             );
             expect(TRASH_RETENTION_DAYS).toBe(30);
         });

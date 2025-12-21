@@ -1,0 +1,203 @@
+name: Post Sandbox Link
+
+on:
+  # Trigger when Vercel deployment succeeds
+  deployment_status:
+    types: [success]
+  # Manual trigger for testing
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: "PR number to post sandbox link to (for testing)"
+        required: true
+        type: number
+      sandbox_url:
+        description: "Sandbox URL to post"
+        required: true
+        type: string
+
+# Prevent multiple runs for rapid deployments
+concurrency:
+  group: sandbox-link-${{ github.event.deployment.sha || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  post-sandbox-link:
+    # Only run for preview deployments (not production) - case-insensitive check
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.deployment_status.state == 'success' &&
+       !contains(fromJSON('["production", "Production", "PRODUCTION"]'), github.event.deployment_status.environment))
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      deployments: read
+
+    steps:
+      - name: "🔍 Get PR Number"
+        id: pr
+        uses: actions/github-script@v7
+        env:
+          DEPLOYMENT_SHA: ${{ github.event.deployment.sha }}
+          MANUAL_PR_NUMBER: ${{ inputs.pr_number }}
+          EVENT_NAME: ${{ github.event_name }}
+        with:
+          script: |
+            const eventName = process.env.EVENT_NAME;
+
+            // Handle manual workflow_dispatch
+            if (eventName === 'workflow_dispatch') {
+              const manualPrNumber = process.env.MANUAL_PR_NUMBER;
+              if (manualPrNumber && !isNaN(parseInt(manualPrNumber, 10))) {
+                core.setOutput('number', manualPrNumber);
+                core.setOutput('found', 'true');
+                console.log(`Using manual PR number: ${manualPrNumber}`);
+                return;
+              }
+              core.setOutput('found', 'false');
+              console.log('Manual trigger requires valid pr_number input');
+              return;
+            }
+
+            const sha = process.env.DEPLOYMENT_SHA;
+            if (!sha) {
+              core.warning('No deployment SHA found');
+              core.setOutput('found', 'false');
+              return;
+            }
+
+            try {
+              // Use GraphQL for efficient PR lookup by commit SHA
+              const query = `query($owner: String!, $repo: String!, $sha: GitObjectID!) {
+                repository(owner: $owner, name: $repo) {
+                  object(oid: $sha) {
+                    ... on Commit {
+                      associatedPullRequests(first: 1, states: OPEN) {
+                        nodes { number }
+                      }
+                    }
+                  }
+                }
+              }`;
+
+              const result = await github.graphql(query, {
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                sha: sha
+              });
+
+              // Validate GraphQL response structure
+              if (!result || !result.repository) {
+                core.warning(`Invalid GraphQL response structure for SHA ${sha}`);
+                core.setOutput('found', 'false');
+                return;
+              }
+
+              const commitObject = result.repository.object;
+              if (!commitObject || !commitObject.associatedPullRequests) {
+                core.setOutput('found', 'false');
+                console.log(`No commit or PR data found for SHA ${sha}`);
+                return;
+              }
+
+              const prs = commitObject.associatedPullRequests.nodes;
+              if (prs && prs.length > 0 && typeof prs[0].number === 'number') {
+                core.setOutput('number', prs[0].number);
+                core.setOutput('found', 'true');
+                console.log(`Found PR #${prs[0].number} for SHA ${sha}`);
+              } else {
+                core.setOutput('found', 'false');
+                console.log(`No open PR found for SHA ${sha}`);
+              }
+            } catch (error) {
+              core.warning(`Failed to find PR for SHA ${sha}: ${error.message}`);
+              core.setOutput('found', 'false');
+            }
+
+      - name: "🎯 Post Sandbox Link"
+        if: steps.pr.outputs.found == 'true'
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+          DEPLOYMENT_URL: ${{ inputs.sandbox_url || github.event.deployment_status.target_url }}
+          ENVIRONMENT_NAME: ${{ github.event.deployment_status.environment || 'manual' }}
+        with:
+          script: |
+            // Parse and validate PR number
+            const prNumber = parseInt(process.env.PR_NUMBER, 10);
+            if (isNaN(prNumber) || prNumber <= 0) {
+              core.warning(`Invalid PR number: ${process.env.PR_NUMBER}`);
+              return;
+            }
+
+            // Get deployment info from environment variables (prevents injection)
+            const deploymentUrl = process.env.DEPLOYMENT_URL || '';
+            const environment = process.env.ENVIRONMENT_NAME || 'preview';
+
+            if (!deploymentUrl) {
+              core.warning('No deployment URL available');
+              return;
+            }
+
+            const timestamp = new Date().toISOString();
+            const commentBody = `<!-- sandbox-link-bot -->
+## 🧪 Sandbox Ready for Testing
+
+Your preview deployment is live and ready for testing:
+
+### [➡️ Open Sandbox Environment](${deploymentUrl})
+
+<sub>Environment: \`${environment}\` | Updated: ${timestamp}</sub>
+
+---
+<details>
+<summary>What is this?</summary>
+
+This is an isolated preview deployment of your PR changes. It runs on Vercel's infrastructure and is:
+- ✅ Separate from production - your changes won't affect real users
+- ✅ Uses preview database/API configurations
+- ✅ Automatically updated when you push new commits
+- ✅ Automatically deleted when the PR is closed
+
+Use this link to manually test the functionality before merging.
+</details>`;
+
+            try {
+              // Check for existing sandbox comment and update it, or create new
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber
+              });
+
+              const sandboxComment = comments.find(c =>
+                c.body && c.body.includes('<!-- sandbox-link-bot -->') &&
+                c.user && c.user.type === 'Bot'
+              );
+
+              if (sandboxComment) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: sandboxComment.id,
+                  body: commentBody
+                });
+                console.log(`Updated existing sandbox comment on PR #${prNumber}`);
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: commentBody
+                });
+                console.log(`Created new sandbox comment on PR #${prNumber}`);
+              }
+            } catch (error) {
+              // Don't fail the workflow - this is a nice-to-have feature
+              const errorMsg = error.message || 'Unknown error';
+              if (errorMsg.includes('rate limit')) {
+                core.warning(`GitHub API rate limit hit while posting to PR #${prNumber}`);
+              } else {
+                core.warning(`Failed to post sandbox link on PR #${prNumber}: ${errorMsg}`);
+              }
+            }

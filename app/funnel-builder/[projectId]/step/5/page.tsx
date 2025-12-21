@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import * as Sentry from "@sentry/nextjs";
 import { StepLayout } from "@/components/funnel/step-layout";
@@ -168,6 +168,41 @@ export default function Step5Page({
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [editPrompt, setEditPrompt] = useState("");
     const [isEditingSlide, setIsEditingSlide] = useState(false);
+
+    // Inline presentation name editing state
+    const [editingPresentationId, setEditingPresentationId] = useState<
+        string | null
+    >(null);
+    const [editingPresentationName, setEditingPresentationName] = useState("");
+    const [isSavingName, setIsSavingName] = useState(false);
+    const nameInputRef = useRef<HTMLInputElement>(null);
+    // Track presentations that users have manually renamed to prevent auto-naming from overwriting
+    // Persisted to localStorage to survive page refreshes
+    const [userEditedTitles, setUserEditedTitles] = useState<Set<string>>(
+        () => {
+            if (typeof window === "undefined") return new Set();
+            try {
+                const stored = localStorage.getItem("userEditedPresentationTitles");
+                return stored ? new Set(JSON.parse(stored)) : new Set();
+            } catch {
+                return new Set();
+            }
+        }
+    );
+
+    // Persist userEditedTitles to localStorage when it changes
+    useEffect(() => {
+        if (userEditedTitles.size > 0) {
+            try {
+                localStorage.setItem(
+                    "userEditedPresentationTitles",
+                    JSON.stringify([...userEditedTitles])
+                );
+            } catch {
+                // localStorage might be unavailable or full
+            }
+        }
+    }, [userEditedTitles]);
 
     // Loading states
     const [isLoading, setIsLoading] = useState(true);
@@ -353,6 +388,96 @@ export default function Step5Page({
         hasDeckStructure &&
         selectedDeckId &&
         !hasReachedLimit;
+
+    // Helper to check if a presentation has a default/auto-generated name
+    const isDefaultPresentationName = useCallback((title: string): boolean => {
+        return (
+            title.includes("Generating") ||
+            title.includes("Generated") ||
+            title.includes("Untitled")
+        );
+    }, []);
+
+    // Helper to extract presentation title from title slide
+    const getTitleFromSlides = useCallback(
+        (slides: GeneratedSlide[] | undefined, fallbackTitle: string): string => {
+            if (!slides?.length) return fallbackTitle;
+
+            const titleSlide =
+                slides.find((s) => s.layoutType === "title") ?? slides[0];
+            return titleSlide?.title?.trim() || fallbackTitle;
+        },
+        []
+    );
+
+    // Shared helper to auto-update presentation title with proper error handling
+    const updatePresentationTitleAuto = useCallback(
+        async (
+            presentationId: string,
+            slides: GeneratedSlide[],
+            currentTitle: string,
+            fallbackTitle: string,
+            onlyIfDefault = false
+        ): Promise<string> => {
+            // Never overwrite user-edited titles
+            if (userEditedTitles.has(presentationId)) {
+                return currentTitle;
+            }
+
+            // Check if we should update (only for default names if onlyIfDefault is true)
+            if (onlyIfDefault && !isDefaultPresentationName(currentTitle)) {
+                return currentTitle;
+            }
+
+            const autoTitle = getTitleFromSlides(slides, fallbackTitle);
+
+            // If title hasn't changed, skip the API call
+            if (autoTitle === currentTitle) {
+                return currentTitle;
+            }
+
+            let finalTitle = autoTitle;
+
+            try {
+                const response = await fetch("/api/presentations", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        presentationId,
+                        title: autoTitle,
+                    }),
+                });
+
+                if (response.ok) {
+                    // Track successful auto-naming for debugging
+                    Sentry.addBreadcrumb({
+                        category: "presentation.auto_name",
+                        message: `Auto-named presentation: ${autoTitle}`,
+                        level: "info",
+                        data: { presentationId, autoTitle, previousTitle: currentTitle },
+                    });
+                } else {
+                    // Fall back to current/fallback title on API failure
+                    finalTitle = onlyIfDefault ? currentTitle : fallbackTitle;
+                    logger.warn(
+                        { presentationId, status: response.status },
+                        "Failed to auto-update presentation title"
+                    );
+                }
+            } catch (error) {
+                // Fall back to current/fallback title on network error
+                finalTitle = onlyIfDefault ? currentTitle : fallbackTitle;
+                logger.warn(
+                    { error, presentationId },
+                    "Failed to auto-update presentation title"
+                );
+            }
+
+            return finalTitle;
+        },
+        [getTitleFromSlides, userEditedTitles, isDefaultPresentationName]
+    );
 
     // Helper functions for slide generation
     const generateSlideContent = useCallback(
@@ -579,7 +704,7 @@ export default function Step5Page({
                     "Slide generated in real-time"
                 );
             },
-            onComplete: (presentationId, slides) => {
+            onComplete: async (presentationId, slides) => {
                 // CRITICAL: Sort slides by slideNumber to maintain Step 4 presentation order
                 // Note: The `slides` array comes from the server's completed event and may not
                 // be pre-sorted. This defensive sort ensures correct order regardless of server behavior.
@@ -587,10 +712,19 @@ export default function Step5Page({
                     (a, b) => a.slideNumber - b.slideNumber
                 ) as GeneratedSlide[];
 
+                // Auto-name presentation based on title slide headline (with fallback on API failure)
+                const finalTitle = await updatePresentationTitleAuto(
+                    presentationId,
+                    sortedSlides,
+                    selectedDeck.title, // currentTitle (treating deck title as initial)
+                    selectedDeck.title, // fallbackTitle
+                    false // Always try to update on fresh generation
+                );
+
                 // Create final presentation record for local state
                 const newPresentation: Presentation = {
                     id: presentationId,
-                    title: `${selectedDeck.title} - Generated`,
+                    title: finalTitle,
                     slides: sortedSlides,
                     status: PresentationStatus.COMPLETED,
                     deckStructureId: selectedDeck.id,
@@ -634,6 +768,7 @@ export default function Step5Page({
         projectId,
         streaming.isGenerating,
         toast,
+        updatePresentationTitleAuto,
     ]);
 
     // Handle resume generation for incomplete presentations
@@ -724,7 +859,7 @@ export default function Step5Page({
                         "Slide generated during resume"
                     );
                 },
-                onComplete: (presentationId, slides) => {
+                onComplete: async (presentationId, slides) => {
                     // CRITICAL: Sort slides by slideNumber to maintain Step 4 presentation order
                     // Note: The `slides` array comes from the server's completed event and may not
                     // be pre-sorted. This defensive sort ensures correct order regardless of server behavior.
@@ -732,9 +867,19 @@ export default function Step5Page({
                         (a, b) => a.slideNumber - b.slideNumber
                     ) as GeneratedSlide[];
 
+                    // Auto-name presentation based on title slide if using default name (with fallback on API failure)
+                    const finalTitle = await updatePresentationTitleAuto(
+                        presentationId,
+                        sortedSlides,
+                        presentation.title, // currentTitle
+                        presentation.title, // fallbackTitle (keep original on failure)
+                        true // Only update if it's a default name
+                    );
+
                     const completedPresentation: Presentation = {
                         ...presentation,
                         id: presentationId,
+                        title: finalTitle,
                         slides: sortedSlides,
                         status: PresentationStatus.COMPLETED,
                     };
@@ -772,7 +917,7 @@ export default function Step5Page({
                 },
             });
         },
-        [projectId, customization, streaming.isGenerating, toast]
+        [projectId, customization, streaming.isGenerating, toast, updatePresentationTitleAuto]
     );
 
     // Handle starting fresh - deletes existing slides and starts over
@@ -1286,6 +1431,89 @@ export default function Step5Page({
             }
         },
         [toast]
+    );
+
+    // Inline presentation name editing functions
+    const startEditingPresentationName = useCallback(
+        (presentation: Presentation) => {
+            setEditingPresentationId(presentation.id);
+            setEditingPresentationName(presentation.title);
+        },
+        []
+    );
+
+    // Focus and select input text when editing starts
+    useEffect(() => {
+        if (editingPresentationId && nameInputRef.current) {
+            nameInputRef.current.focus();
+            nameInputRef.current.select();
+        }
+    }, [editingPresentationId]);
+
+    const savePresentationName = useCallback(
+        async (presentationId: string) => {
+            const trimmedName = editingPresentationName.trim();
+            if (!trimmedName) {
+                setEditingPresentationId(null);
+                setEditingPresentationName("");
+                return;
+            }
+
+            setIsSavingName(true);
+
+            try {
+                const response = await fetch("/api/presentations", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        presentationId,
+                        title: trimmedName,
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Failed to update presentation name: ${response.status}`);
+                }
+
+                // Validate response data
+                const data = await response.json();
+                if (!data.presentation) {
+                    throw new Error("Invalid response from server");
+                }
+
+                // Mark this presentation as user-edited to prevent auto-naming from overwriting
+                setUserEditedTitles((prev) => new Set([...prev, presentationId]));
+
+                setPresentations((prev) =>
+                    prev.map((p) =>
+                        p.id === presentationId ? { ...p, title: trimmedName } : p
+                    )
+                );
+
+                toast({
+                    title: "Name Updated",
+                    description: "Presentation name has been saved.",
+                });
+            } catch (error) {
+                // Use userError for expected failures (network issues, validation errors)
+                logger.userError({ error, presentationId }, "Failed to update presentation name");
+                Sentry.captureException(error, {
+                    tags: { component: "step5", action: "rename_presentation" },
+                    extra: { presentationId, trimmedName },
+                });
+                toast({
+                    title: "Update Failed",
+                    description: "Could not rename presentation. Please try again.",
+                    variant: "destructive",
+                });
+            } finally {
+                setIsSavingName(false);
+                setEditingPresentationId(null);
+                setEditingPresentationName("");
+            }
+        },
+        [editingPresentationName, toast]
     );
 
     // Render loading state
@@ -1838,12 +2066,121 @@ export default function Step5Page({
                                                                 Complete
                                                             </span>
                                                         )}
-                                                        <div>
-                                                            <h4 className="font-semibold">
-                                                                {isDraft || isPaused
-                                                                    ? `${isPaused ? "Paused" : "Draft"} - ${presentation.title}`
-                                                                    : presentation.title}
-                                                            </h4>
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                {editingPresentationId ===
+                                                                presentation.id ? (
+                                                                    <div className="flex flex-1 items-center gap-2">
+                                                                        <input
+                                                                            ref={
+                                                                                nameInputRef
+                                                                            }
+                                                                            type="text"
+                                                                            value={
+                                                                                editingPresentationName
+                                                                            }
+                                                                            onChange={(
+                                                                                e
+                                                                            ) =>
+                                                                                setEditingPresentationName(
+                                                                                    e
+                                                                                        .target
+                                                                                        .value
+                                                                                )
+                                                                            }
+                                                                            aria-label="Presentation name"
+                                                                            maxLength={500}
+                                                                            className="flex-1 rounded border border-primary/30 px-2 py-1 font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                                                                            onKeyDown={(
+                                                                                e
+                                                                            ) => {
+                                                                                if (
+                                                                                    e.key ===
+                                                                                        "Enter" &&
+                                                                                    !isSavingName
+                                                                                )
+                                                                                    savePresentationName(
+                                                                                        presentation.id
+                                                                                    );
+                                                                                if (
+                                                                                    e.key ===
+                                                                                    "Escape"
+                                                                                )
+                                                                                    setEditingPresentationId(
+                                                                                        null
+                                                                                    );
+                                                                            }}
+                                                                            disabled={
+                                                                                isSavingName
+                                                                            }
+                                                                        />
+                                                                        <button
+                                                                            onClick={() =>
+                                                                                savePresentationName(
+                                                                                    presentation.id
+                                                                                )
+                                                                            }
+                                                                            disabled={
+                                                                                isSavingName
+                                                                            }
+                                                                            className="rounded bg-primary px-2 py-1 text-sm text-white hover:bg-primary/90 disabled:opacity-50"
+                                                                        >
+                                                                            {isSavingName ? (
+                                                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                                            ) : (
+                                                                                "Save"
+                                                                            )}
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() =>
+                                                                                setEditingPresentationId(
+                                                                                    null
+                                                                                )
+                                                                            }
+                                                                            disabled={
+                                                                                isSavingName
+                                                                            }
+                                                                            className="rounded bg-gray-300 px-2 py-1 text-sm text-foreground hover:bg-gray-400 disabled:opacity-50"
+                                                                        >
+                                                                            Cancel
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <>
+                                                                        <h4
+                                                                            className="cursor-pointer font-semibold hover:text-primary"
+                                                                            onDoubleClick={(
+                                                                                e
+                                                                            ) => {
+                                                                                e.stopPropagation();
+                                                                                startEditingPresentationName(
+                                                                                    presentation
+                                                                                );
+                                                                            }}
+                                                                            title="Double-click to rename"
+                                                                        >
+                                                                            {isDraft ||
+                                                                            isPaused
+                                                                                ? `${isPaused ? "Paused" : "Draft"} - ${presentation.title}`
+                                                                                : presentation.title}
+                                                                        </h4>
+                                                                        <button
+                                                                            onClick={(
+                                                                                e
+                                                                            ) => {
+                                                                                e.stopPropagation();
+                                                                                startEditingPresentationName(
+                                                                                    presentation
+                                                                                );
+                                                                            }}
+                                                                            className="rounded p-1 text-primary hover:bg-primary/5"
+                                                                            title="Rename presentation"
+                                                                        >
+                                                                            <Pencil className="h-4 w-4" />
+                                                                        </button>
+                                                                    </>
+                                                                )}
+                                                            </div>
                                                             <p className="text-sm text-muted-foreground">
                                                                 {slideCountText}
                                                                 {isIncomplete &&

@@ -176,6 +176,10 @@ export default function Step5Page({
     const [editingPresentationName, setEditingPresentationName] = useState("");
     const [isSavingName, setIsSavingName] = useState(false);
     const nameInputRef = useRef<HTMLInputElement>(null);
+    // Track presentations that users have manually renamed to prevent auto-naming from overwriting
+    const [userEditedTitles, setUserEditedTitles] = useState<Set<string>>(
+        new Set()
+    );
 
     // Loading states
     const [isLoading, setIsLoading] = useState(true);
@@ -365,6 +369,11 @@ export default function Step5Page({
     // Helper to extract presentation title from title slide
     const getTitleFromSlides = useCallback(
         (slides: GeneratedSlide[], fallbackTitle: string): string => {
+            // Guard against empty or undefined slides array
+            if (!slides || slides.length === 0) {
+                return fallbackTitle;
+            }
+
             // Find the title slide (layoutType === "title") or use first slide
             const titleSlide =
                 slides.find((s) => s.layoutType === "title") || slides[0];
@@ -387,6 +396,11 @@ export default function Step5Page({
             fallbackTitle: string,
             onlyIfDefault = false
         ): Promise<string> => {
+            // Never overwrite user-edited titles
+            if (userEditedTitles.has(presentationId)) {
+                return currentTitle;
+            }
+
             // Check if we should update (only for default names if onlyIfDefault is true)
             const isDefaultName =
                 currentTitle.includes("Generating") ||
@@ -436,7 +450,7 @@ export default function Step5Page({
 
             return finalTitle;
         },
-        [getTitleFromSlides]
+        [getTitleFromSlides, userEditedTitles]
     );
 
     // Helper functions for slide generation
@@ -1442,6 +1456,9 @@ export default function Step5Page({
                     throw new Error("Invalid response from server");
                 }
 
+                // Mark this presentation as user-edited to prevent auto-naming from overwriting
+                setUserEditedTitles((prev) => new Set([...prev, presentationId]));
+
                 setPresentations((prev) =>
                     prev.map((p) =>
                         p.id === presentationId ? { ...p, title: trimmedName } : p
@@ -1453,7 +1470,8 @@ export default function Step5Page({
                     description: "Presentation name has been saved.",
                 });
             } catch (error) {
-                logger.error({ error, presentationId }, "Failed to update presentation name");
+                // Use userError for expected failures (network issues, validation errors)
+                logger.userError({ error, presentationId }, "Failed to update presentation name");
                 Sentry.captureException(error, {
                     tags: { component: "step5", action: "rename_presentation" },
                     extra: { presentationId, trimmedName },
@@ -2045,6 +2063,7 @@ export default function Step5Page({
                                                                                 )
                                                                             }
                                                                             aria-label="Presentation name"
+                                                                            maxLength={500}
                                                                             className="flex-1 rounded border border-primary/30 px-2 py-1 font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
                                                                             onKeyDown={(
                                                                                 e
@@ -2104,7 +2123,7 @@ export default function Step5Page({
                                                                     <>
                                                                         <h4
                                                                             className="cursor-pointer font-semibold hover:text-primary"
-                                                                            onClick={(
+                                                                            onDoubleClick={(
                                                                                 e
                                                                             ) => {
                                                                                 e.stopPropagation();
@@ -2112,7 +2131,7 @@ export default function Step5Page({
                                                                                     presentation
                                                                                 );
                                                                             }}
-                                                                            title="Click to rename"
+                                                                            title="Double-click to rename"
                                                                         >
                                                                             {isDraft ||
                                                                             isPaused

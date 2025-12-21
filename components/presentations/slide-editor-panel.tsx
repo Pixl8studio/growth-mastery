@@ -158,6 +158,7 @@ export function SlideEditorPanel({
 
     // Memoize content warnings to avoid recalculating on every render
     // Only recalculates when slide title, content, or layoutType changes
+    // Guard against undefined slide to prevent crash during initial generation
     const contentWarnings = useMemo(
         () => getContentWarnings(slide),
         [slide?.title, slide?.content, slide?.layoutType]

@@ -11,11 +11,8 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Pencil, Check, X, Trash2, AlertTriangle } from "lucide-react";
-import {
-    renameFunnel,
-    getFunnelDetails,
-    TRASH_RETENTION_DAYS,
-} from "@/app/funnel-builder/actions";
+import { renameFunnel, getFunnelDetails } from "@/app/funnel-builder/actions";
+import { TRASH_RETENTION_DAYS } from "@/app/funnel-builder/constants";
 import { DeleteFunnelDialog } from "@/components/funnel/delete-funnel-dialog";
 import { logger } from "@/lib/client-logger";
 

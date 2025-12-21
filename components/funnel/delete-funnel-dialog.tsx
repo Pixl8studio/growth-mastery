@@ -18,7 +18,8 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
-import { softDeleteFunnel, TRASH_RETENTION_DAYS } from "@/app/funnel-builder/actions";
+import { softDeleteFunnel } from "@/app/funnel-builder/actions";
+import { TRASH_RETENTION_DAYS } from "@/app/funnel-builder/constants";
 import { logger } from "@/lib/client-logger";
 
 interface DeleteFunnelDialogProps {

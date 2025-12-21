@@ -23,8 +23,8 @@ import {
     getDeletedFunnels,
     restoreFunnel,
     permanentlyDeleteFunnel,
-    TRASH_RETENTION_DAYS,
 } from "@/app/funnel-builder/actions";
+import { TRASH_RETENTION_DAYS } from "@/app/funnel-builder/constants";
 import { logger } from "@/lib/client-logger";
 
 interface DeletedFunnel {

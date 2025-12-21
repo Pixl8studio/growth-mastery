@@ -33,13 +33,19 @@ interface FunnelFlow {
     created_at: string;
 }
 
+interface FunnelProject {
+    id: string;
+    name: string;
+    status: string;
+}
+
 export default function Step10Page({
     params,
 }: {
     params: Promise<{ projectId: string }>;
 }) {
     const [projectId, setProjectId] = useState("");
-    const [project, setProject] = useState<any>(null);
+    const [project, setProject] = useState<FunnelProject | null>(null);
     const [flowSetup, setFlowSetup] = useState<FlowSetup>({
         hasWatchPage: false,
         hasEnrollmentPage: false,
@@ -142,15 +148,25 @@ export default function Step10Page({
         loadFlowSetup();
     }, [projectId]);
 
+    // Extract primitive values for stable dependency tracking
+    const {
+        watchPagePublished,
+        enrollmentPagePublished,
+        registrationPagePublished,
+        registrationPageId,
+        watchPageId,
+        enrollmentPageId,
+    } = flowSetup;
+
     // Auto-create flow when all pages are published
     useEffect(() => {
         const createFlowIfReady = async () => {
             if (!projectId || !project || flow || isCreatingFlow) return;
 
             const allPagesPublished =
-                flowSetup.watchPagePublished &&
-                flowSetup.enrollmentPagePublished &&
-                flowSetup.registrationPagePublished;
+                watchPagePublished &&
+                enrollmentPagePublished &&
+                registrationPagePublished;
 
             if (!allPagesPublished) return;
 
@@ -170,9 +186,9 @@ export default function Step10Page({
                         funnel_project_id: projectId,
                         user_id: user.user.id,
                         flow_name: project.name || "Main Flow",
-                        registration_page_id: flowSetup.registrationPageId,
-                        watch_page_id: flowSetup.watchPageId,
-                        enrollment_page_id: flowSetup.enrollmentPageId,
+                        registration_page_id: registrationPageId,
+                        watch_page_id: watchPageId,
+                        enrollment_page_id: enrollmentPageId,
                         status: "connected",
                         is_active: true,
                     })
@@ -191,7 +207,18 @@ export default function Step10Page({
         };
 
         createFlowIfReady();
-    }, [projectId, project, flowSetup, flow, isCreatingFlow]);
+    }, [
+        projectId,
+        project,
+        flow,
+        isCreatingFlow,
+        watchPagePublished,
+        enrollmentPagePublished,
+        registrationPagePublished,
+        registrationPageId,
+        watchPageId,
+        enrollmentPageId,
+    ]);
 
     const allPagesCreated =
         flowSetup.hasWatchPage &&

@@ -13,12 +13,6 @@ import { ValidationError } from "@/lib/errors";
 import { generateSlug } from "@/lib/utils";
 
 /**
- * Trash retention period in days before funnels are eligible for permanent deletion.
- * TODO: Implement automated cleanup via cron job or Supabase scheduled function
- */
-export const TRASH_RETENTION_DAYS = 30;
-
-/**
  * Update project's current step
  */
 export async function updateProjectStep(projectId: string, step: number) {

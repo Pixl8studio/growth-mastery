@@ -1,7 +1,7 @@
 /**
  * AI Client
  * Wrapper around Anthropic Claude API for funnel content generation
- * Migrated from OpenAI to Claude for unified AI token management
+ * Uses DALL-E (OpenAI) for image generation only
  */
 
 import Anthropic from "@anthropic-ai/sdk";
@@ -41,14 +41,13 @@ function getAnthropicClient(): Anthropic {
 
 /**
  * Get OpenAI client instance (lazy initialization)
- * Only used for DALL-E image generation - Claude does not have image generation
+ * Used only for DALL-E image generation
  */
 function getOpenAIClient(): OpenAI {
     if (!openaiInstance) {
         if (!env.OPENAI_API_KEY) {
             throw new Error(
-                "OPENAI_API_KEY is not configured. Please add it to your environment variables. " +
-                    "Note: OpenAI is only used for DALL-E image generation."
+                "OPENAI_API_KEY is not configured. Please add it to your environment variables for image generation."
             );
         }
         openaiInstance = new OpenAI({
@@ -124,7 +123,7 @@ function convertToAnthropicFormat(messages: AIMessage[]): {
 }
 
 /**
- * Generate content with Claude and parse JSON response
+ * Generate content with Anthropic Claude and parse JSON response
  * Includes retry logic and token tracking
  *
  * @param messages - Array of messages in OpenAI-compatible format for backward compatibility
@@ -139,23 +138,23 @@ export async function generateWithAI<T>(
     const maxTokens = options?.maxTokens || AI_CONFIG.defaultMaxTokens;
 
     const requestLogger = logger.child({ model, temperature, maxTokens });
-    requestLogger.info("Generating content with Claude");
-
-    // Convert messages to Anthropic format
-    const { system, messages: anthropicMessages } = convertToAnthropicFormat(messages);
-
-    // Enhance system prompt to ensure JSON output
-    const jsonSystemPrompt = system
-        ? `${system}\n\nIMPORTANT: You MUST respond with valid JSON only. No markdown code blocks, no explanations, just the raw JSON object.`
-        : "You MUST respond with valid JSON only. No markdown code blocks, no explanations, just the raw JSON object.";
+    requestLogger.info("Generating content with Anthropic Claude");
 
     try {
         const result = await Sentry.startSpan(
-            { op: "ai.claude.messages", name: `Claude: ${model}` },
+            { op: "ai.anthropic.chat.completions", name: `Anthropic Chat: ${model}` },
             async (span) => {
                 span.setAttribute("model", model);
                 span.setAttribute("temperature", temperature);
                 span.setAttribute("max_tokens", maxTokens);
+
+                const { system, messages: anthropicMessages } =
+                    convertToAnthropicFormat(messages);
+
+                // Add JSON instruction to system prompt if not already present
+                const jsonSystemPrompt = system
+                    ? `${system}\n\nIMPORTANT: You must respond with valid JSON only. No markdown, no code blocks, just raw JSON.`
+                    : "You must respond with valid JSON only. No markdown, no code blocks, just raw JSON.";
 
                 const completion = await retry(
                     async () => {
@@ -176,7 +175,7 @@ export async function generateWithAI<T>(
                         const content = contentBlock.text;
 
                         if (!content) {
-                            throw new Error("No content returned from Claude");
+                            throw new Error("No content returned from Anthropic");
                         }
 
                         requestLogger.info(
@@ -187,7 +186,7 @@ export async function generateWithAI<T>(
                                 promptTokens: response.usage.input_tokens,
                                 completionTokens: response.usage.output_tokens,
                             },
-                            "Claude generation successful"
+                            "Anthropic generation successful"
                         );
 
                         span.setAttribute(
@@ -241,12 +240,15 @@ export async function generateWithAI<T>(
 
         return result;
     } catch (error) {
-        requestLogger.error({ error, model }, "Failed to generate content with Claude");
+        requestLogger.error(
+            { error, model },
+            "Failed to generate content with Anthropic"
+        );
 
         Sentry.captureException(error, {
             tags: {
-                service: "claude",
-                operation: "messages",
+                service: "anthropic",
+                operation: "chat_completions",
                 model,
             },
             extra: {
@@ -275,18 +277,18 @@ export async function generateTextWithAI(
     const maxTokens = options?.maxTokens || AI_CONFIG.defaultMaxTokens;
 
     const requestLogger = logger.child({ model, temperature, maxTokens });
-    requestLogger.info("Generating text with Claude");
-
-    // Convert messages to Anthropic format
-    const { system, messages: anthropicMessages } = convertToAnthropicFormat(messages);
+    requestLogger.info("Generating text with Anthropic Claude");
 
     try {
         const result = await Sentry.startSpan(
-            { op: "ai.claude.text", name: `Claude Text: ${model}` },
+            { op: "ai.anthropic.text.completions", name: `Anthropic Text: ${model}` },
             async (span) => {
                 span.setAttribute("model", model);
                 span.setAttribute("temperature", temperature);
                 span.setAttribute("max_tokens", maxTokens);
+
+                const { system, messages: anthropicMessages } =
+                    convertToAnthropicFormat(messages);
 
                 const completion = await retry(
                     async () => {
@@ -307,7 +309,7 @@ export async function generateTextWithAI(
                         const content = contentBlock.text;
 
                         if (!content) {
-                            throw new Error("No content returned from Claude");
+                            throw new Error("No content returned from Anthropic");
                         }
 
                         requestLogger.info(
@@ -318,7 +320,7 @@ export async function generateTextWithAI(
                                 promptTokens: response.usage.input_tokens,
                                 completionTokens: response.usage.output_tokens,
                             },
-                            "Claude text generation successful"
+                            "Anthropic text generation successful"
                         );
 
                         span.setAttribute(
@@ -346,12 +348,12 @@ export async function generateTextWithAI(
 
         return result;
     } catch (error) {
-        requestLogger.error({ error, model }, "Failed to generate text with Claude");
+        requestLogger.error({ error, model }, "Failed to generate text with Anthropic");
 
         Sentry.captureException(error, {
             tags: {
-                service: "claude",
-                operation: "text",
+                service: "anthropic",
+                operation: "text_completions",
                 model,
             },
             extra: {
@@ -368,7 +370,7 @@ export async function generateTextWithAI(
 }
 
 /**
- * Generate image with DALL-E
+ * Generate image with DALL-E (OpenAI)
  * Uses DALL-E 3 for high-quality image generation
  *
  * NOTE: This function still uses OpenAI as Claude does not have image generation capabilities.

@@ -30,6 +30,7 @@ export default async function SettingsLayout({
         { name: "Integrations", href: "/settings/integrations", icon: "link" },
         { name: "Payments", href: "/settings/payments", icon: "credit-card" },
         { name: "Domains", href: "/settings/domains", icon: "globe" },
+        { name: "Trash", href: "/settings/trash", icon: "trash" },
     ];
 
     return (

@@ -21,11 +21,12 @@ export default async function FunnelBuilderPage() {
     const { user } = await getCurrentUserWithProfile();
     const supabase = await createClient();
 
-    // Fetch user's funnel projects
+    // Fetch user's funnel projects (excluding soft-deleted funnels)
     const { data: projects, error } = await supabase
         .from("funnel_projects")
         .select("*")
         .eq("user_id", user.id)
+        .is("deleted_at", null)
         .order("updated_at", { ascending: false });
 
     if (error) {

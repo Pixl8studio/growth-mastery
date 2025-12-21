@@ -113,7 +113,6 @@ Return as JSON:
                 },
             ],
             {
-                model: "gpt-4o",
                 temperature: 0.7,
                 maxTokens: 800,
             }
@@ -191,7 +190,6 @@ Return as JSON:
                 },
             ],
             {
-                model: "gpt-4o",
                 temperature: 0.3,
                 maxTokens: 500,
             }

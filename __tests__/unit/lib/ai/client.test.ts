@@ -13,7 +13,7 @@ import {
 } from "@/lib/ai/client";
 
 // Mock Anthropic methods for text/JSON generation
-const mockAnthropicMessagesCreate = vi.fn();
+const mockMessagesCreate = vi.fn();
 
 // Mock OpenAI methods for image generation (DALL-E)
 const mockImagesGenerate = vi.fn();
@@ -22,12 +22,12 @@ const mockImagesGenerate = vi.fn();
 vi.mock("@anthropic-ai/sdk", () => ({
     default: vi.fn().mockImplementation(() => ({
         messages: {
-            create: mockAnthropicMessagesCreate,
+            create: mockMessagesCreate,
         },
     })),
 }));
 
-// Mock OpenAI SDK (used for DALL-E and types)
+// Mock OpenAI SDK (used for DALL-E only)
 vi.mock("openai", () => ({
     default: vi.fn().mockImplementation(() => ({
         images: {
@@ -75,6 +75,10 @@ vi.mock("@/lib/utils", () => ({
     retry: vi.fn((fn) => fn()),
 }));
 
+vi.mock("@/lib/ai/json-recovery", () => ({
+    recoverJSON: vi.fn(() => ({ success: false })),
+}));
+
 describe("AI Client", () => {
     beforeEach(() => {
         vi.clearAllMocks();
@@ -95,13 +99,13 @@ describe("AI Client", () => {
                 },
             };
 
-            mockAnthropicMessagesCreate.mockResolvedValue(mockResponse);
+            mockMessagesCreate.mockResolvedValue(mockResponse);
 
             const messages = [{ role: "user" as const, content: "Test prompt" }];
             const result = await generateWithAI<{ result: string }>(messages);
 
             expect(result).toEqual({ result: "test data" });
-            expect(mockAnthropicMessagesCreate).toHaveBeenCalled();
+            expect(mockMessagesCreate).toHaveBeenCalled();
         });
 
         it("should handle system messages by extracting them", async () => {
@@ -118,7 +122,7 @@ describe("AI Client", () => {
                 },
             };
 
-            mockAnthropicMessagesCreate.mockResolvedValue(mockResponse);
+            mockMessagesCreate.mockResolvedValue(mockResponse);
 
             const messages = [
                 { role: "system" as const, content: "You are a helpful assistant" },
@@ -127,7 +131,7 @@ describe("AI Client", () => {
             await generateWithAI<{ response: string }>(messages);
 
             // Verify system message was passed to Claude correctly
-            expect(mockAnthropicMessagesCreate).toHaveBeenCalledWith(
+            expect(mockMessagesCreate).toHaveBeenCalledWith(
                 expect.objectContaining({
                     system: expect.stringContaining("You are a helpful assistant"),
                     messages: expect.arrayContaining([
@@ -146,7 +150,7 @@ describe("AI Client", () => {
                 usage: { input_tokens: 0, output_tokens: 0 },
             };
 
-            mockAnthropicMessagesCreate.mockResolvedValue(mockResponse);
+            mockMessagesCreate.mockResolvedValue(mockResponse);
 
             const messages = [{ role: "user" as const, content: "Test" }];
 
@@ -161,7 +165,7 @@ describe("AI Client", () => {
                 usage: { input_tokens: 0, output_tokens: 0 },
             };
 
-            mockAnthropicMessagesCreate.mockResolvedValue(mockResponse);
+            mockMessagesCreate.mockResolvedValue(mockResponse);
 
             const messages = [{ role: "user" as const, content: "Test" }];
 
@@ -186,13 +190,13 @@ describe("AI Client", () => {
                 },
             };
 
-            mockAnthropicMessagesCreate.mockResolvedValue(mockResponse);
+            mockMessagesCreate.mockResolvedValue(mockResponse);
 
             const messages = [{ role: "user" as const, content: "Write a story" }];
             const result = await generateTextWithAI(messages);
 
             expect(result).toBe("Generated text response");
-            expect(mockAnthropicMessagesCreate).toHaveBeenCalled();
+            expect(mockMessagesCreate).toHaveBeenCalled();
         });
     });
 

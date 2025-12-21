@@ -116,7 +116,7 @@ export const AI_CONFIG = {
         // Claude models - used for all text/JSON generation
         default: "claude-sonnet-4-20250514",
         fast: "claude-3-5-haiku-20241022",
-        // Legacy reference - Claude doesn't have vision-specific model, uses default
+        // Claude doesn't have vision-specific model, uses default
         vision: "claude-sonnet-4-20250514",
     },
     defaultTemperature: 0.7,

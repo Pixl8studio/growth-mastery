@@ -478,6 +478,157 @@ export function normalizeObjections(
 }
 
 /**
+ * Format a value as human-readable text
+ * Converts objects and arrays to formatted strings, never [object Object]
+ */
+export function formatValueAsText(value: unknown): string {
+    if (value === null || value === undefined) {
+        return "";
+    }
+
+    if (typeof value === "string") {
+        // Check for [Object] placeholders
+        if (value === "[Object]" || value === "[object Object]") {
+            return "";
+        }
+        return value;
+    }
+
+    if (typeof value === "number" || typeof value === "boolean") {
+        return String(value);
+    }
+
+    if (Array.isArray(value)) {
+        // Format array items as a readable list
+        const formattedItems = value
+            .map((item, index) => {
+                if (typeof item === "string") {
+                    if (item === "[Object]" || item === "[object Object]") {
+                        return null;
+                    }
+                    return item;
+                }
+                if (typeof item === "object" && item !== null) {
+                    return formatObjectToText(
+                        item as Record<string, unknown>,
+                        index + 1
+                    );
+                }
+                return String(item);
+            })
+            .filter((item): item is string => item !== null && item !== "");
+
+        return formattedItems.join("\n\n");
+    }
+
+    if (typeof value === "object") {
+        return formatObjectToText(value as Record<string, unknown>);
+    }
+
+    return String(value);
+}
+
+/**
+ * Format an object as human-readable text
+ * Intelligently extracts meaningful content from structured objects
+ */
+function formatObjectToText(obj: Record<string, unknown>, itemNumber?: number): string {
+    // Common field names for different object types
+    const titleFields = ["title", "name", "heading", "label"];
+    const contentFields = [
+        "description",
+        "content",
+        "text",
+        "quote",
+        "response",
+        "value",
+        "details",
+        "body",
+    ];
+    const valueFields = ["value", "price", "amount", "cost"];
+
+    const parts: string[] = [];
+
+    // Try to find a title/name field
+    let title = "";
+    for (const field of titleFields) {
+        if (obj[field] && typeof obj[field] === "string") {
+            title = obj[field] as string;
+            break;
+        }
+    }
+
+    // Try to find a content/description field
+    let content = "";
+    for (const field of contentFields) {
+        if (obj[field] && typeof obj[field] === "string") {
+            content = obj[field] as string;
+            break;
+        }
+    }
+
+    // Try to find a value field
+    let valueStr = "";
+    for (const field of valueFields) {
+        if (obj[field] !== undefined && obj[field] !== null) {
+            const val = obj[field];
+            if (typeof val === "number") {
+                valueStr = `$${val.toLocaleString()}`;
+            } else if (typeof val === "string" && val !== content) {
+                valueStr = val;
+            }
+            break;
+        }
+    }
+
+    // Build the formatted string
+    if (title) {
+        if (itemNumber) {
+            parts.push(`${itemNumber}. ${title}`);
+        } else {
+            parts.push(title);
+        }
+    } else if (itemNumber) {
+        parts.push(`${itemNumber}.`);
+    }
+
+    if (valueStr && valueStr !== title) {
+        parts.push(`(${valueStr})`);
+    }
+
+    if (content) {
+        if (parts.length > 0) {
+            parts.push(`- ${content}`);
+        } else {
+            parts.push(content);
+        }
+    }
+
+    // If we couldn't extract structured content, fall back to key-value pairs
+    if (parts.length === 0 || (parts.length === 1 && parts[0] === `${itemNumber}.`)) {
+        const fallbackParts: string[] = [];
+        for (const [key, val] of Object.entries(obj)) {
+            if (val !== null && val !== undefined && val !== "" && val !== "[Object]") {
+                if (typeof val === "string" || typeof val === "number") {
+                    fallbackParts.push(`${key}: ${val}`);
+                } else if (Array.isArray(val)) {
+                    const items = val.filter((v) => v !== null && v !== "[Object]");
+                    if (items.length > 0) {
+                        fallbackParts.push(`${key}: ${items.join(", ")}`);
+                    }
+                }
+            }
+        }
+        if (itemNumber && fallbackParts.length > 0) {
+            return `${itemNumber}. ${fallbackParts.join(" | ")}`;
+        }
+        return fallbackParts.join(" | ");
+    }
+
+    return parts.join(" ");
+}
+
+/**
  * Normalize pricing object
  * Extracts numeric values from various formats
  */

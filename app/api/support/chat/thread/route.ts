@@ -1,6 +1,6 @@
 /**
  * Support Chat Thread API
- * Creates new Claude chat thread for help conversations
+ * Creates new chat thread for help conversations using Anthropic Claude
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -24,16 +24,16 @@ export async function POST(request: NextRequest) {
 
         const { contextPage } = await request.json();
 
-        // Create Claude thread (local UUID)
+        // Create a new thread ID
         const threadId = await createThread();
 
-        // Log support interaction with empty chat_messages in metadata for Claude
+        // Log support interaction with empty message history
         await supabase.from("support_interactions").insert({
             user_id: user.id,
             interaction_type: "chat",
             context_page: contextPage,
             assistant_thread_id: threadId,
-            metadata: { chat_messages: [] }, // Store messages in metadata JSONB
+            metadata: { chat_messages: [] },
         });
 
         requestLogger.info(

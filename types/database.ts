@@ -47,6 +47,59 @@ export interface Database {
                     updated_at?: string;
                 };
             };
+            funnel_projects: {
+                Row: {
+                    id: string;
+                    user_id: string;
+                    user_email: string;
+                    name: string;
+                    slug: string;
+                    description: string | null;
+                    target_audience: string | null;
+                    business_niche: string | null;
+                    status: string;
+                    current_step: number;
+                    settings: Json;
+                    metadata: Json;
+                    created_at: string;
+                    updated_at: string;
+                    deleted_at: string | null;
+                };
+                Insert: {
+                    id?: string;
+                    user_id: string;
+                    user_email: string;
+                    name: string;
+                    slug: string;
+                    description?: string | null;
+                    target_audience?: string | null;
+                    business_niche?: string | null;
+                    status?: string;
+                    current_step?: number;
+                    settings?: Json;
+                    metadata?: Json;
+                    created_at?: string;
+                    updated_at?: string;
+                    deleted_at?: string | null;
+                };
+                Update: {
+                    id?: string;
+                    user_id?: string;
+                    user_email?: string;
+                    name?: string;
+                    slug?: string;
+                    description?: string | null;
+                    target_audience?: string | null;
+                    business_niche?: string | null;
+                    status?: string;
+                    current_step?: number;
+                    settings?: Json;
+                    metadata?: Json;
+                    created_at?: string;
+                    updated_at?: string;
+                    deleted_at?: string | null;
+                };
+            };
             // Add your tables here as you create them in Supabase
             // Example:
             // users: {

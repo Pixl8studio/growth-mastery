@@ -7,12 +7,34 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
-const corsHeaders = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Headers":
-        "authorization, x-client-info, apikey, content-type",
-};
+// CORS Configuration - restrict to production domains
+const ALLOWED_ORIGINS = [
+    Deno.env.get("NEXT_PUBLIC_APP_URL") || "http://localhost:3000",
+    "https://genie-v5.vercel.app",
+].filter(Boolean);
+
+function getCorsHeaders(origin: string | null): Record<string, string> {
+    // Check if origin is in allowed list
+    const allowedOrigin =
+        origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+
+    return {
+        "Access-Control-Allow-Origin": allowedOrigin,
+        "Access-Control-Allow-Headers":
+            "authorization, x-client-info, apikey, content-type",
+    };
+}
+
+// Anthropic API Configuration
+const ANTHROPIC_API_VERSION = Deno.env.get("ANTHROPIC_API_VERSION") || "2023-06-01";
+const ANTHROPIC_MODEL = Deno.env.get("ANTHROPIC_MODEL") || "claude-sonnet-4-20250514";
+
+// Input validation schema
+const JobRequestSchema = z.object({
+    jobId: z.string().uuid("Invalid job ID format"),
+});
 
 interface Slide {
     slideNumber: number;
@@ -29,17 +51,37 @@ interface TalkTrackSlide {
 }
 
 serve(async (req) => {
+    const origin = req.headers.get("origin");
+    const corsHeaders = getCorsHeaders(origin);
+
     // Handle CORS preflight
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
     }
 
     try {
-        const { jobId } = await req.json();
+        // Parse and validate input
+        const rawBody = await req.json();
+        const validationResult = JobRequestSchema.safeParse(rawBody);
+
+        if (!validationResult.success) {
+            return new Response(
+                JSON.stringify({
+                    error: "Invalid request",
+                    details: validationResult.error.errors,
+                }),
+                {
+                    status: 400,
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                }
+            );
+        }
+
+        const { jobId } = validationResult.data;
 
         const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
         const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-        const openaiKey = Deno.env.get("OPENAI_API_KEY")!;
+        const anthropicKey = Deno.env.get("ANTHROPIC_API_KEY")!;
 
         const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -67,7 +109,19 @@ serve(async (req) => {
 
         // Get deck structure slides
         const deckStructure = job.deck_structures;
-        const slides = deckStructure.slides as Slide[];
+
+        // Validate deck structure and slides exist
+        if (!deckStructure) {
+            throw new Error("Deck structure not found for this job");
+        }
+
+        const slides = deckStructure.slides as Slide[] | null;
+
+        if (!slides || !Array.isArray(slides) || slides.length === 0) {
+            throw new Error(
+                "No slides found in deck structure. Please regenerate the deck structure first."
+            );
+        }
 
         console.log(`[Talk Track] Processing ${slides.length} slides for job ${jobId}`);
 
@@ -94,8 +148,8 @@ serve(async (req) => {
                 `[Talk Track] Generating chunk ${i + 1}/${chunks.length} for job ${jobId}`
             );
 
-            // Generate talk track for chunk using OpenAI
-            const chunkResult = await generateTalkTrackChunk(chunk, openaiKey);
+            // Generate talk track for chunk using Anthropic Claude
+            const chunkResult = await generateTalkTrackChunk(chunk, anthropicKey);
             allTalkTrackSlides.push(...chunkResult);
 
             // Update progress
@@ -167,27 +221,39 @@ serve(async (req) => {
     } catch (error) {
         console.error("[Talk Track] Error:", error);
 
-        // Try to get jobId from request to update job status
+        // Try to update job status - jobId is already validated at this point
+        // Use the rawBody we parsed earlier if available
         try {
-            const body = await req.clone().json();
-            const jobId = body.jobId;
+            // Since we already consumed the body, we need to extract jobId from the error context
+            // The jobId should be accessible in the scope if validation passed before the error
+            const supabaseUrl = Deno.env.get("SUPABASE_URL");
+            const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 
-            if (jobId) {
-                const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-                const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-                const supabase = createClient(supabaseUrl, supabaseKey);
+            // Only try to update if we have both credentials and the error occurred after validation
+            if (supabaseUrl && supabaseKey) {
+                // Try to extract jobId from rawBody if it was parsed successfully
+                const jobIdMatch =
+                    typeof rawBody === "object" && rawBody?.jobId
+                        ? String(rawBody.jobId)
+                        : null;
 
-                await supabase
-                    .from("talk_track_jobs")
-                    .update({
-                        status: "failed",
-                        error_message:
-                            error instanceof Error ? error.message : "Unknown error",
-                        completed_at: new Date().toISOString(),
-                    })
-                    .eq("id", jobId);
+                if (jobIdMatch && z.string().uuid().safeParse(jobIdMatch).success) {
+                    const supabase = createClient(supabaseUrl, supabaseKey);
 
-                console.log(`[Talk Track] Job ${jobId} marked as failed`);
+                    await supabase
+                        .from("talk_track_jobs")
+                        .update({
+                            status: "failed",
+                            error_message:
+                                error instanceof Error
+                                    ? error.message
+                                    : "Unknown error",
+                            completed_at: new Date().toISOString(),
+                        })
+                        .eq("id", jobIdMatch);
+
+                    console.log(`[Talk Track] Job ${jobIdMatch} marked as failed`);
+                }
             }
         } catch (updateError) {
             console.error("[Talk Track] Failed to update job status:", updateError);
@@ -206,11 +272,11 @@ serve(async (req) => {
 });
 
 /**
- * Generate talk track for a chunk of slides using OpenAI
+ * Generate talk track for a chunk of slides using Anthropic Claude
  */
 async function generateTalkTrackChunk(
     slides: Slide[],
-    openaiKey: string
+    anthropicKey: string
 ): Promise<TalkTrackSlide[]> {
     const slidesDescription = slides
         .map(
@@ -219,18 +285,7 @@ async function generateTalkTrackChunk(
         )
         .join("\n\n");
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${openaiKey}`,
-        },
-        body: JSON.stringify({
-            model: "gpt-4",
-            messages: [
-                {
-                    role: "system",
-                    content: `You are a master presentation coach creating a video script for a pitch presentation.
+    const systemPrompt = `You are a master presentation coach creating a video script for a pitch presentation.
 
 Generate a natural, conversational script for slides. For EACH slide, provide:
 - 2-4 compelling sentences that the presenter will say
@@ -251,30 +306,53 @@ Return ONLY a JSON object with this exact structure:
   ]
 }
 
-Each script must be exactly 2-4 sentences, conversational, and compelling.`,
-                },
-                {
-                    role: "user",
-                    content: `Generate a talk track for these slides:
+Each script must be exactly 2-4 sentences, conversational, and compelling.
+Return ONLY the JSON object. No markdown code blocks, no explanation.`;
+
+    const userPrompt = `Generate a talk track for these slides:
 
 SLIDES:
 ${slidesDescription}
 
-Return ONLY the JSON object. No markdown, no explanation.`,
-                },
-            ],
+Return ONLY the JSON object. No markdown, no explanation.`;
+
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "x-api-key": anthropicKey,
+            "anthropic-version": ANTHROPIC_API_VERSION,
+        },
+        body: JSON.stringify({
+            model: ANTHROPIC_MODEL,
             max_tokens: 4000,
             temperature: 0.7,
+            system: systemPrompt,
+            messages: [
+                {
+                    role: "user",
+                    content: userPrompt,
+                },
+            ],
         }),
     });
 
     if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`OpenAI API error: ${response.status} - ${errorText}`);
+        throw new Error(`Anthropic API error: ${response.status} - ${errorText}`);
     }
 
     const data = await response.json();
-    const content = data.choices[0].message.content;
+
+    // Extract text from Anthropic response format
+    const textBlock = data.content?.find(
+        (block: { type: string }) => block.type === "text"
+    );
+    const content = textBlock?.text;
+
+    if (!content) {
+        throw new Error("No content in Anthropic response");
+    }
 
     // Parse the JSON response
     const jsonMatch = content.match(/\{[\s\S]*\}/);

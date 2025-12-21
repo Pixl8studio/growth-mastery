@@ -34,6 +34,10 @@ const EXPECTED_USER_ERROR_PATTERNS = [
     /file too large/i,
     /password.*incorrect/i,
     /invalid credentials/i,
+    // Network errors during navigation - user navigated away while request was in progress
+    /failed to fetch/i,
+    /failed to cancel/i,
+    /aborted/i,
 ];
 
 /**

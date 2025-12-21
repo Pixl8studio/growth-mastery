@@ -1,67 +1,216 @@
 "use client";
 
+/**
+ * Step 5: Enrollment Pages
+ * Create and manage enrollment/sales pages with visual editor integration
+ */
+
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import { Sparkles, MessageSquare, Trash2, Download } from "lucide-react";
+import { useIsMobile } from "@/lib/mobile-utils.client";
+import {
+    ShoppingCart,
+    PlusCircle,
+    Eye,
+    Pencil,
+    Trash2,
+    X,
+    Loader2,
+    HelpCircle,
+    Sparkles,
+} from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
+import { generateEnrollmentHTML } from "@/lib/generators/enrollment-page-generator";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
+import { useToast } from "@/components/ui/use-toast";
+import { ToastAction } from "@/components/ui/toast";
+import { Switch } from "@/components/ui/switch";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DeckStructure {
     id: string;
-    title: string;
-    slide_count: number;
-    slides: unknown[];
-    created_at: string;
-}
-
-interface TalkTrack {
-    id: string;
-    deck_structure_id: string;
-    content: string;
-    slide_timings: {
-        totalDuration: number;
-        slides: Array<{ slideNumber: number; duration: number }>;
+    slides: any[];
+    metadata?: {
+        title?: string;
     };
-    total_duration: number;
+    total_slides: number;
     created_at: string;
 }
 
-interface DeckStructureForDisplay {
+interface Offer {
     id: string;
-    title: string;
-    slide_count: number;
+    name: string;
+    tagline: string | null;
+    description: string | null;
+    price: number;
+    currency: string;
+    features: any;
+    created_at: string;
 }
 
-export default function Step6Page({
+interface EnrollmentPage {
+    id: string;
+    headline: string;
+    subheadline: string;
+    html_content: string;
+    theme: any;
+    is_published: boolean;
+    offer_id: string | null;
+    page_type: string;
+    created_at: string;
+}
+
+interface AIEditorPage {
+    id: string;
+    title: string;
+    page_type: string;
+    status: "draft" | "published";
+    version: number;
+    created_at: string;
+    updated_at: string;
+}
+
+const TEMPLATE_OPTIONS = [
+    {
+        value: "urgency-convert",
+        label: "Urgency Convert",
+        description:
+            "High-energy sales page with countdown timers and scarcity messaging. Best for time-sensitive offers and launches.",
+    },
+    {
+        value: "premium-elegant",
+        label: "Premium Elegant",
+        description:
+            "Sophisticated design with refined styling. Ideal for high-ticket offers and luxury positioning.",
+    },
+    {
+        value: "value-focused",
+        label: "Value Focused",
+        description:
+            "Emphasizes benefits and ROI. Perfect for educational products and value-driven buyers.",
+    },
+] as const;
+
+export default function Step5EnrollmentPage({
     params,
 }: {
     params: Promise<{ projectId: string }>;
 }) {
+    const router = useRouter();
+    const isMobile = useIsMobile("lg");
+    const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [generationProgress, setGenerationProgress] = useState(0);
-    const [talkTracks, setTalkTracks] = useState<TalkTrack[]>([]);
-    const [selectedTrack, setSelectedTrack] = useState<TalkTrack | null>(null);
+
+    // Redirect mobile users to desktop-required page
+    useEffect(() => {
+        if (isMobile && projectId) {
+            const params = new URLSearchParams({
+                feature: "Enrollment Page Editor",
+                description:
+                    "The enrollment page editor requires a desktop computer for designing and customizing sales pages with visual editing tools.",
+                returnPath: `/funnel-builder/${projectId}`,
+            });
+            router.push(`/desktop-required?${params.toString()}`);
+        }
+    }, [isMobile, projectId, router]);
     const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
-    const [selectedDeckId, setSelectedDeckId] = useState("");
-    const [isEditingTrack, setIsEditingTrack] = useState(false);
-    const [editedContent, setEditedContent] = useState("");
-    const [showSavedIndicator, setShowSavedIndicator] = useState(false);
-    const [deckStructureMap, setDeckStructureMap] = useState<
-        Map<string, DeckStructureForDisplay>
-    >(new Map());
-    const [activeJobId, setActiveJobId] = useState<string | null>(null);
-    const [jobStatus, setJobStatus] = useState<
-        "pending" | "processing" | "completed" | "failed" | null
-    >(null);
-    const [showToast, setShowToast] = useState(false);
-    const [toastMessage, setToastMessage] = useState("");
+    const [offers, setOffers] = useState<Offer[]>([]);
+    const [enrollmentPages, setEnrollmentPages] = useState<EnrollmentPage[]>([]);
+    const [aiEditorPages, setAiEditorPages] = useState<AIEditorPage[]>([]);
+    const [isCreating, setIsCreating] = useState(false);
+    const [isCreatingV2, setIsCreatingV2] = useState(false);
+    const [creationProgress, setCreationProgress] = useState("");
+    const [showCreateForm, setShowCreateForm] = useState(false);
+    const [formData, setFormData] = useState({
+        deckStructureId: "",
+        offerId: "",
+        templateType: "urgency-convert" as
+            | "urgency-convert"
+            | "premium-elegant"
+            | "value-focused",
+    });
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
+
+    // Handle Generate v2 (AI Editor) click
+    const handleGenerateV2 = async () => {
+        if (!projectId) return;
+
+        setIsCreatingV2(true);
+        try {
+            logger.info(
+                { projectId, pageType: "enrollment" },
+                "Creating AI editor page"
+            );
+
+            const response = await fetch("/api/ai-editor/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    projectId,
+                    pageType: "enrollment",
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || data.details || "Failed to create page");
+            }
+
+            logger.info({ pageId: data.pageId }, "AI editor page created");
+
+            // Add the new page to the list immediately
+            const newPage: AIEditorPage = {
+                id: data.pageId,
+                title: data.title || "Enrollment Page",
+                page_type: "enrollment",
+                status: "draft",
+                version: 1,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            };
+            setAiEditorPages((prev) => [newPage, ...prev]);
+
+            toast({
+                title: "🎉 Page Created!",
+                description: (
+                    <div className="flex flex-col gap-2">
+                        <p>Your v2 page has been generated successfully.</p>
+                        <a
+                            href={`/ai-editor/${data.pageId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-purple-600 hover:text-purple-700 font-medium"
+                        >
+                            Open AI Editor →
+                        </a>
+                    </div>
+                ),
+            });
+        } catch (error: any) {
+            logger.error({ error }, "Failed to create AI editor page");
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description:
+                    error.message ||
+                    "Failed to create AI editor page. Please try again.",
+            });
+        } finally {
+            setIsCreatingV2(false);
+        }
+    };
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -74,6 +223,7 @@ export default function Step6Page({
     useEffect(() => {
         const loadProject = async () => {
             if (!projectId) return;
+
             try {
                 const supabase = createClient();
                 const { data: projectData, error: projectError } = await supabase
@@ -88,279 +238,353 @@ export default function Step6Page({
                 logger.error({ error }, "Failed to load project");
             }
         };
+
         loadProject();
     }, [projectId]);
 
     useEffect(() => {
         const loadData = async () => {
             if (!projectId) return;
+
             try {
                 const supabase = createClient();
-                const [tracksResult, deckStructuresResult] = await Promise.all([
-                    supabase
-                        .from("talk_tracks")
-                        .select("*")
-                        .eq("funnel_project_id", projectId)
-                        .order("created_at", { ascending: false }),
-                    supabase
-                        .from("deck_structures")
-                        .select("*")
-                        .eq("funnel_project_id", projectId)
-                        .order("created_at", { ascending: false }),
-                ]);
 
-                if (tracksResult.data) setTalkTracks(tracksResult.data);
-                if (deckStructuresResult.data) {
-                    // Transform deck structures to match interface
-                    const transformed = (deckStructuresResult.data || []).map(
-                        (deck: any) => ({
-                            id: deck.id,
-                            title: deck.metadata?.title || "Untitled Deck",
-                            slide_count: Array.isArray(deck.slides)
-                                ? deck.slides.length
-                                : deck.total_slides || 55,
-                            slides: deck.slides || [],
-                            created_at: deck.created_at,
-                        })
+                // Load deck structures
+                const { data: deckData, error: deckError } = await supabase
+                    .from("deck_structures")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (deckError) throw deckError;
+                setDeckStructures(deckData || []);
+
+                // Load offers
+                const { data: offerData, error: offerError } = await supabase
+                    .from("offers")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (offerError) throw offerError;
+                setOffers(offerData || []);
+
+                // Auto-select first deck and offer
+                if (deckData && deckData.length > 0) {
+                    setFormData((prev) => ({
+                        ...prev,
+                        deckStructureId: deckData[0].id,
+                    }));
+                }
+                if (offerData && offerData.length > 0) {
+                    setFormData((prev) => ({
+                        ...prev,
+                        offerId: offerData[0].id,
+                    }));
+                }
+
+                // Load enrollment pages
+                const { data: pagesData, error: pagesError } = await supabase
+                    .from("enrollment_pages")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (pagesError) throw pagesError;
+                setEnrollmentPages(pagesData || []);
+
+                // Load AI Editor v2 pages
+                const { data: aiPagesData, error: aiPagesError } = await supabase
+                    .from("ai_editor_pages")
+                    .select(
+                        "id, title, page_type, status, version, created_at, updated_at"
+                    )
+                    .eq("funnel_project_id", projectId)
+                    .eq("page_type", "enrollment")
+                    .order("created_at", { ascending: false });
+
+                if (aiPagesError) {
+                    logger.warn(
+                        { error: aiPagesError },
+                        "Failed to load AI editor pages"
                     );
-                    setDeckStructures(transformed);
-
-                    // Create a map for quick lookup
-                    const map = new Map(
-                        transformed.map((deck) => [
-                            deck.id,
-                            {
-                                id: deck.id,
-                                title: deck.title,
-                                slide_count: deck.slide_count,
-                            },
-                        ])
-                    );
-                    setDeckStructureMap(map);
-
-                    // Auto-select first deck if available and no selection made
-                    if (transformed.length > 0 && !selectedDeckId) {
-                        setSelectedDeckId(transformed[0].id);
-                    }
+                } else {
+                    setAiEditorPages(aiPagesData || []);
                 }
             } catch (error) {
                 logger.error({ error }, "Failed to load data");
             }
         };
+
         loadData();
-    }, [projectId, selectedDeckId]);
-
-    // Check for active jobs on page load (resume if user navigated away)
-    useEffect(() => {
-        const checkForActiveJobs = async () => {
-            if (!projectId) return;
-
-            const supabase = createClient();
-            const { data: jobs } = await supabase
-                .from("talk_track_jobs")
-                .select("id, status, progress")
-                .eq("funnel_project_id", projectId)
-                .in("status", ["pending", "processing"])
-                .order("created_at", { ascending: false })
-                .limit(1);
-
-            if (jobs && jobs.length > 0) {
-                setActiveJobId(jobs[0].id);
-                setJobStatus(jobs[0].status);
-                setGenerationProgress(jobs[0].progress);
-                setIsGenerating(true);
-            }
-        };
-
-        checkForActiveJobs();
     }, [projectId]);
 
-    // Poll job status while generation is active
-    useEffect(() => {
-        if (!activeJobId) return;
-
-        const pollInterval = setInterval(async () => {
-            try {
-                const response = await fetch(
-                    `/api/generate/talk-track/status/${activeJobId}`
-                );
-                const { job } = await response.json();
-
-                setJobStatus(job.status);
-                setGenerationProgress(job.progress);
-
-                if (job.status === "completed") {
-                    clearInterval(pollInterval);
-
-                    // Refresh talk tracks list
-                    const supabase = createClient();
-                    const { data: tracksResult } = await supabase
-                        .from("talk_tracks")
-                        .select("*")
-                        .eq("funnel_project_id", projectId)
-                        .order("created_at", { ascending: false });
-
-                    if (tracksResult) {
-                        setTalkTracks(tracksResult);
-                    }
-
-                    // Show success toast
-                    setToastMessage("Talk Track saved successfully!");
-                    setShowToast(true);
-                    setTimeout(() => setShowToast(false), 3000);
-
-                    // Reset state
-                    setActiveJobId(null);
-                    setIsGenerating(false);
-                    setGenerationProgress(0);
-                } else if (job.status === "failed") {
-                    clearInterval(pollInterval);
-
-                    // Show error toast
-                    setToastMessage(
-                        `Generation failed: ${job.error_message || "Unknown error"}`
-                    );
-                    setShowToast(true);
-                    setTimeout(() => setShowToast(false), 5000);
-
-                    // Reset state
-                    setActiveJobId(null);
-                    setIsGenerating(false);
-                    setGenerationProgress(0);
-                }
-            } catch (error) {
-                logger.error({ error }, "Failed to poll job status");
-            }
-        }, 3000); // Poll every 3 seconds
-
-        return () => clearInterval(pollInterval);
-    }, [activeJobId, projectId]);
-
-    const handleGenerate = async () => {
-        if (!selectedDeckId) {
-            alert("Please select a deck structure first");
+    const handleCreate = async () => {
+        if (!formData.deckStructureId || !formData.offerId) {
+            toast({
+                variant: "destructive",
+                title: "Missing Information",
+                description: "Please select both a deck structure and an offer",
+            });
             return;
         }
 
+        setIsCreating(true);
+        setCreationProgress("Initializing...");
+
         try {
-            const response = await fetch("/api/generate/talk-track", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    projectId,
-                    deckStructureId: selectedDeckId,
-                }),
+            const supabase = createClient();
+
+            // Get current user
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+            if (!user) throw new Error("Not authenticated");
+
+            // Get selected deck structure and offer
+            const deckStructure = deckStructures.find(
+                (d) => d.id === formData.deckStructureId
+            );
+            const offer = offers.find((o) => o.id === formData.offerId);
+
+            if (!deckStructure || !offer) {
+                throw new Error("Deck or offer not found");
+            }
+
+            // Log creation attempt to funnel_flows
+            await supabase.from("funnel_flows").insert({
+                funnel_project_id: projectId,
+                user_id: user.id,
+                step_number: 5,
+                action: "create_enrollment_page_attempt",
+                metadata: {
+                    offer_id: offer.id,
+                    deck_structure_id: deckStructure.id,
+                    template_type: formData.templateType,
+                },
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || "Failed to start generation");
-            }
+            // Auto-generate headline and subheadline from offer
+            const autoHeadline = offer.name;
+            const autoSubheadline =
+                offer.tagline ||
+                offer.description ||
+                "Transform your business with our proven system";
 
-            const { jobId } = await response.json();
+            // Get theme from project or use defaults
+            const theme = project?.settings?.theme || {
+                primary: "#2563eb",
+                secondary: "#10b981",
+                background: "#ffffff",
+                text: "#1f2937",
+            };
 
-            // Start polling
-            setActiveJobId(jobId);
-            setJobStatus("pending");
-            setGenerationProgress(0);
-            setIsGenerating(true);
-        } catch (error) {
-            logger.error({ error }, "Failed to start talk track generation");
-            alert(
-                error instanceof Error
-                    ? error.message
-                    : "Failed to start generation. Please try again."
+            setCreationProgress("Generating page content...");
+
+            // Generate HTML using the generator
+            const htmlContent = generateEnrollmentHTML({
+                projectId,
+                offer,
+                deckStructure,
+                theme,
+                templateType: formData.templateType,
+            });
+
+            setCreationProgress("Saving to database...");
+
+            // Create enrollment page
+            const { data: newPage, error: createError } = await supabase
+                .from("enrollment_pages")
+                .insert({
+                    funnel_project_id: projectId,
+                    user_id: user.id,
+                    offer_id: offer.id,
+                    headline: autoHeadline,
+                    subheadline: autoSubheadline,
+                    html_content: htmlContent,
+                    theme,
+                    is_published: false,
+                    page_type: "direct_purchase",
+                })
+                .select()
+                .single();
+
+            if (createError) throw createError;
+
+            // Log success to funnel_flows
+            await supabase.from("funnel_flows").insert({
+                funnel_project_id: projectId,
+                user_id: user.id,
+                step_number: 5,
+                action: "create_enrollment_page_success",
+                metadata: {
+                    page_id: newPage.id,
+                    offer_id: offer.id,
+                },
+            });
+
+            setCreationProgress("Complete!");
+
+            // Add to list
+            setEnrollmentPages((prev) => [newPage, ...prev]);
+
+            // Reset form
+            setFormData({
+                deckStructureId: deckStructures[0]?.id || "",
+                offerId: offers[0]?.id || "",
+                templateType: "urgency-convert",
+            });
+            setShowCreateForm(false);
+
+            logger.info({ pageId: newPage.id }, "✅ Enrollment page created");
+
+            // Show success toast with action
+            toast({
+                title: "Success! 🎉",
+                description: "Enrollment page created successfully",
+                action: (
+                    <ToastAction
+                        altText="Preview page"
+                        onClick={() => handlePreview(newPage.id)}
+                    >
+                        Preview
+                    </ToastAction>
+                ),
+            });
+        } catch (error: any) {
+            const supabase = createClient();
+            const {
+                data: { user },
+            } = await supabase.auth.getUser();
+
+            // Log error details
+            logger.error(
+                {
+                    error,
+                    errorMessage: error?.message,
+                    errorCode: error?.code,
+                    errorDetails: error?.details,
+                    errorHint: error?.hint,
+                    formData,
+                    projectId,
+                },
+                "❌ Failed to create enrollment page"
             );
-        }
-    };
 
-    const handleDownload = (track: TalkTrack) => {
-        const blob = new Blob([track.content], { type: "text/plain" });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `talk-track-${new Date(track.created_at).toLocaleDateString()}.txt`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    };
-
-    const handleDelete = async (trackId: string) => {
-        if (!confirm("Delete this talk track?")) return;
-
-        try {
-            const supabase = createClient();
-            const { error } = await supabase
-                .from("talk_tracks")
-                .delete()
-                .eq("id", trackId);
-
-            if (!error) {
-                setTalkTracks((prev) => prev.filter((t) => t.id !== trackId));
-                if (selectedTrack?.id === trackId) {
-                    setSelectedTrack(null);
-                }
+            // Log failure to funnel_flows
+            if (user) {
+                await supabase.from("funnel_flows").insert({
+                    funnel_project_id: projectId,
+                    user_id: user.id,
+                    step_number: 5,
+                    action: "create_enrollment_page_error",
+                    metadata: {
+                        error_message: error?.message,
+                        error_code: error?.code,
+                        error_details: error?.details,
+                    },
+                });
             }
-        } catch (error) {
-            logger.error({ error }, "Failed to delete talk track");
+
+            // Show error toast
+            toast({
+                variant: "destructive",
+                title: "Failed to create page",
+                description:
+                    error?.message ||
+                    "An error occurred. Please try again or contact support.",
+            });
+        } finally {
+            setIsCreating(false);
+            setCreationProgress("");
         }
     };
 
-    const handleEditTrack = () => {
-        if (!selectedTrack) return;
-        setIsEditingTrack(true);
-        setEditedContent(selectedTrack.content);
+    const handleEdit = (pageId: string) => {
+        const editorUrl = `/funnel-builder/${projectId}/pages/enrollment/${pageId}?edit=true`;
+        window.open(editorUrl, "_blank");
     };
 
-    const handleSaveTrack = async () => {
-        if (!selectedTrack) return;
+    const handlePreview = (pageId: string) => {
+        const previewUrl = `/funnel-builder/${projectId}/pages/enrollment/${pageId}`;
+        window.open(previewUrl, "_blank");
+    };
+
+    const handleDelete = async (pageId: string) => {
+        if (!confirm("Delete this enrollment page?")) return;
 
         try {
             const supabase = createClient();
             const { error } = await supabase
-                .from("talk_tracks")
-                .update({ content: editedContent })
-                .eq("id", selectedTrack.id);
+                .from("enrollment_pages")
+                .delete()
+                .eq("id", pageId);
 
             if (error) throw error;
 
-            // Update local state
-            setTalkTracks((prev) =>
-                prev.map((track) =>
-                    track.id === selectedTrack.id
-                        ? { ...track, content: editedContent }
-                        : track
-                )
-            );
+            setEnrollmentPages((prev) => prev.filter((p) => p.id !== pageId));
+            logger.info({ pageId }, "Enrollment page deleted");
 
-            setSelectedTrack((prev) =>
-                prev ? { ...prev, content: editedContent } : null
-            );
-            setIsEditingTrack(false);
-
-            // Show saved indicator
-            setShowSavedIndicator(true);
-            setTimeout(() => setShowSavedIndicator(false), 2000);
-        } catch (error) {
-            logger.error({ error }, "Failed to save talk track");
-            alert("Failed to save changes. Please try again.");
+            toast({
+                title: "Page Deleted",
+                description: "Enrollment page has been removed",
+            });
+        } catch (error: any) {
+            logger.error({ error }, "Failed to delete enrollment page");
+            toast({
+                variant: "destructive",
+                title: "Delete Failed",
+                description:
+                    error?.message || "Could not delete the page. Please try again.",
+            });
         }
     };
 
-    const handleCancelEdit = () => {
-        if (!selectedTrack) return;
-        setEditedContent(selectedTrack.content);
-        setIsEditingTrack(false);
+    const handlePublishToggle = async (pageId: string, currentStatus: boolean) => {
+        try {
+            const supabase = createClient();
+            const newStatus = !currentStatus;
+
+            const { error } = await supabase
+                .from("enrollment_pages")
+                .update({ is_published: newStatus })
+                .eq("id", pageId);
+
+            if (error) throw error;
+
+            setEnrollmentPages((prev) =>
+                prev.map((p) =>
+                    p.id === pageId ? { ...p, is_published: newStatus } : p
+                )
+            );
+
+            logger.info(
+                { pageId, isPublished: newStatus },
+                "Enrollment page publish status updated"
+            );
+
+            toast({
+                title: newStatus ? "Page Published" : "Page Unpublished",
+                description: newStatus
+                    ? "Your enrollment page is now live and visible to the public"
+                    : "Your enrollment page is now in draft mode",
+            });
+        } catch (error: any) {
+            logger.error({ error }, "Failed to update publish status");
+            toast({
+                variant: "destructive",
+                title: "Update Failed",
+                description:
+                    error?.message ||
+                    "Could not update publish status. Please try again.",
+            });
+        }
     };
 
-    const getDurationRange = (slideCount: number) => {
-        const minMinutes = Math.round((slideCount * 15) / 60);
-        const maxMinutes = Math.round((slideCount * 30) / 60);
-        return `${minMinutes}-${maxMinutes} min`;
-    };
-
-    const hasCompletedTrack = talkTracks.length > 0;
+    const hasDeckStructure = deckStructures.length > 0;
+    const hasOffer = offers.length > 0;
+    const hasEnrollmentPage = enrollmentPages.length > 0;
+    const canCreatePage = hasDeckStructure && hasOffer;
 
     if (!projectId) {
         return (
@@ -376,245 +600,364 @@ export default function Step6Page({
             projectId={projectId}
             completedSteps={completedSteps}
             funnelName={project?.name}
-            nextDisabled={!hasCompletedTrack}
-            nextLabel={hasCompletedTrack ? "Upload Video" : "Generate Talk Track First"}
-            stepTitle="Talk Track Script"
-            stepDescription="AI generates a slide-by-slide presentation script (2-4 sentences per slide)"
+            nextDisabled={!hasEnrollmentPage}
+            nextLabel={hasEnrollmentPage ? "Create Watch Page" : "Create Page First"}
+            stepTitle="Enrollment Pages"
+            stepDescription="Create high-converting sales pages with visual editor"
         >
             <div className="space-y-8">
-                {/* Toast Notification */}
-                {showToast && (
-                    <div className="fixed right-4 top-4 z-50 rounded-lg border-2 border-green-300 bg-green-50 p-4 shadow-float">
-                        <p className="font-medium text-green-900">{toastMessage}</p>
-                    </div>
-                )}
-
-                {/* Warning Banner for Active Generation */}
-                {(jobStatus === "pending" || jobStatus === "processing") && (
-                    <div className="rounded-lg border-2 border-amber-300 bg-amber-50 p-4">
-                        <p className="font-medium text-amber-900">
-                            ⚠️ Generating Talk Track – This may take 2–5 minutes. You
-                            can navigate freely; we'll notify you when it's ready.
-                        </p>
-                        {generationProgress > 0 && (
-                            <p className="mt-2 text-sm text-amber-700">
-                                Progress: {generationProgress}% complete
-                            </p>
-                        )}
-                    </div>
-                )}
-
-                {deckStructures.length === 0 && (
+                {/* Dependency Warnings */}
+                {!hasDeckStructure && (
                     <DependencyWarning
-                        message="You need to create a deck structure first to generate a talk track."
+                        message="You need to create a presentation structure first."
                         requiredStep={4}
-                        requiredStepName="Deck Structure"
+                        requiredStepName="Presentation Structure"
+                        projectId={projectId}
+                    />
+                )}
+                {!hasOffer && (
+                    <DependencyWarning
+                        message="You need to create an offer first."
+                        requiredStep={2}
+                        requiredStepName="Define Offer"
                         projectId={projectId}
                     />
                 )}
 
-                {!isGenerating ? (
-                    <div className="rounded-lg border border-brand-100 bg-gradient-to-br from-brand-50 to-purple-50 p-8">
-                        {/* Deck Structure Selector */}
-                        <div className="mx-auto mb-6 max-w-md">
-                            <label className="mb-2 block text-sm font-medium text-foreground">
-                                Select Deck Structure
-                            </label>
-                            <select
-                                value={selectedDeckId}
-                                onChange={(e) => setSelectedDeckId(e.target.value)}
-                                disabled={deckStructures.length === 0}
-                                className="w-full rounded-lg border border-border px-4 py-3 focus:border-brand-500 focus:ring-2 focus:ring-brand-500 disabled:cursor-not-allowed disabled:bg-muted"
-                            >
-                                {deckStructures.length === 0 ? (
-                                    <option value="">
-                                        No deck structures available
-                                    </option>
-                                ) : (
-                                    <>
-                                        <option value="">
-                                            Select a deck structure...
-                                        </option>
-                                        {deckStructures.map((deck) => (
-                                            <option key={deck.id} value={deck.id}>
-                                                {deck.title} ({deck.slide_count} slides)
-                                            </option>
-                                        ))}
-                                    </>
-                                )}
-                            </select>
-
-                            {deckStructures.length === 0 && (
-                                <p className="mt-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-600">
-                                    💡 Complete Step 3 first to create deck structures
-                                </p>
-                            )}
-                        </div>
-
-                        <div className="text-center">
+                {/* Create New Page Button */}
+                {!showCreateForm ? (
+                    <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-primary/5 p-8">
+                        <div className="flex flex-col items-center gap-4 text-center">
                             <button
-                                onClick={handleGenerate}
-                                disabled={
-                                    !selectedDeckId || deckStructures.length === 0
-                                }
-                                className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
-                                    selectedDeckId && deckStructures.length > 0
-                                        ? "bg-primary text-white hover:bg-primary/90"
+                                onClick={() => setShowCreateForm(true)}
+                                disabled={!canCreatePage}
+                                className={`flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
+                                    canCreatePage
+                                        ? "bg-purple-600 text-white hover:bg-purple-700"
                                         : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                                 }`}
                             >
-                                <Sparkles className="h-6 w-6" />
-                                {deckStructures.length === 0
-                                    ? "Create Deck Structure First"
-                                    : !selectedDeckId
-                                      ? "Select Deck Structure"
-                                      : "Generate Talk Track"}
+                                <PlusCircle className="h-6 w-6" />
+                                {canCreatePage
+                                    ? "Generate Enrollment Page"
+                                    : "Complete Prerequisites First"}
                             </button>
 
-                            <div className="mt-4 space-y-1 text-sm text-muted-foreground">
-                                <p>⚡ Generation time: ~30-60 seconds</p>
-                                <p>🎤 2-4 sentences per slide</p>
-                                <p>📊 Includes timing and delivery notes</p>
-                            </div>
+                            {/* Generate v2 - AI Editor */}
+                            <button
+                                onClick={handleGenerateV2}
+                                disabled={!canCreatePage || isCreatingV2}
+                                className={`flex items-center gap-2 rounded-lg border-2 px-6 py-3 font-medium transition-colors ${
+                                    canCreatePage && !isCreatingV2
+                                        ? "border-purple-400 bg-white text-purple-600 hover:bg-purple-50"
+                                        : "cursor-not-allowed border-gray-300 bg-gray-100 text-muted-foreground"
+                                }`}
+                            >
+                                {isCreatingV2 ? (
+                                    <>
+                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                        Generating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="h-5 w-5" />
+                                        Generate v2 (AI Chat Editor)
+                                    </>
+                                )}
+                            </button>
+                            <p className="text-sm text-muted-foreground">
+                                Try our new AI-powered conversational editor
+                            </p>
                         </div>
                     </div>
                 ) : (
-                    <div className="rounded-lg border border-primary/20 bg-primary/5 p-6">
-                        <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-primary/10">
-                                <Sparkles className="h-6 w-6 text-primary" />
-                            </div>
-                            <h3 className="mb-2 text-xl font-semibold text-primary">
-                                Generating Talk Track
+                    <div className="rounded-lg border border-purple-200 bg-gradient-to-br from-purple-50 to-primary/5 p-8 shadow-soft">
+                        <div className="mb-6 flex items-center justify-between">
+                            <h3 className="text-xl font-semibold text-foreground">
+                                Create Enrollment Page
                             </h3>
-                            <p className="text-primary">
-                                AI is creating your presentation script...
-                            </p>
+                            <button
+                                onClick={() => setShowCreateForm(false)}
+                                disabled={isCreating}
+                                className="text-muted-foreground hover:text-foreground disabled:opacity-50"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
                         </div>
 
-                        <div className="mx-auto max-w-md">
-                            <div className="mb-2 flex items-center justify-between">
-                                <span className="text-sm font-medium text-primary">
-                                    Progress
-                                </span>
-                                <span className="text-sm text-primary">
-                                    {generationProgress}%
-                                </span>
+                        <TooltipProvider>
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="mb-2 block text-sm font-medium text-foreground">
+                                        Offer
+                                    </label>
+                                    <select
+                                        value={formData.offerId}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                offerId: e.target.value,
+                                            })
+                                        }
+                                        disabled={isCreating}
+                                        className="w-full rounded-lg border border-border bg-card px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {offers.map((offer) => (
+                                            <option key={offer.id} value={offer.id}>
+                                                {offer.name} - {offer.currency}{" "}
+                                                {offer.price.toLocaleString()}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        Page headline will be automatically generated
+                                        from offer name
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="mb-2 block text-sm font-medium text-foreground">
+                                        Presentation Structure
+                                    </label>
+                                    <select
+                                        value={formData.deckStructureId}
+                                        onChange={(e) =>
+                                            setFormData({
+                                                ...formData,
+                                                deckStructureId: e.target.value,
+                                            })
+                                        }
+                                        disabled={isCreating}
+                                        className="w-full rounded-lg border border-border bg-card px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        {deckStructures.map((deck) => (
+                                            <option key={deck.id} value={deck.id}>
+                                                {deck.metadata?.title ||
+                                                    `Presentation ${deck.total_slides} slides`}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        AI-generated testimonials from presentation
+                                        content
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+                                        Template Style
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-muted-foreground" />
+                                            </TooltipTrigger>
+                                            <TooltipContent className="max-w-xs">
+                                                <p className="text-sm">
+                                                    Choose a template that matches your
+                                                    offer positioning and target
+                                                    audience
+                                                </p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </label>
+                                    <div className="space-y-3">
+                                        {TEMPLATE_OPTIONS.map((template) => (
+                                            <div key={template.value}>
+                                                <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card p-4 hover:border-purple-300 hover:bg-purple-50">
+                                                    <input
+                                                        type="radio"
+                                                        name="templateType"
+                                                        value={template.value}
+                                                        checked={
+                                                            formData.templateType ===
+                                                            template.value
+                                                        }
+                                                        onChange={(e) =>
+                                                            setFormData({
+                                                                ...formData,
+                                                                templateType: e.target
+                                                                    .value as any,
+                                                            })
+                                                        }
+                                                        disabled={isCreating}
+                                                        className="mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500"
+                                                    />
+                                                    <div className="flex-1">
+                                                        <div className="font-medium text-foreground">
+                                                            {template.label}
+                                                        </div>
+                                                        <p className="mt-1 text-sm text-muted-foreground">
+                                                            {template.description}
+                                                        </p>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {creationProgress && (
+                                    <div className="rounded-lg bg-purple-100 p-4">
+                                        <div className="flex items-center gap-3">
+                                            <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                                            <span className="text-sm font-medium text-purple-900">
+                                                {creationProgress}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="flex justify-end gap-3 pt-2">
+                                    <button
+                                        onClick={() => setShowCreateForm(false)}
+                                        disabled={isCreating}
+                                        className="rounded-lg border border-border bg-card px-6 py-2 font-medium text-foreground hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={handleCreate}
+                                        disabled={
+                                            !formData.offerId ||
+                                            !formData.deckStructureId ||
+                                            isCreating
+                                        }
+                                        className={`flex items-center gap-2 rounded-lg px-6 py-2 font-semibold ${
+                                            formData.offerId &&
+                                            formData.deckStructureId &&
+                                            !isCreating
+                                                ? "bg-purple-600 text-white hover:bg-purple-700"
+                                                : "cursor-not-allowed bg-gray-300 text-muted-foreground"
+                                        }`}
+                                    >
+                                        {isCreating && (
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                        )}
+                                        {isCreating
+                                            ? creationProgress || "Creating..."
+                                            : "Create Enrollment Page"}
+                                    </button>
+                                </div>
                             </div>
-                            <div className="h-3 w-full rounded-full bg-primary/20">
-                                <div
-                                    className="h-3 rounded-full bg-primary transition-all duration-500 ease-out"
-                                    style={{ width: `${generationProgress}%` }}
-                                />
-                            </div>
-                        </div>
+                        </TooltipProvider>
                     </div>
                 )}
 
+                {/* Existing Pages List */}
                 <div className="rounded-lg border border-border bg-card shadow-soft">
                     <div className="border-b border-border p-6">
                         <div className="flex items-center justify-between">
                             <h3 className="text-xl font-semibold text-foreground">
-                                Your Talk Tracks
+                                Your Enrollment Pages
                             </h3>
                             <span className="text-sm text-muted-foreground">
-                                {talkTracks.length} created
+                                {enrollmentPages.length} created
                             </span>
                         </div>
                     </div>
 
                     <div className="p-6">
-                        {talkTracks.length === 0 ? (
+                        {enrollmentPages.length === 0 ? (
                             <div className="py-12 text-center text-muted-foreground">
-                                <MessageSquare className="mx-auto mb-4 h-12 w-12 opacity-50" />
+                                <ShoppingCart className="mx-auto mb-4 h-12 w-12 opacity-50" />
                                 <p>
-                                    No talk tracks yet. Generate your first one above!
+                                    No enrollment pages yet. Create your first one
+                                    above!
                                 </p>
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {talkTracks.map((track) => (
+                                {enrollmentPages.map((page) => (
                                     <div
-                                        key={track.id}
-                                        onClick={() => setSelectedTrack(track)}
-                                        className="cursor-pointer rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-primary/30 hover:shadow-md"
+                                        key={page.id}
+                                        onClick={() => handleEdit(page.id)}
+                                        className="cursor-pointer rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md"
                                     >
                                         <div className="flex items-start justify-between">
                                             <div className="flex-1">
-                                                <h4 className="mb-2 text-lg font-semibold text-foreground">
-                                                    Talk Track Script
-                                                </h4>
-                                                <div className="mb-2 flex items-center gap-4 text-sm text-muted-foreground">
-                                                    {track.deck_structure_id &&
-                                                    deckStructureMap.get(
-                                                        track.deck_structure_id
-                                                    ) ? (
-                                                        <>
-                                                            <span>
-                                                                ⏱️{" "}
-                                                                {getDurationRange(
-                                                                    deckStructureMap.get(
-                                                                        track.deck_structure_id
-                                                                    )!.slide_count
-                                                                )}{" "}
-                                                                estimated
-                                                            </span>
-                                                            <span>
-                                                                📄{" "}
-                                                                {
-                                                                    deckStructureMap.get(
-                                                                        track.deck_structure_id
-                                                                    )!.slide_count
-                                                                }{" "}
-                                                                slides
-                                                            </span>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <span>
-                                                                ⏱️{" "}
-                                                                {track.slide_timings
-                                                                    ?.totalDuration ||
-                                                                    0}{" "}
-                                                                min
-                                                            </span>
-                                                            <span>
-                                                                📄{" "}
-                                                                {track.slide_timings
-                                                                    ?.slides?.length ||
-                                                                    0}{" "}
-                                                                slides
-                                                            </span>
-                                                        </>
-                                                    )}
+                                                <div className="mb-2 flex items-center gap-3">
+                                                    <h4 className="text-lg font-semibold text-foreground">
+                                                        {page.headline}
+                                                    </h4>
+                                                    <span
+                                                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                                            page.is_published
+                                                                ? "bg-green-100 text-green-800"
+                                                                : "bg-yellow-100 text-yellow-800"
+                                                        }`}
+                                                    >
+                                                        {page.is_published
+                                                            ? "Published"
+                                                            : "Draft"}
+                                                    </span>
+                                                </div>
+
+                                                <p className="mb-3 text-sm text-muted-foreground">
+                                                    {page.subheadline}
+                                                </p>
+
+                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
                                                     <span>
-                                                        📅{" "}
+                                                        Created{" "}
                                                         {new Date(
-                                                            track.created_at
+                                                            page.created_at
                                                         ).toLocaleDateString()}
                                                     </span>
+                                                    <span>Type: {page.page_type}</span>
                                                 </div>
                                             </div>
 
-                                            <div className="flex items-center gap-2">
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDownload(track);
-                                                    }}
-                                                    className="rounded p-2 text-primary hover:bg-primary/5"
+                                            <div className="flex items-center gap-4">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-muted-foreground">
+                                                        {page.is_published
+                                                            ? "Live"
+                                                            : "Draft"}
+                                                    </span>
+                                                    <Switch
+                                                        checked={page.is_published}
+                                                        onCheckedChange={() =>
+                                                            handlePublishToggle(
+                                                                page.id,
+                                                                page.is_published
+                                                            )
+                                                        }
+                                                    />
+                                                </div>
+
+                                                <div
+                                                    className="flex items-center gap-2"
+                                                    onClick={(e) => e.stopPropagation()}
                                                 >
-                                                    <Download className="h-4 w-4" />
-                                                </button>
-                                                <button
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        handleDelete(track.id);
-                                                    }}
-                                                    className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </button>
+                                                    <button
+                                                        onClick={() =>
+                                                            handlePreview(page.id)
+                                                        }
+                                                        className="rounded p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                                        title="Preview"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() =>
+                                                            handleEdit(page.id)
+                                                        }
+                                                        className="rounded p-2 text-purple-600 hover:bg-purple-50"
+                                                        title="Edit with Visual Editor"
+                                                    >
+                                                        <Pencil className="h-4 w-4" />
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() =>
+                                                            handleDelete(page.id)
+                                                        }
+                                                        className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
+                                                        title="Delete"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -623,107 +966,104 @@ export default function Step6Page({
                         )}
                     </div>
                 </div>
-            </div>
 
-            {/* Talk Track Viewer/Editor Modal */}
-            {selectedTrack && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-                    <div className="flex h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-card shadow-2xl">
-                        <div className="flex-shrink-0 rounded-t-lg border-b border-border bg-muted/50 p-6">
+                {/* AI Editor v2 Pages List */}
+                {aiEditorPages.length > 0 && (
+                    <div className="rounded-lg border border-purple-200 bg-gradient-to-br from-purple-50 to-fuchsia-50 shadow-soft">
+                        <div className="border-b border-purple-200 p-6">
                             <div className="flex items-center justify-between">
-                                <div>
-                                    <h2 className="text-2xl font-bold text-foreground">
-                                        Talk Track Script
-                                    </h2>
-                                    {selectedTrack.deck_structure_id &&
-                                        deckStructureMap.get(
-                                            selectedTrack.deck_structure_id
-                                        ) && (
-                                            <p className="mt-1 text-sm text-muted-foreground">
-                                                {
-                                                    deckStructureMap.get(
-                                                        selectedTrack.deck_structure_id
-                                                    )!.title
-                                                }{" "}
-                                                ({" "}
-                                                {
-                                                    deckStructureMap.get(
-                                                        selectedTrack.deck_structure_id
-                                                    )!.slide_count
-                                                }{" "}
-                                                slides, estimated{" "}
-                                                {getDurationRange(
-                                                    deckStructureMap.get(
-                                                        selectedTrack.deck_structure_id
-                                                    )!.slide_count
-                                                )}
-                                                )
-                                            </p>
-                                        )}
+                                <div className="flex items-center gap-3">
+                                    <Sparkles className="h-5 w-5 text-purple-600" />
+                                    <h3 className="text-xl font-semibold text-foreground">
+                                        AI Editor Pages (v2)
+                                    </h3>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    {showSavedIndicator && (
-                                        <span className="rounded bg-green-100 px-3 py-1 text-sm font-medium text-green-700">
-                                            ✓ Saved
-                                        </span>
-                                    )}
-                                    {isEditingTrack ? (
-                                        <>
-                                            <button
-                                                onClick={handleSaveTrack}
-                                                className="rounded bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90"
-                                            >
-                                                Save
-                                            </button>
-                                            <button
-                                                onClick={handleCancelEdit}
-                                                className="rounded border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
-                                            >
-                                                Cancel
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <button
-                                            onClick={handleEditTrack}
-                                            className="rounded border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted/50"
-                                        >
-                                            Edit
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={() => {
-                                            setSelectedTrack(null);
-                                            setIsEditingTrack(false);
-                                        }}
-                                        className="text-2xl font-bold text-muted-foreground hover:text-muted-foreground"
-                                    >
-                                        ×
-                                    </button>
-                                </div>
+                                <span className="rounded-full bg-purple-100 px-3 py-1 text-sm font-medium text-purple-700">
+                                    {aiEditorPages.length} created
+                                </span>
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-hidden">
-                            {isEditingTrack ? (
-                                <textarea
-                                    value={editedContent}
-                                    onChange={(e) => setEditedContent(e.target.value)}
-                                    className="h-full w-full resize-none border-none p-6 font-mono text-sm leading-relaxed text-foreground focus:ring-0"
-                                    placeholder="Edit your talk track here..."
-                                />
-                            ) : (
-                                <div className="h-full overflow-y-scroll p-6">
-                                    <div className="prose max-w-none">
-                                        <pre className="whitespace-pre-wrap rounded-lg bg-muted/50 p-4 text-sm">
-                                            {selectedTrack.content}
-                                        </pre>
+                        <div className="p-6">
+                            <div className="space-y-4">
+                                {aiEditorPages.map((page) => (
+                                    <div
+                                        key={page.id}
+                                        className="rounded-lg border border-purple-200 bg-white p-6 shadow-sm transition-all hover:border-purple-400 hover:shadow-md"
+                                    >
+                                        <div className="flex items-start justify-between">
+                                            <div className="flex-1">
+                                                <div className="mb-2 flex items-center gap-3">
+                                                    <h4 className="text-lg font-semibold text-foreground">
+                                                        {page.title}
+                                                    </h4>
+                                                    <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-semibold text-purple-700">
+                                                        v2
+                                                    </span>
+                                                    <span
+                                                        className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                                            page.status === "published"
+                                                                ? "bg-green-100 text-green-800"
+                                                                : "bg-yellow-100 text-yellow-800"
+                                                        }`}
+                                                    >
+                                                        {page.status === "published"
+                                                            ? "Published"
+                                                            : "Draft"}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                                    <span>
+                                                        Created{" "}
+                                                        {new Date(
+                                                            page.created_at
+                                                        ).toLocaleDateString()}
+                                                    </span>
+                                                    <span>Version {page.version}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="flex items-center gap-2">
+                                                <a
+                                                    href={`/ai-editor/${page.id}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700"
+                                                >
+                                                    <Pencil className="h-4 w-4" />
+                                                    Edit in AI Editor
+                                                </a>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                ))}
+                            </div>
                         </div>
                     </div>
+                )}
+
+                {/* Helper Info */}
+                <div className="rounded-lg border border-primary/10 bg-primary/5 p-6">
+                    <h4 className="mb-3 font-semibold text-primary">
+                        💡 Enrollment Page Tips
+                    </h4>
+                    <ul className="space-y-2 text-sm text-primary">
+                        <li>
+                            • Use urgency and scarcity elements to drive immediate
+                            action
+                        </li>
+                        <li>
+                            • Customize pricing and value stack in the Visual Editor
+                        </li>
+                        <li>
+                            • Add testimonials from your deck structure or create new
+                            ones
+                        </li>
+                        <li>• Changes auto-save every 3 seconds</li>
+                    </ul>
                 </div>
-            )}
+            </div>
         </StepLayout>
     );
 }

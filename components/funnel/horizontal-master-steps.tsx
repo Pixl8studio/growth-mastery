@@ -28,8 +28,8 @@ import {
 } from "@/app/funnel-builder/master-steps-config";
 import { ComingSoonBadge } from "@/components/ui/coming-soon-overlay";
 
-// Traffic Agent steps (12, 13, 14) are coming soon
-const COMING_SOON_STEPS = [12, 13, 14];
+// Traffic Agent steps (11, 12, 13) are coming soon
+const COMING_SOON_STEPS = [11, 12, 13];
 
 interface HorizontalMasterStepsProps {
     projectId: string;
@@ -50,17 +50,15 @@ const STEPS_DATA = [
     { number: 2, title: "Define Offer", description: "7 P's framework" },
     { number: 3, title: "Brand Design", description: "Visual identity" },
     { number: 4, title: "Presentation Structure", description: "AI-generated outline" },
-    { number: 5, title: "Create Presentation", description: "Gamma AI slides" },
-    { number: 6, title: "Enrollment Page", description: "AI sales copy" },
-    { number: 7, title: "Talk Track", description: "Video script" },
-    { number: 8, title: "Upload Video", description: "Pitch recording" },
-    { number: 9, title: "Watch Page", description: "Video landing" },
-    { number: 10, title: "Registration", description: "Lead capture" },
-    { number: 11, title: "Flow Setup", description: "Connect pages" },
-    { number: 12, title: "AI Follow-Up", description: "Smart automation" },
-    { number: 13, title: "Marketing Content", description: "Social content engine" },
-    { number: 14, title: "Ads Manager", description: "Meta/Instagram ads" },
-    { number: 15, title: "Analytics", description: "Track performance" },
+    { number: 5, title: "Create Presentation", description: "Generate Slides" },
+    { number: 6, title: "Upload Video", description: "Pitch recording" },
+    { number: 7, title: "Enrollment Page", description: "AI sales copy" },
+    { number: 8, title: "Watch Page", description: "Video landing" },
+    { number: 9, title: "Registration", description: "Lead capture" },
+    { number: 10, title: "Flow Setup", description: "Connect pages" },
+    { number: 11, title: "AI Follow-Up", description: "Smart automation" },
+    { number: 12, title: "Marketing Content", description: "Social content engine" },
+    { number: 13, title: "Ads Manager", description: "Meta/Instagram ads" },
 ];
 
 export function HorizontalMasterSteps({

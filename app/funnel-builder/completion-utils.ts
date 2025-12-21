@@ -94,7 +94,7 @@ export async function getStepCompletionStatus(
         } = await supabase.auth.getUser();
 
         if (!user) {
-            return Array.from({ length: 14 }, (_, i) => ({
+            return Array.from({ length: 13 }, (_, i) => ({
                 step: i + 1,
                 isCompleted: false,
                 hasContent: false,
@@ -111,9 +111,8 @@ export async function getStepCompletionStatus(
             brandDesigns,
             deckStructures,
             gammaDecks,
-            enrollmentPages,
-            talkTracks,
             videos,
+            enrollmentPages,
             watchPages,
             registrationPages,
             flows,
@@ -164,56 +163,49 @@ export async function getStepCompletionStatus(
                 .eq("funnel_project_id", projectId)
                 .eq("user_id", user.id),
 
-            // Step 6: Enrollment Pages
-            supabase
-                .from("enrollment_pages")
-                .select("id", { count: "exact", head: true })
-                .eq("funnel_project_id", projectId)
-                .eq("user_id", user.id),
-
-            // Step 7: Talk Tracks
-            supabase
-                .from("talk_tracks")
-                .select("id", { count: "exact", head: true })
-                .eq("funnel_project_id", projectId)
-                .eq("user_id", user.id),
-
-            // Step 8: Videos
+            // Step 6: Videos
             supabase
                 .from("pitch_videos")
                 .select("id", { count: "exact", head: true })
                 .eq("funnel_project_id", projectId)
                 .eq("user_id", user.id),
 
-            // Step 9: Watch Pages
+            // Step 7: Enrollment Pages
+            supabase
+                .from("enrollment_pages")
+                .select("id", { count: "exact", head: true })
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id),
+
+            // Step 8: Watch Pages
             supabase
                 .from("watch_pages")
                 .select("id", { count: "exact", head: true })
                 .eq("funnel_project_id", projectId)
                 .eq("user_id", user.id),
 
-            // Step 10: Registration Pages
+            // Step 9: Registration Pages
             supabase
                 .from("registration_pages")
                 .select("id", { count: "exact", head: true })
                 .eq("funnel_project_id", projectId)
                 .eq("user_id", user.id),
 
-            // Step 11: Funnel Flows
+            // Step 10: Funnel Flows
             supabase
                 .from("funnel_flows")
                 .select("id", { count: "exact", head: true })
                 .eq("funnel_project_id", projectId)
                 .eq("user_id", user.id),
 
-            // Step 12: AI Follow-up Configs
+            // Step 11: AI Follow-up Configs
             supabase
                 .from("followup_agent_configs")
                 .select("id", { count: "exact", head: true })
                 .eq("funnel_project_id", projectId)
                 .eq("user_id", user.id),
 
-            // Step 13: Marketing Content Briefs
+            // Step 12: Marketing Content Briefs
             supabase
                 .from("marketing_content_briefs")
                 .select("id", { count: "exact", head: true })
@@ -221,7 +213,7 @@ export async function getStepCompletionStatus(
                 .eq("user_id", user.id)
                 .eq("campaign_type", "organic"),
 
-            // Step 14: Ad Campaigns
+            // Step 13: Ad Campaigns
             supabase
                 .from("marketing_content_briefs")
                 .select("id", { count: "exact", head: true })
@@ -266,46 +258,41 @@ export async function getStepCompletionStatus(
             },
             {
                 step: 6,
-                isCompleted: (enrollmentPages.count ?? 0) > 0,
-                hasContent: (enrollmentPages.count ?? 0) > 0,
-            },
-            {
-                step: 7,
-                isCompleted: (talkTracks.count ?? 0) > 0,
-                hasContent: (talkTracks.count ?? 0) > 0,
-            },
-            {
-                step: 8,
                 isCompleted: (videos.count ?? 0) > 0,
                 hasContent: (videos.count ?? 0) > 0,
             },
             {
-                step: 9,
+                step: 7,
+                isCompleted: (enrollmentPages.count ?? 0) > 0,
+                hasContent: (enrollmentPages.count ?? 0) > 0,
+            },
+            {
+                step: 8,
                 isCompleted: (watchPages.count ?? 0) > 0,
                 hasContent: (watchPages.count ?? 0) > 0,
             },
             {
-                step: 10,
+                step: 9,
                 isCompleted: (registrationPages.count ?? 0) > 0,
                 hasContent: (registrationPages.count ?? 0) > 0,
             },
             {
-                step: 11,
+                step: 10,
                 isCompleted: (flows.count ?? 0) > 0,
                 hasContent: (flows.count ?? 0) > 0,
             },
             {
-                step: 12,
+                step: 11,
                 isCompleted: (followupConfigs.count ?? 0) > 0,
                 hasContent: (followupConfigs.count ?? 0) > 0,
             },
             {
-                step: 13,
+                step: 12,
                 isCompleted: (marketingBriefs.count ?? 0) > 0,
                 hasContent: (marketingBriefs.count ?? 0) > 0,
             },
             {
-                step: 14,
+                step: 13,
                 isCompleted: (adCampaigns.count ?? 0) > 0,
                 hasContent: (adCampaigns.count ?? 0) > 0,
             },
@@ -313,7 +300,7 @@ export async function getStepCompletionStatus(
 
         const completedCount = completionStatus.filter((s) => s.isCompleted).length;
         requestLogger.info(
-            { completedSteps: completedCount, totalSteps: 14 },
+            { completedSteps: completedCount, totalSteps: 13 },
             "Step completion status retrieved"
         );
 
@@ -321,7 +308,7 @@ export async function getStepCompletionStatus(
     } catch (error) {
         requestLogger.error({ error }, "Failed to check step completion");
         // Return empty completion status on error
-        return Array.from({ length: 14 }, (_, i) => ({
+        return Array.from({ length: 13 }, (_, i) => ({
             step: i + 1,
             isCompleted: false,
             hasContent: false,

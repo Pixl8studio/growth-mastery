@@ -177,9 +177,32 @@ export default function Step5Page({
     const [isSavingName, setIsSavingName] = useState(false);
     const nameInputRef = useRef<HTMLInputElement>(null);
     // Track presentations that users have manually renamed to prevent auto-naming from overwriting
+    // Persisted to localStorage to survive page refreshes
     const [userEditedTitles, setUserEditedTitles] = useState<Set<string>>(
-        new Set()
+        () => {
+            if (typeof window === "undefined") return new Set();
+            try {
+                const stored = localStorage.getItem("userEditedPresentationTitles");
+                return stored ? new Set(JSON.parse(stored)) : new Set();
+            } catch {
+                return new Set();
+            }
+        }
     );
+
+    // Persist userEditedTitles to localStorage when it changes
+    useEffect(() => {
+        if (userEditedTitles.size > 0) {
+            try {
+                localStorage.setItem(
+                    "userEditedPresentationTitles",
+                    JSON.stringify([...userEditedTitles])
+                );
+            } catch {
+                // localStorage might be unavailable or full
+            }
+        }
+    }, [userEditedTitles]);
 
     // Loading states
     const [isLoading, setIsLoading] = useState(true);
@@ -366,23 +389,23 @@ export default function Step5Page({
         selectedDeckId &&
         !hasReachedLimit;
 
+    // Helper to check if a presentation has a default/auto-generated name
+    const isDefaultPresentationName = useCallback((title: string): boolean => {
+        return (
+            title.includes("Generating") ||
+            title.includes("Generated") ||
+            title.includes("Untitled")
+        );
+    }, []);
+
     // Helper to extract presentation title from title slide
     const getTitleFromSlides = useCallback(
-        (slides: GeneratedSlide[], fallbackTitle: string): string => {
-            // Guard against empty or undefined slides array
-            if (!slides || slides.length === 0) {
-                return fallbackTitle;
-            }
+        (slides: GeneratedSlide[] | undefined, fallbackTitle: string): string => {
+            if (!slides?.length) return fallbackTitle;
 
-            // Find the title slide (layoutType === "title") or use first slide
             const titleSlide =
-                slides.find((s) => s.layoutType === "title") || slides[0];
-
-            if (titleSlide?.title && titleSlide.title.trim()) {
-                return titleSlide.title.trim();
-            }
-
-            return fallbackTitle;
+                slides.find((s) => s.layoutType === "title") ?? slides[0];
+            return titleSlide?.title?.trim() || fallbackTitle;
         },
         []
     );
@@ -402,12 +425,7 @@ export default function Step5Page({
             }
 
             // Check if we should update (only for default names if onlyIfDefault is true)
-            const isDefaultName =
-                currentTitle.includes("Generating") ||
-                currentTitle.includes("Generated") ||
-                currentTitle.includes("Untitled");
-
-            if (onlyIfDefault && !isDefaultName) {
+            if (onlyIfDefault && !isDefaultPresentationName(currentTitle)) {
                 return currentTitle;
             }
 
@@ -431,7 +449,15 @@ export default function Step5Page({
                     }),
                 });
 
-                if (!response.ok) {
+                if (response.ok) {
+                    // Track successful auto-naming for debugging
+                    Sentry.addBreadcrumb({
+                        category: "presentation.auto_name",
+                        message: `Auto-named presentation: ${autoTitle}`,
+                        level: "info",
+                        data: { presentationId, autoTitle, previousTitle: currentTitle },
+                    });
+                } else {
                     // Fall back to current/fallback title on API failure
                     finalTitle = onlyIfDefault ? currentTitle : fallbackTitle;
                     logger.warn(
@@ -450,7 +476,7 @@ export default function Step5Page({
 
             return finalTitle;
         },
-        [getTitleFromSlides, userEditedTitles]
+        [getTitleFromSlides, userEditedTitles, isDefaultPresentationName]
     );
 
     // Helper functions for slide generation

@@ -398,8 +398,9 @@ describe("Presentation Renaming", () => {
             expect(shouldUpdate).toBe(true);
         });
 
-        it("should detect default names correctly", () => {
-            const isDefaultName = (title: string): boolean => {
+        it("should detect default names correctly with isDefaultPresentationName", () => {
+            // This matches the extracted helper in step 5
+            const isDefaultPresentationName = (title: string): boolean => {
                 return (
                     title.includes("Generating") ||
                     title.includes("Generated") ||
@@ -407,11 +408,36 @@ describe("Presentation Renaming", () => {
                 );
             };
 
-            expect(isDefaultName("Generating...")).toBe(true);
-            expect(isDefaultName("Generated Presentation")).toBe(true);
-            expect(isDefaultName("Untitled Presentation")).toBe(true);
-            expect(isDefaultName("My Custom Title")).toBe(false);
-            expect(isDefaultName("Weekly Team Meeting")).toBe(false);
+            expect(isDefaultPresentationName("Generating...")).toBe(true);
+            expect(isDefaultPresentationName("Generated Presentation")).toBe(true);
+            expect(isDefaultPresentationName("Untitled Presentation")).toBe(true);
+            expect(isDefaultPresentationName("My Custom Title")).toBe(false);
+            expect(isDefaultPresentationName("Weekly Team Meeting")).toBe(false);
+            // Edge cases
+            expect(isDefaultPresentationName("Re-Generating Ideas")).toBe(true);
+            expect(isDefaultPresentationName("")).toBe(false);
+        });
+    });
+
+    describe("localStorage Persistence", () => {
+        it("should serialize userEditedTitles to JSON array", () => {
+            const userEditedTitles = new Set(["pres-1", "pres-2", "pres-3"]);
+            const serialized = JSON.stringify([...userEditedTitles]);
+            const deserialized = new Set(JSON.parse(serialized));
+
+            expect(deserialized.has("pres-1")).toBe(true);
+            expect(deserialized.has("pres-2")).toBe(true);
+            expect(deserialized.has("pres-3")).toBe(true);
+            expect(deserialized.size).toBe(3);
+        });
+
+        it("should handle empty Set serialization", () => {
+            const userEditedTitles = new Set<string>();
+            const serialized = JSON.stringify([...userEditedTitles]);
+            expect(serialized).toBe("[]");
+
+            const deserialized = new Set(JSON.parse(serialized));
+            expect(deserialized.size).toBe(0);
         });
     });
 });

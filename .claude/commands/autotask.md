@@ -137,7 +137,19 @@ Key highlights:
 - Bot feedback addressed
 
 Include the PR URL and worktree location. If design decisions were made autonomously,
-note they're documented in the PR for review. </completion>
+note they're documented in the PR for review.
+
+## Sandbox Testing
+
+After the PR is created, a Vercel preview deployment will automatically start. Within
+2-3 minutes, a "🧪 Sandbox Ready for Testing" comment will appear on the PR with a
+clickable link to the preview environment.
+
+Mention this to the user:
+
+> A sandbox environment will be available shortly. Check the PR for the "Sandbox Ready"
+> comment with a link to test your changes in an isolated preview deployment.
+</completion>
 
 <error-recovery>
 Recover gracefully from failures when possible. Capture decision-enabling context: what was attempted, what state preceded the failure, what the error indicates about root cause, and whether you have enough information to fix it autonomously.

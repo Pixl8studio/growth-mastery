@@ -1,6 +1,6 @@
 /**
  * AI Client
- * Wrapper around Anthropic API for funnel content generation
+ * Wrapper around Anthropic Claude API for funnel content generation
  * Uses DALL-E (OpenAI) for image generation only
  */
 
@@ -57,88 +57,80 @@ function getOpenAIClient(): OpenAI {
     return openaiInstance;
 }
 
-// Message type for Anthropic
-interface Message {
-    role: "user" | "assistant";
-    content: string;
-}
-
-// Content part type for structured message content (e.g., OpenAI's ChatCompletionContentPartText)
-interface ContentPart {
-    type?: string;
-    text?: string;
-}
-
-// Input message type - supports both simple string content and structured content arrays
-type MessageContent =
-    | string
-    | null
-    | undefined
-    | ContentPart[]
-    | Array<string | ContentPart>;
-
-type InputMessage = {
-    role: string;
-    content?: MessageContent;
-};
+/**
+ * Message type compatible with both OpenAI and Anthropic formats
+ * Accepts OpenAI's ChatCompletionMessageParam for backward compatibility
+ */
+export type AIMessage = OpenAI.Chat.Completions.ChatCompletionMessageParam;
 
 /**
- * Extract string content from various message content formats
+ * Extract string content from OpenAI message content
+ * Handles both string and ContentPart array formats
  */
-function extractStringContent(content: unknown): string {
+function extractContent(
+    content: OpenAI.Chat.Completions.ChatCompletionMessageParam["content"]
+): string {
     if (typeof content === "string") {
         return content;
     }
-    if (content === null || content === undefined) {
-        return "";
-    }
     if (Array.isArray(content)) {
-        // Handle OpenAI's ChatCompletionContentPartText[] format
         return content
-            .map((part) => {
-                if (typeof part === "string") return part;
-                if (part && typeof part === "object" && "text" in part) {
-                    return String(part.text);
-                }
-                return "";
-            })
-            .join("");
+            .filter(
+                (part): part is OpenAI.Chat.Completions.ChatCompletionContentPartText =>
+                    "type" in part && part.type === "text"
+            )
+            .map((part) => part.text)
+            .join("\n");
     }
-    return String(content);
+    return "";
 }
 
 /**
- * Convert OpenAI-style messages to Anthropic format
- * Extracts system message and converts chat messages
+ * Convert messages array to Anthropic format
+ * Extracts system messages and converts to Anthropic message format
+ * Handles OpenAI's various message types including 'developer' role
  */
-function convertToAnthropicFormat(messages: InputMessage[]): {
+function convertToAnthropicFormat(messages: AIMessage[]): {
     system: string | undefined;
-    messages: Message[];
+    messages: Anthropic.MessageParam[];
 } {
-    let system: string | undefined;
-    const anthropicMessages: Message[] = [];
+    const systemMessages: string[] = [];
+    const anthropicMessages: Anthropic.MessageParam[] = [];
 
     for (const msg of messages) {
-        const content = extractStringContent(msg.content);
-        if (msg.role === "system") {
-            system = content || undefined;
+        const content = extractContent(msg.content);
+
+        // Handle system and developer messages as system context
+        if (msg.role === "system" || msg.role === "developer") {
+            if (content) {
+                systemMessages.push(content);
+            }
         } else if (msg.role === "user" || msg.role === "assistant") {
-            anthropicMessages.push({
-                role: msg.role,
-                content: content || "",
-            });
+            if (content) {
+                anthropicMessages.push({
+                    role: msg.role,
+                    content,
+                });
+            }
         }
+        // Ignore other roles like 'tool', 'function' that aren't supported
     }
 
-    return { system, messages: anthropicMessages };
+    return {
+        system: systemMessages.length > 0 ? systemMessages.join("\n\n") : undefined,
+        messages: anthropicMessages,
+    };
 }
 
 /**
  * Generate content with Anthropic Claude and parse JSON response
  * Includes retry logic and token tracking
+ *
+ * @param messages - Array of messages in OpenAI-compatible format for backward compatibility
+ * @param options - Generation options (model, temperature, maxTokens)
  */
 export async function generateWithAI<T>(
-    messages: InputMessage[],
+    messages: AIMessage[],
     options?: AIGenerationOptions
 ): Promise<T> {
     const model = options?.model || AI_CONFIG.models.default;
@@ -175,11 +167,12 @@ export async function generateWithAI<T>(
                             messages: anthropicMessages,
                         });
 
-                        const textBlock = response.content.find(
-                            (block) => block.type === "text"
-                        );
-                        const content =
-                            textBlock?.type === "text" ? textBlock.text : null;
+                        const contentBlock = response.content[0];
+                        if (contentBlock.type !== "text") {
+                            throw new Error("Unexpected response type from Claude");
+                        }
+
+                        const content = contentBlock.text;
 
                         if (!content) {
                             throw new Error("No content returned from Anthropic");
@@ -276,7 +269,7 @@ export async function generateWithAI<T>(
  * For free-form text generation
  */
 export async function generateTextWithAI(
-    messages: InputMessage[],
+    messages: AIMessage[],
     options?: AIGenerationOptions
 ): Promise<string> {
     const model = options?.model || AI_CONFIG.models.default;
@@ -308,11 +301,12 @@ export async function generateTextWithAI(
                             messages: anthropicMessages,
                         });
 
-                        const textBlock = response.content.find(
-                            (block) => block.type === "text"
-                        );
-                        const content =
-                            textBlock?.type === "text" ? textBlock.text : null;
+                        const contentBlock = response.content[0];
+                        if (contentBlock.type !== "text") {
+                            throw new Error("Unexpected response type from Claude");
+                        }
+
+                        const content = contentBlock.text;
 
                         if (!content) {
                             throw new Error("No content returned from Anthropic");
@@ -378,6 +372,9 @@ export async function generateTextWithAI(
 /**
  * Generate image with DALL-E (OpenAI)
  * Uses DALL-E 3 for high-quality image generation
+ *
+ * NOTE: This function still uses OpenAI as Claude does not have image generation capabilities.
+ * This is the only remaining OpenAI integration in the project.
  */
 export async function generateImageWithAI(
     prompt: string,
@@ -390,7 +387,7 @@ export async function generateImageWithAI(
     const requestLogger = logger.child({ model: "dall-e-3", size, quality, style });
     requestLogger.info(
         { prompt: prompt.substring(0, 100) },
-        "Generating image with DALL-E"
+        "Generating image with DALL-E (OpenAI)"
     );
 
     try {

@@ -6,10 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
-import {
-    generateSupportResponse,
-    type ChatMessage,
-} from "@/lib/openai/assistants-client";
+import { sendMessageAndGetResponse } from "@/lib/claude/support-chat-client";
 import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
@@ -28,26 +25,7 @@ export async function POST(request: NextRequest) {
         const { threadId, message, contextPage, pageContext, businessContext } =
             await request.json();
 
-        // Get existing conversation history from database
-        const { data: interaction } = await supabase
-            .from("support_interactions")
-            .select("metadata")
-            .eq("assistant_thread_id", threadId)
-            .single();
-
-        // Get existing messages or initialize empty array
-        const existingMessages: ChatMessage[] =
-            (interaction?.metadata as { messages?: ChatMessage[] })?.messages || [];
-
-        // Add user message to history
-        const newUserMessage: ChatMessage = {
-            role: "user",
-            content: message,
-            timestamp: new Date().toISOString(),
-        };
-        const updatedMessages = [...existingMessages, newUserMessage];
-
-        // Build comprehensive system prompt for the assistant
+        // Build comprehensive system prompt for Claude
         let systemPrompt = `You are Genie AI, a helpful assistant for the Genie funnel builder platform.
 
 User is currently on: ${contextPage}`;
@@ -83,31 +61,15 @@ Available actions are listed in the page context above.
 Be conversational, helpful, and proactive. If you see the user is on a form page,
 offer to help them fill it in by asking relevant questions about their business.`;
 
-        // Generate response using Anthropic Claude
-        const responseText = await generateSupportResponse(
-            updatedMessages,
+        // Send message and get Claude's response
+        const responseText = await sendMessageAndGetResponse(
+            threadId,
+            message,
             systemPrompt
         );
 
-        // Add assistant response to history
-        const assistantMessage: ChatMessage = {
-            role: "assistant",
-            content: responseText,
-            timestamp: new Date().toISOString(),
-        };
-        const finalMessages = [...updatedMessages, assistantMessage];
-
-        // Update conversation history in database
-        await supabase
-            .from("support_interactions")
-            .update({
-                metadata: { messages: finalMessages },
-                updated_at: new Date().toISOString(),
-            })
-            .eq("assistant_thread_id", threadId);
-
         requestLogger.info(
-            { userId: user.id, threadId, messageCount: finalMessages.length },
+            { userId: user.id, threadId },
             "Support message processed successfully"
         );
 

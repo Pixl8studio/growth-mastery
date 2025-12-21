@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/nextjs";
 import { createClient } from "@/lib/supabase/server";
-import { createThread } from "@/lib/openai/assistants-client";
+import { createThread } from "@/lib/claude/support-chat-client";
 import { logger } from "@/lib/logger";
 
 export async function POST(request: NextRequest) {
@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
             interaction_type: "chat",
             context_page: contextPage,
             assistant_thread_id: threadId,
-            metadata: { messages: [] },
+            metadata: { chat_messages: [] },
         });
 
         requestLogger.info(

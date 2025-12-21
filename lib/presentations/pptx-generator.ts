@@ -127,6 +127,71 @@ const FONT_SIZE_BODY = 2400; // 24pt
 const FONT_SIZE_FOOTER = 1200; // 12pt
 
 // ============================================================================
+// Bullet-Only Slide Formatting
+// ============================================================================
+
+/**
+ * Calculate dynamic font size and spacing for bullet-only slides.
+ * Scales text larger for fewer bullets to fill the slide better,
+ * and scales down for more bullets to ensure all content fits.
+ *
+ * @param bulletCount - Number of bullet points on the slide
+ * @returns Object with fontSize (hundredths of a point) and lineSpacing (percentage * 1000)
+ */
+function getBulletOnlySlideFormatting(bulletCount: number): {
+    fontSize: number;
+    lineSpacing: number;
+    spaceBefore: number;
+    spaceAfter: number;
+} {
+    // Dynamic scaling based on bullet count
+    // Available body height: CONTENT_SLIDE_BODY_HEIGHT = 3429000 EMU (~3.75 inches)
+    // Goal: Fill vertical space proportionally with larger text for fewer bullets
+
+    if (bulletCount <= 2) {
+        // Very few bullets - use large text with generous spacing
+        return {
+            fontSize: 3600, // 36pt
+            lineSpacing: 150000, // 150% line spacing
+            spaceBefore: 228600, // 0.25 inches before each bullet
+            spaceAfter: 228600, // 0.25 inches after each bullet
+        };
+    } else if (bulletCount <= 4) {
+        // Few bullets - use medium-large text
+        return {
+            fontSize: 3200, // 32pt
+            lineSpacing: 140000, // 140% line spacing
+            spaceBefore: 182880, // 0.2 inches
+            spaceAfter: 182880,
+        };
+    } else if (bulletCount <= 6) {
+        // Moderate bullets - use medium text
+        return {
+            fontSize: 2800, // 28pt
+            lineSpacing: 130000, // 130% line spacing
+            spaceBefore: 137160, // 0.15 inches
+            spaceAfter: 137160,
+        };
+    } else if (bulletCount <= 8) {
+        // Many bullets - use slightly larger than default
+        return {
+            fontSize: 2600, // 26pt
+            lineSpacing: 120000, // 120% line spacing
+            spaceBefore: 91440, // 0.1 inches
+            spaceAfter: 91440,
+        };
+    } else {
+        // Very many bullets - use default compact sizing
+        return {
+            fontSize: FONT_SIZE_BODY, // 24pt
+            lineSpacing: 110000, // 110% line spacing
+            spaceBefore: 45720, // 0.05 inches
+            spaceAfter: 45720,
+        };
+    }
+}
+
+// ============================================================================
 // Helper Functions
 // ============================================================================
 
@@ -1143,17 +1208,37 @@ function generateSlideXml(
     const textColors = getTextColors(slide.layoutType, colors);
     const accentColor = hexToRgb(colors.accent || colors.primary);
 
-    // Build bullet points with layout-appropriate text colors
+    // Determine if this is a bullet-only slide (bullets layout without images)
+    const isBulletOnlySlide = slide.layoutType === "bullets" && !hasImage;
+
+    // Get dynamic formatting for bullet-only slides, use fixed formatting otherwise
+    const bulletFormatting = isBulletOnlySlide
+        ? getBulletOnlySlideFormatting(slide.content.length)
+        : {
+              fontSize: FONT_SIZE_BODY,
+              lineSpacing: 100000,
+              spaceBefore: 0,
+              spaceAfter: 0,
+          };
+
+    // Build bullet points with layout-appropriate text colors and dynamic sizing
     const bulletPoints = slide.content
         .map(
-            (point: string) => `
+            (point: string, index: number) => `
       <a:p>
         <a:pPr marL="${BULLET_MARGIN_LEFT}" indent="${BULLET_INDENT}">
+          ${
+              isBulletOnlySlide
+                  ? `<a:lnSpc><a:spcPct val="${bulletFormatting.lineSpacing}"/></a:lnSpc>
+          <a:spcBef><a:spcPts val="${index === 0 ? 0 : Math.round(bulletFormatting.spaceBefore / 12.7)}"/></a:spcBef>
+          <a:spcAft><a:spcPts val="${Math.round(bulletFormatting.spaceAfter / 12.7)}"/></a:spcAft>`
+                  : ""
+          }
           <a:buFont typeface="Arial" panose="020B0604020202020204" pitchFamily="34" charset="0"/>
           <a:buChar char="&#8226;"/>
         </a:pPr>
         <a:r>
-          <a:rPr lang="en-US" sz="${FONT_SIZE_BODY}" dirty="0">
+          <a:rPr lang="en-US" sz="${bulletFormatting.fontSize}" dirty="0">
             <a:solidFill>
               <a:srgbClr val="${textColors.body}"/>
             </a:solidFill>
@@ -1164,6 +1249,17 @@ function generateSlideXml(
       </a:p>`
         )
         .join("");
+
+    // Body properties for bullet content - use different settings for bullet-only slides
+    // Bullet-only slides: distribute content vertically to fill available space
+    // Other slides: use standard autofit behavior
+    const bulletBodyPr = isBulletOnlySlide
+        ? `<a:bodyPr wrap="square" anchor="t" anchorCtr="0">
+            <a:noAutofit/>
+          </a:bodyPr>`
+        : `<a:bodyPr wrap="square" anchor="ctr">
+            <a:normAutofit fontScale="70000" lnSpcReduction="20000"/>
+          </a:bodyPr>`;
 
     // Different layouts based on slide type
     const isTitleSlide = slide.layoutType === "title";
@@ -1916,9 +2012,7 @@ ${layoutSpecificShapes}
           </a:xfrm>
         </p:spPr>
         <p:txBody>
-          <a:bodyPr wrap="square" anchor="ctr">
-            <a:normAutofit fontScale="70000" lnSpcReduction="20000"/>
-          </a:bodyPr>
+          ${bulletBodyPr}
           <a:lstStyle/>
           ${bulletPoints}
         </p:txBody>

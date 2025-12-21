@@ -330,7 +330,10 @@ export async function renameFunnel(projectId: string, newName: string) {
             throw new ValidationError("Funnel name cannot be empty");
         }
 
-        requestLogger.info({ userId: user.id, newName: trimmedName }, "Renaming funnel");
+        requestLogger.info(
+            { userId: user.id, newName: trimmedName },
+            "Renaming funnel"
+        );
 
         // Check for duplicate name (same user, different project, not deleted)
         // Using maybeSingle() to avoid throwing on multiple matches (race condition safety)

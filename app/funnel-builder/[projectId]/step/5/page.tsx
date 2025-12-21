@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import * as Sentry from "@sentry/nextjs";
 import { StepLayout } from "@/components/funnel/step-layout";
@@ -174,6 +174,8 @@ export default function Step5Page({
         string | null
     >(null);
     const [editingPresentationName, setEditingPresentationName] = useState("");
+    const [isSavingName, setIsSavingName] = useState(false);
+    const nameInputRef = useRef<HTMLInputElement>(null);
 
     // Loading states
     const [isLoading, setIsLoading] = useState(true);
@@ -374,6 +376,67 @@ export default function Step5Page({
             return fallbackTitle;
         },
         []
+    );
+
+    // Shared helper to auto-update presentation title with proper error handling
+    const updatePresentationTitleAuto = useCallback(
+        async (
+            presentationId: string,
+            slides: GeneratedSlide[],
+            currentTitle: string,
+            fallbackTitle: string,
+            onlyIfDefault = false
+        ): Promise<string> => {
+            // Check if we should update (only for default names if onlyIfDefault is true)
+            const isDefaultName =
+                currentTitle.includes("Generating") ||
+                currentTitle.includes("Generated") ||
+                currentTitle.includes("Untitled");
+
+            if (onlyIfDefault && !isDefaultName) {
+                return currentTitle;
+            }
+
+            const autoTitle = getTitleFromSlides(slides, fallbackTitle);
+
+            // If title hasn't changed, skip the API call
+            if (autoTitle === currentTitle) {
+                return currentTitle;
+            }
+
+            let finalTitle = autoTitle;
+
+            try {
+                const response = await fetch("/api/presentations", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        presentationId,
+                        title: autoTitle,
+                    }),
+                });
+
+                if (!response.ok) {
+                    // Fall back to current/fallback title on API failure
+                    finalTitle = onlyIfDefault ? currentTitle : fallbackTitle;
+                    logger.warn(
+                        { presentationId, status: response.status },
+                        "Failed to auto-update presentation title"
+                    );
+                }
+            } catch (error) {
+                // Fall back to current/fallback title on network error
+                finalTitle = onlyIfDefault ? currentTitle : fallbackTitle;
+                logger.warn(
+                    { error, presentationId },
+                    "Failed to auto-update presentation title"
+                );
+            }
+
+            return finalTitle;
+        },
+        [getTitleFromSlides]
     );
 
     // Helper functions for slide generation
@@ -609,34 +672,19 @@ export default function Step5Page({
                     (a, b) => a.slideNumber - b.slideNumber
                 ) as GeneratedSlide[];
 
-                // Auto-name presentation based on title slide headline
-                const autoTitle = getTitleFromSlides(
+                // Auto-name presentation based on title slide headline (with fallback on API failure)
+                const finalTitle = await updatePresentationTitleAuto(
+                    presentationId,
                     sortedSlides,
-                    selectedDeck.title
+                    selectedDeck.title, // currentTitle (treating deck title as initial)
+                    selectedDeck.title, // fallbackTitle
+                    false // Always try to update on fresh generation
                 );
-
-                // Update the presentation title in the database
-                try {
-                    await fetch("/api/presentations", {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        credentials: "include",
-                        body: JSON.stringify({
-                            presentationId,
-                            title: autoTitle,
-                        }),
-                    });
-                } catch (error) {
-                    logger.warn(
-                        { error },
-                        "Failed to auto-update presentation title"
-                    );
-                }
 
                 // Create final presentation record for local state
                 const newPresentation: Presentation = {
                     id: presentationId,
-                    title: autoTitle,
+                    title: finalTitle,
                     slides: sortedSlides,
                     status: PresentationStatus.COMPLETED,
                     deckStructureId: selectedDeck.id,
@@ -680,7 +728,7 @@ export default function Step5Page({
         projectId,
         streaming.isGenerating,
         toast,
-        getTitleFromSlides,
+        updatePresentationTitleAuto,
     ]);
 
     // Handle resume generation for incomplete presentations
@@ -779,39 +827,19 @@ export default function Step5Page({
                         (a, b) => a.slideNumber - b.slideNumber
                     ) as GeneratedSlide[];
 
-                    // Auto-name presentation based on title slide if using default name
-                    const isDefaultName =
-                        presentation.title.includes("Generating") ||
-                        presentation.title.includes("Generated") ||
-                        presentation.title.includes("Untitled");
-                    const autoTitle = isDefaultName
-                        ? getTitleFromSlides(sortedSlides, presentation.title)
-                        : presentation.title;
-
-                    // Update the presentation title in the database if changed
-                    if (autoTitle !== presentation.title) {
-                        try {
-                            await fetch("/api/presentations", {
-                                method: "PATCH",
-                                headers: { "Content-Type": "application/json" },
-                                credentials: "include",
-                                body: JSON.stringify({
-                                    presentationId,
-                                    title: autoTitle,
-                                }),
-                            });
-                        } catch (error) {
-                            logger.warn(
-                                { error },
-                                "Failed to auto-update presentation title"
-                            );
-                        }
-                    }
+                    // Auto-name presentation based on title slide if using default name (with fallback on API failure)
+                    const finalTitle = await updatePresentationTitleAuto(
+                        presentationId,
+                        sortedSlides,
+                        presentation.title, // currentTitle
+                        presentation.title, // fallbackTitle (keep original on failure)
+                        true // Only update if it's a default name
+                    );
 
                     const completedPresentation: Presentation = {
                         ...presentation,
                         id: presentationId,
-                        title: autoTitle,
+                        title: finalTitle,
                         slides: sortedSlides,
                         status: PresentationStatus.COMPLETED,
                     };
@@ -849,7 +877,7 @@ export default function Step5Page({
                 },
             });
         },
-        [projectId, customization, streaming.isGenerating, toast, getTitleFromSlides]
+        [projectId, customization, streaming.isGenerating, toast, updatePresentationTitleAuto]
     );
 
     // Handle starting fresh - deletes existing slides and starts over
@@ -1374,6 +1402,14 @@ export default function Step5Page({
         []
     );
 
+    // Focus and select input text when editing starts
+    useEffect(() => {
+        if (editingPresentationId && nameInputRef.current) {
+            nameInputRef.current.focus();
+            nameInputRef.current.select();
+        }
+    }, [editingPresentationId]);
+
     const savePresentationName = useCallback(
         async (presentationId: string) => {
             const trimmedName = editingPresentationName.trim();
@@ -1382,6 +1418,8 @@ export default function Step5Page({
                 setEditingPresentationName("");
                 return;
             }
+
+            setIsSavingName(true);
 
             try {
                 const response = await fetch("/api/presentations", {
@@ -1395,7 +1433,13 @@ export default function Step5Page({
                 });
 
                 if (!response.ok) {
-                    throw new Error("Failed to update presentation name");
+                    throw new Error(`Failed to update presentation name: ${response.status}`);
+                }
+
+                // Validate response data
+                const data = await response.json();
+                if (!data.presentation) {
+                    throw new Error("Invalid response from server");
                 }
 
                 setPresentations((prev) =>
@@ -1409,13 +1453,18 @@ export default function Step5Page({
                     description: "Presentation name has been saved.",
                 });
             } catch (error) {
-                logger.error({ error }, "Failed to update presentation name");
+                logger.error({ error, presentationId }, "Failed to update presentation name");
+                Sentry.captureException(error, {
+                    tags: { component: "step5", action: "rename_presentation" },
+                    extra: { presentationId, trimmedName },
+                });
                 toast({
                     title: "Update Failed",
                     description: "Could not rename presentation. Please try again.",
                     variant: "destructive",
                 });
             } finally {
+                setIsSavingName(false);
                 setEditingPresentationId(null);
                 setEditingPresentationName("");
             }
@@ -1979,6 +2028,9 @@ export default function Step5Page({
                                                                 presentation.id ? (
                                                                     <div className="flex flex-1 items-center gap-2">
                                                                         <input
+                                                                            ref={
+                                                                                nameInputRef
+                                                                            }
                                                                             type="text"
                                                                             value={
                                                                                 editingPresentationName
@@ -1992,13 +2044,15 @@ export default function Step5Page({
                                                                                         .value
                                                                                 )
                                                                             }
+                                                                            aria-label="Presentation name"
                                                                             className="flex-1 rounded border border-primary/30 px-2 py-1 font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
                                                                             onKeyDown={(
                                                                                 e
                                                                             ) => {
                                                                                 if (
                                                                                     e.key ===
-                                                                                    "Enter"
+                                                                                        "Enter" &&
+                                                                                    !isSavingName
                                                                                 )
                                                                                     savePresentationName(
                                                                                         presentation.id
@@ -2011,7 +2065,9 @@ export default function Step5Page({
                                                                                         null
                                                                                     );
                                                                             }}
-                                                                            autoFocus
+                                                                            disabled={
+                                                                                isSavingName
+                                                                            }
                                                                         />
                                                                         <button
                                                                             onClick={() =>
@@ -2019,9 +2075,16 @@ export default function Step5Page({
                                                                                     presentation.id
                                                                                 )
                                                                             }
-                                                                            className="rounded bg-primary px-2 py-1 text-sm text-white hover:bg-primary/90"
+                                                                            disabled={
+                                                                                isSavingName
+                                                                            }
+                                                                            className="rounded bg-primary px-2 py-1 text-sm text-white hover:bg-primary/90 disabled:opacity-50"
                                                                         >
-                                                                            Save
+                                                                            {isSavingName ? (
+                                                                                <Loader2 className="h-4 w-4 animate-spin" />
+                                                                            ) : (
+                                                                                "Save"
+                                                                            )}
                                                                         </button>
                                                                         <button
                                                                             onClick={() =>
@@ -2029,7 +2092,10 @@ export default function Step5Page({
                                                                                     null
                                                                                 )
                                                                             }
-                                                                            className="rounded bg-gray-300 px-2 py-1 text-sm text-foreground hover:bg-gray-400"
+                                                                            disabled={
+                                                                                isSavingName
+                                                                            }
+                                                                            className="rounded bg-gray-300 px-2 py-1 text-sm text-foreground hover:bg-gray-400 disabled:opacity-50"
                                                                         >
                                                                             Cancel
                                                                         </button>

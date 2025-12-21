@@ -169,6 +169,12 @@ export default function Step5Page({
     const [editPrompt, setEditPrompt] = useState("");
     const [isEditingSlide, setIsEditingSlide] = useState(false);
 
+    // Inline presentation name editing state
+    const [editingPresentationId, setEditingPresentationId] = useState<
+        string | null
+    >(null);
+    const [editingPresentationName, setEditingPresentationName] = useState("");
+
     // Loading states
     const [isLoading, setIsLoading] = useState(true);
 
@@ -1288,6 +1294,64 @@ export default function Step5Page({
         [toast]
     );
 
+    // Inline presentation name editing functions
+    const startEditingPresentationName = useCallback(
+        (presentation: Presentation) => {
+            setEditingPresentationId(presentation.id);
+            setEditingPresentationName(presentation.title);
+        },
+        []
+    );
+
+    const savePresentationName = useCallback(
+        async (presentationId: string) => {
+            const trimmedName = editingPresentationName.trim();
+            if (!trimmedName) {
+                setEditingPresentationId(null);
+                setEditingPresentationName("");
+                return;
+            }
+
+            try {
+                const response = await fetch("/api/presentations", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "include",
+                    body: JSON.stringify({
+                        presentationId,
+                        title: trimmedName,
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error("Failed to update presentation name");
+                }
+
+                setPresentations((prev) =>
+                    prev.map((p) =>
+                        p.id === presentationId ? { ...p, title: trimmedName } : p
+                    )
+                );
+
+                toast({
+                    title: "Name Updated",
+                    description: "Presentation name has been saved.",
+                });
+            } catch (error) {
+                logger.error({ error }, "Failed to update presentation name");
+                toast({
+                    title: "Update Failed",
+                    description: "Could not rename presentation. Please try again.",
+                    variant: "destructive",
+                });
+            } finally {
+                setEditingPresentationId(null);
+                setEditingPresentationName("");
+            }
+        },
+        [editingPresentationName, toast]
+    );
+
     // Render loading state
     if (isLoading) {
         return (
@@ -1838,12 +1902,103 @@ export default function Step5Page({
                                                                 Complete
                                                             </span>
                                                         )}
-                                                        <div>
-                                                            <h4 className="font-semibold">
-                                                                {isDraft || isPaused
-                                                                    ? `${isPaused ? "Paused" : "Draft"} - ${presentation.title}`
-                                                                    : presentation.title}
-                                                            </h4>
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-2">
+                                                                {editingPresentationId ===
+                                                                presentation.id ? (
+                                                                    <div className="flex flex-1 items-center gap-2">
+                                                                        <input
+                                                                            type="text"
+                                                                            value={
+                                                                                editingPresentationName
+                                                                            }
+                                                                            onChange={(
+                                                                                e
+                                                                            ) =>
+                                                                                setEditingPresentationName(
+                                                                                    e
+                                                                                        .target
+                                                                                        .value
+                                                                                )
+                                                                            }
+                                                                            className="flex-1 rounded border border-primary/30 px-2 py-1 font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
+                                                                            onKeyDown={(
+                                                                                e
+                                                                            ) => {
+                                                                                if (
+                                                                                    e.key ===
+                                                                                    "Enter"
+                                                                                )
+                                                                                    savePresentationName(
+                                                                                        presentation.id
+                                                                                    );
+                                                                                if (
+                                                                                    e.key ===
+                                                                                    "Escape"
+                                                                                )
+                                                                                    setEditingPresentationId(
+                                                                                        null
+                                                                                    );
+                                                                            }}
+                                                                            autoFocus
+                                                                        />
+                                                                        <button
+                                                                            onClick={() =>
+                                                                                savePresentationName(
+                                                                                    presentation.id
+                                                                                )
+                                                                            }
+                                                                            className="rounded bg-primary px-2 py-1 text-sm text-white hover:bg-primary/90"
+                                                                        >
+                                                                            Save
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() =>
+                                                                                setEditingPresentationId(
+                                                                                    null
+                                                                                )
+                                                                            }
+                                                                            className="rounded bg-gray-300 px-2 py-1 text-sm text-foreground hover:bg-gray-400"
+                                                                        >
+                                                                            Cancel
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    <>
+                                                                        <h4
+                                                                            className="cursor-pointer font-semibold hover:text-primary"
+                                                                            onClick={(
+                                                                                e
+                                                                            ) => {
+                                                                                e.stopPropagation();
+                                                                                startEditingPresentationName(
+                                                                                    presentation
+                                                                                );
+                                                                            }}
+                                                                            title="Click to rename"
+                                                                        >
+                                                                            {isDraft ||
+                                                                            isPaused
+                                                                                ? `${isPaused ? "Paused" : "Draft"} - ${presentation.title}`
+                                                                                : presentation.title}
+                                                                        </h4>
+                                                                        <button
+                                                                            onClick={(
+                                                                                e
+                                                                            ) => {
+                                                                                e.stopPropagation();
+                                                                                startEditingPresentationName(
+                                                                                    presentation
+                                                                                );
+                                                                            }}
+                                                                            className="rounded p-1 text-primary hover:bg-primary/5"
+                                                                            title="Rename presentation"
+                                                                        >
+                                                                            <Pencil className="h-4 w-4" />
+                                                                        </button>
+                                                                    </>
+                                                                )}
+                                                            </div>
                                                             <p className="text-sm text-muted-foreground">
                                                                 {slideCountText}
                                                                 {isIncomplete &&

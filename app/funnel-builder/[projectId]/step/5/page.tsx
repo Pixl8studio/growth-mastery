@@ -360,6 +360,22 @@ export default function Step5Page({
         selectedDeckId &&
         !hasReachedLimit;
 
+    // Helper to extract presentation title from title slide
+    const getTitleFromSlides = useCallback(
+        (slides: GeneratedSlide[], fallbackTitle: string): string => {
+            // Find the title slide (layoutType === "title") or use first slide
+            const titleSlide =
+                slides.find((s) => s.layoutType === "title") || slides[0];
+
+            if (titleSlide?.title && titleSlide.title.trim()) {
+                return titleSlide.title.trim();
+            }
+
+            return fallbackTitle;
+        },
+        []
+    );
+
     // Helper functions for slide generation
     const generateSlideContent = useCallback(
         (deckSlide: any, customization: PresentationCustomization): string[] => {
@@ -585,7 +601,7 @@ export default function Step5Page({
                     "Slide generated in real-time"
                 );
             },
-            onComplete: (presentationId, slides) => {
+            onComplete: async (presentationId, slides) => {
                 // CRITICAL: Sort slides by slideNumber to maintain Step 4 presentation order
                 // Note: The `slides` array comes from the server's completed event and may not
                 // be pre-sorted. This defensive sort ensures correct order regardless of server behavior.
@@ -593,10 +609,34 @@ export default function Step5Page({
                     (a, b) => a.slideNumber - b.slideNumber
                 ) as GeneratedSlide[];
 
+                // Auto-name presentation based on title slide headline
+                const autoTitle = getTitleFromSlides(
+                    sortedSlides,
+                    selectedDeck.title
+                );
+
+                // Update the presentation title in the database
+                try {
+                    await fetch("/api/presentations", {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: "include",
+                        body: JSON.stringify({
+                            presentationId,
+                            title: autoTitle,
+                        }),
+                    });
+                } catch (error) {
+                    logger.warn(
+                        { error },
+                        "Failed to auto-update presentation title"
+                    );
+                }
+
                 // Create final presentation record for local state
                 const newPresentation: Presentation = {
                     id: presentationId,
-                    title: `${selectedDeck.title} - Generated`,
+                    title: autoTitle,
                     slides: sortedSlides,
                     status: PresentationStatus.COMPLETED,
                     deckStructureId: selectedDeck.id,
@@ -640,6 +680,7 @@ export default function Step5Page({
         projectId,
         streaming.isGenerating,
         toast,
+        getTitleFromSlides,
     ]);
 
     // Handle resume generation for incomplete presentations
@@ -730,7 +771,7 @@ export default function Step5Page({
                         "Slide generated during resume"
                     );
                 },
-                onComplete: (presentationId, slides) => {
+                onComplete: async (presentationId, slides) => {
                     // CRITICAL: Sort slides by slideNumber to maintain Step 4 presentation order
                     // Note: The `slides` array comes from the server's completed event and may not
                     // be pre-sorted. This defensive sort ensures correct order regardless of server behavior.
@@ -738,9 +779,39 @@ export default function Step5Page({
                         (a, b) => a.slideNumber - b.slideNumber
                     ) as GeneratedSlide[];
 
+                    // Auto-name presentation based on title slide if using default name
+                    const isDefaultName =
+                        presentation.title.includes("Generating") ||
+                        presentation.title.includes("Generated") ||
+                        presentation.title.includes("Untitled");
+                    const autoTitle = isDefaultName
+                        ? getTitleFromSlides(sortedSlides, presentation.title)
+                        : presentation.title;
+
+                    // Update the presentation title in the database if changed
+                    if (autoTitle !== presentation.title) {
+                        try {
+                            await fetch("/api/presentations", {
+                                method: "PATCH",
+                                headers: { "Content-Type": "application/json" },
+                                credentials: "include",
+                                body: JSON.stringify({
+                                    presentationId,
+                                    title: autoTitle,
+                                }),
+                            });
+                        } catch (error) {
+                            logger.warn(
+                                { error },
+                                "Failed to auto-update presentation title"
+                            );
+                        }
+                    }
+
                     const completedPresentation: Presentation = {
                         ...presentation,
                         id: presentationId,
+                        title: autoTitle,
                         slides: sortedSlides,
                         status: PresentationStatus.COMPLETED,
                     };
@@ -778,7 +849,7 @@ export default function Step5Page({
                 },
             });
         },
-        [projectId, customization, streaming.isGenerating, toast]
+        [projectId, customization, streaming.isGenerating, toast, getTitleFromSlides]
     );
 
     // Handle starting fresh - deletes existing slides and starts over

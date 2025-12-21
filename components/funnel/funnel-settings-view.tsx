@@ -13,6 +13,7 @@ import { DomainSettings } from "@/components/funnel/settings/domain-settings";
 import { SocialIntegrations } from "@/components/funnel/settings/social-integrations";
 import { CalendarIntegration } from "@/components/funnel/settings/calendar-integration";
 import { EmailDomainSettings } from "@/components/funnel/settings/email-domain-settings";
+import { GeneralSettings } from "@/components/funnel/settings/general-settings";
 
 interface FunnelSettingsViewProps {
     projectId: string;
@@ -70,14 +71,7 @@ export function FunnelSettingsView({ projectId }: FunnelSettingsViewProps) {
                 </TabsContent>
 
                 <TabsContent value="general" className="mt-6">
-                    <div className="rounded-lg border border-border bg-card p-6">
-                        <h3 className="text-lg font-semibold text-foreground">
-                            General Settings
-                        </h3>
-                        <p className="mt-2 text-sm text-muted-foreground">
-                            Additional funnel settings coming soon
-                        </p>
-                    </div>
+                    <GeneralSettings projectId={projectId} />
                 </TabsContent>
             </Tabs>
         </div>

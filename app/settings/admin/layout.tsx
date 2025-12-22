@@ -93,9 +93,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     const allNavigation = [...navigation, ...superAdminNavigation];
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6" role="main" aria-label="Admin Dashboard">
             {/* Admin Header */}
-            <div className="border-b border-border pb-4">
+            <header className="border-b border-border pb-4">
                 <div className="flex items-center justify-between">
                     <div>
                         <h1 className="text-2xl font-bold text-foreground">
@@ -105,7 +105,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                             Monitor users, manage support, and track platform health
                         </p>
                     </div>
-                    <div className="flex items-center space-x-2 text-sm text-muted-foreground">
+                    <div
+                        className="flex items-center space-x-2 text-sm text-muted-foreground"
+                        aria-label="Current admin user information"
+                    >
                         <span
                             className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                                 adminUser.role === "super_admin"
@@ -114,22 +117,30 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                                       ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
                                       : "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300"
                             }`}
+                            role="status"
+                            aria-label={`Your role: ${adminUser.role.replace("_", " ")}`}
                         >
                             {adminUser.role}
                         </span>
-                        <span>{adminUser.email}</span>
+                        <span aria-label={`Logged in as ${adminUser.email}`}>
+                            {adminUser.email}
+                        </span>
                     </div>
                 </div>
-            </div>
+            </header>
 
             {/* Admin Sub-Navigation */}
-            <nav className="flex flex-wrap gap-2 border-b border-border pb-4">
+            <nav
+                className="flex flex-wrap gap-2 border-b border-border pb-4"
+                aria-label="Admin dashboard sections"
+            >
                 {allNavigation.map((item) => (
                     <Link
                         key={item.name}
                         href={item.href}
-                        className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        className="rounded-md px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                         title={item.description}
+                        aria-label={`${item.name}: ${item.description}`}
                     >
                         {item.name}
                     </Link>
@@ -137,7 +148,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             </nav>
 
             {/* Admin Content */}
-            <div>{children}</div>
+            <div role="region" aria-label="Admin content area">
+                {children}
+            </div>
         </div>
     );
 }

@@ -1129,13 +1129,16 @@ Approach:
                                 <TabsContent value="sender" className="mt-6">
                                     <SenderSetupTab
                                         agentConfigId={agentConfig?.id}
+                                        funnelProjectId={projectId}
                                         currentSenderName={agentConfig?.sender_name}
-                                        currentSenderEmail={agentConfig?.sender_email}
-                                        currentSMSSenderId={agentConfig?.sms_sender_id}
-                                        emailProviderType={
-                                            agentConfig?.email_provider_type
+                                        currentReplyToEmail={
+                                            agentConfig?.metadata?.reply_to_email
                                         }
-                                        gmailUserEmail={agentConfig?.gmail_user_email}
+                                        currentSMSSenderId={agentConfig?.sms_sender_id}
+                                        emailMode={agentConfig?.metadata?.email_mode}
+                                        customDomainId={
+                                            agentConfig?.metadata?.custom_domain_id
+                                        }
                                         onUpdate={async () => {
                                             // Reload data after sender updates
                                             if (!projectId) return;

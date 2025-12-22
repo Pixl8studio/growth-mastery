@@ -1,12 +1,14 @@
 /**
  * Sender Setup Tab Component
  *
- * UI for configuring sender identity via Gmail OAuth or SendGrid.
+ * Simplified email sender configuration with two modes:
+ * 1. Quick Start (Default): Use platform domain - just enter name and reply-to
+ * 2. Custom Domain (Advanced): Full Mailgun setup with DNS for branded emails
  */
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,72 +16,127 @@ import { Button } from "@/components/ui/button";
 import {
     CheckCircle2,
     AlertCircle,
-    ExternalLink,
     Loader2,
-    AlertTriangle,
     Check,
+    Globe,
+    Mail,
+    Copy,
+    RefreshCw,
+    ChevronDown,
+    ChevronUp,
+    Zap,
+    Settings2,
 } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { logger } from "@/lib/client-logger";
 import { cn } from "@/lib/utils";
+import type { EmailDomain } from "@/types/integrations";
+
+// Platform sending domain - emails go from here, replies go to user's email
+const PLATFORM_DOMAIN = "mail.geniefunnels.com";
+const PLATFORM_SENDER_EMAIL = `noreply@${PLATFORM_DOMAIN}`;
+
+type EmailMode = "platform" | "custom";
 
 interface SenderSetupTabProps {
     agentConfigId: string;
+    funnelProjectId?: string | null;
     currentSenderName?: string | null;
-    currentSenderEmail?: string | null;
+    currentReplyToEmail?: string | null;
     currentSMSSenderId?: string | null;
-    emailProviderType?: "sendgrid" | "gmail" | "console" | null;
-    gmailUserEmail?: string | null;
+    emailMode?: EmailMode;
+    customDomainId?: string | null;
     onUpdate?: () => void;
 }
 
 export function SenderSetupTab({
     agentConfigId,
+    funnelProjectId = null,
     currentSenderName,
-    currentSenderEmail,
+    currentReplyToEmail,
     currentSMSSenderId,
-    emailProviderType = "sendgrid",
-    gmailUserEmail,
+    emailMode = "platform",
+    customDomainId,
     onUpdate,
 }: SenderSetupTabProps) {
     const { toast } = useToast();
+
+    // Quick Start state (platform domain)
     const [senderName, setSenderName] = useState(currentSenderName || "");
-    const [senderEmail, setSenderEmail] = useState(currentSenderEmail || "");
+    const [replyToEmail, setReplyToEmail] = useState(currentReplyToEmail || "");
     const [smsSenderId, setSmsSenderId] = useState(currentSMSSenderId || "");
     const [saving, setSaving] = useState(false);
-    const [connectingGmail, setConnectingGmail] = useState(false);
-    const [disconnectingGmail, setDisconnectingGmail] = useState(false);
-    const [localProviderType, setLocalProviderType] = useState(emailProviderType);
-    const [localGmailEmail, setLocalGmailEmail] = useState(gmailUserEmail);
-    const [gmailAvailable, setGmailAvailable] = useState<boolean | null>(null);
-    const [checkingGmailStatus, setCheckingGmailStatus] = useState(true);
+    const [localEmailMode, setLocalEmailMode] = useState<EmailMode>(emailMode);
 
-    // Check Gmail OAuth configuration status on mount
-    useEffect(() => {
-        const checkGmailSetup = async () => {
-            try {
-                const response = await fetch("/api/followup/gmail/status");
-                const data = await response.json();
-                setGmailAvailable(data.available);
-                logger.info(
-                    { available: data.available },
-                    "Gmail OAuth configuration status checked"
-                );
-            } catch (error) {
-                logger.error({ error }, "Failed to check Gmail OAuth status");
-                setGmailAvailable(false);
-            } finally {
-                setCheckingGmailStatus(false);
+    // Advanced/Custom domain state
+    const [showAdvanced, setShowAdvanced] = useState(emailMode === "custom");
+    const [emailDomains, setEmailDomains] = useState<EmailDomain[]>([]);
+    const [selectedDomain, setSelectedDomain] = useState<EmailDomain | null>(null);
+    const [loadingDomains, setLoadingDomains] = useState(false);
+    const [showDomainSetup, setShowDomainSetup] = useState(false);
+    const [newDomain, setNewDomain] = useState("");
+    const [newSubdomain, setNewSubdomain] = useState("mail");
+    const [creatingDomain, setCreatingDomain] = useState(false);
+    const [verifyingDomain, setVerifyingDomain] = useState(false);
+    const [showDNSRecords, setShowDNSRecords] = useState(false);
+
+    // Check if setup is complete
+    const isSetupComplete =
+        localEmailMode === "platform"
+            ? !!(senderName && replyToEmail)
+            : selectedDomain?.verification_status === "verified";
+
+    // Load custom domains if needed
+    const loadEmailDomains = useCallback(async () => {
+        setLoadingDomains(true);
+        try {
+            const params = new URLSearchParams();
+            if (funnelProjectId) {
+                params.set("funnel_project_id", funnelProjectId);
             }
-        };
-        checkGmailSetup();
-    }, []);
+            const response = await fetch(`/api/email-domains?${params}`);
+            const data = await response.json();
 
-    const handleSaveSenderInfo = async () => {
-        if (!senderEmail) {
+            if (data.success) {
+                setEmailDomains(data.domains || []);
+                if (customDomainId) {
+                    const domain = (data.domains || []).find(
+                        (d: EmailDomain) => d.id === customDomainId
+                    );
+                    if (domain) {
+                        setSelectedDomain(domain);
+                    }
+                }
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to load email domains");
+        } finally {
+            setLoadingDomains(false);
+        }
+    }, [funnelProjectId, customDomainId]);
+
+    useEffect(() => {
+        if (showAdvanced) {
+            loadEmailDomains();
+        }
+    }, [showAdvanced, loadEmailDomains]);
+
+    // Save Quick Start settings (platform domain)
+    const handleSaveQuickStart = async () => {
+        if (!senderName || !replyToEmail) {
             toast({
-                title: "Error",
-                description: "Sender email is required",
+                title: "Missing Information",
+                description: "Please enter your name and reply-to email",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        // Basic email validation
+        if (!replyToEmail.includes("@")) {
+            toast({
+                title: "Invalid Email",
+                description: "Please enter a valid email address",
                 variant: "destructive",
             });
             return;
@@ -93,32 +150,36 @@ export function SenderSetupTab({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     agent_config_id: agentConfigId,
+                    email_mode: "platform",
                     sender_name: senderName,
-                    sender_email: senderEmail,
-                    sms_sender_id: smsSenderId,
+                    sender_email: PLATFORM_SENDER_EMAIL,
+                    reply_to_email: replyToEmail,
+                    sms_sender_id: smsSenderId || null,
                 }),
             });
 
             const data = await response.json();
 
             if (!response.ok) {
-                throw new Error(data.error || "Failed to update sender info");
+                throw new Error(data.error || "Failed to save settings");
             }
 
+            setLocalEmailMode("platform");
+
             toast({
-                title: "Success",
-                description: "Sender information updated successfully",
+                title: "Ready to Send!",
+                description: "Your email sender is configured and ready to go.",
             });
 
             if (onUpdate) {
                 onUpdate();
             }
         } catch (error) {
-            logger.error({ error }, "Failed to update sender info");
+            logger.error({ error }, "Failed to save sender settings");
             toast({
                 title: "Error",
                 description:
-                    error instanceof Error ? error.message : "Failed to update",
+                    error instanceof Error ? error.message : "Failed to save settings",
                 variant: "destructive",
             });
         } finally {
@@ -126,428 +187,539 @@ export function SenderSetupTab({
         }
     };
 
-    const handleConnectGmail = async () => {
-        setConnectingGmail(true);
-
-        try {
-            const response = await fetch(
-                `/api/followup/gmail/connect?agent_config_id=${agentConfigId}`
-            );
-
-            const data = await response.json();
-
-            if (!response.ok) {
-                // Check if it's a configuration issue
-                if (data.setupRequired) {
-                    toast({
-                        title: "Gmail OAuth Not Configured",
-                        description:
-                            data.details ||
-                            "Please contact your administrator or use SendGrid instead.",
-                        variant: "destructive",
-                    });
-                    setGmailAvailable(false);
-                    return;
-                }
-                throw new Error(data.error || "Failed to initiate Gmail connection");
-            }
-
-            // Open OAuth popup
-            const width = 600;
-            const height = 700;
-            const left = window.screen.width / 2 - width / 2;
-            const top = window.screen.height / 2 - height / 2;
-
-            const popup = window.open(
-                data.authUrl,
-                "Gmail OAuth",
-                `width=${width},height=${height},left=${left},top=${top}`
-            );
-
-            // Poll for popup close or success
-            const checkPopup = setInterval(() => {
-                if (!popup || popup.closed) {
-                    clearInterval(checkPopup);
-                    setConnectingGmail(false);
-                    // Refresh to get updated state
-                    if (onUpdate) {
-                        onUpdate();
-                    }
-                }
-            }, 500);
-        } catch (error) {
-            logger.error({ error }, "Failed to connect Gmail");
+    // Create new custom domain
+    const handleCreateDomain = async () => {
+        if (!newDomain || !newSubdomain) {
             toast({
-                title: "Error",
-                description:
-                    error instanceof Error ? error.message : "Failed to connect Gmail",
+                title: "Missing Information",
+                description: "Please enter both domain and subdomain",
                 variant: "destructive",
             });
-            setConnectingGmail(false);
-        }
-    };
-
-    const handleDisconnectGmail = async () => {
-        if (
-            !confirm(
-                "Are you sure you want to disconnect Gmail? You'll need to set up SendGrid to continue sending emails."
-            )
-        ) {
             return;
         }
 
-        setDisconnectingGmail(true);
-
+        setCreatingDomain(true);
         try {
-            const response = await fetch("/api/followup/gmail/disconnect", {
+            const response = await fetch("/api/email-domains", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    agent_config_id: agentConfigId,
+                    domain: newDomain,
+                    subdomain: newSubdomain,
+                    funnel_project_id: funnelProjectId,
                 }),
             });
 
             const data = await response.json();
 
-            if (!response.ok) {
-                throw new Error(data.error || "Failed to disconnect Gmail");
+            if (!data.success) {
+                throw new Error(data.error || "Failed to create domain");
             }
+
+            setSelectedDomain(data.domain);
+            setShowDomainSetup(false);
+            setShowDNSRecords(true);
+            await loadEmailDomains();
 
             toast({
-                title: "Success",
-                description: "Gmail disconnected successfully",
+                title: "Domain Created",
+                description: `${newSubdomain}.${newDomain} created. Configure DNS records below.`,
             });
-
-            setLocalProviderType("sendgrid");
-            setLocalGmailEmail(null);
-
-            if (onUpdate) {
-                onUpdate();
-            }
         } catch (error) {
-            logger.error({ error }, "Failed to disconnect Gmail");
+            logger.error({ error }, "Failed to create domain");
             toast({
                 title: "Error",
                 description:
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to disconnect Gmail",
+                    error instanceof Error ? error.message : "Failed to create domain",
                 variant: "destructive",
             });
         } finally {
-            setDisconnectingGmail(false);
+            setCreatingDomain(false);
         }
     };
 
-    // Calculate setup progress
-    const isProviderSelected = !!localProviderType;
-    const isAccountConnected =
-        localProviderType === "gmail"
-            ? !!localGmailEmail
-            : !!(senderName && senderEmail);
+    // Verify domain DNS
+    const handleVerifyDomain = async (domain: EmailDomain) => {
+        setVerifyingDomain(true);
+        try {
+            const response = await fetch(`/api/email-domains/${domain.id}/verify`, {
+                method: "POST",
+            });
 
-    const setupSteps = [
-        {
-            id: "provider",
-            label: "Choose Provider",
-            complete: isProviderSelected,
-            description:
-                localProviderType === "gmail"
-                    ? "Gmail"
-                    : localProviderType === "sendgrid"
-                      ? "SendGrid"
-                      : "Not selected",
-        },
-        {
-            id: "connect",
-            label: "Connect Account",
-            complete: isAccountConnected,
-            description: isAccountConnected
-                ? localGmailEmail || senderEmail || "Connected"
-                : "Not connected",
-        },
-    ];
+            const data = await response.json();
 
-    const completedSteps = setupSteps.filter((s) => s.complete).length;
-    const totalSteps = setupSteps.length;
+            if (!data.success) {
+                throw new Error(data.error || "Failed to verify domain");
+            }
+
+            if (data.verification.verified) {
+                setSelectedDomain(data.domain);
+                setLocalEmailMode("custom");
+
+                // Update agent config to use custom domain
+                await fetch("/api/followup/sender/update", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        agent_config_id: agentConfigId,
+                        email_mode: "custom",
+                        custom_domain_id: domain.id,
+                        sender_email: `noreply@${domain.full_domain}`,
+                        sender_name: senderName,
+                    }),
+                });
+
+                await loadEmailDomains();
+                toast({
+                    title: "Domain Verified!",
+                    description: "Your custom email domain is now ready to use.",
+                });
+
+                if (onUpdate) {
+                    onUpdate();
+                }
+            } else {
+                toast({
+                    title: "Verification Pending",
+                    description:
+                        "DNS records not yet propagated. This can take up to 48 hours.",
+                });
+            }
+        } catch (error) {
+            logger.error({ error }, "Failed to verify domain");
+            toast({
+                title: "Verification Failed",
+                description:
+                    error instanceof Error ? error.message : "Failed to verify",
+                variant: "destructive",
+            });
+        } finally {
+            setVerifyingDomain(false);
+        }
+    };
+
+    // Copy to clipboard helper
+    const copyToClipboard = (text: string) => {
+        navigator.clipboard.writeText(text);
+        toast({
+            title: "Copied!",
+            description: "DNS record copied to clipboard",
+        });
+    };
 
     return (
         <div className="space-y-6">
-            {/* Setup Progress Tracker */}
-            <Card className="p-6 bg-gradient-to-r from-primary/5 to-purple-50">
-                <div className="flex items-center justify-between mb-4">
+            {/* Status Banner */}
+            {isSetupComplete && (
+                <div className="flex items-center gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
+                    <CheckCircle2 className="h-5 w-5 text-green-600" />
                     <div>
-                        <h3 className="text-lg font-semibold">Sender Setup Progress</h3>
-                        <p className="text-sm text-muted-foreground">
-                            {completedSteps} of {totalSteps} steps complete
+                        <p className="text-sm font-medium text-green-900">
+                            Email Sender Configured
+                        </p>
+                        <p className="text-xs text-green-700">
+                            {localEmailMode === "platform" ? (
+                                <>
+                                    Sending as "{senderName}" • Replies go to{" "}
+                                    {replyToEmail}
+                                </>
+                            ) : (
+                                <>Sending from {selectedDomain?.full_domain}</>
+                            )}
                         </p>
                     </div>
-                    {completedSteps === totalSteps && (
-                        <div className="flex items-center gap-2 text-green-600">
-                            <CheckCircle2 className="h-5 w-5" />
-                            <span className="text-sm font-medium">Setup Complete!</span>
-                        </div>
-                    )}
+                </div>
+            )}
+
+            {/* Quick Start - Platform Domain */}
+            <Card className="p-6">
+                <div className="flex items-start gap-3 mb-4">
+                    <div className="p-2 bg-primary/10 rounded-lg">
+                        <Zap className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-semibold">Quick Start Setup</h3>
+                        <p className="text-sm text-muted-foreground">
+                            Start sending emails in seconds - no technical setup
+                            required
+                        </p>
+                    </div>
                 </div>
 
-                {/* Progress Bar */}
-                <div className="relative w-full h-2 bg-muted rounded-full mb-4">
-                    <div
-                        className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary to-purple-600 rounded-full transition-all duration-500"
-                        style={{
-                            width: `${(completedSteps / totalSteps) * 100}%`,
-                        }}
-                    />
-                </div>
+                <div className="space-y-4">
+                    <div>
+                        <Label htmlFor="senderName">Your Name *</Label>
+                        <Input
+                            id="senderName"
+                            value={senderName}
+                            onChange={(e) => setSenderName(e.target.value)}
+                            placeholder="Sarah from Acme Corp"
+                            className="mt-1"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                            This is how your name will appear in the "From" field
+                        </p>
+                    </div>
 
-                {/* Step Indicators */}
-                <div className="flex gap-3">
-                    {setupSteps.map((step, index) => (
-                        <div
-                            key={step.id}
-                            className={cn(
-                                "flex-1 p-3 rounded-lg border transition-all",
-                                step.complete
-                                    ? "bg-green-50 border-green-200"
-                                    : "bg-muted/50 border-muted"
-                            )}
-                        >
-                            <div className="flex items-center gap-2 mb-1">
-                                {step.complete ? (
-                                    <Check className="h-4 w-4 text-green-600" />
-                                ) : (
-                                    <span className="text-xs font-medium text-muted-foreground">
-                                        {index + 1}
-                                    </span>
-                                )}
-                                <span
-                                    className={cn(
-                                        "text-xs font-medium",
-                                        step.complete
-                                            ? "text-green-900"
-                                            : "text-muted-foreground"
-                                    )}
-                                >
-                                    {step.label}
-                                </span>
-                            </div>
-                            <p
-                                className={cn(
-                                    "text-xs truncate",
-                                    step.complete
-                                        ? "text-green-700"
-                                        : "text-muted-foreground"
-                                )}
-                            >
-                                {step.description}
-                            </p>
-                        </div>
-                    ))}
+                    <div>
+                        <Label htmlFor="replyToEmail">Reply-To Email *</Label>
+                        <Input
+                            id="replyToEmail"
+                            type="email"
+                            value={replyToEmail}
+                            onChange={(e) => setReplyToEmail(e.target.value)}
+                            placeholder="you@yourcompany.com"
+                            className="mt-1"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                            When recipients reply, their response goes to this email
+                        </p>
+                    </div>
+
+                    <div>
+                        <Label htmlFor="smsSenderId">SMS Sender ID (Optional)</Label>
+                        <Input
+                            id="smsSenderId"
+                            value={smsSenderId}
+                            onChange={(e) => setSmsSenderId(e.target.value)}
+                            placeholder="YourBrand"
+                            maxLength={11}
+                            className="mt-1"
+                        />
+                        <p className="text-xs text-muted-foreground mt-1">
+                            Max 11 characters. Shown as sender name for SMS.
+                        </p>
+                    </div>
+
+                    {/* How it works info */}
+                    <div className="p-3 bg-muted/50 rounded-lg text-sm">
+                        <p className="font-medium text-foreground mb-2">
+                            How it works:
+                        </p>
+                        <ul className="text-muted-foreground space-y-1 text-xs">
+                            <li>
+                                • Emails sent from:{" "}
+                                <code className="bg-muted px-1 rounded">
+                                    "{senderName || "Your Name"}" &lt;
+                                    {PLATFORM_SENDER_EMAIL}&gt;
+                                </code>
+                            </li>
+                            <li>
+                                • When they reply, it goes to:{" "}
+                                <code className="bg-muted px-1 rounded">
+                                    {replyToEmail || "your@email.com"}
+                                </code>
+                            </li>
+                            <li>
+                                • High deliverability - our domain is already verified
+                            </li>
+                        </ul>
+                    </div>
+
+                    <Button
+                        onClick={handleSaveQuickStart}
+                        disabled={saving || !senderName || !replyToEmail}
+                        className="w-full"
+                    >
+                        {saving ? (
+                            <>
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                Saving...
+                            </>
+                        ) : isSetupComplete && localEmailMode === "platform" ? (
+                            <>
+                                <Check className="mr-2 h-4 w-4" />
+                                Settings Saved
+                            </>
+                        ) : (
+                            <>
+                                <Mail className="mr-2 h-4 w-4" />
+                                Save & Start Sending
+                            </>
+                        )}
+                    </Button>
                 </div>
             </Card>
 
-            {/* Gmail OAuth Option */}
+            {/* Advanced - Custom Domain */}
             <Card className="p-6">
-                <h3 className="text-lg font-semibold mb-4">Email Sending Method</h3>
+                <button
+                    type="button"
+                    onClick={() => setShowAdvanced(!showAdvanced)}
+                    className="flex items-center justify-between w-full"
+                >
+                    <div className="flex items-start gap-3">
+                        <div className="p-2 bg-muted rounded-lg">
+                            <Settings2 className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                        <div className="text-left">
+                            <h3 className="text-lg font-semibold">
+                                Custom Domain (Optional)
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                                Send from your own domain like
+                                hello@mail.yourcompany.com
+                            </p>
+                        </div>
+                    </div>
+                    {showAdvanced ? (
+                        <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                    ) : (
+                        <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                    )}
+                </button>
 
-                {localProviderType === "gmail" && localGmailEmail ? (
-                    <div className="space-y-4">
-                        <div className="flex items-start gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
-                            <CheckCircle2 className="h-5 w-5 text-green-600 mt-0.5" />
-                            <div className="flex-1">
-                                <p className="text-sm font-medium text-green-900">
-                                    Gmail Connected
-                                </p>
-                                <p className="text-sm text-green-700 mt-1">
-                                    Sending emails through:{" "}
-                                    <strong>{localGmailEmail}</strong>
-                                </p>
-                                <p className="text-xs text-green-600 mt-1">
-                                    Your emails will be sent through your Gmail account
-                                    with full Gmail deliverability. No DNS setup
-                                    required!
-                                </p>
-                            </div>
+                {showAdvanced && (
+                    <div className="mt-6 pt-6 border-t space-y-4">
+                        {/* Benefits */}
+                        <div className="p-3 bg-primary/5 rounded-lg text-sm">
+                            <p className="font-medium text-primary mb-2">
+                                Benefits of custom domain:
+                            </p>
+                            <ul className="text-muted-foreground space-y-1 text-xs">
+                                <li>✓ Professional branded sender address</li>
+                                <li>✓ Better brand recognition</li>
+                                <li>✓ Full control over email reputation</li>
+                                <li>⚠️ Requires DNS configuration</li>
+                            </ul>
                         </div>
 
-                        <Button
-                            onClick={handleDisconnectGmail}
-                            disabled={disconnectingGmail}
-                            variant="outline"
-                            size="sm"
-                        >
-                            {disconnectingGmail ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Disconnecting...
-                                </>
-                            ) : (
-                                "Disconnect Gmail"
-                            )}
-                        </Button>
-                    </div>
-                ) : (
-                    <div className="space-y-4">
-                        {/* Gmail OAuth Not Available Warning */}
-                        {!checkingGmailStatus && gmailAvailable === false && (
-                            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                                <AlertTriangle className="h-5 w-5 text-amber-600 mt-0.5" />
-                                <div className="flex-1">
-                                    <p className="text-sm font-medium text-amber-900">
-                                        Gmail OAuth Not Configured
-                                    </p>
-                                    <p className="text-sm text-amber-700 mt-1">
-                                        Gmail integration requires Google OAuth
-                                        credentials to be configured by your
-                                        administrator. Please use SendGrid below or
-                                        contact support for assistance.
-                                    </p>
-                                </div>
+                        {/* Existing Domains */}
+                        {loadingDomains ? (
+                            <div className="flex items-center justify-center py-4">
+                                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
                             </div>
-                        )}
+                        ) : emailDomains.length > 0 ? (
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium">Your Domains</p>
+                                {emailDomains.map((domain) => (
+                                    <div
+                                        key={domain.id}
+                                        className={cn(
+                                            "flex items-center justify-between p-3 rounded-lg border",
+                                            selectedDomain?.id === domain.id
+                                                ? "border-primary bg-primary/5"
+                                                : "border-border"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <Globe className="h-4 w-4 text-muted-foreground" />
+                                            <span className="font-medium text-sm">
+                                                {domain.full_domain}
+                                            </span>
+                                            {domain.verification_status ===
+                                            "verified" ? (
+                                                <span className="flex items-center gap-1 text-xs text-green-600">
+                                                    <Check className="h-3 w-3" />
+                                                    Verified
+                                                </span>
+                                            ) : (
+                                                <span className="flex items-center gap-1 text-xs text-amber-600">
+                                                    <AlertCircle className="h-3 w-3" />
+                                                    Pending DNS
+                                                </span>
+                                            )}
+                                        </div>
+                                        <div className="flex gap-2">
+                                            {domain.verification_status !==
+                                                "verified" && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    onClick={() =>
+                                                        handleVerifyDomain(domain)
+                                                    }
+                                                    disabled={verifyingDomain}
+                                                >
+                                                    {verifyingDomain ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <>
+                                                            <RefreshCw className="h-3 w-3 mr-1" />
+                                                            Verify
+                                                        </>
+                                                    )}
+                                                </Button>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : null}
 
-                        {/* Gmail Option - Only show if available */}
-                        {gmailAvailable !== false && (
-                            <>
-                                <div className="flex items-start gap-3 p-4 bg-primary/5 border border-primary/20 rounded-lg">
-                                    <AlertCircle className="h-5 w-5 text-primary mt-0.5" />
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium text-primary">
-                                            Quick Start: Connect Gmail
-                                        </p>
-                                        <p className="text-sm text-primary mt-1">
-                                            Send emails through your Gmail account - no
-                                            DNS setup required! Perfect for getting
-                                            started quickly.
-                                        </p>
-                                        <ul className="text-xs text-primary mt-2 space-y-1">
-                                            <li>
-                                                ✓ Instant setup - just click to connect
-                                            </li>
-                                            <li>
-                                                ✓ Uses Gmail's excellent deliverability
-                                            </li>
-                                            <li>✓ No domain verification needed</li>
-                                            <li>
-                                                ✓ Sending limit: 500 emails/day (2,000
-                                                for Workspace)
-                                            </li>
-                                        </ul>
+                        {/* DNS Records for pending domain */}
+                        {selectedDomain &&
+                            selectedDomain.verification_status !== "verified" && (
+                                <div className="space-y-3">
+                                    <button
+                                        type="button"
+                                        className="flex items-center gap-2 text-sm font-medium"
+                                        onClick={() =>
+                                            setShowDNSRecords(!showDNSRecords)
+                                        }
+                                    >
+                                        {showDNSRecords ? (
+                                            <ChevronUp className="h-4 w-4" />
+                                        ) : (
+                                            <ChevronDown className="h-4 w-4" />
+                                        )}
+                                        DNS Records for {selectedDomain.full_domain}
+                                    </button>
+
+                                    {showDNSRecords && (
+                                        <div className="space-y-3 p-4 bg-muted/50 rounded-lg">
+                                            <p className="text-xs text-muted-foreground">
+                                                Add these DNS records at your domain
+                                                registrar
+                                            </p>
+
+                                            {selectedDomain.spf_record && (
+                                                <div className="p-3 bg-card rounded border">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <span className="text-xs font-medium">
+                                                            TXT (SPF)
+                                                        </span>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() =>
+                                                                copyToClipboard(
+                                                                    selectedDomain.spf_record ||
+                                                                        ""
+                                                                )
+                                                            }
+                                                        >
+                                                            <Copy className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                    <code className="text-xs block bg-muted p-2 rounded break-all">
+                                                        {selectedDomain.spf_record}
+                                                    </code>
+                                                </div>
+                                            )}
+
+                                            {selectedDomain.dkim1_record && (
+                                                <div className="p-3 bg-card rounded border">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <span className="text-xs font-medium">
+                                                            TXT (DKIM) - Host:{" "}
+                                                            {selectedDomain.dkim1_host}
+                                                        </span>
+                                                        <Button
+                                                            size="sm"
+                                                            variant="ghost"
+                                                            onClick={() =>
+                                                                copyToClipboard(
+                                                                    selectedDomain.dkim1_record ||
+                                                                        ""
+                                                                )
+                                                            }
+                                                        >
+                                                            <Copy className="h-3 w-3" />
+                                                        </Button>
+                                                    </div>
+                                                    <code className="text-xs block bg-muted p-2 rounded break-all">
+                                                        {selectedDomain.dkim1_record}
+                                                    </code>
+                                                </div>
+                                            )}
+
+                                            <div className="flex items-start gap-2 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+                                                <AlertCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                                <div>
+                                                    <p className="font-medium">
+                                                        DNS Propagation
+                                                    </p>
+                                                    <p className="mt-1">
+                                                        DNS changes can take 1-48 hours.
+                                                        Click "Verify" after adding
+                                                        records.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                        {/* Add New Domain */}
+                        {showDomainSetup ? (
+                            <div className="p-4 bg-muted/50 rounded-lg space-y-4">
+                                <h4 className="font-medium text-sm">
+                                    Add Custom Domain
+                                </h4>
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div>
+                                        <Label className="text-xs">Subdomain</Label>
+                                        <Input
+                                            value={newSubdomain}
+                                            onChange={(e) =>
+                                                setNewSubdomain(
+                                                    e.target.value.toLowerCase()
+                                                )
+                                            }
+                                            placeholder="mail"
+                                            className="mt-1"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-xs">Domain</Label>
+                                        <Input
+                                            value={newDomain}
+                                            onChange={(e) =>
+                                                setNewDomain(
+                                                    e.target.value.toLowerCase()
+                                                )
+                                            }
+                                            placeholder="yourcompany.com"
+                                            className="mt-1"
+                                        />
                                     </div>
                                 </div>
-
-                                <Button
-                                    onClick={handleConnectGmail}
-                                    disabled={connectingGmail || checkingGmailStatus}
-                                    variant="default"
-                                >
-                                    {connectingGmail ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Connecting...
-                                        </>
-                                    ) : checkingGmailStatus ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Checking...
-                                        </>
-                                    ) : (
-                                        <>
-                                            <ExternalLink className="mr-2 h-4 w-4" />
-                                            Connect Gmail
-                                        </>
-                                    )}
-                                </Button>
-                            </>
+                                <p className="text-xs text-muted-foreground">
+                                    Emails will send from:{" "}
+                                    <strong>
+                                        {newSubdomain || "mail"}.
+                                        {newDomain || "yourcompany.com"}
+                                    </strong>
+                                </p>
+                                <div className="flex gap-2">
+                                    <Button
+                                        onClick={handleCreateDomain}
+                                        disabled={creatingDomain || !newDomain}
+                                        size="sm"
+                                    >
+                                        {creatingDomain ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Creating...
+                                            </>
+                                        ) : (
+                                            "Create Domain"
+                                        )}
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setShowDomainSetup(false)}
+                                    >
+                                        Cancel
+                                    </Button>
+                                </div>
+                            </div>
+                        ) : (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setShowDomainSetup(true)}
+                            >
+                                <Globe className="mr-2 h-4 w-4" />
+                                Add Custom Domain
+                            </Button>
                         )}
-
-                        <div className="pt-4 border-t">
-                            <p className="text-sm font-medium text-foreground mb-2">
-                                {gmailAvailable === false
-                                    ? "Use SendGrid"
-                                    : "Or use custom domain with SendGrid"}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                                For professional branding and higher sending limits, set
-                                up your custom domain below. Requires DNS configuration
-                                at your domain registrar.
-                            </p>
-                        </div>
                     </div>
                 )}
             </Card>
-
-            {/* Sender Information Form - Only show if not using Gmail */}
-            {localProviderType !== "gmail" && (
-                <Card className="p-6">
-                    <h3 className="text-lg font-semibold mb-4">
-                        Sender Information (SendGrid)
-                    </h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                        Configure your SendGrid sender details. You'll need to set up
-                        domain authentication in your SendGrid account.
-                    </p>
-
-                    <div className="space-y-4">
-                        <div>
-                            <Label htmlFor="senderName">From Name *</Label>
-                            <Input
-                                id="senderName"
-                                value={senderName}
-                                onChange={(e) => setSenderName(e.target.value)}
-                                placeholder="Your Name or Company Name"
-                                className="mt-1"
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Example: "Sarah from Acme Corp"
-                            </p>
-                        </div>
-
-                        <div>
-                            <Label htmlFor="senderEmail">From Email *</Label>
-                            <Input
-                                id="senderEmail"
-                                type="email"
-                                value={senderEmail}
-                                onChange={(e) => setSenderEmail(e.target.value)}
-                                placeholder="followup@yourdomain.com"
-                                className="mt-1"
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Use an email from your SendGrid authenticated domain
-                            </p>
-                        </div>
-
-                        <div>
-                            <Label htmlFor="smsSenderId">
-                                SMS Sender ID (Optional)
-                            </Label>
-                            <Input
-                                id="smsSenderId"
-                                value={smsSenderId}
-                                onChange={(e) => setSmsSenderId(e.target.value)}
-                                placeholder="YourBrand"
-                                maxLength={11}
-                                className="mt-1"
-                            />
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Max 11 characters. Used as sender name for SMS messages.
-                            </p>
-                        </div>
-
-                        <Button onClick={handleSaveSenderInfo} disabled={saving}>
-                            {saving ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Saving...
-                                </>
-                            ) : (
-                                "Save Sender Info"
-                            )}
-                        </Button>
-                    </div>
-                </Card>
-            )}
         </div>
     );
 }

@@ -39,6 +39,7 @@ import { StoryLibrary } from "@/components/followup/story-library";
 import { AnalyticsDashboard } from "@/components/followup/analytics-dashboard";
 import { SenderSetupTab } from "@/components/followup/sender-setup-tab";
 import { TestMessageModal } from "@/components/followup/test-message-modal";
+import { OnboardingBanner } from "@/components/followup/onboarding-banner";
 import { ComingSoonOverlay } from "@/components/ui/coming-soon-overlay";
 
 export default function Step11Page({
@@ -1089,6 +1090,20 @@ Approach:
 
                     {followupEnabled && (
                         <>
+                            {/* Onboarding Banner */}
+                            <OnboardingBanner
+                                senderVerified={
+                                    agentConfig?.email_provider_type === "gmail" ||
+                                    agentConfig?.email_provider_type === "mailgun" ||
+                                    !!(
+                                        agentConfig?.sender_email &&
+                                        agentConfig?.sender_name
+                                    )
+                                }
+                                hasSequences={sequences.length > 0}
+                                hasMessages={messages.length > 0}
+                            />
+
                             <Tabs
                                 value={activeTab}
                                 onValueChange={setActiveTab}
@@ -1129,6 +1144,7 @@ Approach:
                                 <TabsContent value="sender" className="mt-6">
                                     <SenderSetupTab
                                         agentConfigId={agentConfig?.id}
+                                        funnelProjectId={projectId}
                                         currentSenderName={agentConfig?.sender_name}
                                         currentSenderEmail={agentConfig?.sender_email}
                                         currentSMSSenderId={agentConfig?.sms_sender_id}
@@ -1136,6 +1152,7 @@ Approach:
                                             agentConfig?.email_provider_type
                                         }
                                         gmailUserEmail={agentConfig?.gmail_user_email}
+                                        mailgunDomainId={agentConfig?.mailgun_domain_id}
                                         onUpdate={async () => {
                                             // Reload data after sender updates
                                             if (!projectId) return;

@@ -5,9 +5,10 @@
 
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/client-logger";
+import { DomainCard } from "@/components/domains/domain-card";
 
 interface CustomDomain {
     id: string;
@@ -36,7 +37,6 @@ export function DomainsSettings() {
     const [projects, setProjects] = useState<FunnelProject[]>([]);
     const [loading, setLoading] = useState(true);
     const [adding, setAdding] = useState(false);
-    const [verifying, setVerifying] = useState<string | null>(null);
 
     const [newDomain, setNewDomain] = useState("");
     const [selectedProjectId, setSelectedProjectId] = useState("");
@@ -111,70 +111,22 @@ export function DomainsSettings() {
         }
     };
 
-    const handleVerifyDomain = async (domainId: string) => {
-        setVerifying(domainId);
-        setError(null);
-        setSuccess(null);
-
-        try {
-            const response = await fetch(`/api/domains/${domainId}/verify`, {
-                method: "POST",
-            });
-
-            const { verified } = await response.json();
-
-            if (verified) {
-                setDomains(
-                    domains.map((d) =>
-                        d.id === domainId
-                            ? {
-                                  ...d,
-                                  verified: true,
-                                  verification_status: "verified",
-                              }
-                            : d
-                    )
-                );
-                setSuccess("Domain verified successfully!");
-            } else {
-                setError(
-                    "Domain not yet verified. Please check your DNS settings and try again in a few minutes."
-                );
-            }
-        } catch (err) {
-            logger.error({ error: err }, "Failed to verify domain");
-            setError("Failed to verify domain");
-        } finally {
-            setVerifying(null);
-        }
-    };
-
-    const handleDeleteDomain = async (domainId: string, domainName: string) => {
-        if (
-            !confirm(
-                `Are you sure you want to remove ${domainName}? This action cannot be undone.`
+    // Callback when a domain is verified via polling
+    const handleDomainVerified = useCallback((domainId: string) => {
+        setDomains((prev) =>
+            prev.map((d) =>
+                d.id === domainId
+                    ? { ...d, verified: true, verification_status: "verified" }
+                    : d
             )
-        ) {
-            return;
-        }
+        );
+        setSuccess("Domain verified successfully!");
+    }, []);
 
-        try {
-            const response = await fetch(`/api/domains/${domainId}`, {
-                method: "DELETE",
-            });
-
-            if (!response.ok) {
-                throw new Error("Failed to delete domain");
-            }
-
-            setDomains(domains.filter((d) => d.id !== domainId));
-            setSuccess("Domain removed successfully");
-            logger.info({ domainId }, "Domain deleted");
-        } catch (err) {
-            logger.error({ error: err }, "Failed to delete domain");
-            setError("Failed to delete domain");
-        }
-    };
+    // Callback when a domain is deleted
+    const handleDomainDeleted = useCallback((domainId: string) => {
+        setDomains((prev) => prev.filter((d) => d.id !== domainId));
+    }, []);
 
     if (loading) {
         return (
@@ -284,92 +236,12 @@ export function DomainsSettings() {
                     </div>
                 ) : (
                     domains.map((domain) => (
-                        <div
+                        <DomainCard
                             key={domain.id}
-                            className="rounded-lg border border-border bg-card p-6"
-                        >
-                            <div className="mb-4 flex items-start justify-between">
-                                <div>
-                                    <h4 className="text-lg font-semibold">
-                                        {domain.domain}
-                                    </h4>
-                                    <p className="text-sm text-muted-foreground">
-                                        Points to: {domain.funnel_projects.name}
-                                    </p>
-                                </div>
-
-                                <div className="flex items-center gap-2">
-                                    {domain.verified ? (
-                                        <span className="rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800">
-                                            ✓ Verified
-                                        </span>
-                                    ) : (
-                                        <span className="rounded-full bg-yellow-100 px-3 py-1 text-sm font-medium text-yellow-800">
-                                            Pending
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-
-                            {!domain.verified && (
-                                <div className="mb-4 rounded-lg border border-primary/20 bg-primary/5 p-4">
-                                    <h5 className="mb-2 font-semibold">
-                                        DNS Configuration Required
-                                    </h5>
-                                    <p className="mb-2 text-sm">
-                                        Add this CNAME record to your DNS provider:
-                                    </p>
-                                    <div className="space-y-1 rounded border bg-card p-3 font-mono text-sm">
-                                        <div>
-                                            <strong>Type:</strong> CNAME
-                                        </div>
-                                        <div>
-                                            <strong>Name:</strong>{" "}
-                                            {domain.dns_instructions.name}
-                                        </div>
-                                        <div>
-                                            <strong>Value:</strong>{" "}
-                                            {domain.dns_instructions.value}
-                                        </div>
-                                    </div>
-                                    <button
-                                        onClick={() => handleVerifyDomain(domain.id)}
-                                        disabled={verifying === domain.id}
-                                        className="mt-3 rounded-md bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        {verifying === domain.id
-                                            ? "Checking..."
-                                            : "Check Verification Status"}
-                                    </button>
-                                </div>
-                            )}
-
-                            {domain.verified && (
-                                <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-4">
-                                    <p className="text-sm text-green-800">
-                                        Your domain is live! Visitors can now access
-                                        your funnel at{" "}
-                                        <a
-                                            href={`https://${domain.domain}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="underline hover:no-underline"
-                                        >
-                                            {domain.domain}
-                                        </a>
-                                    </p>
-                                </div>
-                            )}
-
-                            <button
-                                onClick={() =>
-                                    handleDeleteDomain(domain.id, domain.domain)
-                                }
-                                className="text-sm font-medium text-red-600 hover:text-red-800"
-                            >
-                                Remove Domain
-                            </button>
-                        </div>
+                            domain={domain}
+                            onVerified={handleDomainVerified}
+                            onDelete={handleDomainDeleted}
+                        />
                     ))
                 )}
             </div>

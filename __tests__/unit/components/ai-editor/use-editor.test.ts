@@ -347,4 +347,73 @@ describe("useEditor", () => {
             expect(result.current.html).toBe(newHtml);
         });
     });
+
+    describe("publish functionality", () => {
+        it("should publish page successfully", async () => {
+            // Mock save call
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ success: true }),
+            });
+            // Mock publish call
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    page: { published_url: "https://example.com/page" },
+                }),
+            });
+
+            const { result } = renderHook(() => useEditor(defaultOptions));
+
+            let publishResult: { success: boolean; publishedUrl?: string };
+            await act(async () => {
+                publishResult = await result.current.publish();
+            });
+
+            expect(publishResult!.success).toBe(true);
+            expect(publishResult!.publishedUrl).toBe("https://example.com/page");
+            expect(result.current.status).toBe("published");
+        });
+
+        it("should return failure when publish fails", async () => {
+            // Mock save call
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({ success: true }),
+            });
+            // Mock publish call failure
+            mockFetch.mockResolvedValueOnce({
+                ok: false,
+                json: async () => ({ error: "Failed to publish" }),
+            });
+
+            const { result } = renderHook(() => useEditor(defaultOptions));
+
+            let publishResult: { success: boolean; publishedUrl?: string };
+            await act(async () => {
+                publishResult = await result.current.publish();
+            });
+
+            expect(publishResult!.success).toBe(false);
+            expect(publishResult!.publishedUrl).toBeUndefined();
+        });
+    });
+
+    describe("getShareUrl functionality", () => {
+        it("should return preview URL", () => {
+            // Mock window.location
+            Object.defineProperty(window, "location", {
+                value: { origin: "https://app.example.com" },
+                writable: true,
+            });
+
+            const { result } = renderHook(() => useEditor(defaultOptions));
+
+            const shareUrl = result.current.getShareUrl();
+
+            expect(shareUrl).toBe(
+                `https://app.example.com/ai-editor/${defaultOptions.pageId}/preview`
+            );
+        });
+    });
 });

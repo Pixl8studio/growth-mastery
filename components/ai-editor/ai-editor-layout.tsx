@@ -14,9 +14,11 @@ import { cn } from "@/lib/utils";
 
 // Feature code
 import { ChatPanel } from "./chat/chat-panel";
+import { CodeViewerDialog } from "./code-view/code-viewer-dialog";
 import { EditorHeader } from "./header/editor-header";
 import { useEditor } from "./hooks/use-editor";
 import { PreviewPanel } from "./preview/preview-panel";
+import { VersionHistoryPanel } from "./version-history/version-history-panel";
 
 interface AIEditorLayoutProps {
     pageId: string;
@@ -43,6 +45,24 @@ export function AIEditorLayout({
         "desktop"
     );
 
+    // Preview refresh key (increment to force reload)
+    const [previewRefreshKey, setPreviewRefreshKey] = useState(0);
+    const handleRefreshPreview = useCallback(() => {
+        setPreviewRefreshKey((k) => k + 1);
+    }, []);
+
+    // Fullscreen mode
+    const [isFullscreen, setIsFullscreen] = useState(false);
+    const handleToggleFullscreen = useCallback(() => {
+        setIsFullscreen((prev) => !prev);
+    }, []);
+
+    // Code view dialog
+    const [showCodeView, setShowCodeView] = useState(false);
+
+    // Version history panel
+    const [showVersionHistory, setShowVersionHistory] = useState(false);
+
     // Editor state from hook
     const {
         html,
@@ -58,6 +78,8 @@ export function AIEditorLayout({
         version,
         undo,
         canUndo,
+        publish,
+        getShareUrl,
     } = useEditor({
         pageId,
         projectId,
@@ -65,6 +87,15 @@ export function AIEditorLayout({
         initialHtml,
         initialTitle,
     });
+
+    // Restore version callback (needs to be after useEditor)
+    const handleRestoreVersion = useCallback(
+        (restoredHtml: string, _restoredVersion: number) => {
+            setHtml(restoredHtml);
+            // Note: version update will be handled by the API
+        },
+        [setHtml]
+    );
 
     // Handle resize drag
     const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -121,63 +152,92 @@ export function AIEditorLayout({
                 onDeviceModeChange={setDeviceMode}
                 onUndo={undo}
                 canUndo={canUndo}
-                pageId={pageId}
-                pageType={pageType}
+                onRefreshPreview={handleRefreshPreview}
+                isFullscreen={isFullscreen}
+                onToggleFullscreen={handleToggleFullscreen}
+                onShowCodeView={() => setShowCodeView(true)}
+                onShowVersionHistory={() => setShowVersionHistory(true)}
+                onPublish={publish}
+                onGetShareUrl={getShareUrl}
             />
 
             {/* Main split-pane container */}
             <div ref={containerRef} className="relative flex flex-1 overflow-hidden">
-                {/* Left Panel - Chat */}
-                <div
-                    className={cn(
-                        "flex flex-col border-r border-border bg-muted/30",
-                        "transition-[width] duration-75",
-                        isDragging && "transition-none"
-                    )}
-                    style={{ width: `${splitPosition}%` }}
-                >
-                    <ChatPanel
-                        messages={messages}
-                        isProcessing={isProcessing}
-                        onSendMessage={sendMessage}
-                        suggestedActions={suggestedActions}
-                        lastEditSummary={lastEditSummary}
-                    />
-                </div>
-
-                {/* Resize Handle */}
-                <div
-                    onMouseDown={handleMouseDown}
-                    className={cn(
-                        "group absolute top-0 z-10 flex h-full w-1 cursor-col-resize items-center justify-center",
-                        "hover:bg-primary/20 active:bg-primary/30",
-                        "transition-colors duration-150",
-                        isDragging && "bg-primary/30"
-                    )}
-                    style={{ left: `${splitPosition}%`, transform: "translateX(-50%)" }}
-                >
-                    {/* Visual grip indicator */}
+                {/* Left Panel - Chat (hidden in fullscreen) */}
+                {!isFullscreen && (
                     <div
                         className={cn(
-                            "h-8 w-1 rounded-full bg-muted-foreground/30",
-                            "group-hover:bg-primary/50 group-hover:h-12",
-                            "transition-all duration-150"
+                            "flex flex-col border-r border-border bg-muted/30",
+                            "transition-[width] duration-75",
+                            isDragging && "transition-none"
                         )}
-                    />
-                </div>
+                        style={{ width: `${splitPosition}%` }}
+                    >
+                        <ChatPanel
+                            messages={messages}
+                            isProcessing={isProcessing}
+                            onSendMessage={sendMessage}
+                            suggestedActions={suggestedActions}
+                            lastEditSummary={lastEditSummary}
+                        />
+                    </div>
+                )}
 
-                {/* Right Panel - Preview */}
+                {/* Resize Handle (hidden in fullscreen) */}
+                {!isFullscreen && (
+                    <div
+                        onMouseDown={handleMouseDown}
+                        className={cn(
+                            "group absolute top-0 z-10 flex h-full w-1 cursor-col-resize items-center justify-center",
+                            "hover:bg-primary/20 active:bg-primary/30",
+                            "transition-colors duration-150",
+                            isDragging && "bg-primary/30"
+                        )}
+                        style={{
+                            left: `${splitPosition}%`,
+                            transform: "translateX(-50%)",
+                        }}
+                    >
+                        {/* Visual grip indicator */}
+                        <div
+                            className={cn(
+                                "h-8 w-1 rounded-full bg-muted-foreground/30",
+                                "group-hover:bg-primary/50 group-hover:h-12",
+                                "transition-all duration-150"
+                            )}
+                        />
+                    </div>
+                )}
+
+                {/* Right Panel - Preview (full width in fullscreen) */}
                 <div
                     className="flex flex-1 flex-col overflow-hidden bg-background"
-                    style={{ width: `${100 - splitPosition}%` }}
+                    style={{ width: isFullscreen ? "100%" : `${100 - splitPosition}%` }}
                 >
                     <PreviewPanel
                         html={html}
                         deviceMode={deviceMode}
                         isProcessing={isProcessing}
+                        refreshKey={previewRefreshKey}
                     />
                 </div>
             </div>
+
+            {/* Code View Dialog */}
+            <CodeViewerDialog
+                open={showCodeView}
+                onOpenChange={setShowCodeView}
+                html={html}
+                title={title}
+            />
+
+            {/* Version History Panel */}
+            <VersionHistoryPanel
+                open={showVersionHistory}
+                onOpenChange={setShowVersionHistory}
+                pageId={pageId}
+                onRestore={handleRestoreVersion}
+            />
         </div>
     );
 }

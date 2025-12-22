@@ -6,7 +6,7 @@
  */
 
 import { useEffect, useState, useCallback } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/client-logger";
 import Link from "next/link";
@@ -34,7 +34,6 @@ type SortField =
 type SortOrder = "asc" | "desc";
 
 export default function AdminUsersPage() {
-    const router = useRouter();
     const searchParams = useSearchParams();
 
     const [users, setUsers] = useState<UserListItem[]>([]);
@@ -55,52 +54,58 @@ export default function AdminUsersPage() {
         try {
             setLoading(true);
             const supabase = createClient();
+            const currentMonth = new Date().toISOString().slice(0, 7) + "-01";
 
-            // Fetch all non-admin users
-            const { data: profiles, error: profilesError } = await supabase
-                .from("user_profiles")
-                .select(
-                    `
-                    id,
-                    email,
-                    full_name,
-                    avatar_url,
-                    role,
-                    created_at,
-                    updated_at
-                `
-                )
-                .eq("role", "user")
-                .order("created_at", { ascending: false });
+            // Fetch all data in parallel for improved performance
+            const [profilesResult, healthScoresResult, funnelsResult, costsResult] =
+                await Promise.all([
+                    // Fetch all non-admin users
+                    supabase
+                        .from("user_profiles")
+                        .select(
+                            `
+                            id,
+                            email,
+                            full_name,
+                            avatar_url,
+                            role,
+                            created_at,
+                            updated_at
+                        `
+                        )
+                        .eq("role", "user")
+                        .order("created_at", { ascending: false }),
+                    // Fetch health scores
+                    supabase
+                        .from("user_health_scores")
+                        .select("user_id, overall_score"),
+                    // Fetch funnel counts
+                    supabase
+                        .from("funnel_projects")
+                        .select("user_id")
+                        .is("deleted_at", null),
+                    // Fetch monthly costs
+                    supabase
+                        .from("api_usage_monthly")
+                        .select("user_id, total_cost_cents")
+                        .eq("month", currentMonth),
+                ]);
 
+            const { data: profiles, error: profilesError } = profilesResult;
             if (profilesError) throw profilesError;
 
-            // Fetch health scores
-            const { data: healthScores } = await supabase
-                .from("user_health_scores")
-                .select("user_id, overall_score");
-
+            const { data: healthScores } = healthScoresResult;
             const healthMap = new Map(
                 healthScores?.map((h) => [h.user_id, h.overall_score]) || []
             );
 
-            // Fetch funnel counts
-            const { data: funnels } = await supabase
-                .from("funnel_projects")
-                .select("user_id")
-                .is("deleted_at", null);
-
+            const { data: funnels } = funnelsResult;
             const funnelCountMap = new Map<string, number>();
             funnels?.forEach((f) => {
                 funnelCountMap.set(f.user_id, (funnelCountMap.get(f.user_id) || 0) + 1);
             });
 
-            // Fetch monthly costs
-            const currentMonth = new Date().toISOString().slice(0, 7) + "-01";
-            const { data: costs } = await supabase
-                .from("api_usage_monthly")
-                .select("user_id, total_cost_cents")
-                .eq("month", currentMonth);
+            const { data: costs } = costsResult;
 
             const costMap = new Map<string, number>();
             costs?.forEach((c) => {

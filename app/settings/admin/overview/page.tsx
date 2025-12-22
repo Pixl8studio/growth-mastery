@@ -42,29 +42,59 @@ export default function AdminOverviewPage() {
         async function fetchDashboardData() {
             try {
                 const supabase = createClient();
+                const currentMonth = new Date().toISOString().slice(0, 7) + "-01";
+                const oneWeekAgo = new Date();
+                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
 
-                // Fetch users count and stats
-                const { data: users, error: usersError } = await supabase
-                    .from("user_profiles")
-                    .select("id, created_at, role")
-                    .eq("role", "user");
+                // Fetch all data in parallel for improved performance
+                const [
+                    usersResult,
+                    healthScoresResult,
+                    monthlyCostsResult,
+                    notificationsResult,
+                ] = await Promise.all([
+                    // Fetch users count and stats
+                    supabase
+                        .from("user_profiles")
+                        .select("id, created_at, role")
+                        .eq("role", "user"),
+                    // Fetch health scores
+                    supabase.from("user_health_scores").select("overall_score"),
+                    // Fetch monthly costs
+                    supabase
+                        .from("api_usage_monthly")
+                        .select("total_cost_cents")
+                        .eq("month", currentMonth),
+                    // Fetch notifications for attention feed
+                    supabase
+                        .from("admin_notifications")
+                        .select(
+                            `
+                                id,
+                                type,
+                                priority,
+                                title,
+                                message,
+                                target_user_id,
+                                created_at,
+                                requires_acknowledgment,
+                                acknowledged_at
+                            `
+                        )
+                        .order("priority", { ascending: true })
+                        .order("created_at", { ascending: false })
+                        .limit(20),
+                ]);
 
+                const { data: users, error: usersError } = usersResult;
                 if (usersError) throw usersError;
 
                 const totalUsers = users?.length || 0;
-
-                // Calculate new users this week
-                const oneWeekAgo = new Date();
-                oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
                 const newUsersThisWeek =
                     users?.filter((u) => new Date(u.created_at) > oneWeekAgo).length ||
                     0;
 
-                // Fetch health scores
-                const { data: healthScores, error: healthError } = await supabase
-                    .from("user_health_scores")
-                    .select("overall_score");
-
+                const { data: healthScores, error: healthError } = healthScoresResult;
                 if (healthError) {
                     logger.warn(
                         { error: healthError },
@@ -85,13 +115,7 @@ export default function AdminOverviewPage() {
                 const atRiskUsers =
                     healthScores?.filter((h) => h.overall_score < 50).length || 0;
 
-                // Fetch monthly costs
-                const currentMonth = new Date().toISOString().slice(0, 7) + "-01";
-                const { data: monthlyCosts, error: costsError } = await supabase
-                    .from("api_usage_monthly")
-                    .select("total_cost_cents")
-                    .eq("month", currentMonth);
-
+                const { data: monthlyCosts, error: costsError } = monthlyCostsResult;
                 if (costsError) {
                     logger.warn({ error: costsError }, "Failed to fetch costs");
                 }
@@ -111,26 +135,7 @@ export default function AdminOverviewPage() {
                     atRiskUsers,
                 });
 
-                // Fetch notifications for attention feed
-                const { data: notifications, error: notifError } = await supabase
-                    .from("admin_notifications")
-                    .select(
-                        `
-                        id,
-                        type,
-                        priority,
-                        title,
-                        message,
-                        target_user_id,
-                        created_at,
-                        requires_acknowledgment,
-                        acknowledged_at
-                    `
-                    )
-                    .order("priority", { ascending: true })
-                    .order("created_at", { ascending: false })
-                    .limit(20);
-
+                const { data: notifications, error: notifError } = notificationsResult;
                 if (notifError) {
                     logger.warn({ error: notifError }, "Failed to fetch notifications");
                 }

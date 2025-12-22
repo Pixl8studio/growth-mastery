@@ -172,6 +172,75 @@ export async function getAllAdminUsers(): Promise<AdminUser[]> {
 }
 
 /**
+ * Initialize super admin from environment variable
+ * Used when no super_admin exists (e.g., new deployment)
+ * Checks INITIAL_SUPER_ADMIN_EMAIL env var
+ */
+export async function initializeSuperAdminFromEnv(): Promise<{
+    success: boolean;
+    message: string;
+}> {
+    const supabase = await createClient();
+    const envEmail = process.env.INITIAL_SUPER_ADMIN_EMAIL;
+
+    if (!envEmail) {
+        return { success: false, message: "INITIAL_SUPER_ADMIN_EMAIL not set" };
+    }
+
+    // Check if any super_admin already exists
+    const { data: existingAdmins, error: checkError } = await supabase
+        .from("user_profiles")
+        .select("id")
+        .eq("role", "super_admin")
+        .limit(1);
+
+    if (checkError) {
+        logger.error(
+            { error: checkError },
+            "Failed to check for existing super admins"
+        );
+        return { success: false, message: "Failed to check existing admins" };
+    }
+
+    if (existingAdmins && existingAdmins.length > 0) {
+        return { success: true, message: "Super admin already exists" };
+    }
+
+    // Find the user by email and promote them
+    const { data: user, error: userError } = await supabase
+        .from("user_profiles")
+        .select("id, email")
+        .eq("email", envEmail)
+        .single();
+
+    if (userError || !user) {
+        logger.warn(
+            { email: envEmail },
+            "User from INITIAL_SUPER_ADMIN_EMAIL not found"
+        );
+        return { success: false, message: "User not found" };
+    }
+
+    // Promote to super_admin
+    const { error: updateError } = await supabase
+        .from("user_profiles")
+        .update({ role: "super_admin" })
+        .eq("id", user.id);
+
+    if (updateError) {
+        logger.error({ error: updateError }, "Failed to promote user to super_admin");
+        return { success: false, message: "Failed to update role" };
+    }
+
+    logger.info(
+        { userId: user.id, email: user.email },
+        "Initialized super_admin from environment variable"
+    );
+
+    return { success: true, message: `Promoted ${user.email} to super_admin` };
+}
+
+/**
  * Update a user's role
  * Only super_admins can do this
  * Cannot change the role of another super_admin

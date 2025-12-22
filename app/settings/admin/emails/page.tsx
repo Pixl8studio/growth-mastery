@@ -6,8 +6,13 @@
  */
 
 import { useEffect, useState, useCallback } from "react";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/client-logger";
+
+// Validation schemas for email draft actions
+const emailDraftIdSchema = z.string().uuid("Invalid draft ID format");
+const emailActionSchema = z.enum(["approve", "reject"]);
 
 interface EmailDraft {
     id: string;
@@ -74,7 +79,11 @@ export default function AdminEmailsPage() {
 
     const handleAction = async (draftId: string, action: "approve" | "reject") => {
         try {
-            setProcessing(draftId);
+            // Validate inputs with Zod
+            const validatedDraftId = emailDraftIdSchema.parse(draftId);
+            const validatedAction = emailActionSchema.parse(action);
+
+            setProcessing(validatedDraftId);
             const supabase = createClient();
 
             const {
@@ -82,32 +91,40 @@ export default function AdminEmailsPage() {
             } = await supabase.auth.getUser();
             if (!user) throw new Error("Not authenticated");
 
-            const status = action === "approve" ? "approved" : "rejected";
+            const status = validatedAction === "approve" ? "approved" : "rejected";
 
             const { error } = await supabase
                 .from("admin_email_drafts")
                 .update({
                     status,
-                    approved_by: action === "approve" ? user.id : null,
-                    approved_at: action === "approve" ? new Date().toISOString() : null,
+                    approved_by: validatedAction === "approve" ? user.id : null,
+                    approved_at:
+                        validatedAction === "approve" ? new Date().toISOString() : null,
                 })
-                .eq("id", draftId);
+                .eq("id", validatedDraftId);
 
             if (error) throw error;
 
             // If approved, would send email here
-            if (action === "approve") {
+            if (validatedAction === "approve") {
                 // TODO: Integrate with email service
                 await supabase
                     .from("admin_email_drafts")
                     .update({ status: "sent", sent_at: new Date().toISOString() })
-                    .eq("id", draftId);
+                    .eq("id", validatedDraftId);
             }
 
             fetchDrafts();
             setSelectedDraft(null);
         } catch (err) {
-            logger.error({ error: err }, "Failed to process email draft");
+            if (err instanceof z.ZodError) {
+                logger.error(
+                    { validationErrors: err.issues },
+                    "Invalid email draft action parameters"
+                );
+            } else {
+                logger.error({ error: err }, "Failed to process email draft");
+            }
         } finally {
             setProcessing(null);
         }

@@ -250,12 +250,18 @@ describe("Presentation Renaming", () => {
         });
 
         it("should use first slide if no title slide exists", () => {
-            const slidesWithoutTitle = [
+            const slidesWithoutTitle: Array<{
+                slideNumber: number;
+                title: string;
+                content: string[];
+                layoutType: string;
+                speakerNotes: string;
+            }> = [
                 {
                     slideNumber: 1,
                     title: "First Slide",
                     content: ["Content"],
-                    layoutType: "bullets" as const,
+                    layoutType: "bullets",
                     speakerNotes: "",
                 },
             ];

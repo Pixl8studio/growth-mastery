@@ -2,7 +2,9 @@
 
 ## Overview
 
-An AI-first admin dashboard for premium customer support, enabling the Growth Mastery team to monitor user experience, provide proactive support, debug issues, and manage API costs—all from within the existing application.
+An AI-first admin dashboard for premium customer support, enabling the Growth Mastery
+team to monitor user experience, provide proactive support, debug issues, and manage API
+costs—all from within the existing application.
 
 ---
 
@@ -12,11 +14,11 @@ An AI-first admin dashboard for premium customer support, enabling the Growth Ma
 
 Three roles with increasing permissions:
 
-| Role | Permissions |
-|------|-------------|
-| `support` | View users, view funnels (read-only), see health scores, view notifications |
-| `admin` | All support permissions + impersonation mode, take actions on behalf of users, acknowledge notifications |
-| `super_admin` | All admin permissions + manage admin roles, configure notification recipients, system settings |
+| Role          | Permissions                                                                                              |
+| ------------- | -------------------------------------------------------------------------------------------------------- |
+| `support`     | View users, view funnels (read-only), see health scores, view notifications                              |
+| `admin`       | All support permissions + impersonation mode, take actions on behalf of users, acknowledge notifications |
+| `super_admin` | All admin permissions + manage admin roles, configure notification recipients, system settings           |
 
 ### 1.2 Database Schema Changes
 
@@ -134,8 +136,11 @@ CREATE TABLE admin_email_drafts (
 ### 1.3 Access Pattern
 
 - Admin section appears as new item in Settings sidebar (`/settings/admin`)
-- Only visible to users with role `support`, `admin`, or `super_admin`
-- Regular users (`role = 'user'`) see no indication admin features exist
+- **Only visible to users with role `support`, `admin`, or `super_admin`**
+- **Regular users see nothing** - the "Admin" menu item simply doesn't render for them
+- No 404, no error, no indication the feature exists - they'd have to guess the URL
+- If a non-admin somehow navigates to `/settings/admin`, they are silently redirected to
+  `/settings`
 - All admin actions are logged to `admin_audit_logs`
 
 ### 1.4 RLS Policies
@@ -234,16 +239,19 @@ Primary view showing users who need attention, sorted by urgency:
 ### 3.3 Quick Stats Sections
 
 **User Segments:**
+
 - New users (< 7 days): count + avg health
 - Active users (used in last 7 days): count + avg health
 - At-risk users (health < 50): count + list preview
 - Power users (most active): count + top 5
 
 **Recent Activity:**
+
 - Real-time feed of user actions (funnel created, page published, etc.)
 - Filterable by user, action type, time range
 
 **Error Summary:**
+
 - Sentry integration showing recent errors grouped by user
 - Click to see user context + error details
 
@@ -255,14 +263,15 @@ Primary view showing users who need attention, sorted by urgency:
 
 Sortable, filterable table:
 
-| User | Health | Plan | Funnels | Last Active | API Cost | Status |
-|------|--------|------|---------|-------------|----------|--------|
-| Sarah Chen | 🔴 34 | Pro | 3 | 2 hrs ago | $23.45 | Errors |
-| Mike Johnson | 🟡 67 | Pro | 7 | 1 day ago | $47.23 | Limit |
-| Lisa Park | 🟡 52 | Free | 1 | 5 days ago | $2.10 | Inactive |
-| David Kim | 🟢 89 | Pro | 12 | 30 min ago | $31.20 | Healthy |
+| User         | Health | Plan | Funnels | Last Active | API Cost | Status   |
+| ------------ | ------ | ---- | ------- | ----------- | -------- | -------- |
+| Sarah Chen   | 🔴 34  | Pro  | 3       | 2 hrs ago   | $23.45   | Errors   |
+| Mike Johnson | 🟡 67  | Pro  | 7       | 1 day ago   | $47.23   | Limit    |
+| Lisa Park    | 🟡 52  | Free | 1       | 5 days ago  | $2.10    | Inactive |
+| David Kim    | 🟢 89  | Pro  | 12      | 30 min ago  | $31.20   | Healthy  |
 
 **Filters:**
+
 - Health score range
 - Plan type
 - Signup date range
@@ -271,12 +280,14 @@ Sortable, filterable table:
 - Approaching cost limit (boolean)
 
 **Bulk Actions (admin+ only):**
+
 - Export selected to CSV
 - Generate report for selected
 
 ### 4.2 User Detail View (`/settings/admin/users/[id]`)
 
 #### Profile Section
+
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │ Sarah Chen                                    [Impersonate →]   │
@@ -297,31 +308,37 @@ Sortable, filterable table:
 #### Tabs
 
 **Funnels Tab:**
+
 - List of all user's funnels with status (draft/published)
 - Preview thumbnails
 - Click to view in impersonation mode
 
 **Activity Tab:**
+
 - Timeline of user actions
 - Session replays (if implemented)
 - Login history
 
 **Errors Tab:**
+
 - Sentry errors for this user
 - Error timeline
 - Stack traces with context
 
 **Usage Tab:**
+
 - API cost breakdown by service
 - Hourly/daily/monthly charts
 - Projected month-end cost
 
 **Support History Tab:**
+
 - Previous outreach
 - Tickets/conversations
 - Admin actions taken
 
 **Actions Panel (admin+ only):**
+
 ```
 ┌─────────────────────────────┐
 │ Quick Actions               │
@@ -348,7 +365,8 @@ Click "Impersonate" button on user detail page.
 
 ### 5.2 UI Behavior
 
-Opens as a **slide-out drawer** (70% width) showing the user's dashboard exactly as they see it:
+Opens as a **slide-out drawer** (70% width) showing the user's dashboard exactly as they
+see it:
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
@@ -411,15 +429,15 @@ Opens as a **slide-out drawer** (70% width) showing the user's dashboard exactly
 
 ### 6.2 Notification Types
 
-| Type | Priority | Requires Ack | Trigger |
-|------|----------|--------------|---------|
-| `error_spike` | Urgent | Yes | User has 5+ errors in 1 hour |
-| `cost_alert` | Urgent | No | User exceeds $50/month |
-| `payment_failed` | Urgent | Yes | Stripe payment failure |
-| `user_struggling` | Normal | No | AI detects struggling pattern |
-| `ai_suggestion` | Normal | No | AI drafts outreach email |
-| `new_user` | Normal | No | New signup |
-| `milestone` | Normal | No | User publishes first funnel |
+| Type              | Priority | Requires Ack | Trigger                       |
+| ----------------- | -------- | ------------ | ----------------------------- |
+| `error_spike`     | Urgent   | Yes          | User has 5+ errors in 1 hour  |
+| `cost_alert`      | Urgent   | No           | User exceeds $50/month        |
+| `payment_failed`  | Urgent   | Yes          | Stripe payment failure        |
+| `user_struggling` | Normal   | No           | AI detects struggling pattern |
+| `ai_suggestion`   | Normal   | No           | AI drafts outreach email      |
+| `new_user`        | Normal   | No           | New signup                    |
+| `milestone`       | Normal   | No           | User publishes first funnel   |
 
 ### 6.3 Notification Recipients (Super Admin Config)
 
@@ -455,11 +473,11 @@ Super admins can configure which admins receive which notification types:
 
 ### 7.2 Cost by User Table
 
-| User | AI Tokens | Stripe | Video | Email | Total | % of Limit |
-|------|-----------|--------|-------|-------|-------|------------|
-| Mike Johnson | $38.45 | $6.78 | $2.00 | $0.00 | $47.23 | 94% 🔴 |
-| David Kim | $24.12 | $5.08 | $2.00 | $0.00 | $31.20 | 62% |
-| Sarah Chen | $18.90 | $3.55 | $1.00 | $0.00 | $23.45 | 47% |
+| User         | AI Tokens | Stripe | Video | Email | Total  | % of Limit |
+| ------------ | --------- | ------ | ----- | ----- | ------ | ---------- |
+| Mike Johnson | $38.45    | $6.78  | $2.00 | $0.00 | $47.23 | 94% 🔴     |
+| David Kim    | $24.12    | $5.08  | $2.00 | $0.00 | $31.20 | 62%        |
+| Sarah Chen   | $18.90    | $3.55  | $1.00 | $0.00 | $23.45 | 47%        |
 
 ### 7.3 Charts
 
@@ -471,6 +489,7 @@ Super admins can configure which admins receive which notification types:
 ### 7.4 Cost Attribution
 
 Drill down to see costs per:
+
 - User
 - Funnel
 - Feature (AI editor, video hosting, etc.)
@@ -481,6 +500,7 @@ Drill down to see costs per:
 Global threshold: **$50/month per user**
 
 When exceeded:
+
 1. Urgent notification created
 2. User flagged in user list
 3. (Optional) Auto-email to user about usage
@@ -493,13 +513,13 @@ When exceeded:
 
 AI analyzes user behavior to identify struggling users based on:
 
-| Signal | Weight | Description |
-|--------|--------|-------------|
-| Funnel started, not published | 25% | Created funnel 3+ days ago, still draft |
-| High error rate | 25% | 5+ errors in session |
-| Confusion patterns | 20% | Excessive undo, repeated failed actions |
-| Low engagement post-onboarding | 15% | Completed onboarding but < 2 logins/week |
-| Approaching limits | 15% | > 80% of usage threshold |
+| Signal                         | Weight | Description                              |
+| ------------------------------ | ------ | ---------------------------------------- |
+| Funnel started, not published  | 25%    | Created funnel 3+ days ago, still draft  |
+| High error rate                | 25%    | 5+ errors in session                     |
+| Confusion patterns             | 20%    | Excessive undo, repeated failed actions  |
+| Low engagement post-onboarding | 15%    | Completed onboarding but < 2 logins/week |
+| Approaching limits             | 15%    | > 80% of usage threshold                 |
 
 ### 8.2 AI Email Drafting
 
@@ -537,6 +557,7 @@ When AI identifies a struggling user, it drafts a personalized email:
 ### 8.4 AI Issue Diagnosis
 
 When Sentry errors occur:
+
 1. AI analyzes stack trace + user context
 2. Suggests likely cause
 3. Recommends fix or workaround
@@ -545,6 +566,7 @@ When Sentry errors occur:
 ### 8.5 Churn Prediction
 
 AI scores users on churn risk (0-100) based on:
+
 - Engagement trend (declining = higher risk)
 - Error frequency
 - Support interactions
@@ -557,12 +579,12 @@ AI scores users on churn risk (0-100) based on:
 
 ### 9.1 Components
 
-| Component | Weight | Factors |
-|-----------|--------|---------|
-| Engagement | 25% | Logins/week, time in app, actions taken |
-| Success | 30% | Funnels published, pages live, conversions |
-| Technical | 25% | Error rate, failed API calls, page load times |
-| Billing | 20% | Payment status, approaching limits, failed charges |
+| Component  | Weight | Factors                                            |
+| ---------- | ------ | -------------------------------------------------- |
+| Engagement | 25%    | Logins/week, time in app, actions taken            |
+| Success    | 30%    | Funnels published, pages live, conversions         |
+| Technical  | 25%    | Error rate, failed API calls, page load times      |
+| Billing    | 20%    | Payment status, approaching limits, failed charges |
 
 ### 9.2 Score Ranges
 
@@ -583,6 +605,7 @@ AI scores users on churn risk (0-100) based on:
 ### 10.1 Error Linking
 
 Every Sentry error includes:
+
 - `user_id` tag
 - `user_email` tag
 - `funnel_id` context (if applicable)
@@ -598,6 +621,7 @@ Every Sentry error includes:
 ### 10.3 Proactive Monitoring
 
 Background job checks Sentry every 5 minutes:
+
 - New errors for any user → link to user
 - Error spikes (5+ in 1 hour) → create urgent notification
 - Recurring errors → flag pattern for investigation
@@ -608,13 +632,13 @@ Background job checks Sentry every 5 minutes:
 
 ### 11.1 Available Reports
 
-| Report | Content | Format |
-|--------|---------|--------|
-| User Summary | All users with health scores, usage, status | PDF, CSV |
-| Monthly Billing | Cost breakdown by user and service | PDF, CSV |
-| Error Report | All errors grouped by type and user | PDF |
-| Engagement Report | Login frequency, feature usage, trends | PDF |
-| Churn Risk | At-risk users with recommended actions | PDF |
+| Report            | Content                                     | Format   |
+| ----------------- | ------------------------------------------- | -------- |
+| User Summary      | All users with health scores, usage, status | PDF, CSV |
+| Monthly Billing   | Cost breakdown by user and service          | PDF, CSV |
+| Error Report      | All errors grouped by type and user         | PDF      |
+| Engagement Report | Login frequency, feature usage, trends      | PDF      |
+| Churn Risk        | At-risk users with recommended actions      | PDF      |
 
 ### 11.2 Generation
 
@@ -661,6 +685,7 @@ Every admin action is logged:
 ### 12.4 Audit Log Viewer (Super Admin)
 
 Searchable, filterable log of all admin actions:
+
 - Filter by admin, target user, action type, date range
 - Export to CSV for compliance
 
@@ -757,26 +782,29 @@ api/
 ### 14.2 Middleware
 
 Admin routes protected by middleware that:
+
 1. Checks authentication
 2. Verifies admin role (`support`, `admin`, or `super_admin`)
 3. Logs access to audit log
-4. Returns 404 (not 403) to non-admins to hide existence
+4. **Silently redirects non-admins to `/settings`** - no error message, no indication
+   the feature exists
 
 ### 14.3 Background Jobs
 
-| Job | Frequency | Purpose |
-|-----|-----------|---------|
-| Health score calculation | Hourly | Update all user health scores |
-| API usage aggregation | Hourly | Roll up usage logs to hourly table |
-| Sentry sync | 5 minutes | Check for new errors, create notifications |
-| AI struggling detection | Hourly | Identify struggling users, draft emails |
-| Monthly rollup | Daily | Update monthly usage summaries |
+| Job                      | Frequency | Purpose                                    |
+| ------------------------ | --------- | ------------------------------------------ |
+| Health score calculation | Hourly    | Update all user health scores              |
+| API usage aggregation    | Hourly    | Roll up usage logs to hourly table         |
+| Sentry sync              | 5 minutes | Check for new errors, create notifications |
+| AI struggling detection  | Hourly    | Identify struggling users, draft emails    |
+| Monthly rollup           | Daily     | Update monthly usage summaries             |
 
 ---
 
 ## 15. Implementation Phases
 
 ### Phase 1: Foundation
+
 - [ ] Database schema + migrations
 - [ ] Role system + RLS policies
 - [ ] Admin layout + sidebar integration
@@ -784,24 +812,28 @@ Admin routes protected by middleware that:
 - [ ] Audit logging
 
 ### Phase 2: User Management
+
 - [ ] User detail page
 - [ ] Health score calculation
 - [ ] Impersonation mode (read-only)
 - [ ] Basic actions (reset password, etc.)
 
 ### Phase 3: Monitoring
+
 - [ ] API usage tracking
 - [ ] Cost dashboard
 - [ ] Sentry integration
 - [ ] Notification system
 
 ### Phase 4: AI Features
+
 - [ ] Struggling user detection
 - [ ] AI email drafting
 - [ ] AI issue diagnosis
 - [ ] Churn prediction
 
 ### Phase 5: Polish
+
 - [ ] Report generation
 - [ ] Full impersonation (with edits)
 - [ ] Advanced filtering/search
@@ -809,15 +841,292 @@ Admin routes protected by middleware that:
 
 ---
 
-## 16. Open Questions / Future Considerations
+## 16. Sentry Session Replay Integration
 
-1. **Session replay** - Should we integrate a session replay tool (FullStory, LogRocket) for debugging?
-2. **In-app messaging** - Should admins be able to send in-app messages, not just email?
-3. **User feedback collection** - NPS surveys, feedback widgets to proactively gather sentiment?
-4. **Team collaboration** - Notes/comments between admins on user profiles?
-5. **SLA tracking** - Response time metrics for support interactions?
+### 16.1 Overview
+
+Leverage Sentry's built-in Session Replay feature to watch user sessions directly from
+the admin dashboard. No additional tools needed.
+
+### 16.2 Implementation
+
+- Sentry Session Replay already configured in the app
+- Each user's errors link to their session replays
+- Replays embedded in user detail page via Sentry API
+- Click any error to watch what the user did leading up to it
+
+### 16.3 Admin View Integration
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Session Replays - Sarah Chen                                    │
+├─────────────────────────────────────────────────────────────────┤
+│ ▶ Dec 22, 10:34 AM - 12 min session (3 errors)                 │
+│   [Watch Replay] [View Errors]                                  │
+├─────────────────────────────────────────────────────────────────┤
+│ ▶ Dec 21, 3:15 PM - 8 min session (0 errors)                   │
+│   [Watch Replay]                                                │
+└─────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
-*Document created: December 22, 2025*
-*First super_admin: joe@growthmastery.ai*
+## 17. Team Notes & Follow-up Tasks
+
+### 17.1 Overview
+
+Internal notes on user profiles visible to all admins, with optional follow-up task
+reminders.
+
+### 17.2 Database Schema
+
+```sql
+-- Admin notes on users
+CREATE TABLE admin_user_notes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES user_profiles(id) NOT NULL,
+  admin_user_id UUID REFERENCES user_profiles(id) NOT NULL,
+  content TEXT NOT NULL,
+  follow_up_date DATE, -- optional reminder
+  follow_up_completed BOOLEAN DEFAULT false,
+  follow_up_completed_by UUID REFERENCES user_profiles(id),
+  follow_up_completed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### 17.3 UI - Notes Section on User Detail
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Team Notes                                      [+ Add Note]    │
+├─────────────────────────────────────────────────────────────────┤
+│ Joe • Dec 22, 2025 at 10:30 AM                                 │
+│ Spoke with Sarah about Stripe Connect setup. She's confused    │
+│ about the payout schedule. Sent her documentation link.        │
+│ 📅 Follow up: Dec 29, 2025  [Mark Complete]                    │
+├─────────────────────────────────────────────────────────────────┤
+│ Support Agent • Dec 20, 2025 at 2:15 PM                        │
+│ User reported slow page loads. Investigated - no issues found  │
+│ on our end. Likely her internet connection.                    │
+│ ✅ Completed Dec 21 by Joe                                      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 17.4 Follow-up Notifications
+
+When a follow-up date is reached:
+
+1. Normal notification created for all admins
+2. Appears in notification center
+3. Links directly to user profile
+
+---
+
+## 18. SLA Tracking & Response Metrics
+
+### 18.1 Overview
+
+Full SLA tracking to measure support quality: response times, resolution times, tracked
+per admin with trends.
+
+### 18.2 Database Schema
+
+```sql
+-- Support interactions for SLA tracking
+CREATE TABLE admin_support_interactions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES user_profiles(id) NOT NULL,
+  admin_user_id UUID REFERENCES user_profiles(id),
+  type TEXT NOT NULL, -- 'error_response', 'outreach', 'ticket_response'
+  trigger_notification_id UUID REFERENCES admin_notifications(id),
+
+  -- Timestamps for SLA calculation
+  issue_detected_at TIMESTAMPTZ NOT NULL,
+  first_response_at TIMESTAMPTZ,
+  resolved_at TIMESTAMPTZ,
+
+  -- Calculated metrics (in minutes)
+  response_time_minutes INTEGER,
+  resolution_time_minutes INTEGER,
+
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Daily SLA aggregates per admin
+CREATE TABLE admin_sla_daily (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_user_id UUID REFERENCES user_profiles(id) NOT NULL,
+  date DATE NOT NULL,
+  interactions_count INTEGER DEFAULT 0,
+  avg_response_time_minutes NUMERIC,
+  avg_resolution_time_minutes NUMERIC,
+  issues_unresolved INTEGER DEFAULT 0,
+  UNIQUE(admin_user_id, date)
+);
+```
+
+### 18.3 SLA Dashboard (`/settings/admin/sla`)
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ SLA Metrics - December 2025                                     │
+├────────────────┬────────────────┬────────────────┬──────────────┤
+│ Avg Response   │ Avg Resolution │ Open Issues    │ Total Handled│
+│ 23 minutes     │ 4.2 hours      │ 3              │ 47           │
+│ ↓ 15% vs Nov   │ ↓ 8% vs Nov    │                │ ↑ 12% vs Nov │
+└────────────────┴────────────────┴────────────────┴──────────────┘
+```
+
+### 18.4 Per-Admin Breakdown
+
+| Admin         | Avg Response | Avg Resolution | Handled | Unresolved |
+| ------------- | ------------ | -------------- | ------- | ---------- |
+| Joe           | 18 min       | 3.5 hrs        | 28      | 1          |
+| Support Agent | 31 min       | 5.1 hrs        | 19      | 2          |
+
+### 18.5 Trend Charts
+
+- Response time over time (daily/weekly)
+- Resolution time over time
+- Volume of issues by type
+- Comparison between admins
+
+---
+
+## 19. NPS & Feedback Collection
+
+### 19.1 Overview
+
+Multi-pronged feedback collection: quarterly NPS surveys + post-support interaction
+feedback.
+
+### 19.2 Database Schema
+
+```sql
+-- NPS survey responses
+CREATE TABLE nps_responses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES user_profiles(id) NOT NULL,
+  score INTEGER NOT NULL CHECK (score BETWEEN 0 AND 10),
+  feedback TEXT,
+  survey_type TEXT NOT NULL, -- 'quarterly', 'milestone', 'churn_prevention'
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Post-support feedback
+CREATE TABLE support_feedback (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID REFERENCES user_profiles(id) NOT NULL,
+  interaction_id UUID REFERENCES admin_support_interactions(id),
+  rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5), -- 1-5 stars
+  feedback TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+### 19.3 NPS Survey Triggers
+
+| Trigger                   | Timing          | Survey Type        |
+| ------------------------- | --------------- | ------------------ |
+| Quarterly                 | Every 90 days   | `quarterly`        |
+| First funnel published    | After publish   | `milestone`        |
+| Low health score detected | When score < 40 | `churn_prevention` |
+
+### 19.4 Admin Dashboard View
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ NPS Overview                                                    │
+├────────────────┬────────────────┬────────────────┬──────────────┤
+│ Current NPS    │ Promoters      │ Passives       │ Detractors   │
+│    +42         │ 58% (9-10)     │ 26% (7-8)      │ 16% (0-6)    │
+│ ↑ 5 pts vs Q3  │                │                │              │
+└────────────────┴────────────────┴────────────────┴──────────────┘
+
+Recent Detractor Alerts:
+┌─────────────────────────────────────────────────────────────────┐
+│ 🔴 Lisa Park scored 3 - "The editor keeps crashing"            │
+│    [View User] [Draft Outreach]                    2 hours ago  │
+├─────────────────────────────────────────────────────────────────┤
+│ 🔴 Mike Wilson scored 4 - "Too expensive for what I get"       │
+│    [View User] [Draft Outreach]                    1 day ago    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 19.5 Post-Support Feedback
+
+After admin interaction resolves:
+
+1. User receives "How was your support experience?" prompt
+2. 1-5 star rating + optional comment
+3. Low ratings (1-2) trigger notification for review
+
+---
+
+## 20. In-App Messaging (Future Phase)
+
+**Deferred** - Start with email-only outreach. Add in-app messaging in a future phase if
+needed.
+
+When implemented:
+
+- Message center in user's dashboard
+- Real-time notifications for new messages
+- Message history tied to support interactions
+
+---
+
+## 21. Updated Implementation Phases
+
+### Phase 1: Foundation
+
+- [x] Database schema + migrations
+- [x] Role system + RLS policies
+- [x] Admin layout + sidebar integration
+- [x] Basic user list view
+- [x] Audit logging
+
+### Phase 2: User Management
+
+- [ ] User detail page
+- [ ] Health score calculation
+- [ ] Impersonation mode (read-only)
+- [ ] Basic actions (reset password, etc.)
+- [ ] Team notes with follow-up tasks
+
+### Phase 3: Monitoring
+
+- [ ] API usage tracking
+- [ ] Cost dashboard
+- [ ] Sentry integration + session replays
+- [ ] Notification system
+
+### Phase 4: AI Features
+
+- [ ] Struggling user detection
+- [ ] AI email drafting
+- [ ] AI issue diagnosis
+- [ ] Churn prediction
+
+### Phase 5: Support Quality
+
+- [ ] SLA tracking + response metrics
+- [ ] NPS quarterly surveys
+- [ ] Post-support feedback collection
+- [ ] Report generation
+
+### Phase 6: Polish
+
+- [ ] Full impersonation (with edits)
+- [ ] Advanced filtering/search
+- [ ] Mobile responsiveness
+- [ ] In-app messaging (if needed)
+
+---
+
+_Document created: December 22, 2025_ _Updated: December 22, 2025 - Added session
+replay, team notes, SLA tracking, NPS/feedback_ _First super_admin:
+joe@growthmastery.ai_

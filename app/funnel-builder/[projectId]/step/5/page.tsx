@@ -170,25 +170,23 @@ export default function Step5Page({
     const [isEditingSlide, setIsEditingSlide] = useState(false);
 
     // Inline presentation name editing state
-    const [editingPresentationId, setEditingPresentationId] = useState<
-        string | null
-    >(null);
+    const [editingPresentationId, setEditingPresentationId] = useState<string | null>(
+        null
+    );
     const [editingPresentationName, setEditingPresentationName] = useState("");
     const [isSavingName, setIsSavingName] = useState(false);
     const nameInputRef = useRef<HTMLInputElement>(null);
     // Track presentations that users have manually renamed to prevent auto-naming from overwriting
     // Persisted to localStorage to survive page refreshes
-    const [userEditedTitles, setUserEditedTitles] = useState<Set<string>>(
-        () => {
-            if (typeof window === "undefined") return new Set();
-            try {
-                const stored = localStorage.getItem("userEditedPresentationTitles");
-                return stored ? new Set(JSON.parse(stored)) : new Set();
-            } catch {
-                return new Set();
-            }
+    const [userEditedTitles, setUserEditedTitles] = useState<Set<string>>(() => {
+        if (typeof window === "undefined") return new Set();
+        try {
+            const stored = localStorage.getItem("userEditedPresentationTitles");
+            return stored ? new Set(JSON.parse(stored)) : new Set();
+        } catch {
+            return new Set();
         }
-    );
+    });
 
     // Persist userEditedTitles to localStorage when it changes
     useEffect(() => {
@@ -455,7 +453,11 @@ export default function Step5Page({
                         category: "presentation.auto_name",
                         message: `Auto-named presentation: ${autoTitle}`,
                         level: "info",
-                        data: { presentationId, autoTitle, previousTitle: currentTitle },
+                        data: {
+                            presentationId,
+                            autoTitle,
+                            previousTitle: currentTitle,
+                        },
                     });
                 } else {
                     // Fall back to current/fallback title on API failure
@@ -917,7 +919,13 @@ export default function Step5Page({
                 },
             });
         },
-        [projectId, customization, streaming.isGenerating, toast, updatePresentationTitleAuto]
+        [
+            projectId,
+            customization,
+            streaming.isGenerating,
+            toast,
+            updatePresentationTitleAuto,
+        ]
     );
 
     // Handle starting fresh - deletes existing slides and starts over
@@ -1434,13 +1442,10 @@ export default function Step5Page({
     );
 
     // Inline presentation name editing functions
-    const startEditingPresentationName = useCallback(
-        (presentation: Presentation) => {
-            setEditingPresentationId(presentation.id);
-            setEditingPresentationName(presentation.title);
-        },
-        []
-    );
+    const startEditingPresentationName = useCallback((presentation: Presentation) => {
+        setEditingPresentationId(presentation.id);
+        setEditingPresentationName(presentation.title);
+    }, []);
 
     // Focus and select input text when editing starts
     useEffect(() => {
@@ -1473,7 +1478,9 @@ export default function Step5Page({
                 });
 
                 if (!response.ok) {
-                    throw new Error(`Failed to update presentation name: ${response.status}`);
+                    throw new Error(
+                        `Failed to update presentation name: ${response.status}`
+                    );
                 }
 
                 // Validate response data
@@ -1497,7 +1504,10 @@ export default function Step5Page({
                 });
             } catch (error) {
                 // Use userError for expected failures (network issues, validation errors)
-                logger.userError({ error, presentationId }, "Failed to update presentation name");
+                logger.userError(
+                    { error, presentationId },
+                    "Failed to update presentation name"
+                );
                 Sentry.captureException(error, {
                     tags: { component: "step5", action: "rename_presentation" },
                     extra: { presentationId, trimmedName },
@@ -2089,7 +2099,9 @@ export default function Step5Page({
                                                                                 )
                                                                             }
                                                                             aria-label="Presentation name"
-                                                                            maxLength={500}
+                                                                            maxLength={
+                                                                                500
+                                                                            }
                                                                             className="flex-1 rounded border border-primary/30 px-2 py-1 font-semibold focus:outline-none focus:ring-2 focus:ring-primary"
                                                                             onKeyDown={(
                                                                                 e

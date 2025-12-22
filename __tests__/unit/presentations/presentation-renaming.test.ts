@@ -81,8 +81,14 @@ describe("Presentation Renaming", () => {
     });
 
     describe("PATCH /api/presentations (Update Title)", () => {
-        // TODO: This test is failing because the API route throws an error in the test environment
-        // The mock setup may be incomplete or the route logic has changed
+        /**
+         * SKIPPED: This test is failing because the API route throws an error in the test environment
+         * The mock setup may be incomplete or the route logic has changed.
+         *
+         * Action Required: Create a GitHub issue to track this test fix
+         * Priority: Medium - requires investigation of mock chain setup
+         * Skipped Since: 2024-12 (Admin Dashboard PR cleanup)
+         */
         it.skip("should update presentation title successfully", async () => {
             const presentationId = "123e4567-e89b-12d3-a456-426614174000";
             const newTitle = "My Updated Presentation";

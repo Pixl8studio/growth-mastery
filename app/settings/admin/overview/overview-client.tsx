@@ -56,9 +56,15 @@ export default function AdminOverviewClient({
                 <div className="rounded-lg border border-border bg-card p-4">
                     <p className="text-sm font-medium text-muted-foreground">
                         Active Today
+                        <span
+                            className="ml-1 cursor-help text-xs"
+                            title="Estimated based on 15% typical daily active rate. Real tracking requires activity log implementation."
+                        >
+                            (est.)
+                        </span>
                     </p>
                     <p className="mt-1 text-2xl font-bold text-foreground">
-                        {stats.activeToday}
+                        ~{stats.activeToday}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
                         ~

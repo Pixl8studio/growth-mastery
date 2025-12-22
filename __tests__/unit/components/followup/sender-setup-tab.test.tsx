@@ -26,9 +26,14 @@ global.open = vi.fn();
 // Mock fetch
 global.fetch = vi.fn();
 
-// TODO: These tests need to be updated to match the current SenderSetupTab component UI
-// The component was refactored but tests weren't updated
-// See: https://github.com/Pixl8studio/growth-mastery/issues/XXX
+/**
+ * SKIPPED: These tests need to be updated to match the current SenderSetupTab component UI
+ * The component was refactored but tests weren't updated.
+ *
+ * Action Required: Create a GitHub issue to track this test update work
+ * Priority: Medium - tests should be restored once component API stabilizes
+ * Skipped Since: 2024-12 (Admin Dashboard PR cleanup)
+ */
 describe.skip("SenderSetupTab", () => {
     const mockProps = {
         agentConfigId: "agent-123",

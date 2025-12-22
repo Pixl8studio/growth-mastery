@@ -20,12 +20,14 @@ CREATE INDEX IF NOT EXISTS idx_user_profiles_role ON public.user_profiles (role)
 WHERE
   role != 'user';
 
--- Set initial super_admin
-UPDATE public.user_profiles
-SET role = 'super_admin'
-WHERE
-  email = 'joe@growthmastery.ai';
-
+-- NOTE: Initial super_admin setup
+-- The first super_admin should be set via the application using the
+-- initializeSuperAdminFromEnv() function in lib/admin/roles.ts
+-- which reads from the INITIAL_SUPER_ADMIN_EMAIL environment variable.
+-- This approach is preferred over hardcoding an email in migration because:
+-- 1. Migrations run once and are immutable
+-- 2. Different environments may need different initial admins
+-- 3. Environment variables can be managed per-deployment
 -- ===========================================
 -- 2. Admin Audit Logs (retained forever)
 -- ===========================================

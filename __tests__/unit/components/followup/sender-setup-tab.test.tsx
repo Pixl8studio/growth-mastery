@@ -27,12 +27,24 @@ global.open = vi.fn();
 global.fetch = vi.fn();
 
 /**
- * SKIPPED: These tests need to be updated to match the current SenderSetupTab component UI
- * The component was refactored but tests weren't updated.
+ * SKIPPED TEST SUITE - Tracking Required
  *
- * Action Required: Create a GitHub issue to track this test update work
+ * Issue: SenderSetupTab component was refactored but tests weren't updated to match the new UI
+ *
+ * GitHub Issue: TODO - Create issue at https://github.com/Pixl8studio/growth-mastery/issues/new
+ *   Title: "Fix skipped SenderSetupTab tests"
+ *   Labels: testing, technical-debt
+ *
+ * Tasks to fix:
+ *   1. Review current SenderSetupTab component implementation
+ *   2. Update test mocks and assertions to match current UI
+ *   3. Re-enable the skipped test suite
+ *   4. Verify all tests pass
+ *
  * Priority: Medium - tests should be restored once component API stabilizes
  * Skipped Since: 2024-12 (Admin Dashboard PR cleanup)
+ *
+ * @see /docs/SKIPPED_TESTS.md for full list of skipped tests requiring attention
  */
 describe.skip("SenderSetupTab", () => {
     const mockProps = {

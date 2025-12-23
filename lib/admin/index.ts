@@ -30,6 +30,37 @@ export {
     getRecentLogsForUser,
 } from "./audit";
 
+// Configuration
+export {
+    getAdminSettings,
+    getAdminSetting,
+    estimateActiveToday,
+    ESTIMATED_DAILY_ACTIVE_RATE,
+    type AdminConfig,
+    type HealthScoreWeights,
+} from "./config";
+
+// Validation schemas
+export {
+    UserSortFieldSchema,
+    SortOrderSchema,
+    HealthFilterSchema,
+    UsersQuerySchema,
+    EmailDraftActionSchema,
+    UserNoteSchema,
+    RoleUpdateSchema,
+    NotificationAckSchema,
+    parseUsersQuery,
+    type UserSortField,
+    type SortOrder,
+    type HealthFilter,
+    type UsersQueryParams,
+    type EmailDraftAction,
+    type UserNoteInput,
+    type RoleUpdateInput,
+    type NotificationAckInput,
+} from "./validation";
+
 // Re-export types
 export type {
     AdminRole,

@@ -5,6 +5,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
+import { estimateActiveToday } from "@/lib/admin/config";
 import AdminOverviewClient from "./overview-client";
 
 export interface DashboardStats {
@@ -109,8 +110,9 @@ async function fetchDashboardData(): Promise<{
     const totalCostCents =
         monthlyCosts?.reduce((sum, c) => sum + c.total_cost_cents, 0) || 0;
 
-    // For active today, we'd need activity tracking - placeholder for now
-    const activeToday = Math.round(totalUsers * 0.15); // Estimate 15%
+    // For active today, use centralized estimation until real activity tracking is implemented
+    // See lib/admin/config.ts for methodology documentation
+    const activeToday = estimateActiveToday(totalUsers);
 
     const stats: DashboardStats = {
         totalUsers,

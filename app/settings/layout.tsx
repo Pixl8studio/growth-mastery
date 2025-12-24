@@ -3,6 +3,7 @@
  * Layout wrapper for all settings pages
  */
 
+import * as Sentry from "@sentry/nextjs";
 import { getCurrentUserWithProfile } from "@/lib/auth";
 import { isAdmin, initializeSuperAdminFromEnv, getUserRole } from "@/lib/admin/roles";
 import Link from "next/link";
@@ -26,11 +27,21 @@ export default async function SettingsLayout({
         redirect("/login?redirect=/settings");
     }
 
-    // Initialize super admin from environment if needed
-    // This ensures the initial admin is promoted on first visit
-    await initializeSuperAdminFromEnv();
+    // Only attempt admin initialization if this user matches the env var
+    // This avoids unnecessary DB queries for all other users (Option C - surgical approach)
+    const envEmail = process.env.INITIAL_SUPER_ADMIN_EMAIL;
+    if (envEmail && user.email === envEmail) {
+        const result = await initializeSuperAdminFromEnv();
+        if (result.success && result.message.includes("Promoted")) {
+            Sentry.addBreadcrumb({
+                category: "admin.init",
+                message: "Super admin initialized from environment",
+                level: "info",
+                data: { email: user.email },
+            });
+        }
+    }
 
-    // Get user role from database (refetch to catch any promotion)
     const userRole = await getUserRole(user.id);
     const showAdminSection = isAdmin(userRole);
 

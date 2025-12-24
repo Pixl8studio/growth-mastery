@@ -1,15 +1,72 @@
 /**
  * Next.js Middleware
- * Handles Supabase sessions and custom domain routing
+ * Handles Supabase sessions, admin route protection, and custom domain routing
  */
 
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "./lib/supabase/middleware";
 import { createClient } from "./lib/supabase/server";
 
+// Admin role hierarchy - lower index = less permissions
+const ADMIN_ROLES = ["support", "admin", "super_admin"];
+
+/**
+ * Check if user has admin access for middleware protection
+ * Defense-in-depth layer - layout.tsx also enforces access control
+ */
+async function checkAdminAccess(request: NextRequest): Promise<NextResponse | null> {
+    const supabase = await createClient();
+
+    // Get authenticated user
+    const {
+        data: { user },
+        error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+        // Not authenticated - redirect to login
+        const loginUrl = new URL("/login", request.url);
+        loginUrl.searchParams.set("redirect", request.nextUrl.pathname);
+        return NextResponse.redirect(loginUrl);
+    }
+
+    // Check user role
+    const { data: profile, error: profileError } = await supabase
+        .from("user_profiles")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
+    if (profileError || !profile) {
+        // No profile found - redirect to settings
+        return NextResponse.redirect(new URL("/settings", request.url));
+    }
+
+    const userRole = profile.role || "user";
+
+    // Check if user has at least support role (minimum for admin access)
+    if (!ADMIN_ROLES.includes(userRole)) {
+        // Not an admin - redirect to settings (silent, no error exposed)
+        return NextResponse.redirect(new URL("/settings", request.url));
+    }
+
+    // User has admin access - allow through
+    return null;
+}
+
 export async function middleware(request: NextRequest) {
     const hostname = request.headers.get("host") || "";
     const url = request.nextUrl;
+
+    // Admin route protection (defense-in-depth)
+    if (url.pathname.startsWith("/settings/admin")) {
+        const adminCheck = await checkAdminAccess(request);
+        if (adminCheck) {
+            return adminCheck;
+        }
+        // Continue with session update for valid admin users
+        return await updateSession(request);
+    }
 
     // Get the main domain from environment
     const mainDomain =

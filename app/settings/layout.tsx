@@ -4,9 +4,11 @@
  */
 
 import { getCurrentUserWithProfile } from "@/lib/auth";
+import { isAdmin } from "@/lib/admin/roles";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Header } from "@/components/layout/header";
+import type { AdminRole } from "@/types/admin";
 
 export const metadata = {
     title: "Settings | Growth Mastery AI",
@@ -18,12 +20,16 @@ export default async function SettingsLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const { user } = await getCurrentUserWithProfile();
+    const { user, profile } = await getCurrentUserWithProfile();
 
     // If not authenticated, this will redirect via requireAuth
     if (!user) {
         redirect("/login?redirect=/settings");
     }
+
+    // Get user role from profile
+    const userRole = (profile?.role as AdminRole) || "user";
+    const showAdminSection = isAdmin(userRole);
 
     const navigation = [
         { name: "Profile", href: "/settings/profile", icon: "user" },
@@ -51,6 +57,19 @@ export default async function SettingsLayout({
                                     {item.name}
                                 </Link>
                             ))}
+
+                            {/* Admin Section - Only visible to admins */}
+                            {showAdminSection && (
+                                <>
+                                    <div className="my-4 border-t border-border/50" />
+                                    <Link
+                                        href="/settings/admin"
+                                        className="flex items-center rounded-md px-3 py-2 text-sm font-medium text-foreground hover:bg-muted hover:text-foreground"
+                                    >
+                                        Admin
+                                    </Link>
+                                </>
+                            )}
                         </nav>
                     </aside>
 

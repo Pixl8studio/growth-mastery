@@ -1,9 +1,13 @@
 /**
  * Unit Tests: Supabase Middleware
  * Tests for lib/supabase/middleware.ts
+ *
+ * Note: This file tests Edge Runtime code that uses process.env directly
+ * instead of the Zod-validated env module. See lib/supabase/middleware.ts
+ * for details on Edge Runtime constraints.
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { updateSession } from "@/lib/supabase/middleware";
 import { createServerClient } from "@supabase/ssr";
 import { NextRequest, NextResponse } from "next/server";
@@ -13,19 +17,20 @@ vi.mock("@supabase/ssr", () => ({
     createServerClient: vi.fn(),
 }));
 
-vi.mock("@/lib/env", () => ({
-    env: {
-        NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co",
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
-    },
-}));
-
 describe("Supabase Middleware", () => {
     let mockRequest: NextRequest;
     let mockSupabase: any;
+    let originalEnv: NodeJS.ProcessEnv;
 
     beforeEach(() => {
         vi.clearAllMocks();
+
+        // Store original env values
+        originalEnv = { ...process.env };
+
+        // Set up process.env for tests (Edge Runtime uses process.env directly)
+        process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
 
         // Mock NextRequest
         mockRequest = {
@@ -43,6 +48,11 @@ describe("Supabase Middleware", () => {
         };
 
         (createServerClient as any).mockReturnValue(mockSupabase);
+    });
+
+    afterEach(() => {
+        // Restore original env values
+        process.env = originalEnv;
     });
 
     describe("updateSession", () => {
@@ -65,18 +75,32 @@ describe("Supabase Middleware", () => {
         });
 
         it("should return early when environment variables are missing", async () => {
-            vi.doMock("@/lib/env", () => ({
-                env: {
-                    NEXT_PUBLIC_SUPABASE_URL: undefined,
-                    NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
-                },
-            }));
+            // Clear the environment variables
+            delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+            delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-            const { updateSession: update } = await import("@/lib/supabase/middleware");
-
-            const response = await update(mockRequest);
+            const response = await updateSession(mockRequest);
 
             expect(response).toBeInstanceOf(NextResponse);
+            expect(createServerClient).not.toHaveBeenCalled();
+        });
+
+        it("should return early when only SUPABASE_URL is missing", async () => {
+            delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+
+            const response = await updateSession(mockRequest);
+
+            expect(response).toBeInstanceOf(NextResponse);
+            expect(createServerClient).not.toHaveBeenCalled();
+        });
+
+        it("should return early when only SUPABASE_ANON_KEY is missing", async () => {
+            delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+            const response = await updateSession(mockRequest);
+
+            expect(response).toBeInstanceOf(NextResponse);
+            expect(createServerClient).not.toHaveBeenCalled();
         });
 
         it("should configure cookie handlers correctly", async () => {

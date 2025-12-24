@@ -3,19 +3,48 @@
  * Handles Supabase sessions, admin route protection, and custom domain routing
  */
 
+import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 import { updateSession } from "./lib/supabase/middleware";
-import { createClient } from "./lib/supabase/server";
 
 // Admin role hierarchy - lower index = less permissions
 const ADMIN_ROLES = ["support", "admin", "super_admin"];
+
+/**
+ * Create a Supabase client for use in middleware
+ * Note: Middleware cannot use next/headers cookies() - must use request.cookies
+ */
+function createMiddlewareClient(request: NextRequest) {
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+        return null;
+    }
+
+    return createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookies: {
+            getAll() {
+                return request.cookies.getAll();
+            },
+            setAll() {
+                // Middleware doesn't set cookies here - updateSession handles that
+            },
+        },
+    });
+}
 
 /**
  * Check if user has admin access for middleware protection
  * Defense-in-depth layer - layout.tsx also enforces access control
  */
 async function checkAdminAccess(request: NextRequest): Promise<NextResponse | null> {
-    const supabase = await createClient();
+    const supabase = createMiddlewareClient(request);
+
+    if (!supabase) {
+        // Supabase not configured - allow through (server components will handle auth)
+        return null;
+    }
 
     // Get authenticated user
     const {
@@ -82,7 +111,11 @@ export async function middleware(request: NextRequest) {
     }
 
     // Check if this hostname is a custom domain
-    const supabase = await createClient();
+    const supabase = createMiddlewareClient(request);
+    if (!supabase) {
+        // Supabase not configured - skip custom domain check
+        return await updateSession(request);
+    }
     const { data: customDomain } = await supabase
         .from("custom_domains")
         .select(

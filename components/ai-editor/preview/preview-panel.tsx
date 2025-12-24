@@ -16,9 +16,15 @@ interface PreviewPanelProps {
     html: string;
     deviceMode: "desktop" | "tablet" | "mobile";
     isProcessing: boolean;
+    refreshKey?: number;
 }
 
-export function PreviewPanel({ html, deviceMode, isProcessing }: PreviewPanelProps) {
+export function PreviewPanel({
+    html,
+    deviceMode,
+    isProcessing,
+    refreshKey,
+}: PreviewPanelProps) {
     return (
         <div
             className={cn(
@@ -34,6 +40,7 @@ export function PreviewPanel({ html, deviceMode, isProcessing }: PreviewPanelPro
                         html={html}
                         deviceMode={deviceMode}
                         isProcessing={isProcessing}
+                        refreshKey={refreshKey}
                     />
                 </DeviceFrame>
             </div>

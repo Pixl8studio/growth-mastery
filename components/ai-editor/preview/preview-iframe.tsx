@@ -13,6 +13,7 @@ interface PreviewIframeProps {
     html: string;
     deviceMode: "desktop" | "tablet" | "mobile";
     isProcessing: boolean;
+    refreshKey?: number;
 }
 
 const viewportWidths = {
@@ -21,7 +22,12 @@ const viewportWidths = {
     mobile: 375,
 };
 
-export function PreviewIframe({ html, deviceMode, isProcessing }: PreviewIframeProps) {
+export function PreviewIframe({
+    html,
+    deviceMode,
+    isProcessing,
+    refreshKey = 0,
+}: PreviewIframeProps) {
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [scrollPosition, setScrollPosition] = useState(0);
@@ -71,7 +77,7 @@ export function PreviewIframe({ html, deviceMode, isProcessing }: PreviewIframeP
 
         iframe.addEventListener("load", handleLoad);
         return () => iframe.removeEventListener("load", handleLoad);
-    }, [html]);
+    }, [html, refreshKey]);
 
     const width = viewportWidths[deviceMode];
 

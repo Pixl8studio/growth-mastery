@@ -65,6 +65,8 @@ interface UseEditorReturn {
     undo: () => void;
     canUndo: boolean;
     save: () => Promise<void>;
+    publish: () => Promise<{ success: boolean; publishedUrl?: string }>;
+    getShareUrl: () => string;
 }
 
 export function useEditor({
@@ -390,6 +392,79 @@ export function useEditor({
         );
     }, [pageId, title, html, version]);
 
+    // Publish page
+    const publish = useCallback(async (): Promise<{
+        success: boolean;
+        publishedUrl?: string;
+    }> => {
+        return await Sentry.startSpan(
+            { op: "ai-editor.publish", name: "Publish AI Editor Page" },
+            async (span) => {
+                span.setAttribute("page_id", pageId);
+                span.setAttribute("version", version);
+
+                try {
+                    // First save any pending changes
+                    await save();
+
+                    const response = await fetch(`/api/ai-editor/pages/${pageId}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            status: "published",
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new ValidationError(
+                            errorData.error || "Failed to publish page"
+                        );
+                    }
+
+                    const data = await response.json();
+                    const publishedUrl = data.page?.published_url || null;
+
+                    span.setStatus({ code: 1, message: "Success" });
+                    setStatus("published");
+
+                    Sentry.addBreadcrumb({
+                        category: "ai-editor.publish",
+                        message: "Page published",
+                        level: "info",
+                        data: { pageId, version, publishedUrl },
+                    });
+
+                    logger.info({ pageId, version, publishedUrl }, "📢 Page published");
+
+                    return { success: true, publishedUrl };
+                } catch (error) {
+                    span.setStatus({ code: 2, message: "Error" });
+                    logger.error({ error, pageId }, "Failed to publish page");
+
+                    Sentry.captureException(error, {
+                        tags: { component: "ai-editor", action: "publish_page" },
+                        extra: { pageId, version },
+                    });
+
+                    return { success: false };
+                }
+            }
+        );
+    }, [pageId, version, save]);
+
+    // Get shareable URL for the page
+    const getShareUrl = useCallback((): string => {
+        // If published, use the published URL
+        // Otherwise, return the editor preview URL
+        if (typeof window === "undefined") return "";
+
+        const baseUrl = window.location.origin;
+        // For now, return the editor preview URL
+        // When we have published_url from the API, we could use that instead
+        return `${baseUrl}/ai-editor/${pageId}/preview`;
+    }, [pageId]);
+
     // Auto-save on changes (debounced)
     useEffect(() => {
         // Don't auto-save if html hasn't changed from initial
@@ -422,5 +497,7 @@ export function useEditor({
         undo,
         canUndo,
         save,
+        publish,
+        getShareUrl,
     };
 }

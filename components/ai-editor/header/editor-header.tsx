@@ -6,9 +6,9 @@
  */
 
 import { useState } from "react";
-import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/components/ui/use-toast";
 import {
     Tooltip,
     TooltipContent,
@@ -30,6 +30,7 @@ import {
     Code2,
     Undo2,
     Maximize2,
+    Minimize2,
     RefreshCw,
     Share2,
     ChevronDown,
@@ -46,8 +47,13 @@ interface EditorHeaderProps {
     onDeviceModeChange: (mode: "desktop" | "tablet" | "mobile") => void;
     onUndo: () => void;
     canUndo: boolean;
-    pageId: string;
-    pageType: "registration" | "watch" | "enrollment";
+    onRefreshPreview?: () => void;
+    isFullscreen?: boolean;
+    onToggleFullscreen?: () => void;
+    onShowCodeView?: () => void;
+    onShowVersionHistory?: () => void;
+    onPublish?: () => Promise<{ success: boolean; publishedUrl?: string }>;
+    onGetShareUrl?: () => string;
 }
 
 export function EditorHeader({
@@ -59,17 +65,66 @@ export function EditorHeader({
     onDeviceModeChange,
     onUndo,
     canUndo,
-    pageId,
-    pageType,
+    onRefreshPreview,
+    isFullscreen = false,
+    onToggleFullscreen,
+    onShowCodeView,
+    onShowVersionHistory,
+    onPublish,
+    onGetShareUrl,
 }: EditorHeaderProps) {
+    const { toast } = useToast();
     const [isEditingTitle, setIsEditingTitle] = useState(false);
     const [isPublishing, setIsPublishing] = useState(false);
 
+    const handleShare = async () => {
+        if (!onGetShareUrl) return;
+
+        const shareUrl = onGetShareUrl();
+        try {
+            await navigator.clipboard.writeText(shareUrl);
+            toast({
+                title: "Link copied",
+                description: "Share link has been copied to your clipboard.",
+            });
+        } catch {
+            toast({
+                title: "Copy failed",
+                description: "Could not copy link. Please try again.",
+                variant: "destructive",
+            });
+        }
+    };
+
     const handlePublish = async () => {
+        if (!onPublish) return;
+
         setIsPublishing(true);
-        // TODO: Implement publish logic
-        await new Promise((resolve) => setTimeout(resolve, 1500));
-        setIsPublishing(false);
+        try {
+            const result = await onPublish();
+            if (result.success) {
+                toast({
+                    title: "Page published",
+                    description: result.publishedUrl
+                        ? `Your page is now live at ${result.publishedUrl}`
+                        : "Your page is now live!",
+                });
+            } else {
+                toast({
+                    title: "Publish failed",
+                    description: "Could not publish page. Please try again.",
+                    variant: "destructive",
+                });
+            }
+        } catch {
+            toast({
+                title: "Publish failed",
+                description: "An unexpected error occurred. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setIsPublishing(false);
+        }
     };
 
     const deviceIcons = {
@@ -135,7 +190,12 @@ export function EditorHeader({
                     {/* History */}
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={onShowVersionHistory}
+                            >
                                 <History className="h-4 w-4" />
                             </Button>
                         </TooltipTrigger>
@@ -215,7 +275,12 @@ export function EditorHeader({
                     {/* Code View */}
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={onShowCodeView}
+                            >
                                 <Code2 className="h-4 w-4" />
                             </Button>
                         </TooltipTrigger>
@@ -250,19 +315,33 @@ export function EditorHeader({
                     {/* Fullscreen */}
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <Maximize2 className="h-4 w-4" />
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={onToggleFullscreen}
+                            >
+                                {isFullscreen ? (
+                                    <Minimize2 className="h-4 w-4" />
+                                ) : (
+                                    <Maximize2 className="h-4 w-4" />
+                                )}
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            <p>Fullscreen</p>
+                            <p>{isFullscreen ? "Exit Fullscreen" : "Fullscreen"}</p>
                         </TooltipContent>
                     </Tooltip>
 
                     {/* Refresh */}
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={onRefreshPreview}
+                            >
                                 <RefreshCw className="h-4 w-4" />
                             </Button>
                         </TooltipTrigger>
@@ -274,12 +353,17 @@ export function EditorHeader({
                     {/* Share */}
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={handleShare}
+                            >
                                 <Share2 className="h-4 w-4" />
                             </Button>
                         </TooltipTrigger>
                         <TooltipContent>
-                            <p>Share</p>
+                            <p>Copy Share Link</p>
                         </TooltipContent>
                     </Tooltip>
 

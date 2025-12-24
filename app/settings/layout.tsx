@@ -4,11 +4,10 @@
  */
 
 import { getCurrentUserWithProfile } from "@/lib/auth";
-import { isAdmin } from "@/lib/admin/roles";
+import { isAdmin, initializeSuperAdminFromEnv, getUserRole } from "@/lib/admin/roles";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Header } from "@/components/layout/header";
-import type { AdminRole } from "@/types/admin";
 
 export const metadata = {
     title: "Settings | Growth Mastery AI",
@@ -27,8 +26,12 @@ export default async function SettingsLayout({
         redirect("/login?redirect=/settings");
     }
 
-    // Get user role from profile
-    const userRole = (profile?.role as AdminRole) || "user";
+    // Initialize super admin from environment if needed
+    // This ensures the initial admin is promoted on first visit
+    await initializeSuperAdminFromEnv();
+
+    // Get user role from database (refetch to catch any promotion)
+    const userRole = await getUserRole(user.id);
     const showAdminSection = isAdmin(userRole);
 
     const navigation = [

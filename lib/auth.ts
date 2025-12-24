@@ -53,21 +53,58 @@ export async function isAuthenticated(): Promise<boolean> {
 
 /**
  * Get user profile from database
+ * Creates a basic profile if one doesn't exist (handles edge case for new users)
  */
 export async function getUserProfile(userId: string) {
     const supabase = await createClient();
 
+    // Use maybeSingle() to avoid PGRST116 error when no rows found
     const { data: profile, error } = await supabase
         .from("user_profiles")
         .select("*")
         .eq("id", userId)
-        .single();
+        .maybeSingle();
 
     if (error) {
         throw error;
     }
 
-    return profile;
+    // Profile exists - return it
+    if (profile) {
+        return profile;
+    }
+
+    // No profile found - try to get user email and create a basic profile
+    const {
+        data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user?.email) {
+        throw new Error("Unable to create profile: user email not available");
+    }
+
+    // Generate a unique username from email
+    const baseUsername = user.email.split("@")[0].replace(/[^a-zA-Z0-9]/g, "");
+    const uniqueUsername = `${baseUsername}_${Date.now().toString(36)}`;
+
+    // Create basic profile
+    const { data: newProfile, error: createError } = await supabase
+        .from("user_profiles")
+        .insert({
+            id: userId,
+            email: user.email,
+            username: uniqueUsername,
+            full_name: user.user_metadata?.full_name || null,
+            onboarding_completed: false,
+        })
+        .select()
+        .single();
+
+    if (createError) {
+        throw createError;
+    }
+
+    return newProfile;
 }
 
 /**

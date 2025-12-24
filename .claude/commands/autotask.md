@@ -149,7 +149,7 @@ Mention this to the user:
 
 > A sandbox environment will be available shortly. Check the PR for the "Sandbox Ready"
 > comment with a link to test your changes in an isolated preview deployment.
-</completion>
+> </completion>
 
 <error-recovery>
 Recover gracefully from failures when possible. Capture decision-enabling context: what was attempted, what state preceded the failure, what the error indicates about root cause, and whether you have enough information to fix it autonomously.

@@ -1,14 +1,18 @@
 /**
  * Structured Logger using Pino
  * Provides consistent logging across the application
+ *
+ * Note: Uses process.env.NODE_ENV directly instead of the env module.
+ * The logger is a core module imported by many files, and using the env module
+ * would trigger Zod validation at import time, defeating the lazy-loading pattern.
+ * This follows the same pattern used in middleware.ts for Edge Runtime compatibility.
  */
 
 import pino from "pino";
 
-import { env } from "./env";
-
-const isDevelopment = env.NODE_ENV === "development";
-const isTest = env.NODE_ENV === "test";
+// Use process.env directly to avoid triggering env module validation at import time
+const isDevelopment = process.env.NODE_ENV === "development";
+const isTest = process.env.NODE_ENV === "test";
 
 // Check if we're in a browser context (client-side)
 const isBrowser = typeof window !== "undefined";

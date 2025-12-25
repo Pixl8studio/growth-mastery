@@ -172,6 +172,20 @@ export const resetEnvCache = (): void => {
     cachedEnv = null;
 };
 
+/**
+ * Explicitly validate all environment variables.
+ * Call this at app startup (e.g., in middleware or root layout) to fail fast
+ * if environment variables are misconfigured, rather than waiting for first access.
+ *
+ * @example
+ * // In middleware.ts or layout.tsx
+ * import { validateEnv } from '@/lib/env';
+ * validateEnv(); // Throws if env is invalid
+ */
+export const validateEnv = (): Env => {
+    return getEnv();
+};
+
 // Create a proxy that lazily validates env on first property access
 export const env: Env = new Proxy({} as Env, {
     get(_target, prop: string) {

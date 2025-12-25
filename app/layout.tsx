@@ -2,6 +2,13 @@ import type { Metadata } from "next";
 import { Inter, Poppins } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { validateEnv } from "@/lib/env";
+
+// Fail fast if environment variables are misconfigured
+// This runs at app startup (after Next.js has initialized process.env)
+if (process.env.NODE_ENV !== "test") {
+    validateEnv();
+}
 
 const inter = Inter({
     subsets: ["latin"],

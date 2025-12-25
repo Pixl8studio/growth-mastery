@@ -7,7 +7,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { logger } from "@/lib/client-logger";
 
@@ -17,9 +17,17 @@ interface ErrorProps {
 }
 
 export default function AdminOverviewError({ error, reset }: ErrorProps) {
+    const [isDev] = useState(() => process.env.NODE_ENV === "development");
+    const [showDetails, setShowDetails] = useState(false);
+
     useEffect(() => {
         logger.error(
-            { error: error.message, digest: error.digest },
+            {
+                error: error.message,
+                errorName: error.name,
+                digest: error.digest,
+                stack: error.stack?.split("\n").slice(0, 5).join("\n"),
+            },
             "Admin overview page error"
         );
 
@@ -27,6 +35,10 @@ export default function AdminOverviewError({ error, reset }: ErrorProps) {
             tags: {
                 component: "error-boundary",
                 feature: "admin-overview",
+                ...(error.digest && { digest: error.digest }),
+            },
+            extra: {
+                url: typeof window !== "undefined" ? window.location.href : "unknown",
             },
             level: "error",
         });
@@ -43,9 +55,25 @@ export default function AdminOverviewError({ error, reset }: ErrorProps) {
                     temporary issue with the database connection.
                 </p>
                 {error.digest && (
-                    <p className="mt-1 text-xs text-muted-foreground">
+                    <p className="mt-1 font-mono text-xs text-muted-foreground">
                         Error ID: {error.digest}
                     </p>
+                )}
+                {isDev && error.message && (
+                    <div className="mt-3">
+                        <button
+                            onClick={() => setShowDetails(!showDetails)}
+                            className="text-xs text-muted-foreground underline hover:text-foreground"
+                        >
+                            {showDetails ? "Hide" : "Show"} error details (dev only)
+                        </button>
+                        {showDetails && (
+                            <pre className="mt-2 max-h-48 overflow-auto rounded-md bg-muted p-3 text-left text-xs text-muted-foreground">
+                                {error.name}: {error.message}
+                                {error.stack && `\n\n${error.stack}`}
+                            </pre>
+                        )}
+                    </div>
                 )}
             </div>
             <div className="flex gap-2">

@@ -125,8 +125,11 @@ const envSchema = z.object({
     LOGFIRE_TOKEN: z.string().optional(),
 });
 
+// Type for the validated environment
+type Env = z.infer<typeof envSchema>;
+
 // Parse and validate environment variables
-const parseEnv = () => {
+const parseEnv = (): Env => {
     try {
         return envSchema.parse(process.env);
     } catch (error) {
@@ -140,4 +143,49 @@ const parseEnv = () => {
     }
 };
 
-export const env = parseEnv();
+// Lazy-loaded environment variables
+// Validation only runs when properties are first accessed, not at module load time.
+// This prevents Zod validation from running during SSR in Server Components,
+// which can cause runtime errors in certain Next.js contexts.
+let cachedEnv: Env | null = null;
+
+const getEnv = (): Env => {
+    if (!cachedEnv) {
+        cachedEnv = parseEnv();
+    }
+    return cachedEnv;
+};
+
+/**
+ * Reset the cached environment variables.
+ * This is primarily for testing purposes to allow tests to modify process.env
+ * and have those changes reflected in the env module.
+ */
+export const resetEnvCache = (): void => {
+    cachedEnv = null;
+};
+
+// Create a proxy that lazily validates env on first property access
+export const env: Env = new Proxy({} as Env, {
+    get(_target, prop: string) {
+        return getEnv()[prop as keyof Env];
+    },
+    has(_target, prop: string) {
+        return prop in getEnv();
+    },
+    ownKeys() {
+        return Object.keys(getEnv());
+    },
+    getOwnPropertyDescriptor(_target, prop: string) {
+        const value = getEnv()[prop as keyof Env];
+        if (value !== undefined) {
+            return {
+                value,
+                writable: false,
+                enumerable: true,
+                configurable: true,
+            };
+        }
+        return undefined;
+    },
+});

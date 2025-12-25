@@ -1,17 +1,14 @@
 /**
  * Structured Logger using Pino
  * Provides consistent logging across the application
- *
- * Note: This file uses process.env directly instead of importing from lib/env.ts
- * to avoid Zod validation issues during module initialization. The lib/env.ts
- * module runs Zod validation at import time, which can cause errors in certain
- * Next.js runtime contexts.
  */
 
 import pino from "pino";
 
-const isDevelopment = process.env.NODE_ENV === "development";
-const isTest = process.env.NODE_ENV === "test";
+import { env } from "./env";
+
+const isDevelopment = env.NODE_ENV === "development";
+const isTest = env.NODE_ENV === "test";
 
 // Check if we're in a browser context (client-side)
 const isBrowser = typeof window !== "undefined";

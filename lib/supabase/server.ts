@@ -1,20 +1,16 @@
 /**
  * Supabase Server Client
  * For use in Server Components, Server Actions, and Route Handlers
- *
- * Note: This file uses process.env directly instead of importing from lib/env.ts
- * to avoid Zod validation issues during module initialization. The lib/env.ts
- * module runs Zod validation at import time, which can cause errors in certain
- * Next.js runtime contexts. Using process.env directly is more reliable and
- * consistent with how the middleware and client files handle env vars.
  */
 
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
+import { env } from "../env";
+
 export const createClient = async () => {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseAnonKey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
     if (!supabaseUrl || !supabaseAnonKey) {
         throw new Error(

@@ -5,6 +5,7 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createClient } from "@/lib/supabase/server";
+import { resetEnvCache } from "@/lib/env";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
@@ -25,6 +26,7 @@ describe("Supabase Server Client", () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        resetEnvCache();
 
         // Set up test environment variables
         process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
@@ -42,6 +44,7 @@ describe("Supabase Server Client", () => {
     afterEach(() => {
         // Restore original environment
         process.env = { ...originalEnv };
+        resetEnvCache();
     });
 
     describe("createClient", () => {
@@ -65,9 +68,10 @@ describe("Supabase Server Client", () => {
         });
 
         it("should throw error when environment variables are missing", async () => {
-            // Clear environment variables
+            // Clear environment variables and reset cache to pick up the changes
             delete process.env.NEXT_PUBLIC_SUPABASE_URL;
             delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+            resetEnvCache();
 
             await expect(createClient()).rejects.toThrow(
                 "Missing Supabase environment variables"

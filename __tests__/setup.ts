@@ -64,6 +64,7 @@ if (typeof Element !== "undefined" && typeof window !== "undefined") {
 import { expect, afterEach, beforeAll, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
+import { resetEnvCache } from "@/lib/env";
 
 // Only setup DOM mocks if we're in a DOM environment
 if (typeof Element !== "undefined" && typeof window !== "undefined") {
@@ -132,6 +133,8 @@ afterEach(() => {
         cleanup();
     }
     vi.clearAllMocks();
+    // Reset env cache to allow tests to modify process.env independently
+    resetEnvCache();
 });
 
 // Mock Next.js router

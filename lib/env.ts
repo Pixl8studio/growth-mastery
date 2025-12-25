@@ -1,6 +1,16 @@
 /**
  * Environment Variables Configuration
  * Validates and exports environment variables with type safety
+ *
+ * ⚠️ IMPORTANT: This module uses lazy validation via Proxy.
+ * - Validation runs on FIRST property access, NOT at import time
+ * - To fail fast, call validateEnv() explicitly (see app/layout.tsx)
+ *
+ * ⚠️ DESTRUCTURING WARNING:
+ * DO NOT destructure at module scope - it triggers validation at import time:
+ *   ❌ const { NODE_ENV } = env;  // BAD - triggers validation immediately
+ *   ✅ const nodeEnv = env.NODE_ENV;  // OK - access when needed
+ *   ✅ function getNodeEnv() { return env.NODE_ENV; }  // OK - deferred access
  */
 
 import { z } from "zod";
@@ -186,7 +196,21 @@ export const validateEnv = (): Env => {
     return getEnv();
 };
 
-// Create a proxy that lazily validates env on first property access
+/**
+ * Lazily-validated environment variables.
+ *
+ * This Proxy defers Zod validation until the first property is accessed.
+ * All property accesses are intercepted and routed through getEnv(), which
+ * validates and caches the full environment on first call.
+ *
+ * The `{} as Env` cast is safe because:
+ * - All property access goes through the Proxy's get() trap
+ * - The get() trap calls getEnv() which returns the validated Env object
+ * - TypeScript correctly types the export as Env
+ *
+ * ⚠️ WARNING: Object destructuring triggers full validation immediately.
+ * See module-level JSDoc for details.
+ */
 export const env: Env = new Proxy({} as Env, {
     get(_target, prop: string) {
         return getEnv()[prop as keyof Env];

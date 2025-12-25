@@ -6,7 +6,8 @@ import { validateEnv } from "@/lib/env";
 
 // Fail fast if environment variables are misconfigured
 // This runs at app startup (after Next.js has initialized process.env)
-if (process.env.NODE_ENV !== "test") {
+// Skip in test environments - Vitest sets VITEST env var
+if (!process.env.VITEST) {
     validateEnv();
 }
 

@@ -319,5 +319,36 @@ describe("lib/env", () => {
             resetEnvCache();
             expect(env.NODE_ENV).toBe("production");
         });
+
+        it("should trigger full validation when destructuring (edge case warning)", async () => {
+            // This test documents the destructuring behavior:
+            // Object destructuring triggers full validation because it accesses
+            // getOwnPropertyDescriptor for each destructured property
+            vi.stubEnv("NEXT_PUBLIC_APP_URL", "not-a-valid-url");
+
+            const { env, resetEnvCache } = await import("@/lib/env");
+            resetEnvCache();
+
+            // Destructuring triggers validation immediately
+            // This is documented in the module JSDoc as a pattern to avoid
+            expect(() => {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const { NODE_ENV } = env;
+            }).toThrow("Invalid environment variables");
+        });
+
+        it("should trigger full validation when spreading (edge case warning)", async () => {
+            // Object spreading also triggers full validation via ownKeys()
+            vi.stubEnv("NEXT_PUBLIC_APP_URL", "not-a-valid-url");
+
+            const { env, resetEnvCache } = await import("@/lib/env");
+            resetEnvCache();
+
+            // Spreading triggers validation immediately
+            expect(() => {
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
+                const copy = { ...env };
+            }).toThrow("Invalid environment variables");
+        });
     });
 });

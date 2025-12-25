@@ -1,6 +1,16 @@
 /**
  * Environment Variables Configuration
  * Validates and exports environment variables with type safety
+ *
+ * ⚠️ IMPORTANT: This module uses lazy validation via Proxy.
+ * - Validation runs on FIRST property access, NOT at import time
+ * - To fail fast, call validateEnv() explicitly (see app/layout.tsx)
+ *
+ * ⚠️ DESTRUCTURING WARNING:
+ * DO NOT destructure at module scope - it triggers validation at import time:
+ *   ❌ const { NODE_ENV } = env;  // BAD - triggers validation immediately
+ *   ✅ const nodeEnv = env.NODE_ENV;  // OK - access when needed
+ *   ✅ function getNodeEnv() { return env.NODE_ENV; }  // OK - deferred access
  */
 
 import { z } from "zod";
@@ -125,8 +135,11 @@ const envSchema = z.object({
     LOGFIRE_TOKEN: z.string().optional(),
 });
 
+// Type for the validated environment
+type Env = z.infer<typeof envSchema>;
+
 // Parse and validate environment variables
-const parseEnv = () => {
+const parseEnv = (): Env => {
     try {
         return envSchema.parse(process.env);
     } catch (error) {
@@ -140,4 +153,84 @@ const parseEnv = () => {
     }
 };
 
-export const env = parseEnv();
+// Lazy-loaded environment variables
+// Validation only runs when properties are first accessed, not at module load time.
+// This prevents Zod validation from running during SSR in Server Components,
+// which can cause runtime errors in certain Next.js contexts.
+//
+// IMPORTANT: Proxy Behavior Notes
+// - Validation runs on FIRST property access, then cached
+// - Object destructuring (const { NODE_ENV } = env) triggers full validation
+// - Object spreading ({ ...env }) triggers full validation via ownKeys()
+// - This is intentional: validation is deferred, not prevented
+// - Once Next.js has initialized process.env (after import time), validation works correctly
+let cachedEnv: Env | null = null;
+
+const getEnv = (): Env => {
+    if (!cachedEnv) {
+        cachedEnv = parseEnv();
+    }
+    return cachedEnv;
+};
+
+/**
+ * Reset the cached environment variables.
+ * This is primarily for testing purposes to allow tests to modify process.env
+ * and have those changes reflected in the env module.
+ */
+export const resetEnvCache = (): void => {
+    cachedEnv = null;
+};
+
+/**
+ * Explicitly validate all environment variables.
+ * Call this at app startup (e.g., in middleware or root layout) to fail fast
+ * if environment variables are misconfigured, rather than waiting for first access.
+ *
+ * @example
+ * // In middleware.ts or layout.tsx
+ * import { validateEnv } from '@/lib/env';
+ * validateEnv(); // Throws if env is invalid
+ */
+export const validateEnv = (): Env => {
+    return getEnv();
+};
+
+/**
+ * Lazily-validated environment variables.
+ *
+ * This Proxy defers Zod validation until the first property is accessed.
+ * All property accesses are intercepted and routed through getEnv(), which
+ * validates and caches the full environment on first call.
+ *
+ * The `{} as Env` cast is safe because:
+ * - All property access goes through the Proxy's get() trap
+ * - The get() trap calls getEnv() which returns the validated Env object
+ * - TypeScript correctly types the export as Env
+ *
+ * ⚠️ WARNING: Object destructuring triggers full validation immediately.
+ * See module-level JSDoc for details.
+ */
+export const env: Env = new Proxy({} as Env, {
+    get(_target, prop: string) {
+        return getEnv()[prop as keyof Env];
+    },
+    has(_target, prop: string) {
+        return prop in getEnv();
+    },
+    ownKeys() {
+        return Object.keys(getEnv());
+    },
+    getOwnPropertyDescriptor(_target, prop: string) {
+        const value = getEnv()[prop as keyof Env];
+        if (value !== undefined) {
+            return {
+                value,
+                writable: false,
+                enumerable: true,
+                configurable: true,
+            };
+        }
+        return undefined;
+    },
+});

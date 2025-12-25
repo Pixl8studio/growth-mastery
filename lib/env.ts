@@ -147,6 +147,13 @@ const parseEnv = (): Env => {
 // Validation only runs when properties are first accessed, not at module load time.
 // This prevents Zod validation from running during SSR in Server Components,
 // which can cause runtime errors in certain Next.js contexts.
+//
+// IMPORTANT: Proxy Behavior Notes
+// - Validation runs on FIRST property access, then cached
+// - Object destructuring (const { NODE_ENV } = env) triggers full validation
+// - Object spreading ({ ...env }) triggers full validation via ownKeys()
+// - This is intentional: validation is deferred, not prevented
+// - Once Next.js has initialized process.env (after import time), validation works correctly
 let cachedEnv: Env | null = null;
 
 const getEnv = (): Env => {

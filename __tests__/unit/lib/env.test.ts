@@ -60,17 +60,21 @@ describe("lib/env", () => {
         it("should validate URL format for NEXT_PUBLIC_APP_URL", async () => {
             vi.stubEnv("NEXT_PUBLIC_APP_URL", "not-a-url");
 
-            await expect(async () => {
-                await import("@/lib/env");
-            }).rejects.toThrow();
+            const { env, resetEnvCache } = await import("@/lib/env");
+            resetEnvCache();
+
+            // Validation is lazy - it throws on first property access
+            expect(() => env.NODE_ENV).toThrow();
         });
 
         it("should validate URL format for NEXT_PUBLIC_SUPABASE_URL", async () => {
             vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "invalid-url");
 
-            await expect(async () => {
-                await import("@/lib/env");
-            }).rejects.toThrow();
+            const { env, resetEnvCache } = await import("@/lib/env");
+            resetEnvCache();
+
+            // Validation is lazy - it throws on first property access
+            expect(() => env.NODE_ENV).toThrow();
         });
 
         it("should allow optional Supabase variables to be undefined", async () => {
@@ -212,16 +216,23 @@ describe("lib/env", () => {
         it("should reject invalid NODE_ENV values", async () => {
             vi.stubEnv("NODE_ENV", "invalid");
 
-            await expect(async () => {
-                await import("@/lib/env");
-            }).rejects.toThrow();
+            const { env, resetEnvCache } = await import("@/lib/env");
+            resetEnvCache();
+
+            // Validation is lazy - it throws on first property access
+            expect(() => env.NODE_ENV).toThrow();
         });
 
         it("should provide helpful error message for validation failures", async () => {
             vi.stubEnv("NEXT_PUBLIC_APP_URL", "not-a-url");
 
+            const { env, resetEnvCache } = await import("@/lib/env");
+            resetEnvCache();
+
+            // Validation is lazy - it throws on first property access
             try {
-                await import("@/lib/env");
+                // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+                env.NODE_ENV;
                 expect.fail("Should have thrown error");
             } catch (error) {
                 expect(error).toBeInstanceOf(Error);
@@ -245,6 +256,68 @@ describe("lib/env", () => {
 
             expect(nodeEnv).toBe("production");
             expect(feePercent).toBe(25);
+        });
+    });
+
+    describe("lazy-loading behavior", () => {
+        it("should NOT validate until first property access", async () => {
+            // Set up an invalid URL that would fail validation
+            vi.stubEnv("NEXT_PUBLIC_APP_URL", "not-a-valid-url");
+
+            // Import the module - this should NOT throw
+            // Validation is deferred until first property access
+            const envModule = await import("@/lib/env");
+
+            // Reset cache to ensure we test fresh validation
+            envModule.resetEnvCache();
+
+            // NOW accessing a property should trigger validation and throw
+            expect(() => envModule.env.NODE_ENV).toThrow(
+                "Invalid environment variables"
+            );
+        });
+
+        it("should cache validation result after first access", async () => {
+            vi.stubEnv("NODE_ENV", "production");
+
+            const { env, resetEnvCache } = await import("@/lib/env");
+            resetEnvCache();
+
+            // First access triggers validation
+            const firstAccess = env.NODE_ENV;
+            expect(firstAccess).toBe("production");
+
+            // Change the env var
+            vi.stubEnv("NODE_ENV", "development");
+
+            // Second access should return cached value (still "production")
+            const secondAccess = env.NODE_ENV;
+            expect(secondAccess).toBe("production");
+
+            // After reset, should pick up new value
+            resetEnvCache();
+            const afterReset = env.NODE_ENV;
+            expect(afterReset).toBe("development");
+        });
+
+        it("should allow resetEnvCache to clear cached validation", async () => {
+            vi.stubEnv("NODE_ENV", "test");
+
+            const { env, resetEnvCache } = await import("@/lib/env");
+            resetEnvCache();
+
+            // Access to populate cache
+            expect(env.NODE_ENV).toBe("test");
+
+            // Change env
+            vi.stubEnv("NODE_ENV", "production");
+
+            // Still cached
+            expect(env.NODE_ENV).toBe("test");
+
+            // Reset and verify new value is read
+            resetEnvCache();
+            expect(env.NODE_ENV).toBe("production");
         });
     });
 });

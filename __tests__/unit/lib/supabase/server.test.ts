@@ -3,7 +3,7 @@
  * Tests for lib/supabase/server.ts
  */
 
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createClient } from "@/lib/supabase/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
@@ -17,18 +17,18 @@ vi.mock("next/headers", () => ({
     cookies: vi.fn(),
 }));
 
-vi.mock("@/lib/env", () => ({
-    env: {
-        NEXT_PUBLIC_SUPABASE_URL: "https://test.supabase.co",
-        NEXT_PUBLIC_SUPABASE_ANON_KEY: "test-anon-key",
-    },
-}));
+// Store original process.env
+const originalEnv = { ...process.env };
 
 describe("Supabase Server Client", () => {
     let mockCookieStore: any;
 
     beforeEach(() => {
         vi.clearAllMocks();
+
+        // Set up test environment variables
+        process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-anon-key";
 
         // Mock cookie store
         mockCookieStore = {
@@ -37,6 +37,11 @@ describe("Supabase Server Client", () => {
         };
 
         (cookies as any).mockResolvedValue(mockCookieStore);
+    });
+
+    afterEach(() => {
+        // Restore original environment
+        process.env = { ...originalEnv };
     });
 
     describe("createClient", () => {
@@ -60,30 +65,11 @@ describe("Supabase Server Client", () => {
         });
 
         it("should throw error when environment variables are missing", async () => {
-            // Reset modules to allow re-mocking
-            vi.resetModules();
+            // Clear environment variables
+            delete process.env.NEXT_PUBLIC_SUPABASE_URL;
+            delete process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-            vi.doMock("@/lib/env", () => ({
-                env: {
-                    NEXT_PUBLIC_SUPABASE_URL: undefined,
-                    NEXT_PUBLIC_SUPABASE_ANON_KEY: undefined,
-                },
-            }));
-
-            vi.doMock("@supabase/ssr", () => ({
-                createServerClient: vi.fn(),
-            }));
-
-            vi.doMock("next/headers", () => ({
-                cookies: vi.fn().mockResolvedValue({
-                    getAll: vi.fn().mockReturnValue([]),
-                    set: vi.fn(),
-                }),
-            }));
-
-            const { createClient: getClient } = await import("@/lib/supabase/server");
-
-            await expect(getClient()).rejects.toThrow(
+            await expect(createClient()).rejects.toThrow(
                 "Missing Supabase environment variables"
             );
         });

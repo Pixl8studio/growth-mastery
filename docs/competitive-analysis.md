@@ -6,14 +6,14 @@
 
 ## Executive Summary
 
-GrowthMastery.ai is an all-in-one AI-powered webinar funnel builder that consolidates **11+ separate tools** into a single platform. For founders and creators launching offers, this represents potential savings of **$1,500–$3,500+/month** in software costs alone—before accounting for the time saved and reduced complexity.
+GrowthMastery.ai is an all-in-one AI-powered webinar funnel builder that consolidates **11+ separate tools** into a single platform. For founders and creators launching offers, this represents potential savings of **$500–$3,000+/month** in software costs alone—before accounting for the time saved and reduced complexity.
 
 ### GrowthMastery.ai Pricing Model
 | Component | Cost |
 |-----------|------|
-| **One-Time Deposit** | $997 (refundable at $100K revenue) |
-| **Performance Share** | 5% of sales generated through the platform |
-| **Monthly Software Fees** | $0 |
+| **Monthly Subscription** | $197/month |
+| **Annual Cost** | $2,364/year |
+| **Transaction Fees** | $0 (keep 100% of your sales) |
 
 ---
 
@@ -268,23 +268,23 @@ Sources: [ThriveCart Pricing](https://thrivecart.com/)
 
 ### Cost Comparison Summary
 
-| User Type | Competitor Stack | GrowthMastery.ai | Year 1 Savings |
+| User Type | Competitor Stack | GrowthMastery.ai | Annual Savings |
 |-----------|-----------------|------------------|----------------|
-| Budget Creator | $2,016/year | $997 deposit | **$1,019** |
-| Professional Creator | $8,724/year | $997 deposit | **$7,727** |
-| Scaling Business | $39,156/year | $997 deposit | **$38,159** |
+| Budget Creator | $2,016/year | $2,364/year | Break-even (but 11x more features) |
+| Professional Creator | $8,724/year | $2,364/year | **$6,360/year** |
+| Scaling Business | $39,156/year | $2,364/year | **$36,792/year** |
 
-*Note: GrowthMastery.ai charges a 5% performance share on sales. At breakeven, a Professional Creator would need to generate $174,480 in annual sales before the 5% share exceeds the competitor stack cost. Most creators don't reach this threshold, making GrowthMastery.ai the economically superior choice.*
+### Why $197/month is a No-Brainer
 
-### 5% Revenue Share Break-Even Analysis
+| Metric | Competitor Stack | GrowthMastery.ai |
+|--------|-----------------|------------------|
+| **Monthly Cost** | $530–$3,263 | $197 |
+| **Tools Included** | 1-3 tools | 11+ tools |
+| **AI Content Generation** | Extra $49–$125/mo | Included |
+| **Transaction Fees** | 5-10% on some platforms | 0% |
+| **Setup Time** | Weeks to months | Hours |
 
-| Competitor Stack Cost | Annual Revenue Where 5% = Stack Cost |
-|----------------------|-------------------------------------|
-| $2,016/year | $40,320 in sales |
-| $8,724/year | $174,480 in sales |
-| $39,156/year | $783,120 in sales |
-
-**Key Insight:** The 5% revenue share only becomes more expensive than traditional tools when you're generating significant revenue—at which point the time savings and automation value far exceed the percentage.
+**Key Insight:** Even at the budget tier, GrowthMastery.ai provides 11x more functionality. For professional creators and scaling businesses, the savings are dramatic—$6,000 to $37,000+ annually—while getting a more integrated, AI-powered experience.
 
 ---
 
@@ -310,10 +310,10 @@ GrowthMastery.ai delivers:
 - **Multiple support teams** → **Single point of contact**
 
 ### Risk Mitigation
-- **$997 refundable deposit** (returned at $100K revenue milestone)
-- **100% satisfaction guarantee**
-- **No long-term contracts**
-- **Pay-for-performance model** aligns incentives
+- **Simple monthly pricing** — $197/month, cancel anytime
+- **No transaction fees** — keep 100% of your revenue
+- **No long-term contracts** — month-to-month flexibility
+- **Predictable costs** — no surprise fees as you scale
 
 ---
 
@@ -325,8 +325,8 @@ GrowthMastery.ai is the optimal choice for:
 - Eliminates the "which tools do I need?" paralysis
 - One platform, one price, complete solution
 
-✅ **Creators earning $0–$150K annually**
-- Maximum cost savings vs. traditional stacks
+✅ **Creators at any revenue level**
+- Predictable $197/month regardless of sales volume
 - AI handles the heavy lifting of content creation
 
 ✅ **Time-strapped entrepreneurs**
@@ -361,9 +361,9 @@ For the vast majority of creators and founders, **GrowthMastery.ai delivers 10x 
 - 📊 **Presentations** (Gamma)
 - 📢 **Ad Optimization** (Agency-level)
 
-**Total potential savings: $7,700–$38,000+ per year**
+**Total potential savings: $6,000–$37,000+ per year**
 
-The performance-based 5% share only kicks in when you're making money—ensuring aligned incentives and risk-free adoption for new users.
+At just $197/month with zero transaction fees, GrowthMastery.ai offers predictable pricing that scales with you—not against you.
 
 ---
 

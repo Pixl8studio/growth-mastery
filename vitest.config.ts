@@ -2,6 +2,19 @@ import { defineConfig } from "vitest/config";
 import react from "@vitejs/plugin-react";
 import path from "path";
 
+/**
+ * Testing Strategy:
+ * - Pre-push: Runs static analysis only (lint, type-check, format) for fast feedback (<60s).
+ *   Tests are intentionally skipped to avoid timeouts with 230+ test files.
+ *
+ * - CI (GitHub Actions): Runs the full test suite with coverage via pnpm test:ci.
+ *   This ensures comprehensive test coverage while keeping local development fast.
+ *
+ * - Manual options:
+ *   - pnpm test:unit:changed - Tests affected by HEAD~1 (for targeted testing)
+ *   - pnpm test:unit:fast - All unit tests with dot reporter
+ *   - pnpm pre-push:full - Full validation suite including tests
+ */
 export default defineConfig({
     plugins: [react()],
     test: {

@@ -31,3 +31,6 @@ docs/reference-design
 # Agent test artifacts
 .swarm
 
+# Claude Code plugin files (managed externally)
+.claude
+

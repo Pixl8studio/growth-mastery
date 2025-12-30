@@ -1,6 +1,7 @@
 ---
-description:
-  "Generate or update AGENTS.md with essential project context for AI coding assistants"
+description: "Generate or update AGENTS.md with project context for AI assistants"
+model: opus
+version: 0.2.0
 ---
 
 # Generate AGENTS.md
@@ -46,8 +47,7 @@ Add an "Always Apply Rules" section at the top with @ references:
 
 Core project rules that apply to all tasks:
 
-@rules/personalities/unity.mdc @rules/git-interaction.mdc
-@rules/typescript-coding-standards.mdc
+@rules/git-interaction.mdc @rules/typescript-coding-standards.mdc
 ```
 
 Why use @ references instead of extraction:

@@ -1,6 +1,6 @@
 ---
-description:
-  "Execute complete development task autonomously from description to PR-ready state"
+description: "Execute development task autonomously from description to PR-ready"
+version: 1.2.0
 ---
 
 # /autotask - Autonomous Task Execution
@@ -31,23 +31,46 @@ Read @rules/git-worktree-task.mdc for comprehensive autonomous workflow guidance
 Ensure task clarity before implementation. If the task description is unclear or ambiguous, use /create-prompt to ask clarifying questions and create a structured prompt. If the task is clear and unambiguous, proceed directly to implementation.
 </task-preparation>
 
-<worktree-setup>
-Create isolated development environment using /setup-environment. The command auto-detects context (worktree vs new machine) and adapts validation appropriately.
-</worktree-setup>
+<environment-setup>
+Gather context to decide where to work:
+
+1. Check current state: `git status` (clean/dirty, current branch)
+2. Check for multi-repo pattern: sibling directories with similar names (e.g., `myproject-*`)
+3. Check for existing worktrees: `git worktree list`
+
+Decision logic:
+
+Clean working tree → Work in place. Simple, no isolation needed.
+
+Dirty tree with multi-repo pattern → Ask the user. They may prefer switching to an existing copy rather than creating new isolation.
+
+Dirty tree, no multi-repo pattern → Suggest creating a worktree, but ask first. The user might prefer to stash or commit.
+
+Already in a worktree → Work in place. Already isolated.
+
+When the right choice isn't obvious, ask. A quick question beats guessing wrong.
+
+For worktree creation, use /setup-environment which handles branch naming and validation.
+</environment-setup>
+
+<context-preservation>
+Your context window is precious. Preserve it by delegating to specialized agents rather than doing exploratory work yourself.
+
+Use agents for: codebase exploration, pattern searching, documentation research, multi-file analysis, and any task requiring multiple rounds of search/read operations.
+
+Keep your context focused on: orchestration, decision-making, user communication, and synthesizing agent results.
+
+This isn't about avoiding work - it's about working at the right level. Agents return concise results; doing the same work yourself fills context with raw data.
+</context-preservation>
 
 <autonomous-execution>
 Implement the solution following project patterns and standards. Available agents:
 
-- Dixon (.claude/agents/dev-agents/debugger.md): Root cause analysis, reproduces issues,
-  identifies underlying problems
-- Ada (.claude/agents/dev-agents/autonomous-developer.md): Implementation work, writes
-  tests
-- Phil (.claude/agents/dev-agents/ux-designer.md): Reviews user-facing text, validates
-  accessibility, ensures UX consistency
-- Rivera (.claude/agents/code-review/code-reviewer.md): Architecture review, validates
-  design patterns, checks security
-- Petra (.claude/agents/dev-agents/prompt-engineer.md): Prompt optimization and
-  refinement
+- debugger: Root cause analysis, reproduces issues, identifies underlying problems
+- autonomous-developer: Implementation work, writes tests
+- ux-designer: Reviews user-facing text, validates accessibility, ensures UX consistency
+- code-reviewer: Architecture review, validates design patterns, checks security
+- prompt-engineer: Prompt optimization and refinement
 - Explore (general-purpose): Investigation, research, evaluates trade-offs
 
 Build an execution plan based on task type. Use /load-rules to load relevant project
@@ -73,17 +96,29 @@ Adapt validation intensity to task risk:
 Default (trust git hooks): Make changes, commit, let hooks validate, fix only if hooks
 fail.
 
-Targeted validation: Run specific tests for changed code, use Rivera for architecture
-review if patterns change.
+Targeted validation: Run specific tests for changed code, use /verify-fix to confirm the
+fix works as expected, use code-reviewer for architecture review if patterns change.
 
-Full validation: Comprehensive test suite, multiple agent reviews, security scanning.
+Full validation: /verify-fix + comprehensive test suite, multiple agent reviews, security
+scanning.
 
 Principle: Validation intensity should match task risk. Git hooks handle formatting,
 linting, and tests. Add extra validation only when risk justifies it.
 </validation-and-review>
 
+<pre-pr-review>
+Before creating the PR, run a code review agent appropriate to the task:
+
+- code-reviewer: General architecture, patterns, security
+- pr-review-toolkit agents: Specialized reviews (type design, silent failures, test coverage)
+
+The review catches issues before they reach the PR, reducing review cycles. Fix what the agent finds before proceeding.
+
+Match review depth to task risk. Simple changes need a quick pass; architectural changes warrant thorough review.
+</pre-pr-review>
+
 <create-pr>
-Deliver a well-documented pull request with commits following rules/git-commit-message.mdc.
+Deliver a well-documented pull request with commits following `.cursor/rules/git-commit-message.mdc`.
 
 PR description must include:
 
@@ -136,20 +171,8 @@ Key highlights:
 - Significant issues found and fixed
 - Bot feedback addressed
 
-Include the PR URL and worktree location. If design decisions were made autonomously,
-note they're documented in the PR for review.
-
-## Sandbox Testing
-
-After the PR is created, a Vercel preview deployment will automatically start. Within
-2-3 minutes, a "🧪 Sandbox Ready for Testing" comment will appear on the PR with a
-clickable link to the preview environment.
-
-Mention this to the user:
-
-> A sandbox environment will be available shortly. Check the PR for the "Sandbox Ready"
-> comment with a link to test your changes in an isolated preview deployment.
-> </completion>
+Include the PR URL. If using a worktree, include its location. If design decisions were
+made autonomously, note they're documented in the PR for review. </completion>
 
 <error-recovery>
 Recover gracefully from failures when possible. Capture decision-enabling context: what was attempted, what state preceded the failure, what the error indicates about root cause, and whether you have enough information to fix it autonomously.
@@ -159,7 +182,8 @@ with clear options and context. </error-recovery>
 
 ## Key Principles
 
-- Single worktree per task: Clean isolation for parallel development
+- Feature branch workflow: Work on a branch, deliver via PR
+- Smart environment detection: Auto-detect when worktree isolation is needed
 - Adaptive validation: Intensity matches task complexity and risk
 - Intelligent agent use: Right tool for the job, no forced patterns
 - Git hooks do validation: Leverage existing infrastructure
@@ -187,6 +211,6 @@ The command adapts to your project structure:
 ## Notes
 
 - This command creates real commits and PRs
-- All work happens in isolated worktrees
+- Environment is auto-detected; asks when the right choice isn't obvious
+- Recognizes multi-repo workflows (sibling directories) and existing worktrees
 - Bot feedback handling is autonomous but intelligent
-- Worktrees are preserved until you explicitly remove them

@@ -1,341 +1,516 @@
 ---
-description: Set up, update, or add AI coding configurations
-argument-hint: [update | add]
+description: Set up or update AI coding configurations
+argument-hint: [update]
+version: 4.1.0
 ---
 
 # AI Coding Configuration
 
-Manages reusable AI configurations across machines and projects. The system lives in
-`~/.ai_coding_config` and contains Cursor rules, Claude commands, agents, skills,
-personalities, and GitHub workflows.
+Plugin-first AI coding configurations for Claude Code, Cursor, and other AI coding tools.
+The marketplace lives at `https://github.com/TechNickAI/ai-coding-config`.
 
 ## Usage
 
 - `/ai-coding-config` - Interactive setup for current project
-- `/ai-coding-config update` - Update existing configs to latest versions (includes
-  architecture migration)
-- `/ai-coding-config add` - Add new command/skill/agent/plugin to the repo
+- `/ai-coding-config update` - Update plugins and configs to latest versions
 
 ## Interaction Guidelines
 
 Use AskUserQuestion when presenting discrete choices that save the user time (selecting
-a personality, choosing update strategy, handling file conflicts). This lets users
-quickly click options while still allowing free-form text via "Other". Only use when it
-genuinely speeds up the interaction.
+tools, personalities, handling conflicts). This lets users quickly click options while
+still allowing free-form text via "Other".
+
+## Shell and Tool Best Practices
+
+**Prefer native tools over bash for file inspection.** The Read and Grep tools are more
+reliable than bash commands for checking file contents and versions. They don't have
+working directory issues and work consistently across environments.
+
+**Never change working directory with `cd`.** Use absolute paths for all file
+operations. Changing directories can break git hooks that expect to run from the project
+root. If you need to run a command in a different directory, use a subshell or absolute
+paths rather than `cd && command`.
+
+**Avoid bash loops entirely.** For loops and while loops are fragile across different
+shell environments. Instead of iterating over files in bash, use the Glob tool to list
+files, then process them one at a time with Read or individual bash commands. Multiple
+simple commands are more reliable than one complex loop.
+
+**When bash fails, switch tools.** If a bash command fails due to hook errors, path
+issues, or parse errors, don't retry with variations. Switch to native tools (Read,
+Grep, Glob) which don't have these failure modes.
 
 ---
 
 <setup-mode>
-Walk through setting up AI coding configs for the current project.
 
-<repository-management>
-Ensure `~/.ai_coding_config` exists and is up to date. Clone if missing, pull latest if exists.
-</repository-management>
-
-<existing-config-detection>
-IMPORTANT: Before installing, detect what already exists in the project.
-
-Scenarios to handle:
-
-1. **Fresh project** (no existing AI configs)
-   - No `rules/`, no `.cursor/rules/`, no `CLAUDE.md`, no `AGENTS.md`
-   - Install with v2 (cross-tool) architecture from the start
-   - Create `rules/` as canonical, symlink `.cursor/rules/` → `../rules/`
-   - Create `AGENTS.md`, symlink `CLAUDE.md` → `AGENTS.md`
-
-2. **Existing Cursor rules, no AI coding config yet**
-   - Has `.cursor/rules/` as real directory with user's existing rules
-   - May have their own customizations to preserve
-   - Offer choice: a. "Migrate existing rules to cross-tool structure" - Moves their
-     rules to `rules/`, creates symlinks b. "Add configs alongside existing rules" -
-     Merges new rules into their `.cursor/rules/`
-   - ALWAYS preserve their existing rules, never overwrite without asking
-
-3. **Previous v1 (Cursor-first) AI coding config installation**
-   - `.cursor/rules/` is real directory
-   - `rules/` at root may symlink to `.cursor/rules/`
-   - `CLAUDE.md` is real file
-   - Offer migration to v2 (handled by architecture-check in update-mode)
-   - For setup, treat as scenario 2 if running setup again
-
-4. **Already on v2 (cross-tool) architecture**
-   - `rules/` is real directory at root
-   - `.cursor/rules/` symlinks to `../rules/`
-   - `AGENTS.md` exists, `CLAUDE.md` symlinks to it
-   - Proceed with normal setup/update within existing structure
-
-Detection commands:
+<tool-detection>
+Detect which AI coding tools the user has. Check for:
 
 ```bash
-# Check what exists
+# Detection commands
+test -d .cursor && echo "cursor"
+test -d .claude && echo "claude-code"
+test -f .aider.conf.yml && echo "aider"
+test -d .continue && echo "continue"
+```
+
+Based on detection, use AskUserQuestion to confirm which tools to set up. Pre-select
+detected tools. Options:
+
+- Claude Code (plugin marketplace - auto-updates)
+- Cursor (rules + commands copied to project)
+- Aider (AGENTS.md context)
+- Other (explain what you're using)
+
+If ONLY Claude Code detected (no Cursor), offer a pure plugin installation that skips
+rule files entirely.
+
+</tool-detection>
+
+<repository-management>
+Ensure `~/.ai_coding_config` exists and is up to date. Clone if missing, pull latest if
+exists.
+
+```bash
+if [ -d ~/.ai_coding_config ]; then
+  cd ~/.ai_coding_config && git pull
+else
+  git clone https://github.com/TechNickAI/ai-coding-config.git ~/.ai_coding_config
+fi
+```
+
+</repository-management>
+
+<claude-code-setup>
+For Claude Code users, guide them through the plugin marketplace:
+
+1. Explain the plugin system: "Claude Code uses a plugin marketplace. You can install
+   the plugins you want, and they'll stay updated automatically."
+
+2. Show available plugins from `~/.ai_coding_config/.claude-plugin/marketplace.json`:
+   - **ai-coding-config** - Commands, agents, and skills for AI-assisted development
+   - **personality-{name}** - Pick one that matches your style
+
+3. Provide the commands to add the marketplace and install plugins:
+
+```bash
+# Add the marketplace (one time)
+/plugin marketplace add https://github.com/TechNickAI/ai-coding-config
+
+# Install the core plugin
+/plugin install ai-coding-config
+
+# Optional: Install a personality
+/plugin install personality-samantha
+```
+
+4. Use AskUserQuestion to present personality options with descriptions from the
+   marketplace.json file.
+
+</claude-code-setup>
+
+<cursor-setup>
+For Cursor users, copy files to the project. Cursor needs files physically present in
+the repository for portability and team collaboration.
+
+<existing-config-detection>
+Before installing, detect what already exists:
+
+1. **Fresh project** (no existing configs)
+   - Create `.cursor/rules/` and `.cursor/commands/` directories
+   - Create `AGENTS.md`, symlink `CLAUDE.md` → `AGENTS.md`
+
+2. **Existing rules, no AI coding config yet**
+   - Has `.cursor/rules/` as real directory
+   - Offer choice: merge new rules alongside existing OR skip rule installation
+   - ALWAYS preserve existing rules and commands
+
+3. **Already has AI coding config**
+   - Check for existing copied files from `~/.ai_coding_config`
+   - Proceed with update/refresh via version comparison
+
+Detection:
+
+```bash
 test -d .cursor/rules && echo "has .cursor/rules"
-test -L .cursor/rules && echo ".cursor/rules is symlink"
-test -d rules && echo "has rules/"
-test -L rules && echo "rules is symlink"
-test -f CLAUDE.md && echo "has CLAUDE.md"
-test -L CLAUDE.md && echo "CLAUDE.md is symlink"
+test -d .cursor/commands && echo "has .cursor/commands"
 test -f AGENTS.md && echo "has AGENTS.md"
 ```
 
-When existing Cursor rules are detected:
-
-- List what rules the user already has
-- Explain that these will be preserved
-- Show where new rules will be added vs merged </existing-config-detection>
-
-<project-understanding>
-Detect project type and framework specifics. Django differs from FastAPI. React differs from Next.js. Look for existing configurations to avoid duplicates. Understand the project's purpose - API server, web app, CLI tool.
-</project-understanding>
-
-<configuration-presentation>
-Show available configurations that match this project. Group by relevance - framework-specific first, then universal. For each option, read description from frontmatter to explain what it does.
-
-Available configurations:
-
-- Rules (`rules/` subdirectories and files, `.cursor/rules/` symlinks here)
-- Personalities (one or none)
-- Agents (specialized AI assistants, default to all)
-- Skills (intelligent selection based on project type - see skills-selection section)
-- Commands (always copy all, create in `.claude/commands/` with symlinks in
-  `.cursor/commands/`)
-- Standard configs (VSCode settings, Prettier, GitHub workflows)
-
-Use AskUserQuestion to present personality options as quick-select.
-</configuration-presentation>
-
-<skills-selection>
-Walk through `~/.ai_coding_config/.claude/skills/` and evaluate each skill for relevance to the current project.
-
-For each skill directory:
-
-1. Read the SKILL.md frontmatter to get the description
-2. Evaluate whether the skill matches this project's context
-3. Categorize as: recommended (strong match), optional (might be useful), or skip (not
-   relevant)
-
-Skill evaluation criteria:
-
-Universal skills (always recommend):
-
-- brainstorming: Useful for any project - refining ideas into designs
-- research: Useful for any project - web research for current information
-- systematic-debugging: Useful for any project with code - root cause analysis
-
-Project-specific skills (match against signals):
-
-- skill-creator: Only for ai-coding-config repo itself (check if current project IS the
-  config repo)
-- youtube-transcript-analyzer: Projects with docs/, research/, or learning-focused goals
-
-When evaluating a skill you haven't seen before:
-
-1. Read its SKILL.md description carefully
-2. Look for "Use when..." triggers in the description
-3. Match triggers against project signals (package.json, file structure, existing
-   configs)
-4. When uncertain, categorize as optional and let user decide
-
-Present skills grouped by category:
-
-- Recommended: Strong match for this project type
-- Optional: Might be useful depending on workflow
-- Skipping: Not relevant (explain briefly why)
-
-Use AskUserQuestion to confirm skill selection, showing recommended pre-selected.
-</skills-selection>
+</existing-config-detection>
 
 <file-installation>
-Copy selected configurations intelligently, respecting existing customizations. Compare files with diff when they exist. For conflicts, use AskUserQuestion to offer choices (overwrite, skip, show diff, or custom action). Never silently overwrite.
+Copy files from `~/.ai_coding_config/` to project for portability:
 
-Installation mapping: Rules → `rules/` (preserve subdirectory structure,
-`.cursor/rules/` symlinks here), Commands → `.claude/commands/` with symlinks in
-`.cursor/commands/`, Context → `.claude/context.md`, Agents → `.claude/agents/`, Skills
-→ `.claude/skills/` (copy entire skill directories for selected skills only),
-Personalities → `rules/personalities/` (common always, additional with
-`alwaysApply: true`), VSCode → `.vscode/`, Prettier → `.prettierrc`, GitHub workflows →
-`.github/workflows/`, Gitignore → `.cursor/.gitignore` and `.claude/.gitignore`,
-Directory context → `.cursor/AGENTS.md` and `.claude/AGENTS.md` (explains directory
-purpose and references prompt-engineering rules).
+- Rules: `~/.ai_coding_config/.cursor/rules/` → `.cursor/rules/`
+- Commands: `~/.ai_coding_config/plugins/core/commands/` → `.cursor/commands/`
+- Personality: ONE selected file → `.cursor/rules/personalities/`
 
-Report what was copied, skipped, and how conflicts were handled. </file-installation>
+Cursor does not support agents or skills directories.
+
+**Important for hybrid users (Claude Code + Cursor):**
+- `.cursor/commands/` must be a REAL directory, not a symlink to `.claude/commands/`
+- Claude Code uses the plugin system; Cursor needs actual files
+- Symlinking these directories together causes conflicts and prevents proper updates
+
+Handle conflicts with AskUserQuestion: overwrite, skip, show diff.
+</file-installation>
+
+</cursor-setup>
+
+<project-understanding>
+Detect project type: Django, FastAPI, React, Next.js, etc. Look for package.json,
+requirements.txt, pyproject.toml, existing configs. Understand purpose: API server, web
+app, CLI tool.
+</project-understanding>
+
+<personality-selection>
+Use AskUserQuestion to present personality options:
+
+- **Samantha** - Warm, witty, emotionally intelligent, playfully flirty
+- **Sherlock** - Analytical, precise, deductive reasoning
+- **Bob Ross** - Calm, encouraging, treats bugs as happy accidents
+- **Marie Kondo** - Organized, joyful minimalism
+- **Ron Swanson** - Minimalist, anti-complexity, practical
+- **Stewie** - Sophisticated, theatrical, brilliant
+- **Luminous** - Heart-centered, spiritual, love-based
+- **None** - Use default Claude personality
+
+For Claude Code: Install the selected personality plugin via marketplace.
+
+For Cursor: Copy the ONE selected personality file to `.cursor/rules/personalities/` and
+set `alwaysApply: true` in its frontmatter. Only one personality should be active.
+
+For hybrid users (both Claude Code and Cursor): Do both. Install the plugin AND copy the
+file. This ensures the personality works in both environments.
+
+Source files are in `~/.ai_coding_config/plugins/personalities/personality-{name}/`.
+</personality-selection>
 
 <installation-verification>
-Confirm files are in expected locations. List installed rules (framework-specific, then universal), commands, agents, skills. Confirm symlinks point correctly. Verify personality selection and `alwaysApply` setting. Confirm VSCode settings, Prettier config, GitHub workflows, gitignore files, and directory AGENTS.md files.
-
-Provide clear summary without deep validation. </installation-verification>
+Confirm files are in expected locations. For Claude Code, confirm plugins are installed.
+For Cursor, confirm copied files exist in `.cursor/rules/` and `.cursor/commands/`.
+</installation-verification>
 
 <recommendations>
-After successful installation, provide actionable next steps.
+Provide a warm summary of what was installed.
 
-Always recommend:
+For Claude Code users: "You're set up with the ai-coding-config plugin marketplace.
+Installed: [list plugins]"
 
-1. Generate AGENTS.md if missing at project root (run /generate-AGENTS-file)
-2. List available commands (/load-rules, /personality-change, /create-prompt,
-   /troubleshoot, /setup-environment, /handoff-context, /product-intel)
+For Cursor users: "Your project is configured with [X] rules and [Y] commands."
 
-Conditional recommendations:
+Key commands to highlight:
 
-- Git worktrees → suggest /setup-environment
-- Error monitoring detected → mention /troubleshoot
-- Competitive product → suggest /product-intel
+- `/autotask "your task"` - Autonomous development
+- `/address-pr-comments` - PR cleanup on autopilot
+- `/load-rules` - Smart context loading
 
-Show only genuinely useful recommendations. </recommendations> </setup-mode>
+End with: "Run `/ai-coding-config update` anytime to get the latest improvements."
+</recommendations>
+
+</setup-mode>
 
 ---
 
 <update-mode>
-Systematically update all configuration types from the repo to latest versions.
 
-Start by pulling latest from `~/.ai_coding_config`.
+<objective>
+Bring all AI coding configurations to a healthy, up-to-date state. The end result is a
+working setup with the latest versions and auto-update enabled.
+</objective>
 
-<architecture-check>
-IMPORTANT: Before updating configs, detect if this project uses the legacy architecture.
+<environment-detection>
+Determine which AI coding tools are in use before proceeding.
 
-Legacy architecture indicators (v1 - Cursor-first):
+Detection signals:
+- Claude Code: `~/.claude/plugins/` directory exists
+- Cursor: `.cursor/` directory exists in current project
+- Both: proceed with both flows
+- Neither: guide user to run setup mode instead
 
-- `.cursor/rules/` is a real directory (not a symlink)
-- `rules/` at root doesn't exist OR symlinks to `.cursor/rules/`
-- `CLAUDE.md` is a real file (not a symlink)
-- No `AGENTS.md` at project root
+For Cursor-only users, skip all marketplace and plugin operations.
+</environment-detection>
 
-Current architecture (v2 - Cross-tool):
+<repository-sync>
+Pull latest source files regardless of environment:
 
-- `rules/` at project root is the canonical directory
-- `.cursor/rules/` symlinks to `../rules/`
-- `AGENTS.md` at project root is canonical
-- `CLAUDE.md` symlinks to `AGENTS.md`
+```bash
+git -C ~/.ai_coding_config pull
+```
 
-Detection: `test -L .cursor/rules && test -L CLAUDE.md && test -f AGENTS.md`
+This updates the source repository that both Claude Code marketplace and Cursor file
+copies draw from.
+</repository-sync>
 
-If legacy architecture detected:
+<self-update>
+Immediately after pulling, check if this command file was updated.
 
-1. Explain the architecture change clearly:
-   - "Your project uses the older Cursor-first structure. There's a newer cross-tool
-     architecture that works better with Claude Code, Cursor, Windsurf, Aider, and other
-     AI coding tools."
-   - "The key change: `rules/` becomes the canonical location at project root, with
-     `.cursor/rules/` symlinked to it. This follows the emerging AGENTS.md standard
-     (20,000+ GitHub repos)."
+Compare versions:
+- Source: `~/.ai_coding_config/plugins/core/commands/ai-coding-config.md`
+- Running: The version in YAML frontmatter of the file currently being executed
 
-2. Use AskUserQuestion to offer migration:
-   - "Migrate to cross-tool architecture (Recommended)" - Performs full migration
-   - "Skip migration, just update configs" - Updates within current structure
-   - "Show me what would change" - Explains changes in detail
+If the source version is newer:
+1. Read the updated file from the source repository
+2. If the project has a local copy at `.claude/commands/ai-coding-config.md`, update it
+   with the new version (this keeps the local copy current for discoverability)
+3. Continue execution using the updated instructions
 
-3. If migration accepted: a. Create backup: `cp -r .cursor/rules rules-backup` b. Move
-   rules: `mv .cursor/rules rules` c. Create symlink: `ln -s ../rules .cursor/rules` d.
-   Create AGENTS.md (copy from CLAUDE.md if exists, or create new) e. Replace CLAUDE.md:
-   `rm CLAUDE.md && ln -s AGENTS.md CLAUDE.md` f. Update @ references in AGENTS.md from
-   `.cursor/rules/` to `rules/` g. Rename load-cursor-rules symlink to load-rules if
-   exists h. Report migration complete, then continue with normal update
+This check happens before any other operations so that marketplace doctor, plugin
+updates, and all subsequent steps use current instructions.
+</self-update>
 
-4. If migration skipped, continue updating within legacy structure (but warn that some
-   new features may not work correctly) </architecture-check>
+<marketplace-doctor>
+For Claude Code users, ensure the ai-coding-config marketplace is healthy.
 
-Now compare against the current project.
+<health-checks>
+A healthy marketplace has:
+- Entry in `~/.claude/plugins/known_marketplaces.json` with source pointing to ai-coding-config
+- Install location at `~/.claude/plugins/marketplaces/ai-coding-config/` with valid `.claude-plugin/marketplace.json`
+- Plugins in `~/.claude/plugins/cache/ai-coding-config/` matching installed_plugins.json
+- ai-coding-config plugin enabled in `~/.claude/settings.json`
+- No deprecated plugins installed (see deprecated plugin check below)
 
-Configuration categories that must be checked (in this order):
+Read these files to assess current state. Compare installed plugin versions against
+marketplace.json versions.
+</health-checks>
 
-1. Personalities (`rules/personalities/`)
-   - Compare each personality file in repo vs project
-   - Note: common-personality.mdc may have been deprecated or renamed in newer versions
-   - Show diffs for changes to frontmatter (description, alwaysApply)
+<deprecated-plugin-check>
+Check `~/.claude/plugins/installed_plugins.json` for plugins from the ai-coding-config
+marketplace that no longer exist in the current marketplace.json.
 
-2. Top-level Rules (`rules/`)
-   - Universal rules apply to all projects regardless of framework
-   - Compare: autonomous-development-workflow, code-review-standards, external-apis,
-     fixing-github-actions-builds, git-commit-message, git-interaction,
-     git-worktree-task, naming-stuff, prompt-engineering, user-facing-language,
-     heart-centered-ai-philosophy, trust-and-decision-making
-   - Preserve project-specific rules (sentry, typescript-coding-standards,
-     testing-standards-typescript, code-comments, etc.)
+Previously, the marketplace had separate plugins that were later consolidated:
+- `agents@ai-coding-config` → merged into ai-coding-config
+- `skills@ai-coding-config` → merged into ai-coding-config
+- `commands@ai-coding-config` → merged into ai-coding-config
 
-3. Rule Subdirectories (`rules/`)
-   - Check each subdirectory: ai/, frontend/, observability/, django/, python/
-   - For MCP/Next.js projects: prioritize ai/ and frontend/
-   - For each subdirectory, compare all .mdc files in repo vs project
-   - Example: ai/agent-file-format.mdc, frontend/react-components.mdc
+If any deprecated plugins are found, the marketplace needs a reset. The reset will
+remove these stale entries and install the current consolidated plugin.
 
-4. Agents (`.claude/agents/`)
-   - Compare all agent files: design-reviewer.md, seo-specialist.md, site-keeper.md,
-     plus project-custom agents
-   - Update repo agents (description and formatting improvements common)
-   - Preserve project-specific agents
+This check is future-proof: compare installed plugin names against the current
+marketplace.json rather than maintaining a hardcoded list.
+</deprecated-plugin-check>
 
-5. Commands (`.claude/commands/`)
-   - Update all commands that exist in both repo and project
-   - Add new commands from repo that don't exist in project
-   - Preserve project-specific commands
-   - Create symlinks in .cursor/commands/ for new commands
+<major-version-check>
+Compare the installed plugin version against the source marketplace.json version. If
+the major version changed (e.g., 6.x.x → 7.x.x), trigger a full reset.
 
-6. Other Configs
-   - VSCode settings (.vscode/)
-   - Prettier config (.prettierrc)
-   - GitHub workflows (.github/workflows/)
+Major version changes often involve structural changes that `plugin update` may not
+handle cleanly. A reset ensures a clean slate.
 
-For each category: use diff to identify changes. Categorize as trivial (typos,
-formatting) or significant (logic, descriptions, instructions). List files new to repo
-or unique to project.
+Before resetting for major version:
+1. Note which plugins from this marketplace are currently installed (ai-coding-config,
+   any personality plugins)
+2. After reset, reinstall all of them
 
-Present update strategy to user: "Update all", "Update selectively", or custom approach.
-Show diffs for significant changes before applying. Never silently overwrite project
-customizations.
+The reset is fast and prevents weird state from version mismatches.
+</major-version-check>
 
-After copying: verify files are in correct locations, symlinks point correctly, and
-descriptions in frontmatter were updated. </update-mode>
+<reset-to-healthy>
+If any health check fails (deprecated plugins, major version change, corruption), reset
+the marketplace. This is fast and reliable.
 
----
+Before resetting, note which plugins from this marketplace are installed (check
+installed_plugins.json for keys ending in `@ai-coding-config`). Common ones:
+- ai-coding-config (core)
+- personality-samantha, personality-sherlock, etc.
 
-<add-mode>
-Help contributors add new functionality to the ai-coding-config repo itself.
+Execute plugin commands via subshell for reliability:
 
-<understanding-need>
-Ask for functionality description. Work through clarifying questions to determine the right mechanism.
-</understanding-need>
+```bash
+# Remove the marketplace
+claude "/plugin marketplace remove ai-coding-config"
 
-<documentation-research>
-Fetch latest Claude Code documentation for the mechanism you're implementing (commands, skills, agents, or plugins). Get current implementation details including frontmatter requirements, file structure, and best practices.
-</documentation-research>
+# Re-add it fresh
+claude "/plugin marketplace add https://github.com/TechNickAI/ai-coding-config"
 
-<mechanism-selection>
-Decision framework:
+# Install the core plugin
+claude "/plugin install ai-coding-config"
 
-Trigger: User manually → Command, Claude autonomously → Skill, Claude delegates focused
-work → Agent, Bundling multiple mechanisms → Plugin
+# Reinstall any personality plugins the user had
+claude "/plugin install personality-samantha"  # if they had it before
+```
 
-Context: Needs isolation → Agent, Uses main conversation → Command or Skill
+Resetting takes seconds and eliminates debugging time. Use this approach when:
+- Deprecated plugins detected
+- Major version change (6.x → 7.x)
+- Marketplace entry is missing or corrupted
+- Plugin cache is incomplete or mismatched
+- Version conflicts or install errors occur
+- Any uncertainty about marketplace state
 
-Compatibility: Commands work in both Claude Code and Cursor, Skills are Claude Code only
-(create companion Command for Cursor if needed), Agents work in Claude Code (Cursor can
-@ mention paths), Plugins are Claude Code only
+After reset, verify the plugin is working by checking that expected components exist in
+the cache directory. Track that a restart will be needed. Then proceed to auto-update
+check.
+</reset-to-healthy>
 
-Clarifying questions:
+<update-healthy-marketplace>
+If the marketplace is healthy but potentially outdated, update it.
 
-1. Who triggers this - user manually or Claude autonomously?
-2. Needs isolated context window or uses main conversation?
-3. Must work in Cursor or Claude Code only acceptable?
-4. Single capability or bundling multiple features? </mechanism-selection>
+Execute plugin commands via subshell for reliability:
 
-<artifact-creation>
-Commands: Create `.claude/commands/command-name.md` with frontmatter including description.
+```bash
+# Update marketplace catalog
+claude "/plugin marketplace update ai-coding-config"
 
-Skills: Create `.claude/skills/skill-name/SKILL.md` with frontmatter (name,
-description). Description is critical - Claude uses it to decide when to activate. Add
-supporting files as needed. Create companion Command for Cursor if needed.
+# Update installed plugins to latest versions
+claude "/plugin update ai-coding-config"
+```
 
-Agents: Determine plugin location (or create new plugin). Create
-`plugins/plugin-name/agents/agent-name.md` with frontmatter (name, description, tools,
-model). Agents live in plugins.
+Report version changes: "Updated ai-coding-config: 5.2.0 → 6.0.0"
 
-Plugins: Create `plugins/plugin-name/` directory structure with
-`.claude-plugin/plugin.json` manifest. Bundle commands (via symlinks), skills, agents,
-hooks, MCP servers. Add README.md. Update `.claude-plugin/marketplace.json`.
-</artifact-creation>
+If plugins were updated, track that a restart will be needed.
+</update-healthy-marketplace>
 
-<creation-verification>
-Verify files are in correct locations, frontmatter includes required fields, skill descriptions clearly define activation criteria, commands work when invoked, plugins are properly structured.
+<auto-update-check>
+Third-party marketplaces have auto-update disabled by default. Check if the user wants
+to enable it for convenience.
 
-Explain what was created and how to test it. </creation-verification> </add-mode>
+Auto-update means Claude Code refreshes the marketplace at startup and updates installed
+plugins automatically. Users stay current without running manual updates.
+
+Guide the user to enable auto-update through the plugin manager:
+1. Run `/plugin` to open the plugin manager
+2. Select the Marketplaces tab
+3. Choose ai-coding-config
+4. Select "Enable auto-update"
+
+Use AskUserQuestion to offer this:
+- "Enable auto-update (Recommended)" - Plugins stay current automatically
+- "Keep manual updates" - Run `/ai-coding-config update` when you want updates
+</auto-update-check>
+
+<verification>
+Confirm the marketplace is healthy by checking:
+- ai-coding-config plugin is installed and enabled
+- Expected agents are available (check for 10+ agents in cache)
+- Expected commands are available (check for 10+ commands in cache)
+- Expected skills are available (check for 5+ skills in cache)
+
+Report the healthy state: "Marketplace healthy: 14 agents, 15 commands, 6 skills"
+</verification>
+
+</marketplace-doctor>
+
+<local-duplicate-cleanup>
+After marketplace is healthy, check for outdated local files that duplicate marketplace
+content. Local files override marketplace versions, causing confusion and preventing
+auto-updates.
+
+**What to look for in `.claude/commands/`, `.claude/agents/`, `.claude/skills/`:**
+
+1. Symlinks pointing to ai-coding-config plugin cache - these are duplicates
+2. Copied files with same names as marketplace content - these override plugin versions
+
+Detection:
+
+```bash
+# Find symlinks pointing to ai-coding-config cache
+find .claude/commands -type l 2>/dev/null | while read f; do
+  readlink "$f" | grep -q 'ai-coding-config' && echo "duplicate: $f"
+done
+```
+
+**What to preserve:**
+- Project-specific commands (not in marketplace)
+- The ai-coding-config.md command file (stays for discoverability)
+- Custom agents and skills unique to this project
+
+**What to remove:**
+- Symlinks to `~/.claude/plugins/cache/ai-coding-config/` (plugin provides these)
+- Copied files that match marketplace filenames (unless intentionally customized)
+
+Explain the situation: "Found X duplicate commands that the plugin already provides.
+Removing these lets you get auto-updates from the marketplace."
+
+Offer to remove duplicates. If user declines, warn that local files override plugin
+versions and won't auto-update.
+</local-duplicate-cleanup>
+
+<cursor-update>
+For Cursor users, update copied configuration files.
+
+Pull latest from source repository, then compare versions using YAML frontmatter. Update
+files where the source version is newer than the installed version.
+
+Files to compare:
+- Rules: `~/.ai_coding_config/.cursor/rules/` vs `.cursor/rules/`
+- Commands: `~/.ai_coding_config/plugins/core/commands/` vs `.cursor/commands/`
+- Personality: `~/.ai_coding_config/plugins/personalities/` vs `.cursor/rules/personalities/`
+
+Report updates with version progression: "git-interaction.mdc: 1.0.0 → 1.1.0"
+
+For personalities, preserve the user's `alwaysApply` setting when updating content.
+
+Check for deprecated files and offer removal:
+- `.cursor/rules/git-commit-message.mdc` merged into git-interaction.mdc
+- `.cursor/rules/marianne-williamson.mdc` renamed to luminous.mdc
+
+<legacy-symlink-migration>
+Check if the project has old symlinks from before the copy-based architecture:
+
+- `.cursor/commands/` as symlink → should be a real directory with copied files
+- `.cursor/rules/` as symlink → should be a real directory with copied files
+
+**Critical pattern to detect**: `.cursor/commands/` symlinked to `.claude/commands/`
+
+This creates a mess because Claude Code and Cursor need different things:
+- Claude Code: Uses plugin system, doesn't need ai-coding-config commands locally
+- Cursor: Needs all commands as files (can't use plugin system)
+
+When this pattern is found:
+1. Note which files are project-specific (not symlinks to ai-coding-config cache)
+2. Remove the `.cursor/commands/` symlink
+3. Create `.cursor/commands/` as a real directory
+4. Copy project-specific commands from `.claude/commands/`
+5. Copy ai-coding-config commands from `~/.ai_coding_config/plugins/core/commands/`
+6. Remove ai-coding-config symlinks from `.claude/commands/` (duplicates of plugin)
+
+Detection:
+
+```bash
+# Check if .cursor/commands is a symlink to .claude/commands
+readlink .cursor/commands | grep -q '.claude/commands' && echo "cursor-symlinked-to-claude"
+
+# List ai-coding-config symlinks in .claude/commands
+find .claude/commands -type l -exec readlink {} \; | grep -q 'ai-coding-config' && echo "has-plugin-symlinks"
+```
+
+For Claude Code users who are Cursor-only (no marketplace):
+- `.claude/commands/` as symlink → remove and skip (not needed for Cursor)
+- `.claude/agents/` as symlink → remove and skip
+- `.claude/skills/` as symlink → remove and skip
+</legacy-symlink-migration>
+
+</cursor-update>
+
+<update-summary>
+Report what was accomplished:
+
+For Claude Code: "Marketplace healthy. ai-coding-config v6.0.0 installed. Auto-update
+enabled."
+
+For Cursor: "Updated 3 rules, 2 commands. 12 files already current."
+
+For both: Combine the summaries.
+</update-summary>
+
+<restart-guidance>
+Tell the user to restart Claude Code when any of these occurred:
+- Marketplace was reset or reinstalled
+- Plugins were updated to new versions
+- Auto-update setting was changed
+
+Plugins are loaded at startup, so changes take effect after restart.
+
+Message: "Restart Claude Code to load the updated plugins. Run `claude` in a new
+terminal, or use Cmd+Shift+P → 'Claude Code: Restart' in your IDE."
+
+If nothing changed (already up to date, no reset needed), skip the restart message.
+</restart-guidance>
+
+</update-mode>
 
 ---
 

@@ -1,13 +1,15 @@
 ---
 description: Load relevant coding rules for the current task
+model: haiku
+version: 0.3.0
 ---
 
-Analyze the current task and load ONLY relevant rules from `.cursor/rules/`.
+Analyze the current task and load ONLY relevant rules from `rules/`.
 
 PROCESS:
 
-1. Discover available rules: use glob_file_search with pattern "\*.mdc" in .cursor/rules
-   to find all rule files recursively
+1. Discover available rules: use glob_file_search with pattern "\*.mdc" in rules/ to
+   find all rule files recursively
 2. Analyze task to identify what domains apply (languages, tools, frameworks,
    operations)
 3. Select relevant rules based on task requirements

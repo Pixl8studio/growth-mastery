@@ -1,9 +1,15 @@
 ---
 name: brainstorming
-description:
-  "Use when developing rough ideas into designs before writing code. Refines concepts
-  through collaborative questioning, explores alternatives with tradeoffs, and validates
-  incrementally. Best for fuzzy requirements or when multiple approaches exist."
+description: "Use when rough ideas need design before code or multiple approaches"
+version: 0.3.0
+category: planning
+triggers:
+  - "brainstorm"
+  - "design session"
+  - "multiple approaches"
+  - "explore options"
+  - "unclear implementation"
+  - "fuzzy requirements"
 ---
 
 <objective>

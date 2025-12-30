@@ -62,16 +62,19 @@ Comments should convey information the code cannot.
 ## Output Format
 
 Critical issues: Comments that are factually incorrect or highly misleading.
+
 - Location: file:line
 - Issue: What's wrong
 - Suggestion: How to fix
 
 Improvement opportunities: Comments that could be enhanced.
+
 - Location: file:line
 - Current state: What's lacking
 - Suggestion: How to improve
 
 Recommended removals: Comments that add no value.
+
 - Location: file:line
 - Rationale: Why it should be removed
 

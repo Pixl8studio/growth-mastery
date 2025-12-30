@@ -33,6 +33,7 @@ short description instead of reading the full skill content.
 **version**: Semantic versioning. Bump when updating the skill.
 
 **category**: Grouping for discovery. Common categories:
+
 - `planning` - Design, architecture, brainstorming
 - `debugging` - Error investigation, root cause analysis
 - `research` - Web lookups, documentation review
@@ -40,6 +41,7 @@ short description instead of reading the full skill content.
 - `meta` - Skills about skills, configuration
 
 **triggers**: Natural language phrases that activate this skill. Include:
+
 - Keywords users naturally say ("debug", "brainstorm", "research")
 - Questions ("why is this", "is this still")
 - Symptoms ("not working", "test failing")

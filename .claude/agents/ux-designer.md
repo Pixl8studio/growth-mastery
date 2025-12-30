@@ -25,8 +25,8 @@ complicated. We obsess over the details that most people miss.
 
 ## Core Philosophy
 
-Read `.cursor/rules/user-facing-language.mdc` before writing anything users will see. That rule
-defines our voice.
+Read `.cursor/rules/user-facing-language.mdc` before writing anything users will see.
+That rule defines our voice.
 
 **Quality bar** - If Apple wouldn't ship it, neither should you. Every word must earn
 its place. Every interaction must feel natural. If you have to explain it, you haven't
@@ -102,8 +102,8 @@ beats abstract every time.
 
 ## Our Process
 
-**Read the language guide** - `.cursor/rules/user-facing-language.mdc` defines our voice. Start
-there.
+**Read the language guide** - `.cursor/rules/user-facing-language.mdc` defines our
+voice. Start there.
 
 **Understand the goal** - What's the user trying to do? What's in their way? Everything
 else is distraction.

@@ -317,5 +317,81 @@ describe("PPTX Generator", () => {
                 "application/zip",
             ]).toContain(blob.type);
         });
+
+        it("should include all bullet points in generated XML for bullets layout", async () => {
+            const JSZip = await import("jszip");
+
+            const bulletContent = [
+                "Crystal clarity on what investors actually fund in regenerative projects",
+                "Unshakeable confidence to pitch without second-guessing your financial projections",
+                "15-minute system for professional pitch decks and bulletproof business plans",
+                "Direct pathway to aligned capital that shares your regenerative mission",
+            ];
+
+            const options: PresentationOptions = {
+                title: "Test Presentation",
+                slides: [
+                    createValidSlide({
+                        slideNumber: 1,
+                        layoutType: "bullets",
+                        title: "By Training's End, You'll Have These 4 Game-Changers",
+                        content: bulletContent,
+                    }),
+                ],
+                brandName: "Test Brand",
+                brandColors: defaultBrandColors,
+            };
+
+            const blob = await generatePptx(options);
+
+            // JSZip can load from Blob or Buffer directly
+            const zip = await JSZip.default.loadAsync(blob);
+
+            // Get the first slide XML
+            const slideXml = await zip.file("ppt/slides/slide1.xml")?.async("string");
+            expect(slideXml).toBeDefined();
+
+            // Verify all bullet points are present in the XML
+            for (const bullet of bulletContent) {
+                expect(slideXml).toContain(bullet.replace(/&/g, "&amp;"));
+            }
+
+            // Count the number of bullet characters (&#8226;) - should match number of bullets
+            const bulletCharMatches = slideXml?.match(/&#8226;/g);
+            expect(bulletCharMatches?.length).toBe(bulletContent.length);
+        });
+
+        it("should include all bullet points in content_left layout", async () => {
+            const JSZip = await import("jszip");
+
+            const bulletContent = [
+                "First important bullet point",
+                "Second important bullet point",
+                "Third important bullet point",
+            ];
+
+            const options: PresentationOptions = {
+                title: "Test Presentation",
+                slides: [
+                    createValidSlide({
+                        slideNumber: 1,
+                        layoutType: "content_left",
+                        title: "Content Left Layout",
+                        content: bulletContent,
+                    }),
+                ],
+            };
+
+            const blob = await generatePptx(options);
+            const zip = await JSZip.default.loadAsync(blob);
+            const slideXml = await zip.file("ppt/slides/slide1.xml")?.async("string");
+
+            expect(slideXml).toBeDefined();
+
+            // Verify all bullet points are present
+            for (const bullet of bulletContent) {
+                expect(slideXml).toContain(bullet);
+            }
+        });
     });
 });

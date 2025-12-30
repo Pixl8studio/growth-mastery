@@ -17,8 +17,7 @@ articulate why the bot is mistaken given context it lacks.
 
 Read @rules/code-review-standards.mdc for patterns where bot suggestions typically don't
 apply. Use these to identify incorrect suggestions - explain why the bot is wrong in
-this specific case, not just that the issue is "minor" or "not blocking."
-</objective>
+this specific case, not just that the issue is "minor" or "not blocking." </objective>
 
 <usage>
 /address-pr-comments - Auto-detect PR from current branch
@@ -37,13 +36,13 @@ Detect conflicts via `gh pr view {number} --json mergeable,mergeStateStatus`. If
 mergeable is false, fetch the base branch and rebase or merge to resolve conflicts.
 
 When resolving conflicts:
+
 - Preserve the intent of both sets of changes
 - Keep bot comments in context - some may become obsolete after conflict resolution
 - Push the resolved changes before continuing with comment review
 
-If conflicts involve complex decisions (architectural changes, competing features),
-flag for user attention rather than auto-resolving.
-</conflict-resolution>
+If conflicts involve complex decisions (architectural changes, competing features), flag
+for user attention rather than auto-resolving. </conflict-resolution>
 
 <hotfix-mode>
 If the branch name starts with `hotfix/`, switch to expedited review mode:
@@ -51,26 +50,26 @@ If the branch name starts with `hotfix/`, switch to expedited review mode:
 - Focus on security vulnerabilities and bugs that could break production
 - Speed and correctness take priority over polish
 - One pass through comments, then push fixes immediately
-- Style and refactoring suggestions get declined with "hotfix - addressing critical issues only"
+- Style and refactoring suggestions get declined with "hotfix - addressing critical
+  issues only"
 
 Announce hotfix mode at start, explaining that this is an expedited review focusing on
-security and correctness.
-</hotfix-mode>
+security and correctness. </hotfix-mode>
 
 <comment-sources>
 Code review bots comment at different API levels. Fetch from both endpoints:
 
-PR-level comments (issues endpoint):
-`gh api repos/{owner}/{repo}/issues/{pr}/comments`
+PR-level comments (issues endpoint): `gh api repos/{owner}/{repo}/issues/{pr}/comments`
 Claude Code Review posts here. Username is `claude[bot]`. Only address the most recent
 Claude review - older ones reflect outdated code state.
 
 Line-level review comments (pulls endpoint):
-`gh api repos/{owner}/{repo}/pulls/{pr}/comments`
-Cursor Bugbot posts here as inline comments on specific code lines. Username is
-`cursor[bot]`. Address all Cursor comments - each flags a distinct location.
+`gh api repos/{owner}/{repo}/pulls/{pr}/comments` Cursor Bugbot posts here as inline
+comments on specific code lines. Username is `cursor[bot]`. Address all Cursor
+comments - each flags a distinct location.
 
 You can also use:
+
 - `gh pr view {number} --comments` for PR-level comments
 - `gh api repos/{owner}/{repo}/pulls/{pr}/reviews` for review status
 
@@ -105,8 +104,7 @@ While working through the phases, share interesting findings:
 - "Claude wants magic string extraction for a one-time value. Thumbs down, declining."
 - "SQL injection risk in search query - security issue, rocket reaction and addressing."
 
-Keep narration brief and informative.
-</narration>
+Keep narration brief and informative. </narration>
 
 <triage-process>
 For each bot comment, ask: "Is this suggestion correct given context I have?"
@@ -115,7 +113,8 @@ Address the suggestion when the bot's analysis is correct given full context. Th
 includes bugs, security issues, logic errors, and genuine improvements.
 
 When a bot correctly identifies an issue but suggests a suboptimal fix, address the
-underlying issue with the appropriate solution. Credit the bot for the correct diagnosis.
+underlying issue with the appropriate solution. Credit the bot for the correct
+diagnosis.
 
 Decline with explanation when you can articulate why the bot is wrong:
 
@@ -127,8 +126,7 @@ Decline with explanation when you can articulate why the bot is wrong:
 Valid declines explain why the bot's analysis is incorrect, not why addressing the issue
 is inconvenient. If the feedback would improve the code, address it.
 
-Show triage summary with your reasoning, then proceed autonomously.
-</triage-process>
+Show triage summary with your reasoning, then proceed autonomously. </triage-process>
 
 <feedback-as-training>
 Responding to bot comments serves two purposes: record-keeping and training. Bots learn
@@ -150,12 +148,12 @@ Add reactions via API:
 <addressing-comments>
 Response methods differ by comment type:
 
-PR-level comments (Claude bot):
-These live in the issues endpoint. Reply with a new comment on the PR. Group responses
-logically - one comment addressing multiple points is fine.
+PR-level comments (Claude bot): These live in the issues endpoint. Reply with a new
+comment on the PR. Group responses logically - one comment addressing multiple points is
+fine.
 
-Line-level comments (Cursor bot):
-These support threaded replies. Reply directly to the comment thread:
+Line-level comments (Cursor bot): These support threaded replies. Reply directly to the
+comment thread:
 `gh api repos/{owner}/{repo}/pulls/{pr}/comments/{comment_id}/replies -f body="..."`
 This keeps the conversation in context. The reply appears under the original comment,
 making it easy for anyone reviewing to see the resolution inline.
@@ -179,6 +177,7 @@ separately from bot comments.
 When all review bot checks have completed and no new actionable feedback remains:
 
 Display prominently:
+
 - PR URL (most important - user may have multiple sessions)
 - PR title
 - Summary of what was addressed vs declined

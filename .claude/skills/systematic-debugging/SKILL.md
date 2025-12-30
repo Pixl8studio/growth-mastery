@@ -1,9 +1,17 @@
 ---
 name: systematic-debugging
-description:
-  "Use for bugs, test failures, or unexpected behavior. Ensures root cause understanding
-  before fixing. Traces data flow backward, forms testable hypotheses, and implements
-  minimal fixes. Especially valuable when previous attempts haven't worked."
+description: "Use for bugs, test failures, or unexpected behavior needing root cause"
+version: 1.1.0
+category: debugging
+triggers:
+  - "debug"
+  - "investigate"
+  - "root cause"
+  - "why is this"
+  - "not working"
+  - "test failing"
+  - "unexpected behavior"
+  - "error"
 ---
 
 <objective>

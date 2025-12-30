@@ -1,9 +1,15 @@
 ---
 name: youtube-transcript-analyzer
-description:
-  "Use when analyzing YouTube videos for research or learning. Downloads transcripts
-  with yt-dlp, chunks long content intelligently, and provides context-aware analysis
-  relating video content to your current project or question."
+description: "Use when analyzing YouTube videos for research or learning"
+version: 0.5.0
+category: research
+triggers:
+  - "youtube"
+  - "video transcript"
+  - "analyze video"
+  - "watch this"
+  - "youtube.com"
+  - "youtu.be"
 ---
 
 <objective>

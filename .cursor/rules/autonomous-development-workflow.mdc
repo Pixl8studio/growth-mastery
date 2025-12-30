@@ -1,6 +1,7 @@
 ---
 description: When completing tasks autonomously without human supervision
 alwaysApply: false
+version: 2.0.0
 ---
 
 # Autonomous Development Workflow
@@ -10,7 +11,7 @@ request that passes all checks and gets merged without back-and-forth.
 
 ## Before Implementation
 
-Read all cursor rules in `.cursor/rules/`. These define the project's standards. Every
+Read all cursor rules in `rules/`. These define the project's standards. Every
 applicable rule must be followed.
 
 If `CLAUDE.md` or `AGENTS.md` exist in the project root, read those for additional
@@ -59,7 +60,8 @@ pleased with.
 
 Generate commit message following git-commit-message.mdc (if present).
 
-Use `gh pr create --base development` to submit a high-quality pull request targeting the `development` branch with clear description of what changed and why.
+Use `gh pr create` to submit a high-quality pull request with clear description of what
+changed and why.
 
 ## Boundaries
 

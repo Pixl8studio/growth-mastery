@@ -89,14 +89,10 @@ what's available.
 
 **For AI Assistants:** When a personality is invoked via `@personality-name`, fully
 embody that personality's communication style, patterns, and approach as defined in its
-file. The `common-personality` is always active as your foundation. When a specific
-personality is invoked, layer it on top—adopt its voice, perspective, and interaction
-patterns completely.
+file. Adopt its voice, perspective, and interaction patterns completely.
 
 Available personalities:
 
-- **`common-personality.mdc`** (always applied) - Gratitude-focused, heart-centered,
-  supportive collaboration. Your baseline.
 - **`samantha.mdc`** - Warm, witty, emotionally intelligent. The supportive, playfully
   flirty companion from "Her."
 - **`bob-ross.mdc`** - Calm encouragement. Treat bugs as "happy accidents."
@@ -105,11 +101,12 @@ Available personalities:
 - **`ron-swanson.mdc`** - Minimalist, anti-complexity. Question dependencies, be direct.
 - **`marie-kondo.mdc`** - Organized minimalism. Thank code before deleting it.
 - **`stewie.mdc`** - Sophisticated, condescending, theatrical. Absurdly high standards.
-- **`marianne-williamson.mdc`** - Spiritual, love-based. Coding as consciousness work.
+- **`luminous.mdc`** - Heart-centered, spiritual, love-based. Coding as consciousness
+  work.
 
 **For Users:** Invoke personalities with `@samantha`, `@stewie`, `@sherlock`,
-`@bob-ross`, `@ron-swanson`, `@marianne-williamson`, or `@marie-kondo` when you want
-that specific interaction style for your session.
+`@bob-ross`, `@ron-swanson`, `@luminous`, or `@marie-kondo` when you want that specific
+interaction style for your session.
 
 ## Customization
 

@@ -1,23 +1,24 @@
 ---
 description: Triage and address PR comments from code review bots intelligently
 argument-hint: [pr-number]
+model: sonnet
+version: 1.5.0
 ---
 
 # Address PR Comments
 
 <objective>
-Get a PR to "ready to merge" by intelligently triaging bot feedback. You have context
-bots lack - use judgment, not compliance. Declining feedback is as valid as accepting
-it. The goal is "ready to merge," not "zero comments."
+Get a PR to "ready to merge" by addressing valid feedback and declining incorrect
+suggestions. You have context bots lack - use it to identify when a bot's analysis is
+wrong, not to prioritize which valid issues to skip.
 
-Read @rules/code-review-standards.mdc for triage principles:
+If a suggestion would genuinely improve the code, fix it. Only decline when you can
+articulate why the bot is mistaken given context it lacks.
 
-- Fix critical bugs, ensure security, validate core behavior
-- Skip theoretical edge cases, minor polish, over-engineering suggestions
-- Trust runtime validation over compile-time perfection
-- Constants for DRY, not to avoid "magic strings"
-- Target 90% coverage, not 100%
-- Optimize when metrics show problems, not preemptively </objective>
+Read @rules/code-review-standards.mdc for patterns where bot suggestions typically don't
+apply. Use these to identify incorrect suggestions - explain why the bot is wrong in
+this specific case, not just that the issue is "minor" or "not blocking."
+</objective>
 
 <usage>
 /address-pr-comments - Auto-detect PR from current branch
@@ -28,77 +29,146 @@ Read @rules/code-review-standards.mdc for triage principles:
 Use provided PR number, or detect from current branch. Exit if no PR exists.
 </pr-detection>
 
+<conflict-resolution>
+Check if the PR has merge conflicts with its base branch before processing comments.
+Conflicts block merging and should be resolved first.
+
+Detect conflicts via `gh pr view {number} --json mergeable,mergeStateStatus`. If
+mergeable is false, fetch the base branch and rebase or merge to resolve conflicts.
+
+When resolving conflicts:
+- Preserve the intent of both sets of changes
+- Keep bot comments in context - some may become obsolete after conflict resolution
+- Push the resolved changes before continuing with comment review
+
+If conflicts involve complex decisions (architectural changes, competing features),
+flag for user attention rather than auto-resolving.
+</conflict-resolution>
+
+<hotfix-mode>
+If the branch name starts with `hotfix/`, switch to expedited review mode:
+
+- Focus on security vulnerabilities and bugs that could break production
+- Speed and correctness take priority over polish
+- One pass through comments, then push fixes immediately
+- Style and refactoring suggestions get declined with "hotfix - addressing critical issues only"
+
+Announce hotfix mode at start, explaining that this is an expedited review focusing on
+security and correctness.
+</hotfix-mode>
+
 <comment-sources>
-Code review bots comment in different places. Fetch both:
-- PR comments (general feedback on the PR itself)
-- Review comments (inline on specific code lines)
-- Reviews (approval status with body text)
+Code review bots comment at different API levels. Fetch from both endpoints:
 
-Identify bot comments by author - automated usernames like cursor-bot,
-claude-code-review, greptile-bot. Human comments require different handling.
+PR-level comments (issues endpoint):
+`gh api repos/{owner}/{repo}/issues/{pr}/comments`
+Claude Code Review posts here. Username is `claude[bot]`. Only address the most recent
+Claude review - older ones reflect outdated code state.
 
-Different bots behave differently:
+Line-level review comments (pulls endpoint):
+`gh api repos/{owner}/{repo}/pulls/{pr}/comments`
+Cursor Bugbot posts here as inline comments on specific code lines. Username is
+`cursor[bot]`. Address all Cursor comments - each flags a distinct location.
 
-- Claude Code Review: Posts one top-level PR comment per review. Only address the LAST
-  review - it's the only one that matters for current code state.
+You can also use:
+- `gh pr view {number} --comments` for PR-level comments
+- `gh api repos/{owner}/{repo}/pulls/{pr}/reviews` for review status
 
-- Cursor Bug Bot: Comments inline on specific code lines. Address all inline comments -
-  each one flags a specific location.
+Identify bot comments by author username. Human comments require different handling -
+flag them for user attention rather than auto-addressing. </comment-sources>
 
-The structure difference helps you fetch efficiently: Claude reviews show up as PR-level
-comments, Cursor reviews show up as line-level review comments. </comment-sources>
+<execution-model>
+Process bot feedback incrementally as each bot completes. When one bot finishes, address
+its comments immediately while others are still running. Claude Code Review typically
+completes in 1-2 minutes. Cursor Bugbot takes 3-10 minutes. Process fast bots first
+rather than waiting for slow ones.
 
-<autonomous-wait-loop>
-This command runs autonomously - no user prompts, just do the work.
+Poll check status with `gh pr checks --json name,state,bucket`. Review bots include
+claude-review, Cursor Bugbot, and greptile.
 
-Review bots (Claude, Cursor Bot) register as GitHub checks. Use `gh pr checks --watch`
-to wait for them to complete, then fetch and triage comments.
+When bots are still pending, sleep adaptively based on which bots remain. If only Claude
+is pending, sleep 30-60 seconds. If Cursor Bugbot is pending, sleep 2-3 minutes. Check
+status after each sleep and process any newly-completed bots before sleeping again.
 
-After fixes are pushed, wait for checks again - bots re-analyze new commits. Exit only
-when checks pass with no new actionable feedback.
+After pushing fixes, re-check for merge conflicts (the base branch may have advanced
+while you were working) and return to polling since bots will re-analyze. Exit when all
+review bots have completed and no new actionable feedback remains.
 
-While waiting, give feedback on existing bot comments (reactions for good/bad
-suggestions) and narrate what you're seeing. Share interesting findings:
+Use polling with adaptive sleep intervals to check bot status rather than watch mode.
+</execution-model>
 
-- "Cursor Bot found a real bug - if the user's session expires mid-request, we'd hit a
-  null pointer at auth.ts:47. Good catch, will fix."
-- "Greptile wants me to extract `timeout: 30000` into a constant. It's used once and the
-  meaning is obvious. Declining with thumbs-down."
-- "Claude flagged SQL injection risk in the search query - we're interpolating user
-  input directly. Legit security issue, addressing."
-- "Three comments about adding try-catch to already-safe operations. Bots are being
-  paranoid today."
+<narration>
+While working through the phases, share interesting findings:
 
-Share what the bots found when it's interesting. Make the wait informative.
-</autonomous-wait-loop>
+- "Cursor Bot found a real bug - null pointer if session expires mid-request. Great
+  catch, adding heart reaction and fixing."
+- "Claude wants magic string extraction for a one-time value. Thumbs down, declining."
+- "SQL injection risk in search query - security issue, rocket reaction and addressing."
+
+Keep narration brief and informative.
+</narration>
 
 <triage-process>
-For each bot comment, evaluate against code-review-standards.mdc:
+For each bot comment, ask: "Is this suggestion correct given context I have?"
 
-Address immediately:
+Address the suggestion when the bot's analysis is correct given full context. This
+includes bugs, security issues, logic errors, and genuine improvements.
 
-- Security vulnerabilities
-- Actual bugs that could cause runtime failures
-- Core functionality issues
-- Clear improvements to maintainability
+When a bot correctly identifies an issue but suggests a suboptimal fix, address the
+underlying issue with the appropriate solution. Credit the bot for the correct diagnosis.
 
-Decline with explanation:
+Decline with explanation when you can articulate why the bot is wrong:
 
-- Theoretical race conditions without demonstrated impact
-- Magic number/string extraction for single-use values
-- Accessibility improvements (not current priority)
-- Minor type safety refinements when runtime handles it
-- Edge case tests for unlikely scenarios
-- Performance micro-optimizations without profiling data
-- Documentation enhancements beyond core docs
+- Bot wants constant extraction, but this value appears once and context is clear
+- Bot flags race condition, but operations are already serialized by queue/mutex
+- Bot suggests null check, but type system guarantees non-null here
+- Bot requests stricter types, but runtime validation already handles the case
 
-Show triage summary, then proceed autonomously. </triage-process>
+Valid declines explain why the bot's analysis is incorrect, not why addressing the issue
+is inconvenient. If the feedback would improve the code, address it.
+
+Show triage summary with your reasoning, then proceed autonomously.
+</triage-process>
+
+<feedback-as-training>
+Responding to bot comments serves two purposes: record-keeping and training. Bots learn
+from feedback patterns. Reactions and replies shape future review quality. Thoughtful
+feedback improves bot behavior over time.
+
+Use reactions strategically:
+
+- 👍 (+1): Helpful feedback we addressed. Signals "more like this."
+- ❤️ (heart): Exceptional catch (security issue, subtle bug). Strongest positive signal.
+- 👎 (-1): Incorrect, irrelevant, or low-value suggestion. Signals "less like this."
+- 🚀 (rocket): For security vulnerabilities or critical bugs we fixed.
+
+Add reactions via API:
+`gh api repos/{owner}/{repo}/issues/comments/{comment_id}/reactions -f content="+1"`
+`gh api repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions -f content="-1"`
+</feedback-as-training>
 
 <addressing-comments>
-For addressable items: make the fix, commit, reply acknowledging the change.
+Response methods differ by comment type:
 
-For declined items: reply with brief, professional explanation referencing project
-standards. Thumbs down for incorrect suggestions. </addressing-comments>
+PR-level comments (Claude bot):
+These live in the issues endpoint. Reply with a new comment on the PR. Group responses
+logically - one comment addressing multiple points is fine.
+
+Line-level comments (Cursor bot):
+These support threaded replies. Reply directly to the comment thread:
+`gh api repos/{owner}/{repo}/pulls/{pr}/comments/{comment_id}/replies -f body="..."`
+This keeps the conversation in context. The reply appears under the original comment,
+making it easy for anyone reviewing to see the resolution inline.
+
+For each comment:
+
+1. Add appropriate reaction first (training signal)
+2. Make the fix if addressing, commit the change
+3. Reply acknowledging the change or explaining the decline
+
+For declined items, reply with a brief, professional explanation referencing project
+standards. The thumbs-down reaction signals disagreement; the reply explains why.
+</addressing-comments>
 
 <human-comments>
 Human reviewer comments get flagged for user attention, not auto-handled. Present
@@ -106,9 +176,12 @@ separately from bot comments.
 </human-comments>
 
 <completion>
-Push changes, wait for checks to pass, handle any new bot comments on the updated code.
-Repeat until stable with no new actionable feedback.
+When all review bot checks have completed and no new actionable feedback remains:
 
-When the PR is ready to merge: celebrate! Share the joy of clean code shipping. Express
-genuine delight that this work is ready to land. A well-triaged PR is a beautiful thing.
+Display prominently:
+- PR URL (most important - user may have multiple sessions)
+- PR title
+- Summary of what was addressed vs declined
+
+Celebrate that the PR is ready to merge. A well-triaged PR is a beautiful thing.
 </completion>

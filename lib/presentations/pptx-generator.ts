@@ -1251,11 +1251,12 @@ function generateSlideXml(
         .join("");
 
     // Body properties for bullet content - use different settings for bullet-only slides
-    // Bullet-only slides: distribute content vertically to fill available space
+    // Bullet-only slides: use normAutofit to scale text while maintaining good proportions
+    // This ensures all bullets are visible in PowerPoint (fixes export issue where only first bullet showed)
     // Other slides: use standard autofit behavior
     const bulletBodyPr = isBulletOnlySlide
         ? `<a:bodyPr wrap="square" anchor="t" anchorCtr="0">
-            <a:noAutofit/>
+            <a:normAutofit fontScale="90000" lnSpcReduction="10000"/>
           </a:bodyPr>`
         : `<a:bodyPr wrap="square" anchor="ctr">
             <a:normAutofit fontScale="70000" lnSpcReduction="20000"/>

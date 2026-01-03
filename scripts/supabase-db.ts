@@ -36,7 +36,7 @@ function loadEnv() {
 loadEnv();
 
 const SUPABASE_ACCESS_TOKEN = process.env.SUPABASE_ACCESS_TOKEN;
-const SUPABASE_PROJECT_REF = process.env.SUPABASE_PROJECT_REF || "ufndmgxmlceuoapgvfco";
+const SUPABASE_PROJECT_REF = process.env.SUPABASE_PROJECT_REF || "lbwawhiemqsqlqbnviou";
 const API_BASE = "https://api.supabase.com/v1";
 
 interface QueryResult {

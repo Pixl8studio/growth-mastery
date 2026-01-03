@@ -77,8 +77,12 @@ export function SenderSetupTab({
     const [newDomain, setNewDomain] = useState("");
     const [newSubdomain, setNewSubdomain] = useState("mail");
     const [creatingDomain, setCreatingDomain] = useState(false);
-    const [verifyingDomain, setVerifyingDomain] = useState(false);
+    const [verifyingDomainId, setVerifyingDomainId] = useState<string | null>(null);
     const [showDNSRecords, setShowDNSRecords] = useState(false);
+    const [domainEmailPrefix, setDomainEmailPrefix] = useState("noreply");
+    const [domainValidationError, setDomainValidationError] = useState<string | null>(
+        null
+    );
 
     // Check Gmail OAuth configuration status on mount
     useEffect(() => {
@@ -138,6 +142,22 @@ export function SenderSetupTab({
         loadEmailDomains();
     }, [loadEmailDomains]);
 
+    // Domain format validation regex (matches API validation)
+    const DOMAIN_REGEX = /^[a-z0-9][a-z0-9-]*\.[a-z]{2,}$/i;
+    const SUBDOMAIN_REGEX = /^[a-z0-9][a-z0-9-]*$/i;
+
+    // Validate domain format on input change
+    const validateDomainFormat = (domain: string, subdomain: string): string | null => {
+        if (!domain) return null; // Don't show error for empty input
+        if (!DOMAIN_REGEX.test(domain)) {
+            return "Invalid domain format. Example: yourdomain.com";
+        }
+        if (subdomain && !SUBDOMAIN_REGEX.test(subdomain)) {
+            return "Invalid subdomain format. Use only letters, numbers, and hyphens.";
+        }
+        return null;
+    };
+
     // Create new domain
     const handleCreateDomain = async () => {
         if (!newDomain || !newSubdomain) {
@@ -149,6 +169,19 @@ export function SenderSetupTab({
             return;
         }
 
+        // Client-side validation before API call
+        const validationError = validateDomainFormat(newDomain, newSubdomain);
+        if (validationError) {
+            setDomainValidationError(validationError);
+            toast({
+                title: "Invalid Domain Format",
+                description: validationError,
+                variant: "destructive",
+            });
+            return;
+        }
+
+        setDomainValidationError(null);
         setCreatingDomain(true);
         try {
             const response = await fetch("/api/email-domains", {
@@ -191,7 +224,7 @@ export function SenderSetupTab({
 
     // Verify domain DNS
     const handleVerifyDomain = async (domain: EmailDomain) => {
-        setVerifyingDomain(true);
+        setVerifyingDomainId(domain.id);
         try {
             const response = await fetch(`/api/email-domains/${domain.id}/verify`, {
                 method: "POST",
@@ -232,7 +265,7 @@ export function SenderSetupTab({
                 variant: "destructive",
             });
         } finally {
-            setVerifyingDomain(false);
+            setVerifyingDomainId(null);
         }
     };
 
@@ -243,15 +276,25 @@ export function SenderSetupTab({
             setLocalProviderType("mailgun");
             // Update the agent config to use this domain
             try {
-                await fetch("/api/followup/sender/update", {
+                const response = await fetch("/api/followup/sender/update", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         agent_config_id: agentConfigId,
                         email_provider_type: "mailgun",
                         mailgun_domain_id: domain.id,
-                        sender_email: `noreply@${domain.full_domain}`,
+                        sender_email: `${domainEmailPrefix}@${domain.full_domain}`,
                     }),
+                });
+
+                if (!response.ok) {
+                    const data = await response.json();
+                    throw new Error(data.error || "Failed to update sender");
+                }
+
+                toast({
+                    title: "Domain Selected",
+                    description: `Now sending from ${domainEmailPrefix}@${domain.full_domain}`,
                 });
 
                 if (onUpdate) {
@@ -259,6 +302,14 @@ export function SenderSetupTab({
                 }
             } catch (error) {
                 logger.error({ error }, "Failed to update sender with domain");
+                toast({
+                    title: "Error",
+                    description:
+                        error instanceof Error
+                            ? error.message
+                            : "Failed to update sender with domain",
+                    variant: "destructive",
+                });
             }
         }
     };
@@ -633,7 +684,14 @@ export function SenderSetupTab({
                     )}
 
                     {/* Existing Domains List */}
-                    {emailDomains.length > 0 && (
+                    {loadingDomains ? (
+                        <div className="flex items-center gap-2 p-4 border rounded-lg">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">
+                                Loading your email domains...
+                            </span>
+                        </div>
+                    ) : emailDomains.length > 0 ? (
                         <div className="space-y-2">
                             <p className="text-sm font-medium text-foreground">
                                 Your Email Domains
@@ -673,9 +731,9 @@ export function SenderSetupTab({
                                                 onClick={() =>
                                                     handleVerifyDomain(domain)
                                                 }
-                                                disabled={verifyingDomain}
+                                                disabled={verifyingDomainId === domain.id}
                                             >
-                                                {verifyingDomain ? (
+                                                {verifyingDomainId === domain.id ? (
                                                     <Loader2 className="h-4 w-4 animate-spin" />
                                                 ) : (
                                                     <>
@@ -706,7 +764,7 @@ export function SenderSetupTab({
                                 </div>
                             ))}
                         </div>
-                    )}
+                    ) : null}
 
                     {/* DNS Records Display */}
                     {selectedDomain &&
@@ -846,16 +904,34 @@ export function SenderSetupTab({
                             <h4 className="font-medium text-sm">
                                 Add Custom Email Domain
                             </h4>
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                    <Label className="text-xs">Email Prefix</Label>
+                                    <Input
+                                        value={domainEmailPrefix}
+                                        onChange={(e) =>
+                                            setDomainEmailPrefix(
+                                                e.target.value.toLowerCase()
+                                            )
+                                        }
+                                        placeholder="noreply"
+                                        className="mt-1"
+                                    />
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                        e.g., noreply, hello, support
+                                    </p>
+                                </div>
                                 <div>
                                     <Label className="text-xs">Subdomain</Label>
                                     <Input
                                         value={newSubdomain}
-                                        onChange={(e) =>
-                                            setNewSubdomain(
-                                                e.target.value.toLowerCase()
-                                            )
-                                        }
+                                        onChange={(e) => {
+                                            const value = e.target.value.toLowerCase();
+                                            setNewSubdomain(value);
+                                            setDomainValidationError(
+                                                validateDomainFormat(newDomain, value)
+                                            );
+                                        }}
                                         placeholder="mail"
                                         className="mt-1"
                                     />
@@ -864,17 +940,32 @@ export function SenderSetupTab({
                                     <Label className="text-xs">Domain</Label>
                                     <Input
                                         value={newDomain}
-                                        onChange={(e) =>
-                                            setNewDomain(e.target.value.toLowerCase())
-                                        }
+                                        onChange={(e) => {
+                                            const value = e.target.value.toLowerCase();
+                                            setNewDomain(value);
+                                            setDomainValidationError(
+                                                validateDomainFormat(value, newSubdomain)
+                                            );
+                                        }}
                                         placeholder="yourdomain.com"
-                                        className="mt-1"
+                                        className={cn(
+                                            "mt-1",
+                                            domainValidationError &&
+                                                "border-destructive focus-visible:ring-destructive"
+                                        )}
                                     />
                                 </div>
                             </div>
+                            {domainValidationError && (
+                                <p className="text-xs text-destructive flex items-center gap-1">
+                                    <AlertCircle className="h-3 w-3" />
+                                    {domainValidationError}
+                                </p>
+                            )}
                             <p className="text-xs text-muted-foreground">
                                 Emails will be sent from:{" "}
                                 <strong>
+                                    {domainEmailPrefix || "noreply"}@
                                     {newSubdomain || "mail"}.
                                     {newDomain || "yourdomain.com"}
                                 </strong>
@@ -882,7 +973,11 @@ export function SenderSetupTab({
                             <div className="flex gap-2">
                                 <Button
                                     onClick={handleCreateDomain}
-                                    disabled={creatingDomain || !newDomain}
+                                    disabled={
+                                        creatingDomain ||
+                                        !newDomain ||
+                                        !!domainValidationError
+                                    }
                                     size="sm"
                                 >
                                     {creatingDomain ? (
@@ -897,7 +992,10 @@ export function SenderSetupTab({
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={() => setShowDomainSetup(false)}
+                                    onClick={() => {
+                                        setShowDomainSetup(false);
+                                        setDomainValidationError(null);
+                                    }}
                                 >
                                     Cancel
                                 </Button>

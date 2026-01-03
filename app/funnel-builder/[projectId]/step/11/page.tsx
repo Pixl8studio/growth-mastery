@@ -75,6 +75,7 @@ export default function Step11Page({
     const [messages, setMessages] = useState<any[]>([]);
     const [stories, setStories] = useState<any[]>([]);
     const [offer, setOffer] = useState<any>(null);
+    const [mailgunDomainVerified, setMailgunDomainVerified] = useState(false);
     const [analytics, setAnalytics] = useState<any>({
         sequences: [],
         overall: {
@@ -133,11 +134,40 @@ export default function Step11Page({
                 const configRes = await fetch(
                     `/api/followup/agent-configs?funnel_project_id=${projectId}`
                 );
+                let loadedConfig: any = null;
                 if (configRes.ok) {
                     const configData = await configRes.json();
                     if (configData.configs && configData.configs.length > 0) {
-                        setAgentConfig(configData.configs[0]);
+                        loadedConfig = configData.configs[0];
+                        setAgentConfig(loadedConfig);
                         setFollowupEnabled(true);
+
+                        // Check Mailgun domain verification status if provider is mailgun
+                        if (
+                            loadedConfig.email_provider_type === "mailgun" &&
+                            loadedConfig.mailgun_domain_id
+                        ) {
+                            try {
+                                const domainRes = await fetch(
+                                    `/api/email-domains?funnel_project_id=${projectId}`
+                                );
+                                if (domainRes.ok) {
+                                    const domainData = await domainRes.json();
+                                    const domain = (domainData.domains || []).find(
+                                        (d: any) =>
+                                            d.id === loadedConfig.mailgun_domain_id
+                                    );
+                                    setMailgunDomainVerified(
+                                        domain?.verification_status === "verified"
+                                    );
+                                }
+                            } catch (domainError) {
+                                logger.error(
+                                    { error: domainError },
+                                    "Failed to check Mailgun domain status"
+                                );
+                            }
+                        }
                     }
                 }
 
@@ -1094,7 +1124,8 @@ Approach:
                             <OnboardingBanner
                                 senderVerified={
                                     agentConfig?.email_provider_type === "gmail" ||
-                                    agentConfig?.email_provider_type === "mailgun" ||
+                                    (agentConfig?.email_provider_type === "mailgun" &&
+                                        mailgunDomainVerified) ||
                                     !!(
                                         agentConfig?.sender_email &&
                                         agentConfig?.sender_name

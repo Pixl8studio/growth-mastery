@@ -5,13 +5,10 @@ This document describes how Claude Code can directly interact with the GrowthMas
 ## Project Details
 
 - **Project Name**: GrowthMastery.ai
-- **Project ID**: `lbwawhiemqsqlqbnviou` (Management API access)
-- **Region**: us-west-2
+- **Project ID**: `ufndmgxmlceuoapgvfco`
+- **Region**: us-east-1
 - **Database**: PostgreSQL 17.6.1
-- **Host**: `db.lbwawhiemqsqlqbnviou.supabase.co`
-
-Note: The app uses `ufndmgxmlceuoapgvfco` for runtime (NEXT_PUBLIC_SUPABASE_URL),
-while `lbwawhiemqsqlqbnviou` is used for Management API database operations.
+- **Host**: `db.ufndmgxmlceuoapgvfco.supabase.co`
 
 ## Available Commands
 

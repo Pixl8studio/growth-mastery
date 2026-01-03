@@ -18,7 +18,7 @@ if [ -f .env.local ]; then
 fi
 
 # Configuration
-SUPABASE_PROJECT_REF="${SUPABASE_PROJECT_REF:-lbwawhiemqsqlqbnviou}"
+SUPABASE_PROJECT_REF="${SUPABASE_PROJECT_REF:-ufndmgxmlceuoapgvfco}"
 API_BASE="https://api.supabase.com/v1"
 
 if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then

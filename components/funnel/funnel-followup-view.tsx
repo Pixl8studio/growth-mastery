@@ -12,7 +12,6 @@ import { logger } from "@/lib/client-logger";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, Mail, TrendingUp, DollarSign } from "lucide-react";
 import { ProspectList } from "@/components/followup/prospect-list";
-import { ComingSoonOverlay } from "@/components/ui/coming-soon-overlay";
 
 interface FollowupStats {
     total_prospects: number;
@@ -90,11 +89,7 @@ export function FunnelFollowupView({ projectId }: FunnelFollowupViewProps) {
     }
 
     return (
-        <ComingSoonOverlay
-            featureName="AI Follow-Up"
-            description="The AI Follow-Up system is currently in development. Soon you'll be able to track prospects and automate post-webinar engagement."
-        >
-            <div className="space-y-6">
+        <div className="space-y-6">
                 {/* Stats Cards */}
                 <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     <Card>
@@ -174,6 +169,5 @@ export function FunnelFollowupView({ projectId }: FunnelFollowupViewProps) {
                     <ProspectList funnelProjectId={projectId} />
                 </div>
             </div>
-        </ComingSoonOverlay>
     );
 }

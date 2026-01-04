@@ -22,8 +22,8 @@ import {
 } from "@/app/funnel-builder/master-steps-config";
 import { ComingSoonBadge } from "@/components/ui/coming-soon-overlay";
 
-// Traffic Agent steps (12, 13, 14) are coming soon
-const COMING_SOON_STEPS = [12, 13, 14];
+// Traffic Agent steps (12, 13) are coming soon - step 11 (AI Follow-Up) is now live
+const COMING_SOON_STEPS = [12, 13];
 
 interface MasterSectionCardProps {
     masterStepId: number;

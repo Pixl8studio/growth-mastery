@@ -100,7 +100,11 @@ interface ProgressStage {
 
 const GENERATION_STAGES: ProgressStage[] = [
     { id: "offer", label: "Loading your offer data", status: "pending" },
-    { id: "presentation", label: "Analyzing presentation structure", status: "pending" },
+    {
+        id: "presentation",
+        label: "Analyzing presentation structure",
+        status: "pending",
+    },
     { id: "brand", label: "Applying brand design", status: "pending" },
     { id: "hero", label: "Generating hero section", status: "pending" },
     { id: "value", label: "Building value proposition", status: "pending" },
@@ -194,11 +198,7 @@ export default function Step5EnrollmentPage({
                 prev.map((s, idx) => ({
                     ...s,
                     status:
-                        idx < i
-                            ? "completed"
-                            : idx === i
-                              ? "in_progress"
-                              : "pending",
+                        idx < i ? "completed" : idx === i ? "in_progress" : "pending",
                 }))
             );
 
@@ -487,7 +487,6 @@ Please create an improved enrollment page that captures the same offer and messa
         loadData();
     }, [projectId]);
 
-
     const handleEditLegacy = (pageId: string) => {
         const editorUrl = `/funnel-builder/${projectId}/pages/enrollment/${pageId}?edit=true`;
         window.open(editorUrl, "_blank");
@@ -518,14 +517,15 @@ Please create an improved enrollment page that captures the same offer and messa
             id: page.id,
             title: page.headline,
             subtitle: page.subheadline,
-            status: (page.is_published ? "published" : "draft") as const,
+            status: (page.is_published ? "published" : "draft") as
+                | "published"
+                | "draft",
             type: "legacy" as const,
             created_at: page.created_at,
             offer_id: page.offer_id,
         })),
     ].sort(
-        (a, b) =>
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
 
     const handleDelete = async (pageId: string) => {

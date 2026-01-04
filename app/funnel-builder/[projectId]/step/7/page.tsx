@@ -5,7 +5,7 @@
  * Create and manage enrollment/sales pages with AI-powered editor
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
@@ -23,6 +23,8 @@ import {
     Check,
     Circle,
     ArrowRight,
+    ExternalLink,
+    CheckCircle2,
 } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
@@ -143,19 +145,6 @@ export default function Step5EnrollmentPage({
     const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
-
-    // Redirect mobile users to desktop-required page
-    useEffect(() => {
-        if (isMobile && projectId) {
-            const params = new URLSearchParams({
-                feature: "Enrollment Page Editor",
-                description:
-                    "The enrollment page editor requires a desktop computer for designing and customizing sales pages with visual editing tools.",
-                returnPath: `/funnel-builder/${projectId}`,
-            });
-            router.push(`/desktop-required?${params.toString()}`);
-        }
-    }, [isMobile, projectId, router]);
     const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
     const [offers, setOffers] = useState<Offer[]>([]);
     const [enrollmentPages, setEnrollmentPages] = useState<EnrollmentPage[]>([]);
@@ -173,15 +162,84 @@ export default function Step5EnrollmentPage({
             | "value-focused",
     });
 
+    // Generation completion state
+    const [generationComplete, setGenerationComplete] = useState(false);
+    const [newlyCreatedPageId, setNewlyCreatedPageId] = useState<string | null>(null);
+    const [highlightingPageId, setHighlightingPageId] = useState<string | null>(null);
+    const [viewedNewPages, setViewedNewPages] = useState<Set<string>>(new Set());
+
+    // Mobile detection state - only check on initial load to prevent redirect on resize (e.g., dev tools)
+    const [initialMobileCheck, setInitialMobileCheck] = useState<boolean | null>(null);
+
+    // Capture mobile status only on initial load
+    useEffect(() => {
+        if (initialMobileCheck === null && isMobile !== undefined) {
+            setInitialMobileCheck(isMobile);
+        }
+    }, [isMobile, initialMobileCheck]);
+
+    // Redirect mobile users to desktop-required page (only on initial load, not resize)
+    useEffect(() => {
+        if (initialMobileCheck === true && projectId) {
+            const params = new URLSearchParams({
+                feature: "Enrollment Page Editor",
+                description:
+                    "The enrollment page editor requires a desktop computer for designing and customizing sales pages with visual editing tools.",
+                returnPath: `/funnel-builder/${projectId}`,
+            });
+            router.push(`/desktop-required?${params.toString()}`);
+        }
+    }, [initialMobileCheck, projectId, router]);
+
+    // Ref for scrolling to pages section
+    const pagesSectionRef = useRef<HTMLDivElement>(null);
+
+    // Ref to track API completion for syncing with progress
+    const apiCompleteRef = useRef(false);
+
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
 
-    // Simulate progress stages with realistic timing
+    // Handle completion state transitions with proper cleanup (prevents memory leaks)
+    useEffect(() => {
+        if (generationComplete && newlyCreatedPageId) {
+            // After showing success state for 2 seconds, close form
+            const closeFormTimeout = setTimeout(() => {
+                setShowCreateForm(false);
+                setProgressStages([]);
+                setGenerationComplete(false);
+                setIsCreating(false);
+            }, 2000);
+
+            // Scroll to pages section slightly after form closes
+            const scrollTimeout = setTimeout(() => {
+                pagesSectionRef.current?.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                });
+                setHighlightingPageId(newlyCreatedPageId);
+            }, 2100);
+
+            // Clear highlight glow after animation completes
+            const clearHighlightTimeout = setTimeout(() => {
+                setHighlightingPageId(null);
+            }, 6100);
+
+            // Cleanup all timeouts on unmount or state change
+            return () => {
+                clearTimeout(closeFormTimeout);
+                clearTimeout(scrollTimeout);
+                clearTimeout(clearHighlightTimeout);
+            };
+        }
+    }, [generationComplete, newlyCreatedPageId]);
+
+    // Simulate progress stages with realistic timing - stops at second-to-last stage until API completes
     const simulateProgress = useCallback(async (): Promise<void> => {
         const stages = [...GENERATION_STAGES];
         setProgressStages(stages);
 
-        // Timing for each stage (in ms) - total ~35-45 seconds
+        // Timing for each stage (in ms) - total ~35 seconds before final stage
         const stageTiming = [
             1500, // Loading offer data
             2000, // Analyzing presentation structure
@@ -189,10 +247,11 @@ export default function Step5EnrollmentPage({
             12000, // Generating hero section (longest - AI generation)
             8000, // Building value proposition
             6000, // Creating testimonials
-            3000, // Finalizing page
+            // Final stage timing handled separately - waits for API
         ];
 
-        for (let i = 0; i < stages.length; i++) {
+        // Run through all stages except the last one
+        for (let i = 0; i < stages.length - 1; i++) {
             // Mark current stage as in_progress
             setProgressStages((prev) =>
                 prev.map((s, idx) => ({
@@ -205,6 +264,23 @@ export default function Step5EnrollmentPage({
             await new Promise((resolve) => setTimeout(resolve, stageTiming[i]));
         }
 
+        // Mark second-to-last stage as complete, last stage as in_progress
+        setProgressStages((prev) =>
+            prev.map((s, idx) => ({
+                ...s,
+                status: idx < stages.length - 1 ? "completed" : "in_progress",
+            }))
+        );
+
+        // Wait for API to complete before marking final stage as done
+        // Poll every 200ms to check if API has completed
+        while (!apiCompleteRef.current) {
+            await new Promise((resolve) => setTimeout(resolve, 200));
+        }
+
+        // Small delay for visual feedback before marking complete
+        await new Promise((resolve) => setTimeout(resolve, 300));
+
         // Mark all as completed
         setProgressStages((prev) =>
             prev.map((s) => ({ ...s, status: "completed" as const }))
@@ -215,6 +291,8 @@ export default function Step5EnrollmentPage({
     const handleGenerate = async () => {
         if (!projectId || !formData.offerId || !formData.deckStructureId) return;
 
+        // Reset API completion flag
+        apiCompleteRef.current = false;
         setIsCreating(true);
         const startTime = Date.now();
 
@@ -251,23 +329,10 @@ export default function Step5EnrollmentPage({
                 throw new Error(data.error || data.details || "Failed to create page");
             }
 
-            const elapsed = Date.now() - startTime;
-
-            // If API completed quickly (under 15 seconds), fast-forward progress
-            if (elapsed < 15000) {
-                setProgressStages((prev) =>
-                    prev.map((s) => ({ ...s, status: "completed" as const }))
-                );
-                // Small delay so user sees completion
-                await new Promise((resolve) => setTimeout(resolve, 500));
-            } else {
-                // Otherwise wait for progress simulation to finish naturally
-                await progressPromise;
-            }
-
             logger.info({ pageId: data.pageId }, "Enrollment page created");
 
-            // Add the new page to the list
+            // Add the new page to the list IMMEDIATELY when API completes
+            // This ensures the page appears before/when loading bar completes
             const newPage: AIEditorPage = {
                 id: data.pageId,
                 title: data.title || "Enrollment Page",
@@ -279,29 +344,54 @@ export default function Step5EnrollmentPage({
             };
             setAiEditorPages((prev) => [newPage, ...prev]);
 
-            // Reset form and close
-            setShowCreateForm(false);
-            setProgressStages([]);
+            // Track the newly created page for highlighting
+            setNewlyCreatedPageId(data.pageId);
 
-            toast({
-                title: "Enrollment page created!",
-                description: "Opening the AI Editor in a new tab...",
-            });
+            const elapsed = Date.now() - startTime;
+
+            // Signal that API is complete - progress bar will finish quickly
+            apiCompleteRef.current = true;
+
+            // If API completed quickly (under 10 seconds), fast-forward progress
+            if (elapsed < 10000) {
+                setProgressStages((prev) =>
+                    prev.map((s) => ({ ...s, status: "completed" as const }))
+                );
+                // Small delay so user sees completion
+                await new Promise((resolve) => setTimeout(resolve, 500));
+            } else {
+                // Otherwise wait for progress simulation to finish (it will complete quickly now)
+                await progressPromise;
+            }
+
+            // Show completion state - useEffect handles timeout-based transitions
+            setGenerationComplete(true);
 
             // Open in new tab
             window.open(`/ai-editor/${data.pageId}`, "_blank");
-        } catch (error: any) {
+
+            toast({
+                title: "Enrollment page created!",
+                description: "Your page is now visible below",
+            });
+        } catch (error: unknown) {
+            // Signal API complete to stop the progress simulation
+            apiCompleteRef.current = true;
             logger.error({ error }, "Failed to create enrollment page");
             setProgressStages([]);
+            setIsCreating(false); // Only reset in error case - success case handled by useEffect
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "Failed to create page. Please try again.";
             toast({
                 variant: "destructive",
                 title: "Error",
-                description:
-                    error.message || "Failed to create page. Please try again.",
+                description: errorMessage,
             });
-        } finally {
-            setIsCreating(false);
         }
+        // Note: setIsCreating(false) for success case is handled by the completion useEffect
+        // to properly sequence with the success UI state transitions
     };
 
     // Handle migration of legacy page to AI Editor
@@ -700,7 +790,76 @@ Please create an improved enrollment page that captures the same offer and messa
                         </div>
 
                         {/* Progress Stages UI */}
-                        {isCreating && progressStages.length > 0 ? (
+                        {generationComplete ? (
+                            /* Success/Completion State */
+                            <div className="space-y-6">
+                                <div className="rounded-lg border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-8">
+                                    <div className="flex flex-col items-center text-center">
+                                        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
+                                            <CheckCircle2 className="h-8 w-8 text-green-600" />
+                                        </div>
+                                        <h4 className="mb-2 text-xl font-semibold text-green-800">
+                                            Page Created Successfully!
+                                        </h4>
+                                        <p className="mb-4 max-w-sm text-sm text-green-700">
+                                            Your enrollment page is ready. It&apos;s
+                                            been opened in a new tab and added to your
+                                            pages below.
+                                        </p>
+                                        <div className="flex items-center gap-3">
+                                            <button
+                                                onClick={() => {
+                                                    if (newlyCreatedPageId) {
+                                                        window.open(
+                                                            `/ai-editor/${newlyCreatedPageId}`,
+                                                            "_blank"
+                                                        );
+                                                    }
+                                                }}
+                                                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
+                                            >
+                                                <ExternalLink className="h-4 w-4" />
+                                                Open Editor
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setShowCreateForm(false);
+                                                    setProgressStages([]);
+                                                    setGenerationComplete(false);
+                                                    setTimeout(() => {
+                                                        pagesSectionRef.current?.scrollIntoView(
+                                                            {
+                                                                behavior: "smooth",
+                                                                block: "start",
+                                                            }
+                                                        );
+                                                        if (newlyCreatedPageId) {
+                                                            setHighlightingPageId(
+                                                                newlyCreatedPageId
+                                                            );
+                                                            setTimeout(
+                                                                () =>
+                                                                    setHighlightingPageId(
+                                                                        null
+                                                                    ),
+                                                                4000
+                                                            );
+                                                        }
+                                                    }, 100);
+                                                }}
+                                                className="inline-flex items-center gap-2 rounded-lg border border-green-300 bg-white px-4 py-2 text-sm font-medium text-green-700 transition-colors hover:bg-green-50"
+                                            >
+                                                View in List
+                                            </button>
+                                        </div>
+                                        <p className="mt-4 text-xs text-green-600">
+                                            Closing automatically in a moment...
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : isCreating && progressStages.length > 0 ? (
+                            /* Progress State */
                             <div className="space-y-6">
                                 <div className="rounded-lg border border-purple-200 bg-white p-6">
                                     <div className="mb-4 flex items-center justify-between">
@@ -903,7 +1062,10 @@ Please create an improved enrollment page that captures the same offer and messa
                 )}
 
                 {/* Unified Pages List */}
-                <div className="rounded-lg border border-border bg-card shadow-soft">
+                <div
+                    ref={pagesSectionRef}
+                    className="scroll-mt-8 rounded-lg border border-border bg-card shadow-soft"
+                >
                     <div className="border-b border-border p-6">
                         <div className="flex items-center justify-between">
                             <h3 className="text-xl font-semibold text-foreground">
@@ -945,11 +1107,29 @@ Please create an improved enrollment page that captures the same offer and messa
                                     const legacyPage = isLegacy
                                         ? enrollmentPages.find((p) => p.id === page.id)
                                         : null;
+                                    const isHighlighted =
+                                        highlightingPageId === page.id;
+                                    const isNewPage =
+                                        page.id === newlyCreatedPageId &&
+                                        !viewedNewPages.has(page.id);
+
+                                    // Handler to mark page as viewed
+                                    const markAsViewed = () => {
+                                        if (isNewPage) {
+                                            setViewedNewPages(
+                                                (prev) => new Set([...prev, page.id])
+                                            );
+                                        }
+                                    };
 
                                     return (
                                         <div
                                             key={page.id}
-                                            className="rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md"
+                                            className={`rounded-lg border bg-card p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md ${
+                                                isHighlighted
+                                                    ? "animate-highlight-fade border-purple-500 ring-4 ring-purple-400/50"
+                                                    : "border-border"
+                                            }`}
                                         >
                                             <div className="flex items-start justify-between">
                                                 <div className="flex-1">
@@ -957,6 +1137,11 @@ Please create an improved enrollment page that captures the same offer and messa
                                                         <h4 className="text-lg font-semibold text-foreground">
                                                             {page.title}
                                                         </h4>
+                                                        {isNewPage && (
+                                                            <span className="inline-flex items-center rounded-full bg-purple-600 px-2 py-0.5 text-xs font-bold text-white shadow-sm">
+                                                                NEW
+                                                            </span>
+                                                        )}
                                                         {isLegacy && (
                                                             <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
                                                                 Legacy
@@ -1057,11 +1242,12 @@ Please create an improved enrollment page that captures the same offer and messa
                                                         <>
                                                             {/* AI Editor page actions */}
                                                             <button
-                                                                onClick={() =>
+                                                                onClick={() => {
+                                                                    markAsViewed();
                                                                     handleEditAIEditor(
                                                                         page.id
-                                                                    )
-                                                                }
+                                                                    );
+                                                                }}
                                                                 className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700"
                                                             >
                                                                 <Pencil className="h-4 w-4" />

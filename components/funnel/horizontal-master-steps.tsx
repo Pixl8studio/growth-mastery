@@ -28,8 +28,8 @@ import {
 } from "@/app/funnel-builder/master-steps-config";
 import { ComingSoonBadge } from "@/components/ui/coming-soon-overlay";
 
-// Traffic Agent steps (11, 12, 13) are coming soon
-const COMING_SOON_STEPS = [11, 12, 13];
+// Traffic Agent steps (12, 13) are coming soon
+const COMING_SOON_STEPS = [12, 13];
 
 interface HorizontalMasterStepsProps {
     projectId: string;

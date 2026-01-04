@@ -39,7 +39,6 @@ import { StoryLibrary } from "@/components/followup/story-library";
 import { AnalyticsDashboard } from "@/components/followup/analytics-dashboard";
 import { SenderSetupTab } from "@/components/followup/sender-setup-tab";
 import { TestMessageModal } from "@/components/followup/test-message-modal";
-import { ComingSoonOverlay } from "@/components/ui/coming-soon-overlay";
 
 export default function Step11Page({
     params,
@@ -990,11 +989,7 @@ Approach:
             completedSteps={completedSteps}
             nextLabel="Continue to Marketing"
         >
-            <ComingSoonOverlay
-                featureName="AI Follow-Up Engine"
-                description="The AI Follow-Up Engine is currently in development. Soon you'll be able to automate post-webinar engagement with personalized, AI-powered sequences."
-            >
-                <div className="space-y-6">
+            <div className="space-y-6">
                     {/* Enable/Disable Section */}
                     <Card className="p-6 bg-gradient-to-r from-purple-50 to-primary/5">
                         <div className="flex items-center justify-between">
@@ -1343,7 +1338,6 @@ Approach:
                         </>
                     )}
                 </div>
-            </ComingSoonOverlay>
 
             {/* Test Message Modal */}
             {agentConfig?.id && (

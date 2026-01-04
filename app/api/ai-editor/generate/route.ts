@@ -15,6 +15,9 @@ interface GenerateRequest {
     projectId: string;
     pageType: PageType;
     customPrompt?: string;
+    offerId?: string;
+    deckId?: string;
+    templateStyle?: "urgency-convert" | "premium-elegant" | "value-focused";
 }
 
 export async function POST(request: Request) {
@@ -34,7 +37,8 @@ export async function POST(request: Request) {
 
         // Parse request body
         const body: GenerateRequest = await request.json();
-        const { projectId, pageType, customPrompt } = body;
+        const { projectId, pageType, customPrompt, offerId, deckId, templateStyle } =
+            body;
 
         // Validate inputs
         if (!projectId || !pageType) {
@@ -69,8 +73,55 @@ export async function POST(request: Request) {
             );
         }
 
+        // Validate templateStyle if provided
+        const validTemplateStyles = [
+            "urgency-convert",
+            "premium-elegant",
+            "value-focused",
+        ];
+        if (templateStyle && !validTemplateStyles.includes(templateStyle)) {
+            return NextResponse.json(
+                { error: "Invalid templateStyle" },
+                { status: 400 }
+            );
+        }
+
+        // Validate offerId belongs to this project if provided
+        if (offerId) {
+            const { data: offer, error: offerError } = await supabase
+                .from("offers")
+                .select("id")
+                .eq("id", offerId)
+                .eq("funnel_project_id", projectId)
+                .single();
+
+            if (offerError || !offer) {
+                return NextResponse.json(
+                    { error: "Offer not found in this project" },
+                    { status: 400 }
+                );
+            }
+        }
+
+        // Validate deckId belongs to this project if provided
+        if (deckId) {
+            const { data: deck, error: deckError } = await supabase
+                .from("deck_structures")
+                .select("id")
+                .eq("id", deckId)
+                .eq("funnel_project_id", projectId)
+                .single();
+
+            if (deckError || !deck) {
+                return NextResponse.json(
+                    { error: "Deck structure not found in this project" },
+                    { status: 400 }
+                );
+            }
+        }
+
         logger.info(
-            { userId: user.id, projectId, pageType },
+            { userId: user.id, projectId, pageType, offerId, deckId, templateStyle },
             "Starting AI page generation"
         );
 
@@ -79,6 +130,9 @@ export async function POST(request: Request) {
             projectId,
             pageType,
             customPrompt,
+            offerId,
+            deckId,
+            templateStyle,
         });
 
         // Validate the generated HTML

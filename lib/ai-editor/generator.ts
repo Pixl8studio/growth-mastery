@@ -18,6 +18,9 @@ export interface GeneratePageOptions {
     projectId: string;
     pageType: PageType;
     customPrompt?: string;
+    offerId?: string;
+    deckId?: string;
+    templateStyle?: "urgency-convert" | "premium-elegant" | "value-focused";
 }
 
 export interface GeneratePageResult {
@@ -33,16 +36,25 @@ export interface GeneratePageResult {
 export async function generatePage(
     options: GeneratePageOptions
 ): Promise<GeneratePageResult> {
-    const { projectId, pageType, customPrompt } = options;
+    const { projectId, pageType, customPrompt, offerId, deckId, templateStyle } =
+        options;
     const startTime = Date.now();
 
-    logger.info({ projectId, pageType }, "Starting page generation with Claude");
+    logger.info(
+        { projectId, pageType, offerId, deckId, templateStyle },
+        "Starting page generation with Claude"
+    );
 
     // Load the framework for this page type
     const framework = await loadPageFramework(pageType);
 
-    // Aggregate context from the funnel project
-    const context = await aggregateFunnelContext(projectId);
+    // Aggregate context from the funnel project with specific offer/deck if provided
+    const context = await aggregateFunnelContext({
+        projectId,
+        offerId,
+        deckId,
+        templateStyle,
+    });
 
     // Build the system prompt
     const systemPrompt = buildSystemPrompt(pageType, framework);

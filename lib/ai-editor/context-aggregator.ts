@@ -54,16 +54,57 @@ export interface BusinessContext {
         title: string;
         takeaways: string[];
     }>;
+
+    // Template style for enrollment pages
+    templateStyle?: "urgency-convert" | "premium-elegant" | "value-focused";
+}
+
+export interface AggregateContextOptions {
+    projectId: string;
+    offerId?: string;
+    deckId?: string;
+    templateStyle?: "urgency-convert" | "premium-elegant" | "value-focused";
 }
 
 /**
  * Aggregate all funnel context from Steps 1-4
+ * Optionally accepts specific offerId and deckId to use instead of most recent
  */
 export async function aggregateFunnelContext(
-    projectId: string
+    projectIdOrOptions: string | AggregateContextOptions
 ): Promise<BusinessContext | null> {
+    // Handle both old signature (string) and new signature (options object)
+    const options: AggregateContextOptions =
+        typeof projectIdOrOptions === "string"
+            ? { projectId: projectIdOrOptions }
+            : projectIdOrOptions;
+
+    const { projectId, offerId, deckId, templateStyle } = options;
+
     try {
         const supabase = await createServerClient();
+
+        // Build offer query - use specific ID if provided, otherwise get most recent
+        const offerQuery = offerId
+            ? supabase.from("offers").select("*").eq("id", offerId).single()
+            : supabase
+                  .from("offers")
+                  .select("*")
+                  .eq("funnel_project_id", projectId)
+                  .order("created_at", { ascending: false })
+                  .limit(1)
+                  .single();
+
+        // Build deck query - use specific ID if provided, otherwise get most recent
+        const deckQuery = deckId
+            ? supabase.from("deck_structures").select("*").eq("id", deckId).single()
+            : supabase
+                  .from("deck_structures")
+                  .select("*")
+                  .eq("funnel_project_id", projectId)
+                  .order("created_at", { ascending: false })
+                  .limit(1)
+                  .single();
 
         // Fetch all data in parallel
         const [projectResult, intakeResult, offerResult, brandResult, deckResult] =
@@ -80,25 +121,13 @@ export async function aggregateFunnelContext(
                     .order("created_at", { ascending: false })
                     .limit(1)
                     .single(),
-                supabase
-                    .from("offers")
-                    .select("*")
-                    .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false })
-                    .limit(1)
-                    .single(),
+                offerQuery,
                 supabase
                     .from("brand_designs")
                     .select("*")
                     .eq("funnel_project_id", projectId)
                     .single(),
-                supabase
-                    .from("deck_structures")
-                    .select("*")
-                    .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false })
-                    .limit(1)
-                    .single(),
+                deckQuery,
             ]);
 
         const project = projectResult.data;
@@ -160,6 +189,9 @@ export async function aggregateFunnelContext(
             trainingType: "on-demand",
             trainingDuration: "90 minutes",
             modules: extractModules(deck),
+
+            // Template style preference
+            templateStyle,
         };
 
         logger.info(
@@ -370,9 +402,68 @@ function extractModules(deck: any): Array<{ title: string; takeaways: string[] }
 }
 
 /**
+ * Get template style guidance for AI generation
+ */
+function getTemplateStyleGuidance(
+    templateStyle?: "urgency-convert" | "premium-elegant" | "value-focused"
+): string {
+    if (!templateStyle) return "";
+
+    const styleGuidance: Record<string, string> = {
+        "urgency-convert": `
+## Design Style: Urgency Convert
+
+Create a HIGH-ENERGY sales page with strong urgency and scarcity elements:
+- Use countdown timers prominently (deadline-driven messaging)
+- Bold, action-oriented headlines that create FOMO
+- Scarcity messaging ("Only X spots left", "Doors closing soon")
+- Vibrant, energetic color scheme with contrasting CTAs
+- Multiple call-to-action buttons throughout the page
+- Social proof with real-time indicators if possible
+- Short, punchy paragraphs that drive action
+- Risk reversal with money-back guarantee prominently displayed
+- Limited-time bonuses or early-bird pricing`,
+
+        "premium-elegant": `
+## Design Style: Premium Elegant
+
+Create a SOPHISTICATED, high-end sales page with refined aesthetics:
+- Clean, minimalist layout with generous white space
+- Elegant typography with clear hierarchy
+- Muted, sophisticated color palette (navy, gold, cream)
+- Subtle animations and smooth transitions
+- High-quality imagery placeholders with premium feel
+- Testimonials from notable/credible sources
+- Focus on exclusivity and premium positioning
+- Longer-form storytelling that builds value
+- Understated but confident call-to-action
+- Trust indicators that emphasize quality over urgency`,
+
+        "value-focused": `
+## Design Style: Value Focused
+
+Create a BENEFIT-DRIVEN sales page that emphasizes ROI and transformation:
+- Clear value proposition above the fold
+- Comparison tables showing before/after or value stack
+- ROI calculations and concrete outcome metrics
+- Detailed breakdown of what's included
+- Feature cards with tangible benefits
+- Case studies with specific results and numbers
+- Educational approach that informs before selling
+- Trust-building through transparency
+- Clear pricing with value justification
+- Logical, structured layout that guides decision-making`,
+    };
+
+    return styleGuidance[templateStyle] || "";
+}
+
+/**
  * Format context as a prompt-ready string
  */
 export function formatContextForPrompt(context: BusinessContext): string {
+    const templateGuidance = getTemplateStyleGuidance(context.templateStyle);
+
     return `
 ## Business Context
 
@@ -425,5 +516,6 @@ ${context.founderStory ? `## Founder Story\n${context.founderStory}` : ""}
 
 **Modules:**
 ${context.modules?.map((m) => `### ${m.title}\n${m.takeaways.map((t) => `- ${t}`).join("\n")}`).join("\n\n")}
+${templateGuidance}
 `.trim();
 }

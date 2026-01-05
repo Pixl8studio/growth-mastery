@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { VideoUploader } from "@/components/funnel/video-uploader";
-import { Video, Trash2, Play, Presentation, ExternalLink } from "lucide-react";
+import { Video, Trash2, Play } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
@@ -16,13 +16,6 @@ interface PitchVideo {
     created_at: string;
 }
 
-interface DeckStructure {
-    id: string;
-    title: string;
-    slide_count: number;
-    gamma_deck_url?: string;
-}
-
 export default function Step6Page({
     params,
 }: {
@@ -32,8 +25,6 @@ export default function Step6Page({
     const [project, setProject] = useState<any>(null);
     const [videos, setVideos] = useState<PitchVideo[]>([]);
     const [selectedVideo, setSelectedVideo] = useState<PitchVideo | null>(null);
-    const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
-    const [selectedDeckId, setSelectedDeckId] = useState("");
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
@@ -67,85 +58,23 @@ export default function Step6Page({
     }, [projectId]);
 
     useEffect(() => {
-        const loadData = async () => {
+        const loadVideos = async () => {
             if (!projectId) return;
             try {
                 const supabase = createClient();
+                const { data } = await supabase
+                    .from("pitch_videos")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
 
-                // Fetch videos, deck structures and gamma decks
-                const [videosResult, deckStructuresResponse, gammaDecksResponse] =
-                    await Promise.all([
-                        supabase
-                            .from("pitch_videos")
-                            .select("*")
-                            .eq("funnel_project_id", projectId)
-                            .order("created_at", { ascending: false }),
-                        fetch(`/api/funnel/${projectId}/deck-structures`),
-                        fetch(`/api/funnel/${projectId}/gamma-decks`),
-                    ]);
-
-                if (videosResult.data) setVideos(videosResult.data);
-
-                // Parse API responses for deck structures and gamma decks
-                const deckStructuresData = deckStructuresResponse.ok
-                    ? (await deckStructuresResponse.json()).deckStructures
-                    : [];
-                const gammaDecksData = gammaDecksResponse.ok
-                    ? (await gammaDecksResponse.json()).gammaDecks
-                    : [];
-
-                // Transform deck structures and merge with gamma deck URLs
-                if (deckStructuresData) {
-                    // Create map of gamma deck URLs by deck_structure_id
-                    const gammaDecksMap = new Map(
-                        (gammaDecksData || []).map((deck: any) => [
-                            deck.deck_structure_id,
-                            deck.deck_url,
-                        ])
-                    );
-
-                    logger.info(
-                        {
-                            totalGammaDecks: gammaDecksData?.length || 0,
-                            gammaDecksWithUrls: Array.from(
-                                gammaDecksMap.values()
-                            ).filter((url) => url).length,
-                        },
-                        "Loaded Gamma decks"
-                    );
-
-                    const transformed = (deckStructuresData || []).map((deck: any) => ({
-                        id: deck.id,
-                        title: deck.metadata?.title || "Untitled Deck",
-                        slide_count: Array.isArray(deck.slides)
-                            ? deck.slides.length
-                            : deck.total_slides || 55,
-                        gamma_deck_url: gammaDecksMap.get(deck.id),
-                    }));
-
-                    logger.info(
-                        {
-                            totalDecks: transformed.length,
-                            decksWithGammaUrls: transformed.filter(
-                                (d: DeckStructure) => d.gamma_deck_url
-                            ).length,
-                        },
-                        "Transformed deck structures"
-                    );
-
-                    setDeckStructures(transformed);
-
-                    // Auto-select first deck if available
-                    if (transformed.length > 0 && !selectedDeckId) {
-                        setSelectedDeckId(transformed[0].id);
-                    }
-                }
+                if (data) setVideos(data);
             } catch (error) {
-                logger.error({ error }, "Failed to load data");
+                logger.error({ error }, "Failed to load videos");
             }
         };
-        loadData();
-    }, [projectId, selectedDeckId]);
+        loadVideos();
+    }, [projectId]);
 
     const pollVideoStatus = async (
         videoId: string,
@@ -247,28 +176,6 @@ export default function Step6Page({
         }
     };
 
-    const handleViewDeck = () => {
-        const selectedDeck = deckStructures.find((d) => d.id === selectedDeckId);
-
-        logger.info(
-            {
-                selectedDeckId,
-                deckTitle: selectedDeck?.title,
-                hasGammaUrl: !!selectedDeck?.gamma_deck_url,
-                gammaUrl: selectedDeck?.gamma_deck_url,
-            },
-            "View Deck clicked"
-        );
-
-        if (selectedDeck?.gamma_deck_url) {
-            window.open(selectedDeck.gamma_deck_url, "_blank", "width=1200,height=800");
-        } else {
-            alert("No Gamma deck found for this deck structure. Create one in Step 5.");
-        }
-    };
-
-    const selectedDeck = deckStructures.find((d) => d.id === selectedDeckId);
-
     const hasVideo = videos.length > 0;
 
     if (!projectId) {
@@ -321,61 +228,6 @@ export default function Step6Page({
                         </li>
                     </ol>
                 </div>
-
-                {/* Recording Helper Section */}
-                {deckStructures.length > 0 && (
-                    <div className="rounded-lg border border-primary/10 bg-gradient-to-br from-primary/5 to-primary/5 p-6">
-                        <div className="mb-4">
-                            <h3 className="mb-2 text-lg font-semibold text-foreground">
-                                Recording Helper
-                            </h3>
-                            <p className="text-sm text-muted-foreground">
-                                Select your deck to view it while recording
-                            </p>
-                        </div>
-
-                        <div className="mb-4">
-                            <label className="mb-2 block text-sm font-medium text-foreground">
-                                Select Deck Structure
-                            </label>
-                            <select
-                                value={selectedDeckId}
-                                onChange={(e) => setSelectedDeckId(e.target.value)}
-                                className="w-full rounded-lg border border-border px-4 py-2 focus:border-primary focus:ring-2 focus:ring-primary"
-                            >
-                                {deckStructures.map((deck) => (
-                                    <option key={deck.id} value={deck.id}>
-                                        {deck.title} ({deck.slide_count} slides)
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-
-                        {selectedDeck && (
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={handleViewDeck}
-                                    disabled={!selectedDeck.gamma_deck_url}
-                                    className={`flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 font-medium transition-colors ${
-                                        selectedDeck.gamma_deck_url
-                                            ? "bg-purple-600 text-white hover:bg-purple-700"
-                                            : "cursor-not-allowed bg-gray-300 text-muted-foreground"
-                                    }`}
-                                >
-                                    <Presentation className="h-5 w-5" />
-                                    View Deck
-                                    <ExternalLink className="h-4 w-4" />
-                                </button>
-                            </div>
-                        )}
-
-                        {selectedDeck && !selectedDeck.gamma_deck_url && (
-                            <p className="mt-3 text-sm text-amber-600">
-                                Create a Gamma deck in Step 5 to view it while recording
-                            </p>
-                        )}
-                    </div>
-                )}
 
                 <div className="rounded-lg border border-red-100 bg-gradient-to-br from-red-50 to-orange-50 p-8">
                     <VideoUploader

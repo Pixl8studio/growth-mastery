@@ -1,17 +1,18 @@
 /**
  * Presentations API - AI Image Generation for Slides
  * POST /api/presentations/[id]/slides/[slideNumber]/image
- * Generates an AI image for a specific slide using the image prompt
+ * Generates an AI image for a specific slide using Gemini (primary) with OpenAI fallback
  *
  * Related: GitHub Issue #327 - AI Image Generation per Slide
  */
 
 import * as Sentry from "@sentry/nextjs";
 import { NextRequest, NextResponse } from "next/server";
-import OpenAI from "openai";
 
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
+import { generateImageWithAI } from "@/lib/ai/client";
+import { imageToBuffer } from "@/lib/ai/image-utils";
 import {
     ValidationError,
     NotFoundError,
@@ -20,21 +21,6 @@ import {
 } from "@/lib/errors";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
 import { parseSlidesFromDB } from "@/lib/presentations/schemas";
-
-// Lazy OpenAI client initialization
-let openaiClient: OpenAI | null = null;
-
-function getOpenAIClient(): OpenAI {
-    if (!openaiClient) {
-        if (!process.env.OPENAI_API_KEY) {
-            throw new Error("OPENAI_API_KEY environment variable is required");
-        }
-        openaiClient = new OpenAI({
-            apiKey: process.env.OPENAI_API_KEY,
-        });
-    }
-    return openaiClient;
-}
 
 export async function POST(
     request: NextRequest,
@@ -131,43 +117,32 @@ export async function POST(
 
         logger.info(
             { presentationId, slideNumber, promptLength: enhancedPrompt.length },
-            "Generating AI image for slide"
+            "Generating AI image for slide with Gemini"
         );
 
-        const openai = getOpenAIClient();
-
         try {
-            const response = await openai.images.generate({
-                model: "dall-e-3",
-                prompt: enhancedPrompt,
-                n: 1,
+            // Generate image with Gemini (primary) or OpenAI DALL-E (fallback)
+            const generatedImage = await generateImageWithAI(enhancedPrompt, {
                 size: "1792x1024", // 16:9 aspect ratio for slides
                 quality: "standard",
                 style: "natural",
             });
 
-            const tempImageUrl = response.data?.[0]?.url;
-
-            if (!tempImageUrl) {
-                throw new AIGenerationError("No image URL returned from OpenAI", {
+            if (!generatedImage.url) {
+                throw new AIGenerationError("No image returned from AI provider", {
                     retryable: true,
                     errorCode: "NO_IMAGE_URL",
                 });
             }
 
-            // Download image and upload to permanent storage
-            // OpenAI temporary URLs expire after 1 hour
+            // Convert image to buffer and upload to permanent storage
             let permanentImageUrl: string;
             try {
-                const imageResponse = await fetch(tempImageUrl);
-                if (!imageResponse.ok) {
-                    throw new Error(
-                        `Failed to download image: ${imageResponse.status}`
-                    );
-                }
-
-                const imageBlob = await imageResponse.blob();
-                const imageBuffer = await imageBlob.arrayBuffer();
+                // Handle both base64 (Gemini) and URL (OpenAI) formats
+                const imageBuffer = await imageToBuffer(
+                    generatedImage.url,
+                    generatedImage.isBase64
+                );
 
                 // Generate storage path for the image
                 const timestamp = Date.now();
@@ -185,10 +160,11 @@ export async function POST(
                 if (uploadError) {
                     logger.error(
                         { error: uploadError, storagePath, presentationId },
-                        "Failed to upload image to storage, falling back to temporary URL"
+                        "Failed to upload image to storage, falling back to original URL"
                     );
-                    // Fall back to temporary URL if storage fails
-                    permanentImageUrl = tempImageUrl;
+                    // Fall back to original URL if storage fails
+                    // For Gemini base64, this won't work long-term, but for OpenAI URLs it will work for 1 hour
+                    permanentImageUrl = generatedImage.url;
                 } else {
                     // Get public URL
                     const { data: urlData } = supabase.storage
@@ -204,10 +180,15 @@ export async function POST(
             } catch (downloadError) {
                 logger.error(
                     { error: downloadError, presentationId, slideNumber },
-                    "Failed to download and store image, using temporary URL"
+                    "Failed to process and store image"
                 );
-                // Fall back to temporary URL if download fails
-                permanentImageUrl = tempImageUrl;
+                // For base64, we can't fall back since the data URL won't persist
+                // For HTTP URLs, they expire after 1 hour anyway
+                // Re-throw to trigger error handling
+                throw new AIGenerationError("Failed to process generated image", {
+                    retryable: true,
+                    errorCode: "IMAGE_PROCESSING_FAILED",
+                });
             }
 
             // Update slide with permanent image URL
@@ -251,7 +232,12 @@ export async function POST(
                 generationTime: totalTime,
             });
         } catch (error) {
-            // Parse OpenAI errors
+            // Re-throw AIGenerationError directly
+            if (error instanceof AIGenerationError) {
+                throw error;
+            }
+
+            // Parse AI provider errors
             const errorMessage = error instanceof Error ? error.message : String(error);
             const isRateLimit =
                 errorMessage.toLowerCase().includes("rate limit") ||
@@ -262,7 +248,7 @@ export async function POST(
 
             if (isRateLimit) {
                 throw new AIGenerationError(
-                    "OpenAI rate limit exceeded. Please try again.",
+                    "AI provider rate limit exceeded. Please try again.",
                     {
                         retryable: true,
                         errorCode: "RATE_LIMIT",

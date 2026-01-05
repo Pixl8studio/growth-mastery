@@ -1,7 +1,7 @@
 /**
  * AI Client
  * Wrapper around Anthropic Claude API for funnel content generation
- * Uses DALL-E (OpenAI) for image generation only
+ * Uses Gemini (Google) for image generation with OpenAI DALL-E as fallback
  */
 
 import Anthropic from "@anthropic-ai/sdk";
@@ -12,6 +12,12 @@ import { logger } from "@/lib/logger";
 import { retry } from "@/lib/utils";
 import { AI_CONFIG } from "@/lib/config";
 import { recoverJSON } from "@/lib/ai/json-recovery";
+import {
+    generateImageWithGemini,
+    isGeminiAvailable,
+    GEMINI_MODELS,
+    type GeminiImageModel,
+} from "./gemini-image";
 import type {
     AIGenerationOptions,
     ImageGenerationOptions,
@@ -370,13 +376,20 @@ export async function generateTextWithAI(
 }
 
 /**
- * Generate image with DALL-E (OpenAI)
- * Uses DALL-E 3 for high-quality image generation
- *
- * NOTE: This function still uses OpenAI as Claude does not have image generation capabilities.
- * This is the only remaining OpenAI integration in the project.
+ * Extended image generation options including Gemini model selection
  */
-export async function generateImageWithAI(
+export interface ExtendedImageOptions extends ImageGenerationOptions {
+    /** Specific Gemini model to use (defaults to FLASH) */
+    geminiModel?: GeminiImageModel;
+    /** Force using OpenAI DALL-E instead of Gemini */
+    forceOpenAI?: boolean;
+}
+
+/**
+ * Generate image with DALL-E (OpenAI) - fallback provider
+ * Uses DALL-E 3 for high-quality image generation
+ */
+async function generateImageWithOpenAI(
     prompt: string,
     options?: ImageGenerationOptions
 ): Promise<GeneratedImage> {
@@ -387,7 +400,7 @@ export async function generateImageWithAI(
     const requestLogger = logger.child({ model: "dall-e-3", size, quality, style });
     requestLogger.info(
         { prompt: prompt.substring(0, 100) },
-        "Generating image with DALL-E (OpenAI)"
+        "Generating image with DALL-E (OpenAI fallback)"
     );
 
     try {
@@ -433,10 +446,11 @@ export async function generateImageWithAI(
                         return {
                             url: imageData.url,
                             revisedPrompt: imageData.revised_prompt,
+                            isBase64: false,
                         };
                     },
                     {
-                        maxAttempts: 2, // DALL-E is slower, reduce retries
+                        maxAttempts: 2,
                         delayMs: 2000,
                         backoffMultiplier: 2,
                     }
@@ -472,6 +486,70 @@ export async function generateImageWithAI(
         );
     }
 }
+
+/**
+ * Generate image using Gemini (primary) with OpenAI DALL-E fallback
+ *
+ * Uses Gemini 2.5 Flash Image (Nano Banana) by default for fast, high-quality generation.
+ * Falls back to OpenAI DALL-E 3 if Gemini is unavailable or fails.
+ *
+ * @param prompt - The text prompt describing the image to generate
+ * @param options - Generation options (size, quality, style, geminiModel)
+ */
+export async function generateImageWithAI(
+    prompt: string,
+    options?: ExtendedImageOptions
+): Promise<GeneratedImage> {
+    const requestLogger = logger.child({ operation: "image_generation" });
+
+    // If forced to use OpenAI or Gemini is not available, use OpenAI directly
+    if (options?.forceOpenAI || !isGeminiAvailable()) {
+        requestLogger.info(
+            { reason: options?.forceOpenAI ? "forced" : "gemini_unavailable" },
+            "Using OpenAI DALL-E for image generation"
+        );
+        return generateImageWithOpenAI(prompt, options);
+    }
+
+    // Try Gemini first
+    try {
+        const geminiModel = options?.geminiModel || GEMINI_MODELS.FLASH;
+        requestLogger.info(
+            { model: geminiModel, prompt: prompt.substring(0, 100) },
+            "Attempting image generation with Gemini"
+        );
+
+        const result = await generateImageWithGemini(prompt, {
+            size: options?.size,
+            model: geminiModel,
+        });
+
+        requestLogger.info({ model: geminiModel }, "Gemini image generation successful");
+        return result;
+    } catch (geminiError) {
+        // Log Gemini failure and fall back to OpenAI
+        requestLogger.warn(
+            { error: geminiError },
+            "Gemini image generation failed, falling back to OpenAI DALL-E"
+        );
+
+        Sentry.addBreadcrumb({
+            category: "ai.fallback",
+            message: "Gemini image generation failed, using OpenAI fallback",
+            level: "warning",
+            data: {
+                geminiError:
+                    geminiError instanceof Error ? geminiError.message : "Unknown",
+            },
+        });
+
+        // Fall back to OpenAI
+        return generateImageWithOpenAI(prompt, options);
+    }
+}
+
+// Re-export Gemini models for use in API routes
+export { GEMINI_MODELS, type GeminiImageModel };
 
 /**
  * Estimate token count for a string (rough approximation)

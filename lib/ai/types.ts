@@ -126,6 +126,8 @@ export interface ImageGenerationOptions {
 export interface GeneratedImage {
     url: string;
     revisedPrompt?: string;
+    /** True if url is a base64 data URL (from Gemini), false/undefined if HTTP URL (from OpenAI) */
+    isBase64?: boolean;
 }
 
 // Brand design types - Basic color palette

@@ -218,6 +218,7 @@ describe("AI Client", () => {
             expect(result).toEqual({
                 url: "https://images.openai.com/test.png",
                 revisedPrompt: "A revised prompt",
+                isBase64: false,
             });
             expect(mockImagesGenerate).toHaveBeenCalled();
         });

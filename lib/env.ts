@@ -41,9 +41,14 @@ const envSchema = z.object({
     ANTHROPIC_API_KEY: z.string().optional(),
 
     // ===========================================
-    // OpenAI Configuration (Image Generation Only)
+    // OpenAI Configuration (Image Generation Fallback)
     // ===========================================
     OPENAI_API_KEY: z.string().optional(),
+
+    // ===========================================
+    // Google Gemini Configuration (Primary Image Generation)
+    // ===========================================
+    GEMINI_API_KEY: z.string().optional(),
 
     // ===========================================
     // VAPI Configuration

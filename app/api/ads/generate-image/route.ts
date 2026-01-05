@@ -1,17 +1,19 @@
 /**
  * Ad Image Generation API
- * Generate ad-specific images using DALL-E for Meta/Instagram ads
+ * Generate ad-specific images using Gemini for Meta/Instagram ads
+ * Uses Gemini 3 Pro for Facebook Feed (higher quality) and Gemini 2.5 Flash for others
  *
  * Supports standard ad dimensions:
- * - 1200x628 (Facebook Feed, landscape)
- * - 1080x1080 (Instagram Feed, square)
- * - 1792x1024 (Story/Reel, closest DALL-E supported ratio)
+ * - 1200x628 (Facebook Feed, landscape) - Uses Gemini 3 Pro
+ * - 1080x1080 (Instagram Feed, square) - Uses Gemini 2.5 Flash
+ * - 1792x1024 (Story/Reel) - Uses Gemini 2.5 Flash
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
-import { generateImageWithAI } from "@/lib/ai/client";
+import { generateImageWithAI, GEMINI_MODELS } from "@/lib/ai/client";
+import { imageToBuffer } from "@/lib/ai/image-utils";
 import { AuthenticationError, ValidationError } from "@/lib/errors";
 import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
@@ -91,35 +93,40 @@ export async function POST(request: NextRequest) {
 
         const size = FORMAT_TO_SIZE[format];
 
+        // Select Gemini model based on ad format
+        // Facebook Feed uses Gemini 3 Pro for higher quality
+        // Other formats use Gemini 2.5 Flash for speed
+        const geminiModel =
+            format === "facebook_feed" ? GEMINI_MODELS.PRO : GEMINI_MODELS.FLASH;
+
         requestLogger.info(
             {
                 userId: user.id,
                 projectId: funnel_project_id,
                 format,
                 size,
+                geminiModel,
                 promptLength: prompt.length,
             },
-            "Generating ad image with DALL-E"
+            "Generating ad image with Gemini"
         );
 
         // Enhance prompt for ad-specific generation
         const adPrompt = buildAdPrompt(prompt, format);
 
-        // Generate image with DALL-E
+        // Generate image with Gemini (primary) or OpenAI DALL-E (fallback)
         const generatedImage = await generateImageWithAI(adPrompt, {
             size,
             quality,
             style,
+            geminiModel,
         });
 
-        // Download the generated image from OpenAI
-        const imageResponse = await fetch(generatedImage.url);
-        if (!imageResponse.ok) {
-            throw new Error("Failed to download generated image");
-        }
-
-        const imageBlob = await imageResponse.blob();
-        const imageBuffer = await imageBlob.arrayBuffer();
+        // Convert image to buffer - handle both base64 (Gemini) and URL (OpenAI)
+        const imageBuffer = await imageToBuffer(
+            generatedImage.url,
+            generatedImage.isBase64
+        );
 
         // Generate storage path
         const timestamp = Date.now();
@@ -165,6 +172,8 @@ export async function POST(request: NextRequest) {
                     quality,
                     style,
                     generated_for: "meta_ads",
+                    provider: generatedImage.isBase64 ? "gemini" : "openai",
+                    gemini_model: generatedImage.isBase64 ? geminiModel : undefined,
                 },
             })
             .select()

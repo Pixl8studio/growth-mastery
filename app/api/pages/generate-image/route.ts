@@ -1,12 +1,14 @@
 /**
  * AI Image Generation API
- * Generate images using DALL-E and save to Supabase Storage
+ * Generate images using Gemini (primary) with OpenAI DALL-E fallback
+ * Saves generated images to Supabase Storage
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { generateImageWithAI } from "@/lib/ai/client";
+import { imageToBuffer } from "@/lib/ai/image-utils";
 import * as Sentry from "@sentry/nextjs";
 
 const MAX_PROMPT_LENGTH = 4000;
@@ -84,24 +86,21 @@ export async function POST(request: NextRequest) {
                 size,
                 quality,
             },
-            "Generating image with DALL-E"
+            "Generating image with Gemini (OpenAI fallback)"
         );
 
-        // Generate image with DALL-E
+        // Generate image with Gemini (primary) or OpenAI DALL-E (fallback)
         const generatedImage = await generateImageWithAI(prompt, {
             size: size || "1024x1024",
             quality: quality || "standard",
             style: "vivid",
         });
 
-        // Download the generated image from OpenAI
-        const imageResponse = await fetch(generatedImage.url);
-        if (!imageResponse.ok) {
-            throw new Error("Failed to download generated image");
-        }
-
-        const imageBlob = await imageResponse.blob();
-        const imageBuffer = await imageBlob.arrayBuffer();
+        // Convert image to buffer - handle both base64 (Gemini) and URL (OpenAI)
+        const imageBuffer = await imageToBuffer(
+            generatedImage.url,
+            generatedImage.isBase64
+        );
 
         // Generate storage path
         const timestamp = Date.now();
@@ -148,6 +147,7 @@ export async function POST(request: NextRequest) {
                     revised_prompt: generatedImage.revisedPrompt,
                     size: size || "1024x1024",
                     quality: quality || "standard",
+                    provider: generatedImage.isBase64 ? "gemini" : "openai",
                 },
             })
             .select()

@@ -102,7 +102,9 @@ export async function POST(request: NextRequest) {
             const requiredFields = nodeDef.fields.filter((f) => f.required);
             const missingFields = requiredFields.filter((f) => {
                 const value = (contentToApprove as Record<string, unknown>)[f.key];
-                return value === undefined || value === null || value === "";
+                if (value === undefined || value === null || value === "") return true;
+                if (Array.isArray(value) && value.length === 0) return true;
+                return false;
             });
 
             if (missingFields.length > 0) {

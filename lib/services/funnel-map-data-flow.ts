@@ -205,8 +205,7 @@ export async function syncToOffersTable(
             name: coreOfferData.promise || "Main Offer",
             description: coreOfferData.product,
             price:
-                typeof coreOfferData.price === "object" &&
-                coreOfferData.price !== null
+                typeof coreOfferData.price === "object" && coreOfferData.price !== null
                     ? (coreOfferData.price as Record<string, number>).webinar ||
                       (coreOfferData.price as Record<string, number>).regular
                     : null,
@@ -259,7 +258,10 @@ export async function syncToOffersTable(
             return { success: true, offerId: data.id };
         }
     } catch (error) {
-        flowLogger.error({ error, projectId: context.projectId }, "Failed to sync to offers");
+        flowLogger.error(
+            { error, projectId: context.projectId },
+            "Failed to sync to offers"
+        );
         Sentry.captureException(error, {
             tags: { action: "sync_funnel_to_offers" },
             extra: { projectId: context.projectId },
@@ -322,7 +324,12 @@ export function checkDownstreamReadiness(
  * Get required nodes for a specific downstream step
  */
 export function getRequiredNodesForStep(
-    step: "brand_design" | "deck_structure" | "registration_page" | "enrollment_page" | "watch_page"
+    step:
+        | "brand_design"
+        | "deck_structure"
+        | "registration_page"
+        | "enrollment_page"
+        | "watch_page"
 ): FunnelNodeType[] {
     switch (step) {
         case "brand_design":

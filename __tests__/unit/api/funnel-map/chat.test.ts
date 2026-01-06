@@ -333,7 +333,9 @@ describe("Funnel Map Chat API", () => {
             // Verify the AI was called with sanitized content
             expect(mockGenerateWithAI).toHaveBeenCalled();
             const aiMessages = mockGenerateWithAI.mock.calls[0][0];
-            const userMessage = aiMessages.find((m: { role: string }) => m.role === "user");
+            const userMessage = aiMessages.find(
+                (m: { role: string }) => m.role === "user"
+            );
             expect(userMessage.content).not.toContain("[system]");
             expect(userMessage.content).toContain("[user_input]");
         });
@@ -349,7 +351,9 @@ describe("Funnel Map Chat API", () => {
 
             expect(mockGenerateWithAI).toHaveBeenCalled();
             const aiMessages = mockGenerateWithAI.mock.calls[0][0];
-            const userMessage = aiMessages.find((m: { role: string }) => m.role === "user");
+            const userMessage = aiMessages.find(
+                (m: { role: string }) => m.role === "user"
+            );
             expect(userMessage.content).not.toContain("[assistant]");
         });
 
@@ -364,7 +368,9 @@ describe("Funnel Map Chat API", () => {
 
             expect(mockGenerateWithAI).toHaveBeenCalled();
             const aiMessages = mockGenerateWithAI.mock.calls[0][0];
-            const userMessage = aiMessages.find((m: { role: string }) => m.role === "user");
+            const userMessage = aiMessages.find(
+                (m: { role: string }) => m.role === "user"
+            );
             expect(userMessage.content).toContain("[filtered]");
         });
 
@@ -379,7 +385,9 @@ describe("Funnel Map Chat API", () => {
 
             expect(mockGenerateWithAI).toHaveBeenCalled();
             const aiMessages = mockGenerateWithAI.mock.calls[0][0];
-            const userMessage = aiMessages.find((m: { role: string }) => m.role === "user");
+            const userMessage = aiMessages.find(
+                (m: { role: string }) => m.role === "user"
+            );
             expect(userMessage.content).not.toMatch(/##\s*system/i);
         });
 
@@ -516,7 +524,9 @@ describe("Funnel Map Chat API", () => {
 
     describe("Error Handling", () => {
         it("should return 500 on unexpected errors", async () => {
-            mockGenerateWithAI.mockRejectedValueOnce(new Error("AI service unavailable"));
+            mockGenerateWithAI.mockRejectedValueOnce(
+                new Error("AI service unavailable")
+            );
 
             const { POST } = await import("@/app/api/funnel-map/chat/route");
             const response = await POST(createChatRequest(VALID_CHAT_REQUEST));

@@ -40,9 +40,7 @@ export function LoadingExperience({
         }
 
         const messageInterval = setInterval(() => {
-            setCurrentMessageIndex(
-                (prev) => (prev + 1) % LOADING_MESSAGES.length
-            );
+            setCurrentMessageIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
         }, 2500);
 
         return () => clearInterval(messageInterval);
@@ -53,8 +51,7 @@ export function LoadingExperience({
         if (!isLoading) return;
 
         // Calculate target progress based on completed nodes
-        const nodeProgress =
-            totalNodes > 0 ? (completedNodes / totalNodes) * 100 : 0;
+        const nodeProgress = totalNodes > 0 ? (completedNodes / totalNodes) * 100 : 0;
 
         // Smooth progress animation
         const progressInterval = setInterval(() => {
@@ -157,12 +154,7 @@ export function LoadingIndicator({
     className?: string;
 }) {
     return (
-        <div
-            className={cn(
-                "flex items-center gap-2 text-muted-foreground",
-                className
-            )}
-        >
+        <div className={cn("flex items-center gap-2 text-muted-foreground", className)}>
             <Loader2 className="h-4 w-4 animate-spin" />
             <span className="text-sm">{message || "Loading..."}</span>
         </div>

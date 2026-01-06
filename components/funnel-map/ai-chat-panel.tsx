@@ -142,10 +142,16 @@ export function AIChatPanel({
 
             if (error instanceof Error) {
                 const errorMessage = error.message.toLowerCase();
-                if (errorMessage.includes("rate limit") || errorMessage.includes("429")) {
+                if (
+                    errorMessage.includes("rate limit") ||
+                    errorMessage.includes("429")
+                ) {
                     errorContent =
                         "You've reached the request limit. Please wait a moment before trying again.";
-                } else if (errorMessage.includes("network") || errorMessage.includes("fetch")) {
+                } else if (
+                    errorMessage.includes("network") ||
+                    errorMessage.includes("fetch")
+                ) {
                     errorContent =
                         "Unable to connect to the server. Please check your internet connection and try again.";
                 } else if (errorMessage.includes("timeout")) {
@@ -332,9 +338,7 @@ export function AIChatPanel({
                     </div>
                     <div className="max-h-32 overflow-y-auto space-y-2">
                         {Object.entries(pendingChanges).map(([key, value]) => {
-                            const field = definition.fields.find(
-                                (f) => f.key === key
-                            );
+                            const field = definition.fields.find((f) => f.key === key);
                             return (
                                 <div
                                     key={key}
@@ -365,13 +369,9 @@ export function AIChatPanel({
                         <div className="text-xs text-muted-foreground max-w-xs">
                             <p className="mb-2">Try asking:</p>
                             <ul className="space-y-1 text-left">
-                                <li>
-                                    • "Make the headline more compelling"
-                                </li>
+                                <li>• "Make the headline more compelling"</li>
                                 <li>• "Add more urgency to the CTA"</li>
-                                <li>
-                                    • "Rewrite this for a different audience"
-                                </li>
+                                <li>• "Rewrite this for a different audience"</li>
                             </ul>
                         </div>
                     </div>

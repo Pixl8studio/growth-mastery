@@ -21,6 +21,7 @@ export type FunnelNodeType =
     | "masterclass"
     | "core_offer"
     | "checkout"
+    | "upsells" // Legacy value for backward compatibility
     | "upsell_1"
     | "upsell_2"
     | "order_bump"
@@ -350,9 +351,7 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 placeholder: "e.g., $5,000/month",
             },
         ],
-        benchmark: FUNNEL_BENCHMARKS.find(
-            (b) => b.node_type === "registration"
-        )!,
+        benchmark: FUNNEL_BENCHMARKS.find((b) => b.node_type === "registration")!,
     },
     {
         id: "registration",
@@ -407,8 +406,7 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "social_proof",
                 label: "Social Proof Element",
                 type: "textarea",
-                placeholder:
-                    "e.g., 'Join 10,000+ entrepreneurs who have...'",
+                placeholder: "e.g., 'Join 10,000+ entrepreneurs who have...'",
             },
             {
                 key: "cta_text",
@@ -417,9 +415,7 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 placeholder: "e.g., 'Reserve My Free Seat'",
             },
         ],
-        benchmark: FUNNEL_BENCHMARKS.find(
-            (b) => b.node_type === "registration"
-        )!,
+        benchmark: FUNNEL_BENCHMARKS.find((b) => b.node_type === "registration")!,
     },
     {
         id: "registration_confirmation",
@@ -455,8 +451,7 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "pre_event_content",
                 label: "Pre-Event Content",
                 type: "textarea",
-                helpText:
-                    "Optional content to engage registrants before the event",
+                helpText: "Optional content to engage registrants before the event",
             },
             {
                 key: "share_prompt",
@@ -492,8 +487,7 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "hook",
                 label: "Opening Hook",
                 type: "textarea",
-                placeholder:
-                    "The attention-grabbing opening that pulls them in",
+                placeholder: "The attention-grabbing opening that pulls them in",
             },
             {
                 key: "origin_story",
@@ -532,9 +526,7 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 helpText: "Key points that set up the offer reveal",
             },
         ],
-        benchmark: FUNNEL_BENCHMARKS.find(
-            (b) => b.node_type === "masterclass"
-        )!,
+        benchmark: FUNNEL_BENCHMARKS.find((b) => b.node_type === "masterclass")!,
     },
     {
         id: "core_offer",
@@ -550,8 +542,7 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 label: "Promise - What outcome do you guarantee?",
                 type: "textarea",
                 required: true,
-                helpText:
-                    "The specific, measurable result they'll achieve",
+                helpText: "The specific, measurable result they'll achieve",
             },
             {
                 key: "person",
@@ -608,9 +599,7 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
             },
         ],
         benchmark: FUNNEL_BENCHMARKS.find(
-            (b) =>
-                b.node_type === "core_offer" &&
-                b.pathway_type === "direct_purchase"
+            (b) => b.node_type === "core_offer" && b.pathway_type === "direct_purchase"
         )!,
     },
     {
@@ -883,9 +872,7 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 placeholder: "Your scheduling link",
             },
         ],
-        benchmark: FUNNEL_BENCHMARKS.find(
-            (b) => b.node_type === "call_booking"
-        )!,
+        benchmark: FUNNEL_BENCHMARKS.find((b) => b.node_type === "call_booking")!,
     },
     {
         id: "call_booking_confirmation",

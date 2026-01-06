@@ -12,12 +12,10 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { logger } from "@/lib/logger";
 import * as Sentry from "@sentry/nextjs";
-import { rateLimit } from "@/lib/middleware/rate-limit";
-import { generateText } from "ai";
-import { openai } from "@ai-sdk/openai";
+import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
+import { generateWithAI, type AIMessage } from "@/lib/ai/client";
 import type { FunnelNodeType, PathwayType } from "@/types/funnel-map";
 import { getNodeDefinition } from "@/types/funnel-map";
-import { AI_DRAFT_MAX_TOKENS, AI_DRAFT_TEMPERATURE } from "@/lib/config/funnel-map";
 
 const regenerateRequestSchema = z.object({
     projectId: z.string().uuid(),
@@ -32,27 +30,13 @@ export async function POST(request: NextRequest) {
     });
 
     try {
-        // Rate limiting - more restrictive since this is expensive
-        const rateLimitResult = await rateLimit(request, {
-            identifier: "funnel-map-regenerate",
-            limit: 30,
-            window: 60 * 60, // 30 per hour
-        });
-
-        if (!rateLimitResult.success) {
-            return NextResponse.json(
-                { error: "Rate limit exceeded. Please try again later." },
-                { status: 429 }
-            );
-        }
-
         // Parse request
         const body = await request.json();
         const parseResult = regenerateRequestSchema.safeParse(body);
 
         if (!parseResult.success) {
             return NextResponse.json(
-                { error: "Invalid request", details: parseResult.error.errors },
+                { error: "Invalid request", details: parseResult.error.issues },
                 { status: 400 }
             );
         }
@@ -91,6 +75,16 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Rate limiting - use funnel-drafts endpoint (expensive operations, 10/hour)
+        const rateLimitIdentifier = getRateLimitIdentifier(request, user.id);
+        const rateLimitResponse = await checkRateLimit(
+            rateLimitIdentifier,
+            "funnel-drafts"
+        );
+        if (rateLimitResponse) {
+            return rateLimitResponse;
+        }
+
         requestLogger.info(
             { userId: user.id, projectId, nodeType },
             "Regenerating node draft"
@@ -99,10 +93,7 @@ export async function POST(request: NextRequest) {
         // Get node definition
         const nodeDef = getNodeDefinition(nodeType);
         if (!nodeDef) {
-            return NextResponse.json(
-                { error: "Invalid node type" },
-                { status: 400 }
-            );
+            return NextResponse.json({ error: "Invalid node type" }, { status: 400 });
         }
 
         // Fetch business profile for context
@@ -136,30 +127,22 @@ export async function POST(request: NextRequest) {
             pathwayType
         );
 
-        // Generate new draft
-        const { text: responseText } = await generateText({
-            model: openai("gpt-4o"),
-            maxTokens: AI_DRAFT_MAX_TOKENS,
-            temperature: AI_DRAFT_TEMPERATURE,
-            system: systemPrompt,
-            prompt: `Generate fresh content for the "${nodeDef.title}" step of this funnel. Be creative and provide high-quality, conversion-optimized copy based on the business context provided. Return ONLY valid JSON.`,
-        });
+        // Generate new draft using Claude
+        const messages: AIMessage[] = [
+            { role: "system", content: systemPrompt },
+            {
+                role: "user",
+                content: `Generate fresh content for the "${nodeDef.title}" step of this funnel. Be creative and provide high-quality, conversion-optimized copy based on the business context provided. Return ONLY valid JSON.`,
+            },
+        ];
 
-        // Parse the response
-        let newDraftContent: Record<string, unknown>;
-        try {
-            const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-            if (!jsonMatch) {
-                throw new Error("No JSON found in response");
+        const newDraftContent = await generateWithAI<Record<string, unknown>>(
+            messages,
+            {
+                temperature: 0.7,
+                maxTokens: 2000,
             }
-            newDraftContent = JSON.parse(jsonMatch[0]);
-        } catch (parseError) {
-            requestLogger.error({ parseError, responseText }, "Failed to parse AI response");
-            return NextResponse.json(
-                { error: "Failed to generate valid content. Please try again." },
-                { status: 500 }
-            );
-        }
+        );
 
         // Update the node with new draft
         const { error: updateError } = await supabase
@@ -177,7 +160,10 @@ export async function POST(request: NextRequest) {
             .eq("user_id", user.id);
 
         if (updateError) {
-            requestLogger.error({ error: updateError }, "Failed to save regenerated draft");
+            requestLogger.error(
+                { error: updateError },
+                "Failed to save regenerated draft"
+            );
             Sentry.captureException(updateError, {
                 tags: { action: "regenerate_node" },
                 extra: { projectId, nodeType },

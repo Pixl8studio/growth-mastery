@@ -12,7 +12,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { logger } from "@/lib/logger";
 import * as Sentry from "@sentry/nextjs";
-import { rateLimit } from "@/lib/middleware/rate-limit";
+import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
 import type { FunnelNodeType } from "@/types/funnel-map";
 
 const approveRequestSchema = z.object({
@@ -25,27 +25,13 @@ export async function POST(request: NextRequest) {
     const requestLogger = logger.child({ requestId, route: "funnel-map/approve" });
 
     try {
-        // Rate limiting
-        const rateLimitResult = await rateLimit(request, {
-            identifier: "funnel-map-approve",
-            limit: 100,
-            window: 60 * 60, // 100 per hour
-        });
-
-        if (!rateLimitResult.success) {
-            return NextResponse.json(
-                { error: "Rate limit exceeded. Please try again later." },
-                { status: 429 }
-            );
-        }
-
-        // Parse request
+        // Parse request first to get user for rate limiting
         const body = await request.json();
         const parseResult = approveRequestSchema.safeParse(body);
 
         if (!parseResult.success) {
             return NextResponse.json(
-                { error: "Invalid request", details: parseResult.error.errors },
+                { error: "Invalid request", details: parseResult.error.issues },
                 { status: 400 }
             );
         }
@@ -84,6 +70,16 @@ export async function POST(request: NextRequest) {
             );
         }
 
+        // Rate limiting - use funnel-chat endpoint (lighter weight operations)
+        const rateLimitIdentifier = getRateLimitIdentifier(request, user.id);
+        const rateLimitResponse = await checkRateLimit(
+            rateLimitIdentifier,
+            "funnel-chat"
+        );
+        if (rateLimitResponse) {
+            return rateLimitResponse;
+        }
+
         requestLogger.info({ userId: user.id, projectId, nodeType }, "Approving node");
 
         // Fetch the node data
@@ -97,10 +93,7 @@ export async function POST(request: NextRequest) {
 
         if (fetchError || !nodeData) {
             requestLogger.warn({ projectId, nodeType }, "Node not found");
-            return NextResponse.json(
-                { error: "Node not found" },
-                { status: 404 }
-            );
+            return NextResponse.json({ error: "Node not found" }, { status: 404 });
         }
 
         // Check if already approved

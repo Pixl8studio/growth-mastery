@@ -164,7 +164,10 @@ export default function Step2Page({
             // Update local state with new drafts
             const nodeMap = new Map<FunnelNodeType, FunnelNodeData>();
             result.drafts.forEach(
-                (draft: { nodeType: FunnelNodeType; content: Record<string, unknown> }) => {
+                (draft: {
+                    nodeType: FunnelNodeType;
+                    content: Record<string, unknown>;
+                }) => {
                     nodeMap.set(draft.nodeType, {
                         id: crypto.randomUUID(),
                         funnel_project_id: projectId,
@@ -176,6 +179,9 @@ export default function Step2Page({
                         status: "draft",
                         is_active: true,
                         pathway_type: result.pathwayType,
+                        is_approved: false,
+                        approved_at: null,
+                        approved_content: {},
                         created_at: new Date().toISOString(),
                         updated_at: new Date().toISOString(),
                     });

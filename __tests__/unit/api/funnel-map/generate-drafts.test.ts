@@ -33,9 +33,10 @@ vi.mock("@/lib/supabase/server", () => ({
                 return {
                     select: vi.fn(() => ({
                         eq: vi.fn(() => ({
-                            single: tableName === "funnel_projects"
-                                ? mockSupabaseSelectProject
-                                : mockSupabaseSelectProfile,
+                            single:
+                                tableName === "funnel_projects"
+                                    ? mockSupabaseSelectProject
+                                    : mockSupabaseSelectProfile,
                         })),
                     })),
                     upsert: vi.fn((data, options) => {
@@ -118,7 +119,10 @@ const TEST_BUSINESS_PROFILE = {
     pricing: { webinar: 997, regular: 1497 },
     vehicle_belief_shift: { old: "Old way", new: "New way" },
     internal_belief_shift: { doubt: "Can't do it", confidence: "Can do it" },
-    external_belief_shift: { resources: "Need money", resourcefulness: "Just need skills" },
+    external_belief_shift: {
+        resources: "Need money",
+        resourcefulness: "Just need skills",
+    },
     top_objections: [{ objection: "Too expensive", response: "ROI explanation" }],
 };
 
@@ -185,7 +189,9 @@ describe("Funnel Map Generate Drafts API", () => {
             mockSupabaseAuth.mockResolvedValueOnce({ data: { user: null } });
 
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             expect(response.status).toBe(401);
             const data = await response.json();
@@ -206,7 +212,9 @@ describe("Funnel Map Generate Drafts API", () => {
             });
 
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             expect(response.status).toBe(429);
         });
@@ -215,7 +223,9 @@ describe("Funnel Map Generate Drafts API", () => {
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
             await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
 
-            const { getRateLimitIdentifier } = await import("@/lib/middleware/rate-limit");
+            const { getRateLimitIdentifier } = await import(
+                "@/lib/middleware/rate-limit"
+            );
             expect(getRateLimitIdentifier).toHaveBeenCalled();
             expect(mockCheckRateLimitWithInfo).toHaveBeenCalledWith(
                 "user:test-user-id",
@@ -285,11 +295,14 @@ describe("Funnel Map Generate Drafts API", () => {
 
         it("should return error status for invalid JSON body", async () => {
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const request = new NextRequest("http://localhost/api/funnel-map/generate-drafts", {
-                method: "POST",
-                body: "not valid json",
-                headers: { "Content-Type": "application/json" },
-            });
+            const request = new NextRequest(
+                "http://localhost/api/funnel-map/generate-drafts",
+                {
+                    method: "POST",
+                    body: "not valid json",
+                    headers: { "Content-Type": "application/json" },
+                }
+            );
 
             const response = await POST(request);
             // JSON parse errors are caught in the generic catch block, returning 500
@@ -305,7 +318,9 @@ describe("Funnel Map Generate Drafts API", () => {
             });
 
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             expect(response.status).toBe(404);
             const data = await response.json();
@@ -319,7 +334,9 @@ describe("Funnel Map Generate Drafts API", () => {
             });
 
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             expect(response.status).toBe(403);
             const data = await response.json();
@@ -335,7 +352,9 @@ describe("Funnel Map Generate Drafts API", () => {
             });
 
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             expect(response.status).toBe(400);
             const data = await response.json();
@@ -351,7 +370,9 @@ describe("Funnel Map Generate Drafts API", () => {
             });
 
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             expect(response.status).toBe(200);
             const data = await response.json();
@@ -365,7 +386,9 @@ describe("Funnel Map Generate Drafts API", () => {
             });
 
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             expect(response.status).toBe(200);
             const data = await response.json();
@@ -395,7 +418,9 @@ describe("Funnel Map Generate Drafts API", () => {
     describe("AI Draft Generation", () => {
         it("should generate drafts for all pathway nodes", async () => {
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             expect(response.status).toBe(200);
             const data = await response.json();
@@ -413,7 +438,9 @@ describe("Funnel Map Generate Drafts API", () => {
                 .mockResolvedValue(MOCK_AI_DRAFT); // Rest succeed
 
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             expect(response.status).toBe(200);
             const data = await response.json();
@@ -429,7 +456,9 @@ describe("Funnel Map Generate Drafts API", () => {
                 .mockResolvedValue(MOCK_AI_DRAFT);
 
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             const data = await response.json();
             // At least one draft should have empty content
@@ -449,7 +478,9 @@ describe("Funnel Map Generate Drafts API", () => {
             });
 
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             const data = await response.json();
             // Check that the response doesn't contain [system]
@@ -466,7 +497,9 @@ describe("Funnel Map Generate Drafts API", () => {
             });
 
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             const data = await response.json();
             // Check that array items are sanitized
@@ -511,7 +544,9 @@ describe("Funnel Map Generate Drafts API", () => {
                 .mockResolvedValueOnce({ error: null });
 
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             expect(response.status).toBe(200);
             // Should have retried 3 times
@@ -523,7 +558,9 @@ describe("Funnel Map Generate Drafts API", () => {
             mockSupabaseUpsert.mockResolvedValue({ error: { message: "Batch error" } });
 
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             // Should have tried batch 3 times, then individual saves
             // 3 batch retries + individual saves for each node
@@ -547,7 +584,9 @@ describe("Funnel Map Generate Drafts API", () => {
             });
 
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             const data = await response.json();
             expect(data.warnings).toBeDefined();
@@ -558,7 +597,9 @@ describe("Funnel Map Generate Drafts API", () => {
             mockSupabaseUpsert.mockResolvedValue({ error: { message: "All failed" } });
 
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             expect(response.status).toBe(500);
             const data = await response.json();
@@ -568,10 +609,14 @@ describe("Funnel Map Generate Drafts API", () => {
 
     describe("Error Handling", () => {
         it("should return 500 on unexpected errors", async () => {
-            mockSupabaseSelectProfile.mockRejectedValueOnce(new Error("Unexpected error"));
+            mockSupabaseSelectProfile.mockRejectedValueOnce(
+                new Error("Unexpected error")
+            );
 
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             expect(response.status).toBe(500);
         });
@@ -590,7 +635,9 @@ describe("Funnel Map Generate Drafts API", () => {
     describe("Response Format", () => {
         it("should return proper response structure on success", async () => {
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             expect(response.status).toBe(200);
             const data = await response.json();
@@ -603,7 +650,9 @@ describe("Funnel Map Generate Drafts API", () => {
 
         it("should include nodeType and content for each draft", async () => {
             const { POST } = await import("@/app/api/funnel-map/generate-drafts/route");
-            const response = await POST(createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID }));
+            const response = await POST(
+                createGenerateDraftsRequest({ projectId: TEST_PROJECT_ID })
+            );
 
             const data = await response.json();
 

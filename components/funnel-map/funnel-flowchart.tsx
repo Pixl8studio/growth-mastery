@@ -4,6 +4,12 @@
  * Funnel Flowchart Component
  * Visual flowchart for the Step 2 Funnel Co-Creation Experience
  * Uses React Flow for interactive node-based visualization
+ *
+ * Enhanced with Issue #407 features:
+ * - Conditional node visibility
+ * - Approval workflow integration
+ * - Industry benchmarks
+ * - New node types support
  */
 
 import { useCallback, useEffect, useMemo } from "react";
@@ -26,6 +32,7 @@ import type {
     FunnelNodeType,
     FunnelNodeData,
     PathwayType,
+    RegistrationConfig,
 } from "@/types/funnel-map";
 import { getNodesForPathway, FUNNEL_NODE_DEFINITIONS } from "@/types/funnel-map";
 
@@ -34,13 +41,14 @@ interface FunnelFlowchartProps {
     nodeData: Map<FunnelNodeType, FunnelNodeData>;
     selectedNode: FunnelNodeType | null;
     onNodeSelect: (nodeType: FunnelNodeType) => void;
+    onNodeApprove?: (nodeType: FunnelNodeType) => void;
+    onNodeRegenerate?: (nodeType: FunnelNodeType) => void;
     isGeneratingDrafts?: boolean;
+    registrationConfig?: RegistrationConfig | null;
+    showBenchmarks?: boolean;
 }
 
 // Custom node types for React Flow
-// React Flow passes additional props (id, dragging, etc.) to node components,
-// but our FunnelNode only needs the data prop. Using type assertion here is
-// safe because React Flow handles the prop injection internally.
 import type { NodeTypes } from "@xyflow/react";
 
 const nodeTypes = {
@@ -48,9 +56,9 @@ const nodeTypes = {
 } as NodeTypes;
 
 // Node spacing
-const NODE_SPACING_Y = 140;
+const NODE_SPACING_Y = 160; // Increased for action buttons
 
-// Color mappings
+// Color mappings - extended for new node types
 const NODE_COLORS: Record<string, { bg: string; border: string; text: string }> = {
     blue: {
         bg: "bg-blue-50",
@@ -97,6 +105,26 @@ const NODE_COLORS: Record<string, { bg: string; border: string; text: string }> 
         border: "border-pink-200",
         text: "text-pink-700",
     },
+    teal: {
+        bg: "bg-teal-50",
+        border: "border-teal-200",
+        text: "text-teal-700",
+    },
+    violet: {
+        bg: "bg-violet-50",
+        border: "border-violet-200",
+        text: "text-violet-700",
+    },
+    lime: {
+        bg: "bg-lime-50",
+        border: "border-lime-200",
+        text: "text-lime-700",
+    },
+    yellow: {
+        bg: "bg-yellow-50",
+        border: "border-yellow-200",
+        text: "text-yellow-700",
+    },
 };
 
 export function FunnelFlowchart({
@@ -104,12 +132,16 @@ export function FunnelFlowchart({
     nodeData,
     selectedNode,
     onNodeSelect,
+    onNodeApprove,
+    onNodeRegenerate,
     isGeneratingDrafts = false,
+    registrationConfig,
+    showBenchmarks = true,
 }: FunnelFlowchartProps) {
-    // Get nodes for the selected pathway
+    // Get nodes for the selected pathway, filtering conditional nodes
     const pathwayNodes = useMemo(
-        () => getNodesForPathway(pathwayType),
-        [pathwayType]
+        () => getNodesForPathway(pathwayType, registrationConfig),
+        [pathwayType, registrationConfig]
     );
 
     // Create React Flow nodes
@@ -133,38 +165,60 @@ export function FunnelFlowchart({
                     status: data?.status || "draft",
                     isGenerating: isGeneratingDrafts && !data,
                     onSelect: () => onNodeSelect(nodeDef.id),
+                    onApprove: onNodeApprove
+                        ? () => onNodeApprove(nodeDef.id)
+                        : undefined,
+                    onRegenerate: onNodeRegenerate
+                        ? () => onNodeRegenerate(nodeDef.id)
+                        : undefined,
+                    pathwayType,
+                    showBenchmarks,
                 },
                 sourcePosition: Position.Bottom,
                 targetPosition: Position.Top,
             };
         });
-    }, [pathwayNodes, nodeData, selectedNode, isGeneratingDrafts, onNodeSelect]);
+    }, [
+        pathwayNodes,
+        nodeData,
+        selectedNode,
+        isGeneratingDrafts,
+        onNodeSelect,
+        onNodeApprove,
+        onNodeRegenerate,
+        pathwayType,
+        showBenchmarks,
+    ]);
 
     // Create edges connecting nodes in sequence
     const initialEdges: Edge[] = useMemo(() => {
-        return pathwayNodes.slice(0, -1).map((nodeDef, index) => ({
-            id: `edge-${nodeDef.id}-${pathwayNodes[index + 1].id}`,
-            source: nodeDef.id,
-            target: pathwayNodes[index + 1].id,
-            type: "smoothstep",
-            animated: isGeneratingDrafts,
-            style: {
-                strokeWidth: 2,
-                stroke: "#94a3b8",
-            },
-            markerEnd: {
-                type: MarkerType.ArrowClosed,
-                color: "#94a3b8",
-            },
-        }));
-    }, [pathwayNodes, isGeneratingDrafts]);
+        return pathwayNodes.slice(0, -1).map((nodeDef, index) => {
+            const sourceData = nodeData.get(nodeDef.id);
+            const targetData = nodeData.get(pathwayNodes[index + 1].id);
+            const isApproved = sourceData?.is_approved && targetData?.is_approved;
+
+            return {
+                id: `edge-${nodeDef.id}-${pathwayNodes[index + 1].id}`,
+                source: nodeDef.id,
+                target: pathwayNodes[index + 1].id,
+                type: "smoothstep",
+                animated: isGeneratingDrafts,
+                style: {
+                    strokeWidth: 2,
+                    stroke: isApproved ? "#22c55e" : "#94a3b8",
+                },
+                markerEnd: {
+                    type: MarkerType.ArrowClosed,
+                    color: isApproved ? "#22c55e" : "#94a3b8",
+                },
+            };
+        });
+    }, [pathwayNodes, isGeneratingDrafts, nodeData]);
 
     const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
     // Update nodes when data changes
-    // Using useEffect for side effects (calling setNodes/setEdges) instead of useMemo
-    // This follows React's rules of hooks and prevents state updates during render
     useEffect(() => {
         setNodes(initialNodes);
     }, [initialNodes, setNodes]);
@@ -228,6 +282,10 @@ export function FunnelFlowchart({
                             indigo: "#6366f1",
                             rose: "#f43f5e",
                             pink: "#ec4899",
+                            teal: "#14b8a6",
+                            violet: "#8b5cf6",
+                            lime: "#84cc16",
+                            yellow: "#eab308",
                         };
                         return colorMap[def.color] || "#94a3b8";
                     }}

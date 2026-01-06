@@ -524,7 +524,10 @@ export async function generateImageWithAI(
             model: geminiModel,
         });
 
-        requestLogger.info({ model: geminiModel }, "Gemini image generation successful");
+        requestLogger.info(
+            { model: geminiModel },
+            "Gemini image generation successful"
+        );
         return result;
     } catch (geminiError) {
         // Log Gemini failure and fall back to OpenAI

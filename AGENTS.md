@@ -30,7 +30,8 @@ multi-step wizard that generates registration, watch, and enrollment pages using
 - `lib/` - Shared utilities, services, AI integrations
 - `__tests__/unit/` - Unit tests (colocated pattern NOT used)
 - `__tests__/e2e/` - Playwright E2E tests
-- `supabase/migrations/` - Database migrations (auto-generated, never edit manually)
+- `supabase/migrations/` - Database migrations (prefer `supabase db diff` for local
+  changes)
 
 ## Code Conventions
 
@@ -43,9 +44,21 @@ DO:
 
 DON'T:
 
-- Never manually create/edit migration files - use `supabase db diff`
 - Never skip git hooks with `--no-verify`
 - Never use `npm` commands - always `pnpm`
+
+## Database Migrations
+
+Preferred workflow: Use `supabase db diff` to auto-generate migrations from local schema
+changes.
+
+Alternative workflow (API-first): When changes are applied directly to the database via
+Supabase API, create migration files to document those changes for version control and
+other environments. This is valid when:
+
+- SQL has been tested and confirmed working on the live database
+- Migration file accurately documents the applied changes
+- Rollback instructions are included in comments
 
 ## Git Workflow
 

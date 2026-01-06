@@ -80,7 +80,10 @@ interface GenerateDraftsResponse {
 export async function POST(request: NextRequest) {
     // Generate unique request ID for distributed tracing
     const requestId = crypto.randomUUID();
-    const requestLogger = logger.child({ route: "funnel-map-generate-drafts", requestId });
+    const requestLogger = logger.child({
+        route: "funnel-map-generate-drafts",
+        requestId,
+    });
     let projectId: string | undefined;
     let userId: string | undefined;
     let pathwayType: PathwayType | undefined;
@@ -122,7 +125,8 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { projectId: reqProjectId, pathwayType: requestedPathway } = parseResult.data;
+        const { projectId: reqProjectId, pathwayType: requestedPathway } =
+            parseResult.data;
         projectId = reqProjectId;
 
         // Verify project ownership
@@ -481,12 +485,10 @@ async function saveDraftsToDatabase(
     let lastError: unknown = null;
 
     for (let attempt = 1; attempt <= DB_MAX_RETRIES; attempt++) {
-        const { error } = await supabase
-            .from("funnel_node_data")
-            .upsert(insertData, {
-                onConflict: "funnel_project_id,node_type",
-                ignoreDuplicates: false,
-            });
+        const { error } = await supabase.from("funnel_node_data").upsert(insertData, {
+            onConflict: "funnel_project_id,node_type",
+            ignoreDuplicates: false,
+        });
 
         if (!error) {
             batchSuccess = true;
@@ -518,16 +520,16 @@ async function saveDraftsToDatabase(
 
         for (const data of insertData) {
             try {
-                const { error } = await supabase
-                    .from("funnel_node_data")
-                    .upsert(data, {
-                        onConflict: "funnel_project_id,node_type",
-                        ignoreDuplicates: false,
-                    });
+                const { error } = await supabase.from("funnel_node_data").upsert(data, {
+                    onConflict: "funnel_project_id,node_type",
+                    ignoreDuplicates: false,
+                });
 
                 if (error) {
                     failedNodes.push(data.node_type);
-                    warnings.push(`Failed to save draft for ${data.node_type}: ${error.message}`);
+                    warnings.push(
+                        `Failed to save draft for ${data.node_type}: ${error.message}`
+                    );
                     logger.error(
                         { error, projectId, nodeType: data.node_type },
                         "Individual draft save failed"

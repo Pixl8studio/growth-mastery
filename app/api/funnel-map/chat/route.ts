@@ -86,8 +86,16 @@ const FunnelNodeDefinitionSchema = z.object({
 const ChatRequestSchema = z.object({
     projectId: z.string().uuid("Invalid project ID format"),
     nodeType: FunnelNodeTypeSchema,
-    message: z.string().min(1, "Message is required").max(MAX_MESSAGE_LENGTH, `Message too long (max ${MAX_MESSAGE_LENGTH} characters)`),
-    conversationHistory: z.array(ConversationMessageSchema).max(MAX_CONVERSATION_MESSAGES_API, "Conversation history too long"),
+    message: z
+        .string()
+        .min(1, "Message is required")
+        .max(
+            MAX_MESSAGE_LENGTH,
+            `Message too long (max ${MAX_MESSAGE_LENGTH} characters)`
+        ),
+    conversationHistory: z
+        .array(ConversationMessageSchema)
+        .max(MAX_CONVERSATION_MESSAGES_API, "Conversation history too long"),
     currentContent: z.record(z.string(), z.unknown()),
     definition: FunnelNodeDefinitionSchema,
 });
@@ -448,7 +456,10 @@ async function saveConversationAtomic(
 
         return { success: true };
     } catch (error) {
-        logger.error({ error, projectId, nodeType }, "Failed to save conversation atomically");
+        logger.error(
+            { error, projectId, nodeType },
+            "Failed to save conversation atomically"
+        );
         return { success: false, error: String(error) };
     }
 }

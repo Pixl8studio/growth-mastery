@@ -98,7 +98,8 @@ describe("Gemini Image Generation", () => {
         it("generates image with default options", async () => {
             process.env.GEMINI_API_KEY = "test-api-key";
 
-            const mockBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+            const mockBase64 =
+                "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
             const { GoogleGenAI } = await import("@google/genai");
             const mockGenerateContent = vi.fn().mockResolvedValue({
                 candidates: [

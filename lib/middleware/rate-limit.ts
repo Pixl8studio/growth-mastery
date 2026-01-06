@@ -75,13 +75,37 @@ const imageGenerationRatelimit = new Ratelimit({
     prefix: "ratelimit:image-generation",
 });
 
+/**
+ * Rate limiter for funnel map chat
+ * Limits: 50 requests per hour per user (AI conversations)
+ */
+const funnelChatRatelimit = new Ratelimit({
+    redis: kv,
+    limiter: Ratelimit.slidingWindow(50, "1 h"),
+    analytics: true,
+    prefix: "ratelimit:funnel-chat",
+});
+
+/**
+ * Rate limiter for funnel draft generation
+ * Limits: 10 requests per hour per user (expensive: 7-9 parallel AI calls)
+ */
+const funnelDraftsRatelimit = new Ratelimit({
+    redis: kv,
+    limiter: Ratelimit.slidingWindow(10, "1 h"),
+    analytics: true,
+    prefix: "ratelimit:funnel-drafts",
+});
+
 export type RateLimitEndpoint =
     | "scraping"
     | "brand-colors"
     | "presentation-generation"
     | "presentation-export"
     | "slide-edit"
-    | "image-generation";
+    | "image-generation"
+    | "funnel-chat"
+    | "funnel-drafts";
 
 /**
  * Check rate limit for a user
@@ -99,6 +123,8 @@ export async function checkRateLimit(
             "presentation-export": presentationExportRatelimit,
             "slide-edit": slideEditRatelimit,
             "image-generation": imageGenerationRatelimit,
+            "funnel-chat": funnelChatRatelimit,
+            "funnel-drafts": funnelDraftsRatelimit,
         };
 
         const limiter = limiterMap[endpoint];

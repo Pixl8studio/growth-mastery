@@ -13,7 +13,7 @@ import { logger } from "@/lib/logger";
 import * as Sentry from "@sentry/nextjs";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
 import type { FunnelNodeType } from "@/types/funnel-map";
-import { getNodeDefinition } from "@/types/funnel-map";
+import { getNodeDefinition, getEffectiveContent } from "@/types/funnel-map";
 
 const approveRequestSchema = z.object({
     projectId: z.string().uuid(),
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
 
         requestLogger.info({ userId: user.id, projectId, nodeType }, "Approving node");
 
-        // Fetch the node data
+        // Fetch the node data to validate content before approval
         const { data: nodeData, error: fetchError } = await supabase
             .from("funnel_node_data")
             .select("*")
@@ -89,11 +89,12 @@ export async function POST(request: NextRequest) {
             });
         }
 
-        // Get the content to approve (prefer refined, fall back to draft)
-        const contentToApprove =
-            Object.keys(nodeData.refined_content || {}).length > 0
-                ? nodeData.refined_content
-                : nodeData.draft_content;
+        // Get the content to approve using shared helper
+        const contentToApprove = getEffectiveContent({
+            draft_content: nodeData.draft_content,
+            refined_content: nodeData.refined_content,
+            approved_content: nodeData.approved_content,
+        });
 
         // Validate required fields are present before approval
         const nodeDef = getNodeDefinition(nodeType);
@@ -115,20 +116,21 @@ export async function POST(request: NextRequest) {
             }
         }
 
-        // Update node with approval
-        const { error: updateError } = await supabase
-            .from("funnel_node_data")
-            .update({
-                is_approved: true,
-                approved_at: new Date().toISOString(),
-                approved_content: contentToApprove,
-                status: "completed",
-            })
-            .eq("id", nodeData.id);
+        // Use atomic database function to approve node and update counts
+        // This prevents race conditions and ensures transaction safety
+        const { data: approvalResult, error: approvalError } = await supabase.rpc(
+            "approve_funnel_node",
+            {
+                p_project_id: projectId,
+                p_node_type: nodeType,
+                p_user_id: user.id,
+                p_content_to_approve: contentToApprove,
+            }
+        );
 
-        if (updateError) {
-            requestLogger.error({ error: updateError }, "Failed to approve node");
-            Sentry.captureException(updateError, {
+        if (approvalError) {
+            requestLogger.error({ error: approvalError }, "Failed to approve node");
+            Sentry.captureException(approvalError, {
                 tags: { action: "approve_node" },
                 extra: { projectId, nodeType },
             });
@@ -138,52 +140,36 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Update funnel map config approval count
-        // Query runs AFTER the update, so the current node is already counted as approved
-        const { data: allNodes } = await supabase
-            .from("funnel_node_data")
-            .select("is_approved")
-            .eq("funnel_project_id", projectId)
-            .eq("user_id", user.id);
+        // The RPC returns an array with one row
+        const result = Array.isArray(approvalResult)
+            ? approvalResult[0]
+            : approvalResult;
 
-        const approvedCount = (allNodes || []).filter((n) => n.is_approved).length;
-        const totalCount = (allNodes || []).length;
-
-        const { error: configError } = await supabase
-            .from("funnel_map_config")
-            .update({
-                nodes_approved_count: approvedCount,
-                total_nodes_count: totalCount,
-                all_nodes_approved: approvedCount >= totalCount,
-            })
-            .eq("funnel_project_id", projectId)
-            .eq("user_id", user.id);
-
-        if (configError) {
-            // Log but don't fail the request - the node is approved, config is secondary
-            requestLogger.error(
-                { error: configError },
-                "Failed to update config approval count (node was still approved)"
+        if (!result?.success) {
+            return NextResponse.json(
+                { error: result?.error_message || "Failed to approve node" },
+                { status: 500 }
             );
-            Sentry.captureException(configError, {
-                tags: { action: "update_approval_config" },
-                extra: { projectId, nodeType, approvedCount, totalCount },
-            });
         }
 
         requestLogger.info(
-            { projectId, nodeType, approvedCount, totalCount },
+            {
+                projectId,
+                nodeType,
+                approvedCount: result.approved_count,
+                totalCount: result.total_count,
+            },
             "Node approved successfully"
         );
 
         return NextResponse.json({
             success: true,
-            approvedAt: new Date().toISOString(),
+            approvedAt: result.approved_at,
             approvedContent: contentToApprove,
             progress: {
-                approved: approvedCount,
-                total: totalCount,
-                allApproved: approvedCount >= totalCount,
+                approved: result.approved_count,
+                total: result.total_count,
+                allApproved: result.all_approved,
             },
         });
     } catch (error) {

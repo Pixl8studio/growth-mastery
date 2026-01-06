@@ -19,6 +19,8 @@ import { getNodeDefinition } from "@/types/funnel-map";
 const regenerateRequestSchema = z.object({
     projectId: z.string().uuid(),
     nodeType: z.string() as z.ZodType<FunnelNodeType>,
+    // Optional: Confirm overwriting approved content
+    confirmOverwrite: z.boolean().optional().default(false),
 });
 
 export async function POST(request: NextRequest) {
@@ -40,7 +42,7 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        const { projectId, nodeType } = parseResult.data;
+        const { projectId, nodeType, confirmOverwrite } = parseResult.data;
 
         // Create Supabase client using shared helper
         const supabase = await createClient();
@@ -79,6 +81,48 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Invalid node type" }, { status: 400 });
         }
 
+        // Verify node exists before attempting regeneration
+        const { data: existingNode, error: nodeError } = await supabase
+            .from("funnel_node_data")
+            .select("id, is_approved, approved_at, approved_content, draft_content")
+            .eq("funnel_project_id", projectId)
+            .eq("node_type", nodeType)
+            .eq("user_id", user.id)
+            .single();
+
+        if (nodeError || !existingNode) {
+            requestLogger.warn(
+                { projectId, nodeType },
+                "Node not found for regeneration"
+            );
+            return NextResponse.json(
+                {
+                    error: "Node not found",
+                    hint: "The node must exist before it can be regenerated. Generate initial drafts first.",
+                },
+                { status: 404 }
+            );
+        }
+
+        // Check if node is approved and require confirmation
+        if (existingNode.is_approved && !confirmOverwrite) {
+            requestLogger.warn(
+                { projectId, nodeType },
+                "Regeneration blocked - node is approved"
+            );
+            return NextResponse.json(
+                {
+                    error: "Node is already approved",
+                    requiresConfirmation: true,
+                    approvedAt: existingNode.approved_at,
+                    message:
+                        "This node has approved content. Regenerating will discard your approved work. " +
+                        "Set confirmOverwrite: true to proceed.",
+                },
+                { status: 409 } // Conflict
+            );
+        }
+
         // Fetch business profile for context
         const { data: businessProfile } = await supabase
             .from("business_profiles")
@@ -88,7 +132,10 @@ export async function POST(request: NextRequest) {
 
         if (!businessProfile) {
             return NextResponse.json(
-                { error: "Business profile not found. Complete Step 1 first." },
+                {
+                    error: "Business profile not found",
+                    hint: "Complete Step 1 (Business Profile) before regenerating funnel content.",
+                },
                 { status: 400 }
             );
         }
@@ -127,6 +174,11 @@ export async function POST(request: NextRequest) {
             }
         );
 
+        // Store previous approved content if overwriting
+        const previousApprovedContent = existingNode.is_approved
+            ? existingNode.approved_content
+            : null;
+
         // Update the node with new draft
         const { error: updateError } = await supabase
             .from("funnel_node_data")
@@ -157,12 +209,39 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        requestLogger.info({ projectId, nodeType }, "Node regenerated successfully");
+        // Update approval count if we overwrote approved content
+        if (previousApprovedContent) {
+            // Decrement approval count since we just unapproved a node
+            const { data: allNodes } = await supabase
+                .from("funnel_node_data")
+                .select("is_approved")
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id);
+
+            const approvedCount = (allNodes || []).filter((n) => n.is_approved).length;
+            const totalCount = (allNodes || []).length;
+
+            await supabase
+                .from("funnel_map_config")
+                .update({
+                    nodes_approved_count: approvedCount,
+                    total_nodes_count: totalCount,
+                    all_nodes_approved: approvedCount >= totalCount,
+                })
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id);
+        }
+
+        requestLogger.info(
+            { projectId, nodeType, overwroteApproved: !!previousApprovedContent },
+            "Node regenerated successfully"
+        );
 
         return NextResponse.json({
             success: true,
             nodeType,
             draftContent: newDraftContent,
+            overwroteApproved: !!previousApprovedContent,
         });
     } catch (error) {
         requestLogger.error({ error }, "Unexpected error in regeneration");

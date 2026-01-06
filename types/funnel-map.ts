@@ -1065,6 +1065,48 @@ export function getNodeDefinition(
     return FUNNEL_NODE_DEFINITIONS.find((n) => n.id === nodeType);
 }
 
+/**
+ * Pricing value type for type safety
+ * Supports multiple pricing formats
+ */
+export type PricingValue =
+    | number
+    | { webinar: number; regular?: number }
+    | { regular: number; webinar?: number }
+    | null;
+
+/**
+ * Content selection helper - DRY principle
+ * Selects the most appropriate content: approved > refined > draft
+ */
+export function getEffectiveContent(node: {
+    draft_content?: Record<string, unknown>;
+    refined_content?: Record<string, unknown>;
+    approved_content?: Record<string, unknown>;
+}): Record<string, unknown> {
+    // Priority: approved > refined > draft
+    if (node.approved_content && Object.keys(node.approved_content).length > 0) {
+        return node.approved_content;
+    }
+    if (node.refined_content && Object.keys(node.refined_content).length > 0) {
+        return node.refined_content;
+    }
+    return node.draft_content || {};
+}
+
+/**
+ * Safely extract price from various formats
+ */
+export function extractPrice(price: PricingValue): number | null {
+    if (typeof price === "number") {
+        return price;
+    }
+    if (typeof price === "object" && price !== null) {
+        return price.webinar ?? price.regular ?? null;
+    }
+    return null;
+}
+
 export function getNodesForPathway(
     pathway: PathwayType,
     registrationConfig?: RegistrationConfig | null

@@ -22,6 +22,7 @@ ALTER TABLE public.funnel_node_data ADD CONSTRAINT funnel_node_data_node_type_ch
         'masterclass',
         'core_offer',
         'checkout',
+        'upsells',  -- Legacy value for backward compatibility
         'upsell_1',
         'upsell_2',
         'order_bump',

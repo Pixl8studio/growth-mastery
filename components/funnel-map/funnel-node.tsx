@@ -3,9 +3,15 @@
 /**
  * Custom Funnel Node Component
  * Renders individual nodes in the funnel flowchart
+ *
+ * Enhanced with Issue #407 features:
+ * - Explicit approval workflow
+ * - Industry benchmarks display
+ * - Draft regeneration
+ * - New node type icons
  */
 
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Handle, Position } from "@xyflow/react";
 import {
     Globe,
@@ -21,15 +27,31 @@ import {
     Loader2,
     Pencil,
     Sparkles,
+    CheckCircle,
+    CalendarCheck,
+    Plus,
+    ArrowUp,
+    RefreshCw,
+    BadgeCheck,
+    BarChart3,
 } from "lucide-react";
 import type {
     FunnelNodeDefinition,
     FunnelNodeData,
     NodeStatus,
+    FunnelBenchmark,
+    PathwayType,
 } from "@/types/funnel-map";
+import { getBenchmarkForNode } from "@/types/funnel-map";
 import { cn } from "@/lib/utils";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-// Icon mapping
+// Icon mapping - extended with new icons for Issue #407
 const ICONS: Record<string, React.ElementType> = {
     Globe,
     UserPlus,
@@ -40,6 +62,10 @@ const ICONS: Record<string, React.ElementType> = {
     Calendar,
     Phone,
     Heart,
+    CheckCircle,
+    CalendarCheck,
+    Plus,
+    ArrowUp,
 };
 
 export interface FunnelNodeDataProps {
@@ -54,10 +80,64 @@ export interface FunnelNodeDataProps {
     status: NodeStatus;
     isGenerating: boolean;
     onSelect: () => void;
+    onApprove?: () => void;
+    onRegenerate?: () => void;
+    pathwayType: PathwayType;
+    showBenchmarks?: boolean;
 }
 
 interface FunnelNodeComponentProps {
     data: FunnelNodeDataProps;
+}
+
+function BenchmarkIndicator({
+    benchmark,
+    className,
+}: {
+    benchmark: FunnelBenchmark;
+    className?: string;
+}) {
+    return (
+        <TooltipProvider>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <div
+                        className={cn(
+                            "flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5 text-xs text-slate-600 cursor-help",
+                            className
+                        )}
+                    >
+                        <BarChart3 className="h-3 w-3" />
+                        <span>{benchmark.conversion_rate_median}%</span>
+                    </div>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="max-w-xs">
+                    <div className="space-y-2">
+                        <p className="font-medium">{benchmark.metric_description}</p>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
+                            <span className="text-muted-foreground">Low:</span>
+                            <span>{benchmark.conversion_rate_low}%</span>
+                            <span className="text-muted-foreground">Typical:</span>
+                            <span className="font-medium text-blue-600">
+                                {benchmark.conversion_rate_median}%
+                            </span>
+                            <span className="text-muted-foreground">High:</span>
+                            <span className="text-green-600">
+                                {benchmark.conversion_rate_high}%
+                            </span>
+                            <span className="text-muted-foreground">Elite:</span>
+                            <span className="text-purple-600">
+                                {benchmark.conversion_rate_elite}%
+                            </span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                            Source: {benchmark.source}
+                        </p>
+                    </div>
+                </TooltipContent>
+            </Tooltip>
+        </TooltipProvider>
+    );
 }
 
 function FunnelNodeComponent({ data }: FunnelNodeComponentProps) {
@@ -69,15 +149,54 @@ function FunnelNodeComponent({ data }: FunnelNodeComponentProps) {
         status,
         isGenerating,
         onSelect,
+        onApprove,
+        onRegenerate,
+        pathwayType,
+        showBenchmarks = true,
     } = data;
     const Icon = ICONS[definition.icon] || Globe;
+    const [isRegenerating, setIsRegenerating] = useState(false);
+
+    const isApproved = nodeData?.is_approved ?? false;
+    const benchmark = showBenchmarks
+        ? getBenchmarkForNode(definition.id, pathwayType)
+        : undefined;
+
+    const handleRegenerate = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (onRegenerate && !isRegenerating) {
+            setIsRegenerating(true);
+            try {
+                await onRegenerate();
+            } finally {
+                setIsRegenerating(false);
+            }
+        }
+    };
+
+    const handleApprove = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (onApprove && !isApproved) {
+            onApprove();
+        }
+    };
 
     const getStatusBadge = () => {
-        if (isGenerating) {
+        if (isGenerating || isRegenerating) {
             return (
                 <span className="flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
                     <Loader2 className="h-3 w-3 animate-spin" />
-                    Generating...
+                    {isRegenerating ? "Regenerating..." : "Generating..."}
+                </span>
+            );
+        }
+
+        // Show approved badge if approved
+        if (isApproved) {
+            return (
+                <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                    <BadgeCheck className="h-3 w-3" />
+                    Approved
                 </span>
             );
         }
@@ -133,6 +252,7 @@ function FunnelNodeComponent({ data }: FunnelNodeComponentProps) {
     };
 
     const completionPercentage = getCompletionPercentage();
+    const canApprove = !isApproved && status !== "draft" && completionPercentage > 0;
 
     return (
         <>
@@ -151,7 +271,8 @@ function FunnelNodeComponent({ data }: FunnelNodeComponentProps) {
                     isSelected
                         ? "ring-2 ring-primary ring-offset-2 border-primary"
                         : colors.border,
-                    isGenerating && "animate-pulse"
+                    (isGenerating || isRegenerating) && "animate-pulse",
+                    isApproved && "ring-2 ring-green-500/30"
                 )}
                 style={{ width: 280 }}
             >
@@ -173,14 +294,18 @@ function FunnelNodeComponent({ data }: FunnelNodeComponentProps) {
                     </div>
 
                     <div className="min-w-0 flex-1">
-                        <h3
-                            className={cn(
-                                "font-semibold leading-tight",
-                                isSelected ? "text-primary" : "text-foreground"
-                            )}
-                        >
-                            {definition.title}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                            <h3
+                                className={cn(
+                                    "font-semibold leading-tight",
+                                    isSelected ? "text-primary" : "text-foreground"
+                                )}
+                            >
+                                {definition.title}
+                            </h3>
+                            {/* Benchmark indicator next to title */}
+                            {benchmark && <BenchmarkIndicator benchmark={benchmark} />}
+                        </div>
                         <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
                             {definition.description}
                         </p>
@@ -191,7 +316,7 @@ function FunnelNodeComponent({ data }: FunnelNodeComponentProps) {
                 <div className="mt-3 flex items-center justify-between">
                     {getStatusBadge()}
 
-                    {!isGenerating && completionPercentage > 0 && (
+                    {!isGenerating && !isRegenerating && completionPercentage > 0 && (
                         <div className="flex items-center gap-2">
                             <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-200">
                                 <div
@@ -221,10 +346,59 @@ function FunnelNodeComponent({ data }: FunnelNodeComponentProps) {
                     </div>
                 )}
 
+                {/* Action buttons - Approve & Regenerate */}
+                {!isGenerating && !isRegenerating && (onApprove || onRegenerate) && (
+                    <div className="mt-3 flex items-center gap-2 border-t border-slate-200 pt-3">
+                        {/* Approve button */}
+                        {onApprove && canApprove && (
+                            <button
+                                onClick={handleApprove}
+                                className={cn(
+                                    "flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                                    "bg-green-100 text-green-700 hover:bg-green-200"
+                                )}
+                            >
+                                <BadgeCheck className="h-3 w-3" />
+                                Approve
+                            </button>
+                        )}
+
+                        {/* Regenerate button */}
+                        {onRegenerate && nodeData && (
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <button
+                                            onClick={handleRegenerate}
+                                            className={cn(
+                                                "flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                                                "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                            )}
+                                        >
+                                            <RefreshCw className="h-3 w-3" />
+                                            Regenerate
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Generate new AI draft for this node</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
+                    </div>
+                )}
+
                 {/* Selection indicator */}
-                {isSelected && (
+                {isSelected && !isApproved && (
                     <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-white shadow-sm">
                         <Check className="h-3 w-3" />
+                    </div>
+                )}
+
+                {/* Approved indicator */}
+                {isApproved && (
+                    <div className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-green-500 text-white shadow-sm">
+                        <BadgeCheck className="h-3 w-3" />
                     </div>
                 )}
             </div>

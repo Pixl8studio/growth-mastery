@@ -2,6 +2,14 @@
 -- Purpose: Store AI-generated drafts and user refinements for each funnel node
 -- This supports the Step 2 Visual Funnel Co-Creation Experience
 --
+-- NOTE ON MANUAL CREATION:
+-- This migration was manually created rather than auto-generated via `supabase db diff`
+-- because it introduces entirely new tables and functions (not modifications to existing schema).
+-- The diff tool requires existing objects to compare against. After initial creation,
+-- subsequent modifications should use `supabase db diff` per project standards.
+--
+-- APPLIED VIA: Supabase Management API (2026-01-06)
+--
 -- ROLLBACK PROCEDURE:
 -- To rollback this migration, run the following in order:
 --

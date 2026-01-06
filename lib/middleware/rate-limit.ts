@@ -77,11 +77,12 @@ const imageGenerationRatelimit = new Ratelimit({
 
 /**
  * Rate limiter for funnel map chat
- * Limits: 50 requests per hour per user (AI conversations)
+ * Limits: 150 requests per hour per user (AI conversations)
+ * Rationale: Users refining 7-9 nodes need ~16-21 messages per node
  */
 const funnelChatRatelimit = new Ratelimit({
     redis: kv,
-    limiter: Ratelimit.slidingWindow(50, "1 h"),
+    limiter: Ratelimit.slidingWindow(150, "1 h"),
     analytics: true,
     prefix: "ratelimit:funnel-chat",
 });

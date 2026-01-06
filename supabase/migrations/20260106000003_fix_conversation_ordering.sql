@@ -2,6 +2,14 @@
 -- Purpose: Add secondary sort key to prevent non-deterministic ordering
 --          when messages have identical timestamps
 --
+-- NOTE ON MANUAL CREATION:
+-- This migration was manually created rather than auto-generated via `supabase db diff`
+-- because it modifies a PostgreSQL function definition. Function body changes are not
+-- captured by schema diffs. Subsequent schema changes (tables, columns, indexes)
+-- should use `supabase db diff` per project standards.
+--
+-- APPLIED VIA: Supabase Management API (2026-01-06)
+--
 -- ROLLBACK PROCEDURE:
 -- To rollback this migration, restore the previous version of the function:
 --   See migration 20260106000002_funnel_map_atomic_update.sql for the original function

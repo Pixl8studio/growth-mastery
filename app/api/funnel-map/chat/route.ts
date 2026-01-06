@@ -17,32 +17,28 @@ import {
 } from "@/lib/middleware/rate-limit";
 import type { FunnelNodeDefinition } from "@/types/funnel-map";
 import { sanitizeUserContent } from "@/lib/ai/sanitize";
+import {
+    MAX_CONVERSATION_MESSAGES_API,
+    MAX_CONVERSATION_MESSAGES_AI,
+    MAX_MESSAGE_LENGTH,
+    AI_CHAT_MAX_TOKENS,
+    AI_CHAT_TEMPERATURE,
+} from "@/lib/config/funnel-map";
 
 // ============================================
 // CONSTANTS
 // ============================================
+// Note: Core limits imported from @/lib/config/funnel-map for single source of truth
+// See that file for documentation on conversation history limits and rationale
 
 /**
- * Maximum messages to send to AI for context (sliding window)
- *
- * Conversation History Limits:
- * - API accepts max 100 messages (ChatRequestSchema.conversationHistory)
- * - Database stores last 100 messages (PostgreSQL function limit)
- * - AI receives only last 20 messages (this constant)
- *
- * Rationale: Full history preserved for UX, limited context for AI cost/quality
+ * Fallback message when AI response validation fails
+ * Provides actionable guidance while being honest about the issue
  */
-const AI_CONTEXT_WINDOW_SIZE = 20;
-
-/** Maximum tokens for AI response */
-const AI_MAX_TOKENS = 2000;
-
-/** AI temperature for chat responses */
-const AI_TEMPERATURE = 0.7;
-
-/** Fallback message when AI response validation fails */
 const AI_VALIDATION_FALLBACK_MESSAGE =
-    "I apologize, but I had trouble formulating my response. Could you please rephrase your question?";
+    "I encountered a technical issue processing your request. This sometimes happens with complex questions. " +
+    "Please try: (1) rephrasing your question more simply, (2) asking about one specific field at a time, " +
+    "or (3) waiting a moment and trying again. Your message was saved and won't be lost.";
 
 // ============================================
 // REQUEST VALIDATION SCHEMA
@@ -87,14 +83,11 @@ const FunnelNodeDefinitionSchema = z.object({
     fields: z.array(FunnelNodeFieldSchema),
 });
 
-/** Maximum message length in characters (reduced from 10000 to prevent token overflow) */
-const MAX_MESSAGE_LENGTH = 2000;
-
 const ChatRequestSchema = z.object({
     projectId: z.string().uuid("Invalid project ID format"),
     nodeType: FunnelNodeTypeSchema,
-    message: z.string().min(1, "Message is required").max(MAX_MESSAGE_LENGTH, "Message too long (max 2000 characters)"),
-    conversationHistory: z.array(ConversationMessageSchema).max(100, "Conversation history too long"),
+    message: z.string().min(1, "Message is required").max(MAX_MESSAGE_LENGTH, `Message too long (max ${MAX_MESSAGE_LENGTH} characters)`),
+    conversationHistory: z.array(ConversationMessageSchema).max(MAX_CONVERSATION_MESSAGES_API, "Conversation history too long"),
     currentContent: z.record(z.string(), z.unknown()),
     definition: FunnelNodeDefinitionSchema,
 });
@@ -191,7 +184,7 @@ export async function POST(request: NextRequest) {
         );
 
         // Build conversation for AI with sliding window (only last N messages for context)
-        const recentHistory = conversationHistory.slice(-AI_CONTEXT_WINDOW_SIZE);
+        const recentHistory = conversationHistory.slice(-MAX_CONVERSATION_MESSAGES_AI);
         const systemPrompt = buildSystemPrompt(definition, currentContent);
         const messages: AIMessage[] = [
             { role: "system", content: systemPrompt },
@@ -204,8 +197,8 @@ export async function POST(request: NextRequest) {
 
         // Generate AI response
         const rawResult = await generateWithAI<ChatResponse>(messages, {
-            temperature: AI_TEMPERATURE,
-            maxTokens: AI_MAX_TOKENS,
+            temperature: AI_CHAT_TEMPERATURE,
+            maxTokens: AI_CHAT_MAX_TOKENS,
         });
 
         // Validate AI response structure

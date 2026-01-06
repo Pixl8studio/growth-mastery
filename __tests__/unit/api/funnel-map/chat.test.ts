@@ -147,7 +147,7 @@ describe("Funnel Map Chat API", () => {
         mockCheckRateLimitWithInfo.mockResolvedValue({
             blocked: false,
             response: null,
-            info: { limit: 50, remaining: 49, reset: new Date().toISOString() },
+            info: { limit: 150, remaining: 149, reset: new Date().toISOString() },
         });
 
         // Default: RPC succeeds
@@ -179,7 +179,7 @@ describe("Funnel Map Chat API", () => {
             mockCheckRateLimitWithInfo.mockResolvedValueOnce({
                 blocked: true,
                 response: rateLimitResponse,
-                info: { limit: 50, remaining: 0, reset: new Date().toISOString() },
+                info: { limit: 150, remaining: 0, reset: new Date().toISOString() },
             });
 
             const { POST } = await import("@/app/api/funnel-map/chat/route");
@@ -434,7 +434,7 @@ describe("Funnel Map Chat API", () => {
 
             expect(response.status).toBe(200);
             const data = await response.json();
-            expect(data.message).toContain("trouble formulating");
+            expect(data.message).toContain("technical issue");
             expect(data.warning).toBe("AI response validation failed");
         });
 

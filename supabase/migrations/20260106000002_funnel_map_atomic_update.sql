@@ -1,6 +1,14 @@
 -- Migration: Atomic JSONB Update Function
 -- Purpose: Provide atomic JSONB merge for conversation updates to prevent race conditions
 --
+-- NOTE ON MANUAL CREATION:
+-- This migration was manually created rather than auto-generated via `supabase db diff`
+-- because it introduces a new PostgreSQL function (not modifications to existing schema).
+-- Subsequent modifications should use `supabase db diff` per project standards.
+--
+-- APPLIED VIA: Supabase Management API (2026-01-06)
+-- SUPERSEDED BY: 20260106000003_fix_conversation_ordering.sql (improved ordering logic)
+--
 -- ROLLBACK PROCEDURE:
 -- To rollback this migration, run:
 --   DROP FUNCTION IF EXISTS merge_funnel_node_conversation(UUID, UUID, TEXT, JSONB, JSONB);

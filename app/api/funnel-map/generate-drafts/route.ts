@@ -24,16 +24,12 @@ import {
     type FunnelNodeType,
 } from "@/types/funnel-map";
 import { sanitizeAIOutput, sanitizeUserContent } from "@/lib/ai/sanitize";
+import { AI_DRAFT_MAX_TOKENS, AI_DRAFT_TEMPERATURE } from "@/lib/config/funnel-map";
 
 // ============================================
 // CONSTANTS
 // ============================================
-
-/** Maximum tokens for AI response per node */
-const AI_MAX_TOKENS = 2000;
-
-/** AI temperature for draft generation */
-const AI_TEMPERATURE = 0.7;
+// Note: AI parameters imported from @/lib/config/funnel-map for single source of truth
 
 /** Maximum retry attempts for database operations */
 const DB_MAX_RETRIES = 3;
@@ -348,8 +344,8 @@ async function generateNodeDraft(
     ];
 
     const result = await generateWithAI<Record<string, unknown>>(messages, {
-        temperature: AI_TEMPERATURE,
-        maxTokens: AI_MAX_TOKENS,
+        temperature: AI_DRAFT_TEMPERATURE,
+        maxTokens: AI_DRAFT_MAX_TOKENS,
     });
 
     // Validate and sanitize the AI response

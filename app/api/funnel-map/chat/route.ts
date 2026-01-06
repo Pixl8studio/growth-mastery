@@ -16,6 +16,7 @@ import {
     type RateLimitResult,
 } from "@/lib/middleware/rate-limit";
 import type { FunnelNodeDefinition } from "@/types/funnel-map";
+import { sanitizeUserContent } from "@/lib/ai/sanitize";
 
 // ============================================
 // CONSTANTS
@@ -86,10 +87,13 @@ const FunnelNodeDefinitionSchema = z.object({
     fields: z.array(FunnelNodeFieldSchema),
 });
 
+/** Maximum message length in characters (reduced from 10000 to prevent token overflow) */
+const MAX_MESSAGE_LENGTH = 2000;
+
 const ChatRequestSchema = z.object({
     projectId: z.string().uuid("Invalid project ID format"),
     nodeType: FunnelNodeTypeSchema,
-    message: z.string().min(1, "Message is required").max(10000, "Message too long"),
+    message: z.string().min(1, "Message is required").max(MAX_MESSAGE_LENGTH, "Message too long (max 2000 characters)"),
     conversationHistory: z.array(ConversationMessageSchema).max(100, "Conversation history too long"),
     currentContent: z.record(z.string(), z.unknown()),
     definition: FunnelNodeDefinitionSchema,
@@ -111,7 +115,9 @@ type ChatResponse = z.infer<typeof ChatResponseSchema>;
 // ============================================
 
 export async function POST(request: NextRequest) {
-    const requestLogger = logger.child({ route: "funnel-map-chat" });
+    // Generate unique request ID for distributed tracing
+    const requestId = crypto.randomUUID();
+    const requestLogger = logger.child({ route: "funnel-map-chat", requestId });
     let projectId: string | undefined;
     let nodeType: string | undefined;
     let userId: string | undefined;
@@ -327,14 +333,16 @@ export async function POST(request: NextRequest) {
         }
 
         const response = NextResponse.json(result);
+        response.headers.set("X-Request-ID", requestId);
         return addRateLimitHeaders(response, rateLimitInfo);
     } catch (error) {
         requestLogger.error({ error, projectId, nodeType }, "Funnel map chat failed");
 
         Sentry.captureException(error, {
-            tags: { route: "funnel-map-chat" },
+            tags: { route: "funnel-map-chat", requestId },
             extra: {
                 errorType: error instanceof z.ZodError ? "validation" : "runtime",
+                requestId,
                 projectId,
                 nodeType,
                 userId,
@@ -343,7 +351,7 @@ export async function POST(request: NextRequest) {
 
         // Handle Zod validation errors specifically
         if (error instanceof z.ZodError) {
-            return NextResponse.json(
+            const response = NextResponse.json(
                 {
                     error: "Invalid request",
                     details: error.issues.map((issue) => ({
@@ -353,33 +361,22 @@ export async function POST(request: NextRequest) {
                 },
                 { status: 400 }
             );
+            response.headers.set("X-Request-ID", requestId);
+            return response;
         }
 
-        return NextResponse.json(
+        const response = NextResponse.json(
             { error: "Failed to process chat request" },
             { status: 500 }
         );
+        response.headers.set("X-Request-ID", requestId);
+        return response;
     }
 }
 
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
-
-/**
- * Sanitize user content to prevent prompt injection
- * Uses XML-style delimiters to clearly separate user content
- */
-function sanitizeUserContent(content: string): string {
-    // Remove any attempts to inject system-level instructions
-    const sanitized = content
-        .replace(/\[system\]/gi, "[user_input]")
-        .replace(/\[assistant\]/gi, "[user_input]")
-        .replace(/##\s*(system|instructions|ignore)/gi, "## user_content")
-        .replace(/ignore (previous|all|above) instructions/gi, "[filtered]");
-
-    return sanitized;
-}
 
 function buildSystemPrompt(
     definition: FunnelNodeDefinition,

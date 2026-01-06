@@ -136,18 +136,44 @@ export function AIChatPanel({
                 setPendingChanges(result.suggestedChanges);
             }
         } catch (error) {
-            // Log error for debugging
-            logger.error({ error, projectId, nodeType }, "Chat request failed");
+            // Determine error type for better user feedback
+            let errorContent =
+                "I'm sorry, I encountered an error. Please try again or rephrase your question.";
+
+            if (error instanceof Error) {
+                const errorMessage = error.message.toLowerCase();
+                if (errorMessage.includes("rate limit") || errorMessage.includes("429")) {
+                    errorContent =
+                        "You've reached the request limit. Please wait a moment before trying again.";
+                } else if (errorMessage.includes("network") || errorMessage.includes("fetch")) {
+                    errorContent =
+                        "Unable to connect to the server. Please check your internet connection and try again.";
+                } else if (errorMessage.includes("timeout")) {
+                    errorContent =
+                        "The request took too long to complete. Please try again with a shorter message.";
+                }
+            }
+
+            // Log error for debugging with full context
+            logger.error(
+                {
+                    error,
+                    projectId,
+                    nodeType,
+                    messageLength: userMessage.content.length,
+                    historyLength: updatedMessages.length,
+                },
+                "Chat request failed"
+            );
 
             // Add error message to conversation
-            const errorMessage: ConversationMessage = {
+            const errorMessageObj: ConversationMessage = {
                 id: crypto.randomUUID(),
                 role: "assistant",
-                content:
-                    "I'm sorry, I encountered an error. Please try again or rephrase your question.",
+                content: errorContent,
                 timestamp: new Date().toISOString(),
             };
-            onConversationUpdate(nodeType, [...updatedMessages, errorMessage]);
+            onConversationUpdate(nodeType, [...updatedMessages, errorMessageObj]);
         } finally {
             setIsLoading(false);
         }

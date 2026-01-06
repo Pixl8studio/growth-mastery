@@ -9,7 +9,12 @@ import { generateWithAI, type AIMessage } from "@/lib/ai/client";
 import { logger } from "@/lib/logger";
 import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
-import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
+import {
+    checkRateLimitWithInfo,
+    getRateLimitIdentifier,
+    addRateLimitHeaders,
+    type RateLimitResult,
+} from "@/lib/middleware/rate-limit";
 import type { BusinessProfile } from "@/types/business-profile";
 import {
     FUNNEL_NODE_DEFINITIONS,
@@ -18,6 +23,7 @@ import {
     type PathwayType,
     type FunnelNodeType,
 } from "@/types/funnel-map";
+import { sanitizeAIOutput, sanitizeUserContent } from "@/lib/ai/sanitize";
 
 // ============================================
 // CONSTANTS
@@ -46,6 +52,18 @@ const GenerateDraftsRequestSchema = z.object({
     pathwayType: PathwayTypeSchema.optional(),
 });
 
+/**
+ * Schema for validating pricing field from business profile
+ * Pricing can be null or an object with optional webinar/regular prices
+ */
+const PricingSchema = z
+    .object({
+        webinar: z.number().nonnegative().optional(),
+        regular: z.number().nonnegative().optional(),
+    })
+    .nullable()
+    .optional();
+
 interface NodeDraft {
     nodeType: FunnelNodeType;
     content: Record<string, unknown>;
@@ -64,10 +82,13 @@ interface GenerateDraftsResponse {
 // ============================================
 
 export async function POST(request: NextRequest) {
-    const requestLogger = logger.child({ route: "funnel-map-generate-drafts" });
+    // Generate unique request ID for distributed tracing
+    const requestId = crypto.randomUUID();
+    const requestLogger = logger.child({ route: "funnel-map-generate-drafts", requestId });
     let projectId: string | undefined;
     let userId: string | undefined;
     let pathwayType: PathwayType | undefined;
+    let rateLimitInfo: RateLimitResult["info"] = null;
 
     try {
         const supabase = await createClient();
@@ -80,13 +101,14 @@ export async function POST(request: NextRequest) {
         }
         userId = user.id;
 
-        // Check rate limit (expensive operation: 7-9 parallel AI calls)
-        const rateLimitResponse = await checkRateLimit(
+        // Check rate limit and save info for response headers (expensive operation: 7-9 parallel AI calls)
+        const rateLimitResult = await checkRateLimitWithInfo(
             getRateLimitIdentifier(request, user.id),
             "funnel-drafts"
         );
-        if (rateLimitResponse) {
-            return rateLimitResponse;
+        rateLimitInfo = rateLimitResult.info;
+        if (rateLimitResult.blocked) {
+            return rateLimitResult.response!;
         }
 
         // Validate request body with Zod
@@ -138,8 +160,9 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Determine pathway based on pricing
-        const pricing = businessProfile.pricing as { webinar?: number; regular?: number } | null;
+        // Determine pathway based on pricing (validated with Zod schema)
+        const pricingResult = PricingSchema.safeParse(businessProfile.pricing);
+        const pricing = pricingResult.success ? pricingResult.data : null;
         const price = pricing?.webinar || pricing?.regular || null;
         pathwayType = requestedPathway || determinePathwayFromPrice(price);
 
@@ -216,24 +239,27 @@ export async function POST(request: NextRequest) {
             "Funnel drafts generated successfully"
         );
 
-        const response: GenerateDraftsResponse = {
+        const responseData: GenerateDraftsResponse = {
             success: true,
             drafts,
             pathwayType,
         };
 
         if (warnings.length > 0) {
-            response.warnings = warnings;
+            responseData.warnings = warnings;
         }
 
-        return NextResponse.json(response);
+        const response = NextResponse.json(responseData);
+        response.headers.set("X-Request-ID", requestId);
+        return addRateLimitHeaders(response, rateLimitInfo);
     } catch (error) {
         requestLogger.error({ error, projectId }, "Funnel draft generation failed");
 
         Sentry.captureException(error, {
-            tags: { route: "funnel-map-generate-drafts" },
+            tags: { route: "funnel-map-generate-drafts", requestId },
             extra: {
                 errorType: error instanceof z.ZodError ? "validation" : "runtime",
+                requestId,
                 projectId,
                 pathwayType,
                 userId,
@@ -242,7 +268,7 @@ export async function POST(request: NextRequest) {
 
         // Handle Zod validation errors specifically
         if (error instanceof z.ZodError) {
-            return NextResponse.json(
+            const response = NextResponse.json(
                 {
                     error: "Invalid request",
                     details: error.issues.map((issue) => ({
@@ -252,12 +278,16 @@ export async function POST(request: NextRequest) {
                 },
                 { status: 400 }
             );
+            response.headers.set("X-Request-ID", requestId);
+            return response;
         }
 
-        return NextResponse.json(
+        const response = NextResponse.json(
             { error: "Failed to generate funnel drafts" },
             { status: 500 }
         );
+        response.headers.set("X-Request-ID", requestId);
+        return response;
     }
 }
 
@@ -283,10 +313,10 @@ function validateNodeDraftResponse(
         if (value !== undefined) {
             // Basic validation - ensure no injection attempts in values
             if (typeof value === "string") {
-                validated[field] = sanitizeContent(value);
+                validated[field] = sanitizeAIOutput(value);
             } else if (Array.isArray(value)) {
                 validated[field] = value.map((item) =>
-                    typeof item === "string" ? sanitizeContent(item) : item
+                    typeof item === "string" ? sanitizeAIOutput(item) : item
                 );
             } else {
                 validated[field] = value;
@@ -295,16 +325,6 @@ function validateNodeDraftResponse(
     }
 
     return validated;
-}
-
-/**
- * Sanitize content to remove potential injection attempts
- */
-function sanitizeContent(content: string): string {
-    return content
-        .replace(/\[system\]/gi, "")
-        .replace(/\[assistant\]/gi, "")
-        .replace(/##\s*(system|instructions)/gi, "");
 }
 
 // ============================================
@@ -391,29 +411,29 @@ function buildDraftUserPrompt(
 ## Business Context
 
 ### Ideal Customer
-${sanitizeContent(profile.ideal_customer || "Not specified")}
+${sanitizeUserContent(profile.ideal_customer || "Not specified")}
 
 ### Transformation Promise
-${sanitizeContent(profile.transformation || "Not specified")}
+${sanitizeUserContent(profile.transformation || "Not specified")}
 
 ### Core Problem
-Perceived: ${sanitizeContent(profile.perceived_problem || "Not specified")}
-Root Cause: ${sanitizeContent(profile.root_cause || "Not specified")}
+Perceived: ${sanitizeUserContent(profile.perceived_problem || "Not specified")}
+Root Cause: ${sanitizeUserContent(profile.root_cause || "Not specified")}
 
 ### Story & Credibility
-Struggle Story: ${sanitizeContent(profile.struggle_story || "Not specified")}
-Breakthrough: ${sanitizeContent(profile.breakthrough_moment || "Not specified")}
-Credibility: ${sanitizeContent(profile.credibility_experience || "Not specified")}
+Struggle Story: ${sanitizeUserContent(profile.struggle_story || "Not specified")}
+Breakthrough: ${sanitizeUserContent(profile.breakthrough_moment || "Not specified")}
+Credibility: ${sanitizeUserContent(profile.credibility_experience || "Not specified")}
 
 ### Signature Method
-${sanitizeContent(profile.signature_method || "Not specified")}
+${sanitizeUserContent(profile.signature_method || "Not specified")}
 
 ### Offer Details
-Name: ${sanitizeContent(profile.offer_name || "Not specified")}
-Type: ${sanitizeContent(profile.offer_type || "Not specified")}
-Deliverables: ${sanitizeContent(profile.deliverables || "Not specified")}
-Promise/Outcome: ${sanitizeContent(profile.promise_outcome || "Not specified")}
-Guarantee: ${sanitizeContent(profile.guarantee || "Not specified")}
+Name: ${sanitizeUserContent(profile.offer_name || "Not specified")}
+Type: ${sanitizeUserContent(profile.offer_type || "Not specified")}
+Deliverables: ${sanitizeUserContent(profile.deliverables || "Not specified")}
+Promise/Outcome: ${sanitizeUserContent(profile.promise_outcome || "Not specified")}
+Guarantee: ${sanitizeUserContent(profile.guarantee || "Not specified")}
 
 ### Pricing
 ${profile.pricing ? `Regular: $${profile.pricing.regular || "TBD"}, Webinar: $${profile.pricing.webinar || "TBD"}` : "Not specified"}
@@ -424,7 +444,7 @@ Internal (Self-doubt → Confidence): ${profile.internal_belief_shift ? JSON.str
 External (Resources → Resourcefulness): ${profile.external_belief_shift ? JSON.stringify(profile.external_belief_shift) : "Not specified"}
 
 ### Objections
-${profile.top_objections ? profile.top_objections.map((o) => `- ${sanitizeContent(o.objection)}: ${sanitizeContent(o.response)}`).join("\n") : "Not specified"}
+${profile.top_objections ? profile.top_objections.map((o) => `- ${sanitizeUserContent(o.objection)}: ${sanitizeUserContent(o.response)}`).join("\n") : "Not specified"}
 </business_context>
 
 Generate the "${nodeDef.title}" content based on this business context. Return ONLY valid JSON.`;

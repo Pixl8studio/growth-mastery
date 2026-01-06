@@ -20,6 +20,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { VoiceToTextButton } from "@/components/ui/voice-to-text-button";
 import { cn } from "@/lib/utils";
+import { logger } from "@/lib/client-logger";
 import type {
     FunnelNodeType,
     FunnelNodeData,
@@ -127,8 +128,11 @@ export function AIChatPanel({
             if (result.suggestedChanges) {
                 setPendingChanges(result.suggestedChanges);
             }
-        } catch (_error) {
-            // Add error message
+        } catch (error) {
+            // Log error for debugging
+            logger.error({ error, projectId, nodeType }, "Chat request failed");
+
+            // Add error message to conversation
             const errorMessage: ConversationMessage = {
                 id: crypto.randomUUID(),
                 role: "assistant",

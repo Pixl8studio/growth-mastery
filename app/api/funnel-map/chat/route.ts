@@ -8,20 +8,60 @@ import { createClient } from "@/lib/supabase/server";
 import { generateWithAI, type AIMessage } from "@/lib/ai/client";
 import { logger } from "@/lib/logger";
 import * as Sentry from "@sentry/nextjs";
-import type {
-    FunnelNodeType,
-    FunnelNodeDefinition,
-    ConversationMessage,
-} from "@/types/funnel-map";
+import { z } from "zod";
+import type { FunnelNodeDefinition } from "@/types/funnel-map";
 
-interface ChatRequest {
-    projectId: string;
-    nodeType: FunnelNodeType;
-    message: string;
-    conversationHistory: ConversationMessage[];
-    currentContent: Record<string, unknown>;
-    definition: FunnelNodeDefinition;
-}
+// ============================================
+// REQUEST VALIDATION SCHEMA
+// ============================================
+
+const FunnelNodeTypeSchema = z.enum([
+    "traffic_source",
+    "registration",
+    "masterclass",
+    "core_offer",
+    "checkout",
+    "upsells",
+    "call_booking",
+    "sales_call",
+    "thank_you",
+]);
+
+const ConversationMessageSchema = z.object({
+    id: z.string(),
+    role: z.enum(["user", "assistant"]),
+    content: z.string(),
+    timestamp: z.string(),
+    suggestedChanges: z.record(z.string(), z.unknown()).optional(),
+});
+
+const FunnelNodeFieldSchema = z.object({
+    key: z.string(),
+    label: z.string(),
+    type: z.enum(["text", "textarea", "list", "pricing"]),
+    required: z.boolean().optional(),
+    aiPrompt: z.string().optional(),
+});
+
+const FunnelNodeDefinitionSchema = z.object({
+    id: FunnelNodeTypeSchema,
+    title: z.string(),
+    description: z.string(),
+    icon: z.string(),
+    color: z.string(),
+    pathways: z.array(z.enum(["direct_purchase", "book_call"])),
+    framework: z.string().optional(),
+    fields: z.array(FunnelNodeFieldSchema),
+});
+
+const ChatRequestSchema = z.object({
+    projectId: z.string().uuid("Invalid project ID format"),
+    nodeType: FunnelNodeTypeSchema,
+    message: z.string().min(1, "Message is required").max(10000, "Message too long"),
+    conversationHistory: z.array(ConversationMessageSchema).max(100, "Conversation history too long"),
+    currentContent: z.record(z.string(), z.unknown()),
+    definition: FunnelNodeDefinitionSchema,
+});
 
 interface ChatResponse {
     message: string;
@@ -41,7 +81,21 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const body: ChatRequest = await request.json();
+        // Validate request body with Zod
+        const parseResult = ChatRequestSchema.safeParse(await request.json());
+        if (!parseResult.success) {
+            return NextResponse.json(
+                {
+                    error: "Invalid request",
+                    details: parseResult.error.issues.map((issue) => ({
+                        field: issue.path.join("."),
+                        message: issue.message,
+                    })),
+                },
+                { status: 400 }
+            );
+        }
+
         const {
             projectId,
             nodeType,
@@ -49,13 +103,21 @@ export async function POST(request: NextRequest) {
             conversationHistory,
             currentContent,
             definition,
-        } = body;
+        } = parseResult.data;
 
-        if (!projectId || !nodeType || !message) {
-            return NextResponse.json(
-                { error: "Missing required fields" },
-                { status: 400 }
-            );
+        // Verify project ownership
+        const { data: project, error: projectError } = await supabase
+            .from("funnel_projects")
+            .select("user_id")
+            .eq("id", projectId)
+            .single();
+
+        if (projectError || !project) {
+            return NextResponse.json({ error: "Project not found" }, { status: 404 });
+        }
+
+        if (project.user_id !== user.id) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
         requestLogger.info(
@@ -110,7 +172,25 @@ export async function POST(request: NextRequest) {
 
         Sentry.captureException(error, {
             tags: { route: "funnel-map-chat" },
+            extra: {
+                // Note: These might not be available if error occurred before parsing
+                errorType: error instanceof z.ZodError ? "validation" : "runtime",
+            },
         });
+
+        // Handle Zod validation errors specifically
+        if (error instanceof z.ZodError) {
+            return NextResponse.json(
+                {
+                    error: "Invalid request",
+                    details: error.issues.map((issue) => ({
+                        field: issue.path.join("."),
+                        message: issue.message,
+                    })),
+                },
+                { status: 400 }
+            );
+        }
 
         return NextResponse.json(
             { error: "Failed to process chat request" },
@@ -173,47 +253,47 @@ async function saveConversationToDatabase(
     supabase: Awaited<ReturnType<typeof createClient>>,
     userId: string,
     projectId: string,
-    nodeType: FunnelNodeType,
-    conversationHistory: ConversationMessage[],
+    nodeType: z.infer<typeof FunnelNodeTypeSchema>,
+    conversationHistory: z.infer<typeof ConversationMessageSchema>[],
     suggestedChanges?: Record<string, unknown>
 ) {
     try {
-        // Check if node data exists
-        const { data: existingNode } = await supabase
-            .from("funnel_node_data")
-            .select("id, refined_content")
-            .eq("funnel_project_id", projectId)
-            .eq("node_type", nodeType)
-            .single();
+        // First, get existing refined_content if we need to merge changes
+        let existingRefinedContent: Record<string, unknown> = {};
 
-        if (existingNode) {
-            // Update existing node
-            const updateData: Record<string, unknown> = {
-                conversation_history: conversationHistory,
-                status: "in_progress",
-            };
-
-            if (suggestedChanges) {
-                updateData.refined_content = {
-                    ...(existingNode.refined_content as Record<string, unknown> || {}),
-                    ...suggestedChanges,
-                };
-            }
-
-            await supabase
+        if (suggestedChanges) {
+            const { data: existingNode } = await supabase
                 .from("funnel_node_data")
-                .update(updateData)
-                .eq("id", existingNode.id);
-        } else {
-            // Create new node
-            await supabase.from("funnel_node_data").insert({
+                .select("refined_content")
+                .eq("funnel_project_id", projectId)
+                .eq("node_type", nodeType)
+                .single();
+
+            if (existingNode?.refined_content) {
+                existingRefinedContent = existingNode.refined_content as Record<string, unknown>;
+            }
+        }
+
+        // Use upsert to handle race conditions - relies on unique index (funnel_project_id, node_type)
+        const { error } = await supabase.from("funnel_node_data").upsert(
+            {
                 funnel_project_id: projectId,
                 user_id: userId,
                 node_type: nodeType,
                 conversation_history: conversationHistory,
-                refined_content: suggestedChanges || {},
+                refined_content: suggestedChanges
+                    ? { ...existingRefinedContent, ...suggestedChanges }
+                    : existingRefinedContent,
                 status: "in_progress",
-            });
+            },
+            {
+                onConflict: "funnel_project_id,node_type",
+                ignoreDuplicates: false,
+            }
+        );
+
+        if (error) {
+            throw error;
         }
     } catch (error) {
         logger.error({ error, projectId, nodeType }, "Failed to save conversation");

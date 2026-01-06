@@ -94,7 +94,7 @@ export async function getStepCompletionStatus(
         } = await supabase.auth.getUser();
 
         if (!user) {
-            return Array.from({ length: 13 }, (_, i) => ({
+            return Array.from({ length: 12 }, (_, i) => ({
                 step: i + 1,
                 isCompleted: false,
                 hasContent: false,
@@ -107,7 +107,7 @@ export async function getStepCompletionStatus(
         const [
             transcripts,
             businessProfiles,
-            offers,
+            funnelMapConfig,
             brandDesigns,
             deckStructures,
             gammaDecks,
@@ -115,7 +115,6 @@ export async function getStepCompletionStatus(
             enrollmentPages,
             watchPages,
             registrationPages,
-            flows,
             followupConfigs,
             marketingBriefs,
             adCampaigns,
@@ -135,12 +134,13 @@ export async function getStepCompletionStatus(
                 .eq("user_id", user.id)
                 .maybeSingle(),
 
-            // Step 2: Offers
+            // Step 2: Funnel Map Config (Visual Funnel Co-Creation)
             supabase
-                .from("offers")
-                .select("id", { count: "exact", head: true })
+                .from("funnel_map_config")
+                .select("id, is_step2_complete, drafts_generated")
                 .eq("funnel_project_id", projectId)
-                .eq("user_id", user.id),
+                .eq("user_id", user.id)
+                .maybeSingle(),
 
             // Step 3: Brand Designs
             supabase
@@ -191,21 +191,14 @@ export async function getStepCompletionStatus(
                 .eq("funnel_project_id", projectId)
                 .eq("user_id", user.id),
 
-            // Step 10: Funnel Flows
-            supabase
-                .from("funnel_flows")
-                .select("id", { count: "exact", head: true })
-                .eq("funnel_project_id", projectId)
-                .eq("user_id", user.id),
-
-            // Step 11: AI Follow-up Configs
+            // Step 10: AI Follow-up Configs
             supabase
                 .from("followup_agent_configs")
                 .select("id", { count: "exact", head: true })
                 .eq("funnel_project_id", projectId)
                 .eq("user_id", user.id),
 
-            // Step 12: Marketing Content Briefs
+            // Step 11: Marketing Content Briefs
             supabase
                 .from("marketing_content_briefs")
                 .select("id", { count: "exact", head: true })
@@ -213,7 +206,7 @@ export async function getStepCompletionStatus(
                 .eq("user_id", user.id)
                 .eq("campaign_type", "organic"),
 
-            // Step 13: Ad Campaigns
+            // Step 12: Ad Campaigns
             supabase
                 .from("marketing_content_briefs")
                 .select("id", { count: "exact", head: true })
@@ -230,6 +223,12 @@ export async function getStepCompletionStatus(
         );
         const step1Completed = hasTranscripts || hasBusinessProfile;
 
+        // Step 2 is completed if funnel map drafts have been generated
+        const step2Completed = Boolean(
+            funnelMapConfig.data?.drafts_generated ||
+                funnelMapConfig.data?.is_step2_complete
+        );
+
         const completionStatus: StepCompletion[] = [
             {
                 step: 1,
@@ -238,8 +237,8 @@ export async function getStepCompletionStatus(
             },
             {
                 step: 2,
-                isCompleted: (offers.count ?? 0) > 0,
-                hasContent: (offers.count ?? 0) > 0,
+                isCompleted: step2Completed,
+                hasContent: step2Completed,
             },
             {
                 step: 3,
@@ -276,23 +275,19 @@ export async function getStepCompletionStatus(
                 isCompleted: (registrationPages.count ?? 0) > 0,
                 hasContent: (registrationPages.count ?? 0) > 0,
             },
+            // Step 10 (Flow Setup) has been removed - flow is now auto-configured in Step 2
             {
                 step: 10,
-                isCompleted: (flows.count ?? 0) > 0,
-                hasContent: (flows.count ?? 0) > 0,
-            },
-            {
-                step: 11,
                 isCompleted: (followupConfigs.count ?? 0) > 0,
                 hasContent: (followupConfigs.count ?? 0) > 0,
             },
             {
-                step: 12,
+                step: 11,
                 isCompleted: (marketingBriefs.count ?? 0) > 0,
                 hasContent: (marketingBriefs.count ?? 0) > 0,
             },
             {
-                step: 13,
+                step: 12,
                 isCompleted: (adCampaigns.count ?? 0) > 0,
                 hasContent: (adCampaigns.count ?? 0) > 0,
             },
@@ -300,7 +295,7 @@ export async function getStepCompletionStatus(
 
         const completedCount = completionStatus.filter((s) => s.isCompleted).length;
         requestLogger.info(
-            { completedSteps: completedCount, totalSteps: 13 },
+            { completedSteps: completedCount, totalSteps: 12 },
             "Step completion status retrieved"
         );
 
@@ -308,7 +303,7 @@ export async function getStepCompletionStatus(
     } catch (error) {
         requestLogger.error({ error }, "Failed to check step completion");
         // Return empty completion status on error
-        return Array.from({ length: 13 }, (_, i) => ({
+        return Array.from({ length: 12 }, (_, i) => ({
             step: i + 1,
             isCompleted: false,
             hasContent: false,

@@ -29,16 +29,16 @@ export const MASTER_STEPS: MasterStepConfig[] = [
     {
         id: 3,
         title: "Funnel Pages",
-        description: "Build enrollment, watch room, registration, and flow",
+        description: "Build enrollment, watch room, and registration pages",
         icon: "layout",
-        subSteps: [7, 8, 9, 10],
+        subSteps: [7, 8, 9],
     },
     {
         id: 4,
         title: "Traffic Agents",
         description: "Set up AI follow-up, content engine, and ads",
         icon: "users",
-        subSteps: [11, 12, 13],
+        subSteps: [10, 11, 12],
     },
 ];
 

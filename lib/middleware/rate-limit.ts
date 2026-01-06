@@ -75,22 +75,63 @@ const imageGenerationRatelimit = new Ratelimit({
     prefix: "ratelimit:image-generation",
 });
 
+/**
+ * Rate limiter for funnel map chat
+ * Limits: 150 requests per hour per user (AI conversations)
+ * Rationale: Users refining 7-9 nodes need ~16-21 messages per node
+ */
+const funnelChatRatelimit = new Ratelimit({
+    redis: kv,
+    limiter: Ratelimit.slidingWindow(150, "1 h"),
+    analytics: true,
+    prefix: "ratelimit:funnel-chat",
+});
+
+/**
+ * Rate limiter for funnel draft generation
+ * Limits: 10 requests per hour per user (expensive: 7-9 parallel AI calls)
+ */
+const funnelDraftsRatelimit = new Ratelimit({
+    redis: kv,
+    limiter: Ratelimit.slidingWindow(10, "1 h"),
+    analytics: true,
+    prefix: "ratelimit:funnel-drafts",
+});
+
 export type RateLimitEndpoint =
     | "scraping"
     | "brand-colors"
     | "presentation-generation"
     | "presentation-export"
     | "slide-edit"
-    | "image-generation";
+    | "image-generation"
+    | "funnel-chat"
+    | "funnel-drafts";
+
+/**
+ * Rate limit check result with metadata for headers
+ */
+export interface RateLimitResult {
+    /** Whether the request was blocked (true = blocked, false = allowed) */
+    blocked: boolean;
+    /** 429 response if blocked, null if allowed */
+    response: NextResponse | null;
+    /** Rate limit info for adding headers to successful responses */
+    info: {
+        limit: number;
+        remaining: number;
+        reset: string;
+    } | null;
+}
 
 /**
  * Check rate limit for a user
- * Returns null if allowed, or NextResponse with 429 if rate limited
+ * Returns result object with blocking status and rate limit info for headers
  */
-export async function checkRateLimit(
+export async function checkRateLimitWithInfo(
     identifier: string,
     endpoint: RateLimitEndpoint
-): Promise<NextResponse | null> {
+): Promise<RateLimitResult> {
     try {
         const limiterMap: Record<RateLimitEndpoint, Ratelimit> = {
             scraping: scrapingRatelimit,
@@ -99,44 +140,51 @@ export async function checkRateLimit(
             "presentation-export": presentationExportRatelimit,
             "slide-edit": slideEditRatelimit,
             "image-generation": imageGenerationRatelimit,
+            "funnel-chat": funnelChatRatelimit,
+            "funnel-drafts": funnelDraftsRatelimit,
         };
 
         const limiter = limiterMap[endpoint];
 
         const { success, limit, remaining, reset } = await limiter.limit(identifier);
+        const resetDate = new Date(reset);
+        const resetIso = resetDate.toISOString();
 
         if (!success) {
-            const resetDate = new Date(reset);
             logger.warn(
                 {
                     identifier,
                     endpoint,
                     limit,
                     remaining,
-                    reset: resetDate.toISOString(),
+                    reset: resetIso,
                 },
                 "Rate limit exceeded"
             );
 
-            return NextResponse.json(
-                {
-                    error: "Rate limit exceeded. Please try again later.",
-                    limit,
-                    remaining: 0,
-                    resetAt: resetDate.toISOString(),
-                },
-                {
-                    status: 429,
-                    headers: {
-                        "X-RateLimit-Limit": limit.toString(),
-                        "X-RateLimit-Remaining": "0",
-                        "X-RateLimit-Reset": resetDate.toISOString(),
-                        "Retry-After": Math.ceil(
-                            (reset - Date.now()) / 1000
-                        ).toString(),
+            return {
+                blocked: true,
+                response: NextResponse.json(
+                    {
+                        error: "Rate limit exceeded. Please try again later.",
+                        limit,
+                        remaining: 0,
+                        resetAt: resetIso,
                     },
-                }
-            );
+                    {
+                        status: 429,
+                        headers: {
+                            "X-RateLimit-Limit": limit.toString(),
+                            "X-RateLimit-Remaining": "0",
+                            "X-RateLimit-Reset": resetIso,
+                            "Retry-After": Math.ceil(
+                                (reset - Date.now()) / 1000
+                            ).toString(),
+                        },
+                    }
+                ),
+                info: { limit, remaining: 0, reset: resetIso },
+            };
         }
 
         // Log rate limit status for monitoring
@@ -150,12 +198,44 @@ export async function checkRateLimit(
             "Rate limit check passed"
         );
 
-        return null; // Allow request
+        return {
+            blocked: false,
+            response: null,
+            info: { limit, remaining, reset: resetIso },
+        };
     } catch (error) {
         // If rate limiting fails, allow the request (graceful degradation)
         logger.error({ error, identifier, endpoint }, "Rate limit check failed");
-        return null;
+        return { blocked: false, response: null, info: null };
     }
+}
+
+/**
+ * Check rate limit for a user (legacy function for backwards compatibility)
+ * Returns null if allowed, or NextResponse with 429 if rate limited
+ */
+export async function checkRateLimit(
+    identifier: string,
+    endpoint: RateLimitEndpoint
+): Promise<NextResponse | null> {
+    const result = await checkRateLimitWithInfo(identifier, endpoint);
+    return result.response;
+}
+
+/**
+ * Add rate limit headers to a response
+ */
+export function addRateLimitHeaders(
+    response: NextResponse,
+    info: RateLimitResult["info"]
+): NextResponse {
+    if (!info) return response;
+
+    response.headers.set("X-RateLimit-Limit", info.limit.toString());
+    response.headers.set("X-RateLimit-Remaining", info.remaining.toString());
+    response.headers.set("X-RateLimit-Reset", info.reset);
+
+    return response;
 }
 
 /**

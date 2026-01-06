@@ -1,36 +1,42 @@
 "use client";
 
-import { useState, useEffect } from "react";
+/**
+ * Step 2: Visual Funnel Co-Creation Experience
+ * Interactive flowchart for mapping customer journey with AI-assisted drafts
+ */
+
+import { useState, useEffect, useCallback } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import { Sparkles, DollarSign, Trash2, Pencil, User } from "lucide-react";
-import { OfferEditor } from "@/components/funnel/offer-editor";
+import { FunnelFlowchart, AIChatPanel } from "@/components/funnel-map";
+import {
+    Sparkles,
+    Loader2,
+    ArrowRight,
+    Check,
+    RefreshCw,
+    CreditCard,
+    Phone,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { useToast } from "@/components/ui/use-toast";
 import type { BusinessProfile } from "@/types/business-profile";
-
-interface Offer {
-    id: string;
-    name: string;
-    description: string | null;
-    tagline?: string | null;
-    price: number;
-    currency: string;
-    features: string[];
-    bonuses: string[];
-    guarantee?: string | null;
-    // 7 P's Framework
-    promise?: string;
-    person?: string;
-    process?: string;
-    purpose?: string;
-    pathway?: "book_call" | "direct_purchase";
-    max_features?: number;
-    max_bonuses?: number;
-    created_at: string;
-}
+import type {
+    FunnelNodeType,
+    FunnelNodeData,
+    FunnelMapConfig,
+    PathwayType,
+    ConversationMessage,
+} from "@/types/funnel-map";
+import {
+    PATHWAY_DEFINITIONS,
+    getNodesForPathway,
+    determinePathwayFromPrice,
+} from "@/types/funnel-map";
+import { cn } from "@/lib/utils";
 
 export default function Step2Page({
     params,
@@ -39,27 +45,24 @@ export default function Step2Page({
 }) {
     const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
-    const [project, setProject] = useState<any>(null);
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [generationProgress, setGenerationProgress] = useState(0);
-    const [offers, setOffers] = useState<Offer[]>([]);
-    const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [editingName, setEditingName] = useState("");
-    const [transcripts, setTranscripts] = useState<any[]>([]);
-    const [selectedTranscript, setSelectedTranscript] = useState("");
+    const [project, setProject] = useState<{ name: string; user_id: string } | null>(
+        null
+    );
     const [businessProfile, setBusinessProfile] = useState<BusinessProfile | null>(
         null
     );
-    const [selectedSource, setSelectedSource] = useState<"transcript" | "profile" | "">(
-        ""
+    const [mapConfig, setMapConfig] = useState<FunnelMapConfig | null>(null);
+    const [nodeData, setNodeData] = useState<Map<FunnelNodeType, FunnelNodeData>>(
+        new Map()
     );
-    const [alternatives, setAlternatives] = useState<any[]>([]);
-    const [loadingAlternatives, setLoadingAlternatives] = useState(false);
+    const [selectedNode, setSelectedNode] = useState<FunnelNodeType | null>(null);
+    const [isGenerating, setIsGenerating] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [pathwayType, setPathwayType] = useState<PathwayType>("direct_purchase");
 
-    // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
 
+    // Resolve params
     useEffect(() => {
         const resolveParams = async () => {
             const resolved = await params;
@@ -68,304 +71,236 @@ export default function Step2Page({
         resolveParams();
     }, [params]);
 
+    // Load project and data
     useEffect(() => {
-        const loadProject = async () => {
+        const loadData = async () => {
             if (!projectId) return;
+            setIsLoading(true);
 
             try {
                 const supabase = createClient();
-                const { data: projectData, error: projectError } = await supabase
+
+                // Load project
+                const { data: projectData } = await supabase
                     .from("funnel_projects")
-                    .select("*")
+                    .select("name, user_id")
                     .eq("id", projectId)
                     .single();
 
-                if (projectError) throw projectError;
-                setProject(projectData);
-            } catch (error) {
-                logger.error({ error }, "Failed to load project");
-            }
-        };
-
-        loadProject();
-    }, [projectId]);
-
-    useEffect(() => {
-        const loadOffers = async () => {
-            if (!projectId) return;
-
-            try {
-                const supabase = createClient();
-
-                // Load offers
-                const { data: offersData, error: offersError } = await supabase
-                    .from("offers")
-                    .select("*")
-                    .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false });
-
-                if (offersError) throw offersError;
-                setOffers(offersData || []);
-
-                // Load transcripts
-                const { data: transcriptData, error: transcriptError } = await supabase
-                    .from("vapi_transcripts")
-                    .select("*")
-                    .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false });
-
-                if (transcriptError) throw transcriptError;
-                setTranscripts(transcriptData || []);
+                if (projectData) setProject(projectData);
 
                 // Load business profile
-                let loadedProfile: BusinessProfile | null = null;
-                try {
-                    const profileResponse = await fetch(
-                        `/api/context/business-profile?projectId=${projectId}`,
-                        { credentials: "include" }
-                    );
+                const profileResponse = await fetch(
+                    `/api/context/business-profile?projectId=${projectId}`,
+                    { credentials: "include" }
+                );
 
-                    if (profileResponse.ok) {
-                        const profileResult = await profileResponse.json();
-                        if (
-                            profileResult.profile &&
-                            profileResult.profile.completion_status?.overall > 0
-                        ) {
-                            loadedProfile = profileResult.profile;
-                            setBusinessProfile(loadedProfile);
-                        }
+                if (profileResponse.ok) {
+                    const profileResult = await profileResponse.json();
+                    if (profileResult.profile) {
+                        setBusinessProfile(profileResult.profile);
+
+                        // Determine pathway from pricing
+                        const pricing = profileResult.profile.pricing;
+                        const price = pricing?.webinar || pricing?.regular || null;
+                        const determinedPathway = determinePathwayFromPrice(price);
+                        setPathwayType(determinedPathway);
                     }
-                } catch (profileError) {
-                    // Non-critical - business profile loading is optional
-                    logger.warn(
-                        { error: profileError },
-                        "Failed to load business profile"
-                    );
                 }
 
-                // Auto-select first available source (prefer business profile if complete, then transcripts)
-                if (!selectedSource) {
-                    const hasCompleteProfile =
-                        loadedProfile &&
-                        (loadedProfile.completion_status?.overall ?? 0) >= 50;
+                // Load funnel map config
+                const { data: configData } = await supabase
+                    .from("funnel_map_config")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .single();
 
-                    if (hasCompleteProfile) {
-                        setSelectedSource("profile");
-                    } else if (transcriptData && transcriptData.length > 0) {
-                        setSelectedSource("transcript");
-                        setSelectedTranscript(transcriptData[0].id);
-                    }
+                if (configData) {
+                    setMapConfig(configData);
+                    setPathwayType(configData.pathway_type);
+                }
+
+                // Load funnel node data
+                const { data: nodesData } = await supabase
+                    .from("funnel_node_data")
+                    .select("*")
+                    .eq("funnel_project_id", projectId);
+
+                if (nodesData) {
+                    const nodeMap = new Map<FunnelNodeType, FunnelNodeData>();
+                    nodesData.forEach((node) => {
+                        nodeMap.set(node.node_type as FunnelNodeType, node);
+                    });
+                    setNodeData(nodeMap);
                 }
             } catch (error) {
-                logger.error({ error }, "Failed to load offers");
+                logger.error({ error }, "Failed to load funnel map data");
+            } finally {
+                setIsLoading(false);
             }
         };
 
-        loadOffers();
-    }, [projectId, selectedTranscript, selectedSource]);
+        loadData();
+    }, [projectId]);
 
-    const handleGenerateOffer = async () => {
+    // Generate initial drafts
+    const handleGenerateDrafts = async () => {
         setIsGenerating(true);
-        setGenerationProgress(0);
 
         try {
-            setGenerationProgress(30);
-
-            // Build request body based on selected source
-            const requestBody: {
-                projectId: string;
-                transcriptId?: string;
-                businessProfileId?: string;
-            } = {
-                projectId,
-            };
-
-            if (selectedSource === "profile" && businessProfile) {
-                requestBody.businessProfileId = businessProfile.id;
-            } else if (selectedSource === "transcript" && selectedTranscript) {
-                requestBody.transcriptId = selectedTranscript;
-            }
-
-            const response = await fetch("/api/generate/offer", {
+            const response = await fetch("/api/funnel-map/generate-drafts", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(requestBody),
+                body: JSON.stringify({ projectId, pathwayType }),
             });
 
-            setGenerationProgress(80);
-
             if (!response.ok) {
-                throw new Error("Failed to generate offer");
+                const error = await response.json();
+                throw new Error(error.error || "Failed to generate drafts");
             }
 
             const result = await response.json();
 
-            setOffers((prev) => [result.offer, ...prev]);
-            setGenerationProgress(100);
-
-            // Load alternatives for the newly created offer
-            if (result.offer?.id) {
-                loadAlternatives(result.offer.id);
-            }
-
-            setTimeout(() => {
-                setIsGenerating(false);
-                setGenerationProgress(0);
-            }, 1000);
-        } catch (error) {
-            logger.error({ error }, "Failed to generate offer");
-            setIsGenerating(false);
-            setGenerationProgress(0);
-            toast({
-                variant: "destructive",
-                title: "Something went wrong",
-                description:
-                    "Failed to generate offer. Please retry or contact support if the issue persists.",
-            });
-        }
-    };
-
-    const loadAlternatives = async (baseOfferId: string) => {
-        setLoadingAlternatives(true);
-        try {
-            const response = await fetch("/api/generate/offer-alternatives", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ baseOfferId, projectId }),
-            });
-
-            if (response.ok) {
-                const result = await response.json();
-                setAlternatives(result.alternatives || []);
-            }
-        } catch (error) {
-            logger.error({ error }, "Failed to load alternative offers");
-        } finally {
-            setLoadingAlternatives(false);
-        }
-    };
-
-    const handleUseAlternative = async (alternative: any) => {
-        try {
-            const supabase = createClient();
-            const { data: savedOffer, error } = await supabase
-                .from("offers")
-                .insert({
-                    funnel_project_id: projectId,
-                    user_id: project?.user_id,
-                    name: alternative.name,
-                    description:
-                        alternative.tagline || alternative.keyDifference || null,
-                    tagline: alternative.tagline,
-                    price: alternative.price,
-                    currency: alternative.currency || "USD",
-                    features: alternative.features || [],
-                    bonuses: alternative.bonuses || [],
-                    guarantee: alternative.guarantee,
-                    promise: alternative.promise,
-                    person: alternative.person,
-                    process: alternative.process,
-                    purpose: alternative.purpose,
-                    pathway: alternative.pathway,
-                    max_features: 6,
-                    max_bonuses: 5,
-                })
-                .select()
-                .single();
-
-            if (!error && savedOffer) {
-                setOffers((prev) => [savedOffer, ...prev]);
-                toast({
-                    title: "Offer added successfully!",
-                    description:
-                        "You can select another variation or continue to the next step.",
-                });
-            }
-        } catch (error) {
-            logger.error({ error }, "Failed to use alternative offer");
-            toast({
-                variant: "destructive",
-                title: "Something went wrong",
-                description:
-                    "Failed to create offer. Please retry or contact support if the issue persists.",
-            });
-        }
-    };
-
-    const handleDeleteOffer = async (offerId: string) => {
-        if (!confirm("Delete this offer?")) return;
-
-        try {
-            const supabase = createClient();
-            const { error } = await supabase.from("offers").delete().eq("id", offerId);
-
-            if (!error) {
-                setOffers((prev) => prev.filter((o) => o.id !== offerId));
-                if (selectedOffer?.id === offerId) {
-                    setSelectedOffer(null);
+            // Update local state with new drafts
+            const nodeMap = new Map<FunnelNodeType, FunnelNodeData>();
+            result.drafts.forEach(
+                (draft: { nodeType: FunnelNodeType; content: Record<string, unknown> }) => {
+                    nodeMap.set(draft.nodeType, {
+                        id: crypto.randomUUID(),
+                        funnel_project_id: projectId,
+                        user_id: project?.user_id || "",
+                        node_type: draft.nodeType,
+                        draft_content: draft.content,
+                        refined_content: {},
+                        conversation_history: [],
+                        status: "draft",
+                        is_active: true,
+                        pathway_type: result.pathwayType,
+                        created_at: new Date().toISOString(),
+                        updated_at: new Date().toISOString(),
+                    });
                 }
+            );
+            setNodeData(nodeMap);
+            setPathwayType(result.pathwayType);
+
+            toast({
+                title: "Drafts Generated!",
+                description:
+                    "AI has created initial content for your funnel. Click any node to refine it.",
+            });
+
+            // Select first node
+            const pathwayNodes = getNodesForPathway(result.pathwayType);
+            if (pathwayNodes.length > 0) {
+                setSelectedNode(pathwayNodes[0].id);
             }
         } catch (error) {
-            logger.error({ error }, "Failed to delete offer");
+            logger.error({ error }, "Failed to generate funnel drafts");
+            toast({
+                variant: "destructive",
+                title: "Generation Failed",
+                description:
+                    error instanceof Error ? error.message : "Please try again.",
+            });
+        } finally {
+            setIsGenerating(false);
         }
     };
 
-    const handleEditSave = async (offerId: string) => {
-        try {
+    // Handle pathway change
+    const handlePathwayChange = async (newPathway: PathwayType) => {
+        setPathwayType(newPathway);
+
+        // If drafts were already generated, regenerate for new pathway
+        if (mapConfig?.drafts_generated) {
+            await handleGenerateDrafts();
+        }
+    };
+
+    // Handle node selection
+    const handleNodeSelect = (nodeType: FunnelNodeType) => {
+        setSelectedNode(nodeType);
+    };
+
+    // Handle content update from AI chat
+    const handleContentUpdate = useCallback(
+        (nodeType: FunnelNodeType, content: Record<string, unknown>) => {
+            setNodeData((prev) => {
+                const newMap = new Map(prev);
+                const existingNode = newMap.get(nodeType);
+
+                if (existingNode) {
+                    newMap.set(nodeType, {
+                        ...existingNode,
+                        refined_content: content,
+                        status: "refined",
+                        updated_at: new Date().toISOString(),
+                    });
+                }
+
+                return newMap;
+            });
+
+            // Save to database
             const supabase = createClient();
-            const { error } = await supabase
-                .from("offers")
-                .update({ name: editingName.trim() })
-                .eq("id", offerId);
+            supabase
+                .from("funnel_node_data")
+                .update({
+                    refined_content: content,
+                    status: "refined",
+                })
+                .eq("funnel_project_id", projectId)
+                .eq("node_type", nodeType)
+                .then(({ error }) => {
+                    if (error) {
+                        logger.error({ error }, "Failed to save content update");
+                    }
+                });
+        },
+        [projectId]
+    );
 
-            if (!error) {
-                setOffers((prev) =>
-                    prev.map((o) =>
-                        o.id === offerId ? { ...o, name: editingName.trim() } : o
-                    )
-                );
-                setEditingId(null);
-                setEditingName("");
-            }
-        } catch (error) {
-            logger.error({ error }, "Failed to update offer name");
-        }
-    };
+    // Handle conversation update
+    const handleConversationUpdate = useCallback(
+        (nodeType: FunnelNodeType, messages: ConversationMessage[]) => {
+            setNodeData((prev) => {
+                const newMap = new Map(prev);
+                const existingNode = newMap.get(nodeType);
 
-    const hasCompletedOffer = offers.length > 0;
-    const hasIntakeData =
-        transcripts.length > 0 ||
-        (businessProfile && (businessProfile.completion_status?.overall ?? 0) > 0);
-    const canGenerateOffer =
-        (selectedSource === "profile" && businessProfile) ||
-        (selectedSource === "transcript" && selectedTranscript);
+                if (existingNode) {
+                    newMap.set(nodeType, {
+                        ...existingNode,
+                        conversation_history: messages,
+                        status:
+                            existingNode.status === "draft"
+                                ? "in_progress"
+                                : existingNode.status,
+                        updated_at: new Date().toISOString(),
+                    });
+                }
 
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-        });
-    };
+                return newMap;
+            });
+        },
+        []
+    );
 
-    const getMethodLabel = (method: string) => {
-        switch (method) {
-            case "voice":
-                return "Voice Call";
-            case "upload":
-                return "Document Upload";
-            case "paste":
-                return "Pasted Content";
-            case "scrape":
-                return "Web Scraping";
-            case "google_drive":
-                return "Google Drive";
-            default:
-                return "Unknown";
-        }
-    };
+    // Calculate completion
+    const pathwayNodes = getNodesForPathway(pathwayType);
+    const completedNodes = pathwayNodes.filter((node) => {
+        const data = nodeData.get(node.id);
+        return data?.status === "completed" || data?.status === "refined";
+    });
+    const completionPercentage = Math.round(
+        (completedNodes.length / pathwayNodes.length) * 100
+    );
+    const hasStarted = nodeData.size > 0;
+    const canContinue = completionPercentage >= 50; // Require at least 50% completion
+
+    // Check if business profile is complete enough
+    const hasBusinessProfile =
+        businessProfile && (businessProfile.completion_status?.overall ?? 0) >= 30;
 
     if (!projectId) {
         return (
@@ -381,505 +316,235 @@ export default function Step2Page({
             projectId={projectId}
             funnelName={project?.name}
             completedSteps={completedSteps}
-            nextDisabled={!hasCompletedOffer}
-            nextLabel={
-                hasCompletedOffer ? "Generate Deck Structure" : "Generate Offer First"
-            }
-            stepTitle="Define Offer"
-            stepDescription="AI intelligently analyzes your intake to create optimized offers with the proven 7 P's framework"
+            nextDisabled={!canContinue}
+            nextLabel={canContinue ? "Continue to Brand Design" : "Complete Map First"}
+            stepTitle="Map Your Funnel"
+            stepDescription="Visualize your customer journey with AI-generated content for each step"
         >
-            <div className="space-y-8">
-                {/* Dependency Warning */}
-                {!hasIntakeData && (
-                    <DependencyWarning
-                        message="You need to complete your intake session first so AI can understand your business and create a compelling offer."
-                        requiredStep={1}
-                        requiredStepName="Intake"
-                        projectId={projectId}
-                    />
-                )}
+            <div className="flex h-[calc(100vh-200px)] min-h-[600px] gap-0">
+                {/* Main Content Area */}
+                <div
+                    className={cn(
+                        "flex flex-1 flex-col transition-all duration-300",
+                        selectedNode ? "w-[60%]" : "w-full"
+                    )}
+                >
+                    {/* Dependency Warning */}
+                    {!hasBusinessProfile && !isLoading && (
+                        <div className="mb-4">
+                            <DependencyWarning
+                                message="Complete your Business Profile first so AI can generate personalized funnel content."
+                                requiredStep={1}
+                                requiredStepName="Business Profile"
+                                projectId={projectId}
+                            />
+                        </div>
+                    )}
 
-                {/* Generation Interface */}
-                {!isGenerating ? (
-                    <div className="rounded-lg border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-8">
-                        <div className="mx-auto mb-6 max-w-md">
-                            <label className="mb-2 block text-sm font-medium text-foreground">
-                                Select Data Source
-                            </label>
+                    {/* Pathway Selection */}
+                    {hasBusinessProfile && !hasStarted && (
+                        <div className="mb-6 rounded-lg border border-border bg-card p-6">
+                            <h3 className="mb-4 text-lg font-semibold text-foreground">
+                                Choose Your Purchase Pathway
+                            </h3>
                             <p className="mb-4 text-sm text-muted-foreground">
-                                AI intelligently analyzes your business context to
-                                define your business offers to be used to build the rest
-                                of your funnel and marketing launch.
+                                Based on your offer price, we recommend the{" "}
+                                <span className="font-medium text-primary">
+                                    {PATHWAY_DEFINITIONS[pathwayType].title}
+                                </span>{" "}
+                                pathway.
                             </p>
 
-                            {/* Source Selection */}
-                            <div className="space-y-3">
-                                {/* Business Profile Option */}
-                                {businessProfile &&
-                                    (businessProfile.completion_status?.overall ?? 0) >
-                                        0 && (
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                setSelectedSource("profile");
-                                                setSelectedTranscript("");
-                                            }}
-                                            className={`flex w-full items-center gap-3 rounded-lg border p-4 text-left transition-all ${
-                                                selectedSource === "profile"
-                                                    ? "border-green-500 bg-green-50 ring-2 ring-green-500"
-                                                    : "border-border bg-card hover:border-green-300"
-                                            }`}
-                                        >
-                                            <div
-                                                className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                                                    selectedSource === "profile"
-                                                        ? "bg-green-500 text-white"
-                                                        : "bg-muted text-muted-foreground"
-                                                }`}
-                                            >
-                                                <User className="h-5 w-5" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="font-medium text-foreground">
-                                                    Business Profile
-                                                </div>
-                                                <div className="text-sm text-muted-foreground">
-                                                    {
-                                                        businessProfile
-                                                            .completion_status?.overall
-                                                    }
-                                                    % complete -{" "}
-                                                    {businessProfile.source === "wizard"
-                                                        ? "Guided Wizard"
-                                                        : businessProfile.source ===
-                                                            "gpt_paste"
-                                                          ? "GPT Import"
-                                                          : "Voice Call"}
-                                                </div>
-                                            </div>
-                                            {selectedSource === "profile" && (
-                                                <div className="text-green-600">✓</div>
-                                            )}
-                                        </button>
-                                    )}
-
-                                {/* Transcript Options */}
-                                {transcripts.length > 0 && (
-                                    <div className="space-y-2">
-                                        {businessProfile &&
-                                            (businessProfile.completion_status
-                                                ?.overall ?? 0) > 0 && (
-                                                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider pt-2">
-                                                    Or select a legacy intake session
-                                                </div>
-                                            )}
-                                        {transcripts.map((transcript: any) => (
-                                            <button
-                                                key={transcript.id}
-                                                type="button"
-                                                onClick={() => {
-                                                    setSelectedSource("transcript");
-                                                    setSelectedTranscript(
-                                                        transcript.id
-                                                    );
-                                                }}
-                                                className={`flex w-full items-center gap-3 rounded-lg border p-4 text-left transition-all ${
-                                                    selectedSource === "transcript" &&
-                                                    selectedTranscript === transcript.id
-                                                        ? "border-green-500 bg-green-50 ring-2 ring-green-500"
-                                                        : "border-border bg-card hover:border-green-300"
-                                                }`}
-                                            >
-                                                <div
-                                                    className={`flex h-10 w-10 items-center justify-center rounded-full ${
-                                                        selectedSource ===
-                                                            "transcript" &&
-                                                        selectedTranscript ===
-                                                            transcript.id
-                                                            ? "bg-green-500 text-white"
-                                                            : "bg-muted text-muted-foreground"
-                                                    }`}
-                                                >
-                                                    <Sparkles className="h-5 w-5" />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <div className="font-medium text-foreground">
-                                                        {transcript.session_name ||
-                                                            `${getMethodLabel(transcript.intake_method || "voice")}`}
-                                                    </div>
-                                                    <div className="text-sm text-muted-foreground">
-                                                        {formatDate(
-                                                            transcript.created_at
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                {selectedSource === "transcript" &&
-                                                    selectedTranscript ===
-                                                        transcript.id && (
-                                                        <div className="text-green-600">
-                                                            ✓
-                                                        </div>
-                                                    )}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-
-                                {/* No data available */}
-                                {!hasIntakeData && (
-                                    <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-600">
-                                        💡 Complete Step 1 first to create intake
-                                        sessions
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="text-center">
-                            <button
-                                onClick={handleGenerateOffer}
-                                disabled={!canGenerateOffer}
-                                className={`mx-auto flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
-                                    canGenerateOffer
-                                        ? "bg-primary text-primary-foreground hover:bg-primary/90"
-                                        : "cursor-not-allowed bg-gray-300 text-muted-foreground"
-                                }`}
-                            >
-                                <Sparkles className="h-6 w-6" />
-                                {canGenerateOffer
-                                    ? "Generate Offer"
-                                    : "Select Data Source First"}
-                            </button>
-
-                            <div className="mt-4 space-y-1 text-sm text-muted-foreground">
-                                <p>⚡ Generation time: ~20 seconds</p>
-                                <p>💰 Creates pricing, features, and bonuses</p>
-                            </div>
-                        </div>
-                    </div>
-                ) : (
-                    <div className="rounded-lg border border-green-200 bg-green-50 p-6">
-                        <div className="mb-6 text-center">
-                            <div className="mx-auto mb-4 flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-green-100">
-                                <Sparkles className="h-6 w-6 text-green-600" />
-                            </div>
-                            <h3 className="mb-2 text-xl font-semibold text-green-900">
-                                Generating Your Offer
-                            </h3>
-                            <p className="text-green-700">
-                                AI is creating your pricing and features...
-                            </p>
-                        </div>
-
-                        <div className="mx-auto max-w-md">
-                            <div className="mb-2 flex items-center justify-between">
-                                <span className="text-sm font-medium text-green-700">
-                                    Progress
-                                </span>
-                                <span className="text-sm text-green-600">
-                                    {generationProgress}%
-                                </span>
-                            </div>
-                            <div className="h-3 w-full rounded-full bg-green-200">
-                                <div
-                                    className="h-3 rounded-full bg-green-600 transition-all duration-500 ease-out"
-                                    style={{ width: `${generationProgress}%` }}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* AI Suggested Offers - Alternative Variations */}
-                {alternatives.length > 0 && (
-                    <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-primary/5 p-6">
-                        <div className="mb-6">
-                            <h3 className="mb-2 text-xl font-semibold text-foreground">
-                                🎯 AI Suggested Offer Variations
-                            </h3>
-                            <p className="text-muted-foreground">
-                                Explore these strategic alternatives optimized for
-                                different market positions
-                            </p>
-                        </div>
-
-                        <div className="grid gap-4 md:grid-cols-3">
-                            {alternatives.map((alt: any, idx: number) => (
-                                <div
-                                    key={idx}
-                                    className="rounded-lg border border-purple-200 bg-card p-5 shadow-sm transition-all hover:shadow-md"
-                                >
-                                    <div className="mb-3">
-                                        <div className="mb-1 inline-block rounded-full bg-purple-100 px-3 py-1 text-xs font-medium text-purple-700">
-                                            {alt.type === "value" && "💰 Value-Focused"}
-                                            {alt.type === "premium" && "👑 Premium"}
-                                            {alt.type === "scale" &&
-                                                "📈 Scale-Optimized"}
-                                        </div>
-                                    </div>
-
-                                    <h4 className="mb-2 text-lg font-semibold text-foreground">
-                                        {alt.name}
-                                    </h4>
-
-                                    <div className="mb-3 text-2xl font-bold text-purple-600">
-                                        ${alt.price}
-                                    </div>
-
-                                    <div className="mb-3 space-y-1 text-sm text-muted-foreground">
-                                        <div>
-                                            📦 {alt.features?.length || 0} features
-                                        </div>
-                                        <div>🎁 {alt.bonuses?.length || 0} bonuses</div>
-                                        <div className="flex items-center gap-1">
-                                            <span>
-                                                {alt.pathway === "book_call"
-                                                    ? "📞"
-                                                    : "🛒"}
-                                            </span>
-                                            <span>
-                                                {alt.pathway === "book_call"
-                                                    ? "Book Call"
-                                                    : "Direct Purchase"}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {alt.keyDifference && (
-                                        <p className="mb-4 text-sm italic text-muted-foreground">
-                                            "{alt.keyDifference}"
-                                        </p>
-                                    )}
-
+                            <div className="grid gap-4 md:grid-cols-2">
+                                {(
+                                    Object.entries(PATHWAY_DEFINITIONS) as [
+                                        PathwayType,
+                                        (typeof PATHWAY_DEFINITIONS)[PathwayType],
+                                    ][]
+                                ).map(([key, pathway]) => (
                                     <button
-                                        onClick={() => handleUseAlternative(alt)}
-                                        className="w-full rounded-lg bg-purple-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-purple-700"
+                                        key={key}
+                                        onClick={() =>
+                                            handlePathwayChange(key as PathwayType)
+                                        }
+                                        className={cn(
+                                            "flex items-start gap-4 rounded-lg border-2 p-4 text-left transition-all",
+                                            pathwayType === key
+                                                ? "border-primary bg-primary/5 ring-2 ring-primary ring-offset-2"
+                                                : "border-border hover:border-primary/50"
+                                        )}
                                     >
-                                        Use This Offer
+                                        <div
+                                            className={cn(
+                                                "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                                                pathwayType === key
+                                                    ? "bg-primary text-primary-foreground"
+                                                    : "bg-muted text-muted-foreground"
+                                            )}
+                                        >
+                                            {key === "direct_purchase" ? (
+                                                <CreditCard className="h-5 w-5" />
+                                            ) : (
+                                                <Phone className="h-5 w-5" />
+                                            )}
+                                        </div>
+                                        <div>
+                                            <h4 className="font-semibold text-foreground">
+                                                {pathway.title}
+                                            </h4>
+                                            <p className="text-sm text-muted-foreground">
+                                                {pathway.description}
+                                            </p>
+                                            <p className="mt-1 text-xs font-medium text-primary">
+                                                {pathway.priceThreshold}
+                                            </p>
+                                        </div>
+                                        {pathwayType === key && (
+                                            <Check className="ml-auto h-5 w-5 text-primary" />
+                                        )}
                                     </button>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
+                    )}
 
-                        {loadingAlternatives && (
-                            <div className="py-8 text-center">
-                                <div className="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-4 border-purple-200 border-t-purple-600"></div>
-                                <p className="text-sm text-purple-600">
-                                    Generating alternative offers...
+                    {/* Generate Drafts Button */}
+                    {hasBusinessProfile && !hasStarted && (
+                        <div className="mb-6 flex justify-center">
+                            <Button
+                                size="lg"
+                                onClick={handleGenerateDrafts}
+                                disabled={isGenerating}
+                                className="gap-2 px-8"
+                            >
+                                {isGenerating ? (
+                                    <>
+                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                        Generating Your Funnel...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="h-5 w-5" />
+                                        Generate AI Drafts
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* Loading State */}
+                    {isLoading && (
+                        <div className="flex flex-1 items-center justify-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    )}
+
+                    {/* Generating State */}
+                    {isGenerating && (
+                        <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-primary/20 bg-primary/5 p-8">
+                            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+                                <Sparkles className="h-8 w-8 animate-pulse text-primary" />
+                            </div>
+                            <h3 className="mb-2 text-xl font-semibold text-foreground">
+                                Creating Your Funnel Map
+                            </h3>
+                            <p className="text-center text-muted-foreground">
+                                AI is analyzing your business profile and generating
+                                personalized content for each step of your funnel...
+                            </p>
+                            <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <span>This takes about 30-60 seconds</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Flowchart */}
+                    {!isLoading && !isGenerating && hasStarted && (
+                        <div className="flex-1">
+                            {/* Progress Bar */}
+                            <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-card p-4">
+                                <div className="flex items-center gap-4">
+                                    <span className="text-sm font-medium text-foreground">
+                                        Funnel Completion
+                                    </span>
+                                    <div className="h-2 w-32 overflow-hidden rounded-full bg-muted">
+                                        <div
+                                            className={cn(
+                                                "h-full rounded-full transition-all duration-500",
+                                                completionPercentage === 100
+                                                    ? "bg-green-500"
+                                                    : "bg-primary"
+                                            )}
+                                            style={{
+                                                width: `${completionPercentage}%`,
+                                            }}
+                                        />
+                                    </div>
+                                    <span className="text-sm text-muted-foreground">
+                                        {completedNodes.length}/{pathwayNodes.length}{" "}
+                                        nodes refined
+                                    </span>
+                                </div>
+
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={handleGenerateDrafts}
+                                    disabled={isGenerating}
+                                    className="gap-2"
+                                >
+                                    <RefreshCw className="h-4 w-4" />
+                                    Regenerate Drafts
+                                </Button>
+                            </div>
+
+                            {/* React Flow Flowchart */}
+                            <FunnelFlowchart
+                                pathwayType={pathwayType}
+                                nodeData={nodeData}
+                                selectedNode={selectedNode}
+                                onNodeSelect={handleNodeSelect}
+                                isGeneratingDrafts={isGenerating}
+                            />
+                        </div>
+                    )}
+
+                    {/* Empty State (after profile, before generation) */}
+                    {!isLoading &&
+                        !isGenerating &&
+                        !hasStarted &&
+                        hasBusinessProfile && (
+                            <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border p-8 text-center">
+                                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+                                    <ArrowRight className="h-8 w-8 text-muted-foreground" />
+                                </div>
+                                <h3 className="mb-2 text-xl font-semibold text-foreground">
+                                    Ready to Map Your Funnel
+                                </h3>
+                                <p className="max-w-md text-muted-foreground">
+                                    Click "Generate AI Drafts" above to create
+                                    personalized content for each step of your customer
+                                    journey.
                                 </p>
                             </div>
                         )}
+                </div>
+
+                {/* AI Chat Panel */}
+                {selectedNode && hasStarted && (
+                    <div className="w-[40%] min-w-[360px] max-w-[500px]">
+                        <AIChatPanel
+                            nodeType={selectedNode}
+                            nodeData={nodeData.get(selectedNode) || null}
+                            projectId={projectId}
+                            onClose={() => setSelectedNode(null)}
+                            onContentUpdate={handleContentUpdate}
+                            onConversationUpdate={handleConversationUpdate}
+                        />
                     </div>
                 )}
-
-                {/* Generated Offers */}
-                <div className="rounded-lg border border-border bg-card shadow-soft">
-                    <div className="border-b border-border p-6">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-xl font-semibold text-foreground">
-                                Your Offers
-                            </h3>
-                            <span className="text-sm text-muted-foreground">
-                                {offers.length} created
-                            </span>
-                        </div>
-                    </div>
-
-                    <div className="p-6">
-                        {offers.length === 0 ? (
-                            <div className="py-12 text-center text-muted-foreground">
-                                <DollarSign className="mx-auto mb-4 h-12 w-12 opacity-50" />
-                                <p>No offers yet. Generate your first one above!</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {offers.map((offer) => (
-                                    <div
-                                        key={offer.id}
-                                        onClick={() => setSelectedOffer(offer)}
-                                        className="cursor-pointer rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-green-300 hover:shadow-md"
-                                    >
-                                        <div className="flex items-start justify-between">
-                                            <div className="flex-1">
-                                                <div className="mb-2 flex items-center gap-3">
-                                                    {editingId === offer.id ? (
-                                                        <div
-                                                            className="flex flex-1 items-center gap-2"
-                                                            onClick={(e) =>
-                                                                e.stopPropagation()
-                                                            }
-                                                        >
-                                                            <input
-                                                                type="text"
-                                                                value={editingName}
-                                                                onChange={(e) =>
-                                                                    setEditingName(
-                                                                        e.target.value
-                                                                    )
-                                                                }
-                                                                className="flex-1 rounded border border-green-300 px-2 py-1 text-lg font-semibold focus:outline-none focus:ring-2 focus:ring-green-500"
-                                                                onKeyDown={(e) => {
-                                                                    if (
-                                                                        e.key ===
-                                                                        "Enter"
-                                                                    )
-                                                                        handleEditSave(
-                                                                            offer.id
-                                                                        );
-                                                                    if (
-                                                                        e.key ===
-                                                                        "Escape"
-                                                                    )
-                                                                        setEditingId(
-                                                                            null
-                                                                        );
-                                                                }}
-                                                                autoFocus
-                                                            />
-                                                            <button
-                                                                onClick={() =>
-                                                                    handleEditSave(
-                                                                        offer.id
-                                                                    )
-                                                                }
-                                                                className="rounded bg-green-600 px-2 py-1 text-sm text-white hover:bg-green-700"
-                                                            >
-                                                                Save
-                                                            </button>
-                                                            <button
-                                                                onClick={() =>
-                                                                    setEditingId(null)
-                                                                }
-                                                                className="rounded bg-gray-300 px-2 py-1 text-sm text-foreground hover:bg-gray-400"
-                                                            >
-                                                                Cancel
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <>
-                                                            <h4
-                                                                className="cursor-pointer text-lg font-semibold text-foreground hover:text-green-600"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setEditingId(
-                                                                        offer.id
-                                                                    );
-                                                                    setEditingName(
-                                                                        offer.name
-                                                                    );
-                                                                }}
-                                                            >
-                                                                {offer.name}
-                                                            </h4>
-                                                            <button
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    setEditingId(
-                                                                        offer.id
-                                                                    );
-                                                                    setEditingName(
-                                                                        offer.name
-                                                                    );
-                                                                }}
-                                                                className="rounded p-1 text-green-600 hover:bg-green-50"
-                                                            >
-                                                                <Pencil className="h-4 w-4" />
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
-
-                                                <div className="mb-2 text-muted-foreground">
-                                                    {offer.description}
-                                                </div>
-                                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                                    <span className="text-2xl font-bold text-green-600">
-                                                        ${offer.price}
-                                                    </span>
-                                                    <span>{offer.currency}</span>
-                                                    <span>
-                                                        📦 {offer.features?.length || 0}{" "}
-                                                        features
-                                                    </span>
-                                                    <span>
-                                                        🎁 {offer.bonuses?.length || 0}{" "}
-                                                        bonuses
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteOffer(offer.id);
-                                                }}
-                                                className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
-                                            >
-                                                <Trash2 className="h-4 w-4" />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                </div>
             </div>
-
-            {/* Offer Editor Modal */}
-            {selectedOffer && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 p-4">
-                    <div className="flex h-[90vh] w-full max-w-4xl flex-col rounded-lg bg-card shadow-2xl">
-                        <div className="rounded-t-lg border-b border-border bg-muted/50 p-6">
-                            <div className="flex items-center justify-between">
-                                <h2 className="text-2xl font-bold text-foreground">
-                                    {selectedOffer.name}
-                                </h2>
-                                <button
-                                    onClick={() => setSelectedOffer(null)}
-                                    className="text-2xl font-bold text-muted-foreground hover:text-muted-foreground"
-                                >
-                                    ×
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="flex-1 overflow-y-scroll p-6">
-                            <OfferEditor
-                                initialOffer={selectedOffer}
-                                onSave={async (updates) => {
-                                    try {
-                                        const supabase = createClient();
-                                        const { error } = await supabase
-                                            .from("offers")
-                                            .update(updates)
-                                            .eq("id", selectedOffer.id);
-
-                                        if (!error) {
-                                            // Reload offers
-                                            const { data: offersData } = await supabase
-                                                .from("offers")
-                                                .select("*")
-                                                .eq("funnel_project_id", projectId)
-                                                .order("created_at", {
-                                                    ascending: false,
-                                                });
-
-                                            if (offersData) {
-                                                setOffers(offersData);
-                                            }
-                                            setSelectedOffer(null);
-                                        }
-                                    } catch (error) {
-                                        logger.error({ error }, "Failed to save offer");
-                                        throw error;
-                                    }
-                                }}
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
         </StepLayout>
     );
 }

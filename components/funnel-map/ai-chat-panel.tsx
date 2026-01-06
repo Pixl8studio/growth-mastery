@@ -28,6 +28,13 @@ import type {
 } from "@/types/funnel-map";
 import { getNodeDefinition } from "@/types/funnel-map";
 
+// ============================================
+// CONSTANTS
+// ============================================
+
+/** Maximum height for auto-resizing textarea in pixels */
+const MAX_TEXTAREA_HEIGHT_PX = 120;
+
 interface AIChatPanelProps {
     nodeType: FunnelNodeType;
     nodeData: FunnelNodeData | null;
@@ -74,7 +81,7 @@ export function AIChatPanel({
     useEffect(() => {
         if (textareaRef.current) {
             textareaRef.current.style.height = "auto";
-            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 120)}px`;
+            textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, MAX_TEXTAREA_HEIGHT_PX)}px`;
         }
     }, [inputValue]);
 

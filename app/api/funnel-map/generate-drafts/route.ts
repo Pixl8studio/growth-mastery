@@ -29,6 +29,12 @@ const AI_MAX_TOKENS = 2000;
 /** AI temperature for draft generation */
 const AI_TEMPERATURE = 0.7;
 
+/** Maximum retry attempts for database operations */
+const DB_MAX_RETRIES = 3;
+
+/** Base delay for exponential backoff in milliseconds */
+const DB_RETRY_BASE_DELAY_MS = 500;
+
 // ============================================
 // REQUEST VALIDATION SCHEMA
 // ============================================
@@ -173,14 +179,19 @@ export async function POST(request: NextRequest) {
 
         const drafts = await Promise.all(draftPromises);
 
-        // Save all drafts to database
-        await saveDraftsToDatabase(
+        // Save all drafts to database with retry logic
+        const saveResult = await saveDraftsToDatabase(
             supabase,
             user.id,
             projectId,
             drafts,
             pathwayType
         );
+
+        // Add any database save warnings to the response warnings
+        if (saveResult.warnings.length > 0) {
+            warnings.push(...saveResult.warnings);
+        }
 
         // Create/update funnel map config
         await supabase.from("funnel_map_config").upsert(
@@ -195,7 +206,13 @@ export async function POST(request: NextRequest) {
         );
 
         requestLogger.info(
-            { projectId, draftsCount: drafts.length, warnings: warnings.length },
+            {
+                projectId,
+                draftsCount: drafts.length,
+                savedCount: saveResult.savedCount,
+                failedNodes: saveResult.failedNodes,
+                warnings: warnings.length,
+            },
             "Funnel drafts generated successfully"
         );
 
@@ -415,13 +432,21 @@ Generate the "${nodeDef.title}" content based on this business context. Return O
     return context;
 }
 
+/**
+ * Save drafts to database with retry logic and partial failure handling
+ * Returns information about which drafts were saved successfully
+ */
 async function saveDraftsToDatabase(
     supabase: Awaited<ReturnType<typeof createClient>>,
     userId: string,
     projectId: string,
     drafts: NodeDraft[],
     pathwayType: PathwayType
-) {
+): Promise<{ savedCount: number; failedNodes: string[]; warnings: string[] }> {
+    const warnings: string[] = [];
+    const failedNodes: string[] = [];
+    let savedCount = 0;
+
     // Prepare upsert data
     const insertData = drafts.map((draft) => ({
         funnel_project_id: projectId,
@@ -435,16 +460,82 @@ async function saveDraftsToDatabase(
         pathway_type: pathwayType,
     }));
 
-    // Upsert all nodes
-    const { error } = await supabase
-        .from("funnel_node_data")
-        .upsert(insertData, {
-            onConflict: "funnel_project_id,node_type",
-            ignoreDuplicates: false,
-        });
+    // Try batch upsert first with retry logic
+    let batchSuccess = false;
+    let lastError: unknown = null;
 
-    if (error) {
-        logger.error({ error, projectId }, "Failed to save drafts to database");
-        throw error;
+    for (let attempt = 1; attempt <= DB_MAX_RETRIES; attempt++) {
+        const { error } = await supabase
+            .from("funnel_node_data")
+            .upsert(insertData, {
+                onConflict: "funnel_project_id,node_type",
+                ignoreDuplicates: false,
+            });
+
+        if (!error) {
+            batchSuccess = true;
+            savedCount = drafts.length;
+            break;
+        }
+
+        lastError = error;
+        logger.warn(
+            { error, projectId, attempt, maxRetries: DB_MAX_RETRIES },
+            "Database save attempt failed, retrying"
+        );
+
+        // Exponential backoff before retry
+        if (attempt < DB_MAX_RETRIES) {
+            await new Promise((resolve) =>
+                setTimeout(resolve, DB_RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1))
+            );
+        }
     }
+
+    // If batch failed after all retries, try saving each draft individually
+    // This ensures partial success - user gets their drafts even if some fail
+    if (!batchSuccess) {
+        logger.error(
+            { error: lastError, projectId },
+            "Batch save failed after all retries, attempting individual saves"
+        );
+
+        for (const data of insertData) {
+            try {
+                const { error } = await supabase
+                    .from("funnel_node_data")
+                    .upsert(data, {
+                        onConflict: "funnel_project_id,node_type",
+                        ignoreDuplicates: false,
+                    });
+
+                if (error) {
+                    failedNodes.push(data.node_type);
+                    warnings.push(`Failed to save draft for ${data.node_type}: ${error.message}`);
+                    logger.error(
+                        { error, projectId, nodeType: data.node_type },
+                        "Individual draft save failed"
+                    );
+                } else {
+                    savedCount++;
+                }
+            } catch (err) {
+                failedNodes.push(data.node_type);
+                warnings.push(`Exception saving ${data.node_type}`);
+                logger.error(
+                    { error: err, projectId, nodeType: data.node_type },
+                    "Exception during individual draft save"
+                );
+            }
+        }
+
+        // If we couldn't save any drafts, throw to trigger error response
+        if (savedCount === 0) {
+            throw new Error(
+                `Failed to save any drafts to database after ${DB_MAX_RETRIES} retries. AI generation completed successfully - drafts can be retrieved by regenerating.`
+            );
+        }
+    }
+
+    return { savedCount, failedNodes, warnings };
 }

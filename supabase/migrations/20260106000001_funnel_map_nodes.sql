@@ -1,6 +1,33 @@
 -- Migration: Funnel Map Nodes
 -- Purpose: Store AI-generated drafts and user refinements for each funnel node
 -- This supports the Step 2 Visual Funnel Co-Creation Experience
+--
+-- ROLLBACK PROCEDURE:
+-- To rollback this migration, run the following in order:
+--
+--   -- 1. Drop RLS policies
+--   DROP POLICY IF EXISTS "Users can view their own funnel node data" ON public.funnel_node_data;
+--   DROP POLICY IF EXISTS "Users can insert their own funnel node data" ON public.funnel_node_data;
+--   DROP POLICY IF EXISTS "Users can update their own funnel node data" ON public.funnel_node_data;
+--   DROP POLICY IF EXISTS "Users can delete their own funnel node data" ON public.funnel_node_data;
+--   DROP POLICY IF EXISTS "Users can view their own funnel map config" ON public.funnel_map_config;
+--   DROP POLICY IF EXISTS "Users can insert their own funnel map config" ON public.funnel_map_config;
+--   DROP POLICY IF EXISTS "Users can update their own funnel map config" ON public.funnel_map_config;
+--   DROP POLICY IF EXISTS "Users can delete their own funnel map config" ON public.funnel_map_config;
+--
+--   -- 2. Drop triggers
+--   DROP TRIGGER IF EXISTS trigger_update_funnel_node_data_updated_at ON public.funnel_node_data;
+--   DROP TRIGGER IF EXISTS trigger_update_funnel_map_config_updated_at ON public.funnel_map_config;
+--
+--   -- 3. Drop trigger function
+--   DROP FUNCTION IF EXISTS update_funnel_node_data_updated_at();
+--
+--   -- 4. Drop tables (this will also cascade delete indexes)
+--   DROP TABLE IF EXISTS public.funnel_map_config;
+--   DROP TABLE IF EXISTS public.funnel_node_data;
+--
+-- WARNING: This will permanently delete all funnel node data and configurations.
+-- Ensure data is backed up before running rollback.
 
 -- ============================================
 -- FUNNEL NODE DATA TABLE

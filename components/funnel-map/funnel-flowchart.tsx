@@ -6,7 +6,7 @@
  * Uses React Flow for interactive node-based visualization
  */
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import {
     ReactFlow,
     Background,
@@ -37,11 +37,15 @@ interface FunnelFlowchartProps {
     isGeneratingDrafts?: boolean;
 }
 
-// Custom node types for React Flow - use any to bypass strict typing
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const nodeTypes: Record<string, any> = {
+// Custom node types for React Flow
+// React Flow passes additional props (id, dragging, etc.) to node components,
+// but our FunnelNode only needs the data prop. Using type assertion here is
+// safe because React Flow handles the prop injection internally.
+import type { NodeTypes } from "@xyflow/react";
+
+const nodeTypes = {
     funnelNode: FunnelNode,
-};
+} as NodeTypes;
 
 // Node spacing
 const NODE_SPACING_Y = 140;
@@ -159,11 +163,13 @@ export function FunnelFlowchart({
     const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
     // Update nodes when data changes
-    useMemo(() => {
+    // Using useEffect for side effects (calling setNodes/setEdges) instead of useMemo
+    // This follows React's rules of hooks and prevents state updates during render
+    useEffect(() => {
         setNodes(initialNodes);
     }, [initialNodes, setNodes]);
 
-    useMemo(() => {
+    useEffect(() => {
         setEdges(initialEdges);
     }, [initialEdges, setEdges]);
 

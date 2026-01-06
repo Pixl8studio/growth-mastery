@@ -1,5 +1,13 @@
 -- Migration: Atomic JSONB Update Function
 -- Purpose: Provide atomic JSONB merge for conversation updates to prevent race conditions
+--
+-- ROLLBACK PROCEDURE:
+-- To rollback this migration, run:
+--   DROP FUNCTION IF EXISTS merge_funnel_node_conversation(UUID, UUID, TEXT, JSONB, JSONB);
+--
+-- This will remove the atomic merge function. The application will need to be updated
+-- to use direct INSERT/UPDATE operations (with potential race conditions) or an alternative
+-- approach if this function is rolled back.
 
 -- ============================================
 -- ATOMIC JSONB MERGE FUNCTION
@@ -34,6 +42,7 @@ BEGIN
     ON CONFLICT (funnel_project_id, node_type)
     DO UPDATE SET
         -- Append new message to conversation history (keep last 100 messages)
+        -- Uses COALESCE on timestamp casting to handle malformed JSONB gracefully
         conversation_history = (
             SELECT jsonb_agg(elem)
             FROM (
@@ -41,7 +50,7 @@ BEGIN
                 FROM jsonb_array_elements(
                     COALESCE(funnel_node_data.conversation_history, '[]'::jsonb) || jsonb_build_array(p_new_message)
                 ) AS elem
-                ORDER BY (elem->>'timestamp')::timestamptz DESC
+                ORDER BY COALESCE((elem->>'timestamp')::timestamptz, NOW()) DESC
                 LIMIT 100
             ) sub
         ),

@@ -9,14 +9,28 @@ import { generateWithAI, type AIMessage } from "@/lib/ai/client";
 import { logger } from "@/lib/logger";
 import * as Sentry from "@sentry/nextjs";
 import { z } from "zod";
-import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
+import {
+    checkRateLimitWithInfo,
+    getRateLimitIdentifier,
+    addRateLimitHeaders,
+    type RateLimitResult,
+} from "@/lib/middleware/rate-limit";
 import type { FunnelNodeDefinition } from "@/types/funnel-map";
 
 // ============================================
 // CONSTANTS
 // ============================================
 
-/** Maximum messages to send to AI for context (sliding window) */
+/**
+ * Maximum messages to send to AI for context (sliding window)
+ *
+ * Conversation History Limits:
+ * - API accepts max 100 messages (ChatRequestSchema.conversationHistory)
+ * - Database stores last 100 messages (PostgreSQL function limit)
+ * - AI receives only last 20 messages (this constant)
+ *
+ * Rationale: Full history preserved for UX, limited context for AI cost/quality
+ */
 const AI_CONTEXT_WINDOW_SIZE = 20;
 
 /** Maximum tokens for AI response */
@@ -24,6 +38,10 @@ const AI_MAX_TOKENS = 2000;
 
 /** AI temperature for chat responses */
 const AI_TEMPERATURE = 0.7;
+
+/** Fallback message when AI response validation fails */
+const AI_VALIDATION_FALLBACK_MESSAGE =
+    "I apologize, but I had trouble formulating my response. Could you please rephrase your question?";
 
 // ============================================
 // REQUEST VALIDATION SCHEMA
@@ -97,6 +115,7 @@ export async function POST(request: NextRequest) {
     let projectId: string | undefined;
     let nodeType: string | undefined;
     let userId: string | undefined;
+    let rateLimitInfo: RateLimitResult["info"] = null;
 
     try {
         const supabase = await createClient();
@@ -109,13 +128,14 @@ export async function POST(request: NextRequest) {
         }
         userId = user.id;
 
-        // Check rate limit
-        const rateLimitResponse = await checkRateLimit(
+        // Check rate limit and save info for response headers
+        const rateLimitResult = await checkRateLimitWithInfo(
             getRateLimitIdentifier(request, user.id),
             "funnel-chat"
         );
-        if (rateLimitResponse) {
-            return rateLimitResponse;
+        rateLimitInfo = rateLimitResult.info;
+        if (rateLimitResult.blocked) {
+            return rateLimitResult.response!;
         }
 
         // Validate request body with Zod
@@ -189,11 +209,59 @@ export async function POST(request: NextRequest) {
                 { rawResult, validationErrors: validatedResult.error.issues },
                 "AI returned invalid response structure"
             );
-            // Provide fallback response
-            return NextResponse.json({
-                message: "I apologize, but I had trouble formulating my response. Could you please rephrase your question?",
+
+            // Capture persistent validation failures in Sentry
+            Sentry.captureMessage("AI response validation failed", {
+                level: "warning",
+                tags: { route: "funnel-map-chat", type: "ai_validation_failure" },
+                extra: {
+                    rawResult,
+                    validationErrors: validatedResult.error.issues,
+                    projectId,
+                    nodeType,
+                },
+            });
+
+            // Save both user message and fallback response to maintain conversation continuity
+            const fallbackUserMessage = {
+                id: crypto.randomUUID(),
+                role: "user",
+                content: message,
+                timestamp: new Date().toISOString(),
+            };
+
+            // Save user message first
+            await saveConversationAtomic(
+                supabase,
+                user.id,
+                projectId,
+                reqNodeType,
+                fallbackUserMessage,
+                undefined
+            );
+
+            // Save fallback AI response to maintain conversation symmetry
+            const fallbackAssistantMessage = {
+                id: crypto.randomUUID(),
+                role: "assistant",
+                content: AI_VALIDATION_FALLBACK_MESSAGE,
+                timestamp: new Date().toISOString(),
+            };
+
+            await saveConversationAtomic(
+                supabase,
+                user.id,
+                projectId,
+                reqNodeType,
+                fallbackAssistantMessage,
+                undefined
+            );
+
+            const response = NextResponse.json({
+                message: AI_VALIDATION_FALLBACK_MESSAGE,
                 warning: "AI response validation failed",
             });
+            return addRateLimitHeaders(response, rateLimitInfo);
         }
 
         const result = validatedResult.data;
@@ -207,7 +275,7 @@ export async function POST(request: NextRequest) {
             "AI chat response generated"
         );
 
-        // Prepare new message for storage
+        // Prepare user message for storage
         const newUserMessage = {
             id: crypto.randomUUID(),
             role: "user",
@@ -215,25 +283,51 @@ export async function POST(request: NextRequest) {
             timestamp: new Date().toISOString(),
         };
 
-        // Save using atomic RPC to prevent race conditions
-        const saveResult = await saveConversationAtomic(
+        // Save user message using atomic RPC to prevent race conditions
+        const userSaveResult = await saveConversationAtomic(
             supabase,
             user.id,
             projectId,
             reqNodeType,
             newUserMessage,
+            undefined // Don't merge changes with user message
+        );
+
+        // Prepare assistant message for storage (includes suggested changes)
+        const newAssistantMessage = {
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content: result.message,
+            timestamp: new Date().toISOString(),
+        };
+
+        // Save assistant message with any suggested changes
+        const assistantSaveResult = await saveConversationAtomic(
+            supabase,
+            user.id,
+            projectId,
+            reqNodeType,
+            newAssistantMessage,
             result.suggestedChanges
         );
 
+        // Combine save results
+        const saveResult = {
+            success: userSaveResult.success && assistantSaveResult.success,
+            error: userSaveResult.error || assistantSaveResult.error,
+        };
+
         // Return response with warning if save failed
         if (!saveResult.success) {
-            return NextResponse.json({
+            const response = NextResponse.json({
                 ...result,
                 warning: "Response generated but failed to save conversation history",
             });
+            return addRateLimitHeaders(response, rateLimitInfo);
         }
 
-        return NextResponse.json(result);
+        const response = NextResponse.json(result);
+        return addRateLimitHeaders(response, rateLimitInfo);
     } catch (error) {
         requestLogger.error({ error, projectId, nodeType }, "Funnel map chat failed");
 

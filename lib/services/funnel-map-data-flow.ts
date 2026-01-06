@@ -199,16 +199,29 @@ export async function syncToOffersTable(
             .eq("offer_type", "main")
             .single();
 
+        // Safely extract price from various formats
+        let extractedPrice: number | null = null;
+        if (typeof coreOfferData.price === "number") {
+            extractedPrice = coreOfferData.price;
+        } else if (
+            typeof coreOfferData.price === "object" &&
+            coreOfferData.price !== null
+        ) {
+            const priceObj = coreOfferData.price as Record<string, unknown>;
+            extractedPrice =
+                typeof priceObj.webinar === "number"
+                    ? priceObj.webinar
+                    : typeof priceObj.regular === "number"
+                      ? priceObj.regular
+                      : null;
+        }
+
         const offerPayload = {
             funnel_project_id: context.projectId,
             user_id: context.userId,
             name: coreOfferData.promise || "Main Offer",
             description: coreOfferData.product,
-            price:
-                typeof coreOfferData.price === "object" && coreOfferData.price !== null
-                    ? (coreOfferData.price as Record<string, number>).webinar ||
-                      (coreOfferData.price as Record<string, number>).regular
-                    : null,
+            price: extractedPrice,
             guarantee: coreOfferData.guarantee,
             offer_type: "main",
             features: coreOfferData.bonuses.map((b) => ({ title: b })),

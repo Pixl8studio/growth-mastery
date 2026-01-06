@@ -8,12 +8,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import * as Sentry from "@sentry/nextjs";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
 import type { FunnelNodeType } from "@/types/funnel-map";
+import { getNodeDefinition } from "@/types/funnel-map";
 
 const approveRequestSchema = z.object({
     projectId: z.string().uuid(),
@@ -38,24 +38,8 @@ export async function POST(request: NextRequest) {
 
         const { projectId, nodeType } = parseResult.data;
 
-        // Create Supabase client
-        const cookieStore = await cookies();
-        const supabase = createServerClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-            {
-                cookies: {
-                    getAll() {
-                        return cookieStore.getAll();
-                    },
-                    setAll(cookiesToSet) {
-                        cookiesToSet.forEach(({ name, value, options }) => {
-                            cookieStore.set(name, value, options);
-                        });
-                    },
-                },
-            }
-        );
+        // Create Supabase client using shared helper
+        const supabase = await createClient();
 
         // Verify authentication
         const {
@@ -111,6 +95,26 @@ export async function POST(request: NextRequest) {
                 ? nodeData.refined_content
                 : nodeData.draft_content;
 
+        // Validate required fields are present before approval
+        const nodeDef = getNodeDefinition(nodeType);
+        if (nodeDef) {
+            const requiredFields = nodeDef.fields.filter((f) => f.required);
+            const missingFields = requiredFields.filter((f) => {
+                const value = (contentToApprove as Record<string, unknown>)[f.key];
+                return value === undefined || value === null || value === "";
+            });
+
+            if (missingFields.length > 0) {
+                return NextResponse.json(
+                    {
+                        error: "Cannot approve incomplete content",
+                        missingFields: missingFields.map((f) => f.label),
+                    },
+                    { status: 400 }
+                );
+            }
+        }
+
         // Update node with approval
         const { error: updateError } = await supabase
             .from("funnel_node_data")
@@ -135,16 +139,17 @@ export async function POST(request: NextRequest) {
         }
 
         // Update funnel map config approval count
+        // Query runs AFTER the update, so the current node is already counted as approved
         const { data: allNodes } = await supabase
             .from("funnel_node_data")
             .select("is_approved")
             .eq("funnel_project_id", projectId)
             .eq("user_id", user.id);
 
-        const approvedCount = (allNodes || []).filter((n) => n.is_approved).length + 1;
+        const approvedCount = (allNodes || []).filter((n) => n.is_approved).length;
         const totalCount = (allNodes || []).length;
 
-        await supabase
+        const { error: configError } = await supabase
             .from("funnel_map_config")
             .update({
                 nodes_approved_count: approvedCount,
@@ -153,6 +158,18 @@ export async function POST(request: NextRequest) {
             })
             .eq("funnel_project_id", projectId)
             .eq("user_id", user.id);
+
+        if (configError) {
+            // Log but don't fail the request - the node is approved, config is secondary
+            requestLogger.error(
+                { error: configError },
+                "Failed to update config approval count (node was still approved)"
+            );
+            Sentry.captureException(configError, {
+                tags: { action: "update_approval_config" },
+                extra: { projectId, nodeType, approvedCount, totalCount },
+            });
+        }
 
         requestLogger.info(
             { projectId, nodeType, approvedCount, totalCount },

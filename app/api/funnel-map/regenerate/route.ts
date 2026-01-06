@@ -14,11 +14,11 @@ import * as Sentry from "@sentry/nextjs";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
 import { generateWithAI, type AIMessage } from "@/lib/ai/client";
 import type { FunnelNodeType, PathwayType } from "@/types/funnel-map";
-import { getNodeDefinition } from "@/types/funnel-map";
+import { getNodeDefinition, VALID_NODE_TYPES } from "@/types/funnel-map";
 
 const regenerateRequestSchema = z.object({
     projectId: z.string().uuid(),
-    nodeType: z.string() as z.ZodType<FunnelNodeType>,
+    nodeType: z.enum(VALID_NODE_TYPES),
     // Optional: Confirm overwriting approved content
     confirmOverwrite: z.boolean().optional().default(false),
 });

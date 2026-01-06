@@ -3,6 +3,23 @@
 --
 -- This function handles node approval with row-level locking to prevent
 -- race conditions when multiple approval requests occur simultaneously.
+--
+-- SECURITY NOTES:
+-- ================
+-- This function uses SECURITY DEFINER, which means it runs with the privileges
+-- of the function creator (bypassing RLS). This is necessary because:
+--   1. We need to update both funnel_node_data and funnel_map_config atomically
+--   2. RLS policies would require separate transactions, creating race conditions
+--
+-- Authorization is enforced through WHERE clause filters:
+--   - All queries filter by user_id = p_user_id (passed from authenticated session)
+--   - Users can only approve their own nodes (verified by WHERE user_id = p_user_id)
+--   - The API layer validates p_user_id matches the authenticated user before calling
+--
+-- This design prevents privilege escalation because:
+--   - The function ONLY operates on rows where user_id matches the parameter
+--   - The API route passes user.id from the authenticated session, not user input
+--   - No user-supplied data is used in any security-sensitive context
 CREATE OR REPLACE FUNCTION public.approve_funnel_node (
   p_project_id UUID,
   p_node_type TEXT,

@@ -15,7 +15,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import * as Sentry from "@sentry/nextjs";
-import type { FunnelNodeType, FunnelNodeData, PricingValue } from "@/types/funnel-map";
+import type { FunnelNodeType, FunnelNodeData } from "@/types/funnel-map";
 import { extractPrice, getEffectiveContent } from "@/types/funnel-map";
 
 const flowLogger = logger.child({ service: "funnel-map-data-flow" });
@@ -200,8 +200,8 @@ export async function syncToOffersTable(
             .eq("offer_type", "main")
             .single();
 
-        // Use type-safe price extraction helper
-        const extractedPrice = extractPrice(coreOfferData.price as PricingValue);
+        // Use type-safe price extraction helper (handles unknown input gracefully)
+        const extractedPrice = extractPrice(coreOfferData.price);
 
         const offerPayload = {
             funnel_project_id: context.projectId,

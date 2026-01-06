@@ -13,11 +13,15 @@ import { logger } from "@/lib/logger";
 import * as Sentry from "@sentry/nextjs";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
 import type { FunnelNodeType } from "@/types/funnel-map";
-import { getNodeDefinition, getEffectiveContent } from "@/types/funnel-map";
+import {
+    getNodeDefinition,
+    getEffectiveContent,
+    VALID_NODE_TYPES,
+} from "@/types/funnel-map";
 
 const approveRequestSchema = z.object({
     projectId: z.string().uuid(),
-    nodeType: z.string() as z.ZodType<FunnelNodeType>,
+    nodeType: z.enum(VALID_NODE_TYPES),
 });
 
 export async function POST(request: NextRequest) {

@@ -30,6 +30,27 @@ export type FunnelNodeType =
     | "sales_call"
     | "thank_you";
 
+/**
+ * Valid node types as a const tuple for Zod enum validation.
+ * This ensures runtime validation matches the TypeScript type.
+ */
+export const VALID_NODE_TYPES = [
+    "traffic_source",
+    "registration",
+    "registration_confirmation",
+    "masterclass",
+    "core_offer",
+    "checkout",
+    "upsells",
+    "upsell_1",
+    "upsell_2",
+    "order_bump",
+    "call_booking",
+    "call_booking_confirmation",
+    "sales_call",
+    "thank_you",
+] as const satisfies readonly FunnelNodeType[];
+
 export type PathwayType = "direct_purchase" | "book_call";
 
 export type NodeStatus = "draft" | "in_progress" | "refined" | "completed";
@@ -1095,14 +1116,27 @@ export function getEffectiveContent(node: {
 }
 
 /**
- * Safely extract price from various formats
+ * Safely extracts a numeric price from various pricing formats.
+ * Handles unknown input gracefully without runtime errors.
+ *
+ * @param price - The price value in various possible formats
+ * @returns The extracted price as a number, or null if extraction fails
  */
-export function extractPrice(price: PricingValue): number | null {
-    if (typeof price === "number") {
+export function extractPrice(price: unknown): number | null {
+    // Handle direct number
+    if (typeof price === "number" && !isNaN(price)) {
         return price;
     }
+    // Handle object with webinar/regular properties
     if (typeof price === "object" && price !== null) {
-        return price.webinar ?? price.regular ?? null;
+        const priceObj = price as Record<string, unknown>;
+        // Try webinar price first, then regular
+        if (typeof priceObj.webinar === "number" && !isNaN(priceObj.webinar)) {
+            return priceObj.webinar;
+        }
+        if (typeof priceObj.regular === "number" && !isNaN(priceObj.regular)) {
+            return priceObj.regular;
+        }
     }
     return null;
 }

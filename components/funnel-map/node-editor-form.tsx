@@ -49,30 +49,43 @@ function formatFieldLabel(key: string, providedLabel?: string): string {
 /**
  * Strip markdown syntax from text to display clean values in form fields
  * Removes: **bold**, *italic*, __underline__, ~~strikethrough~~, `code`, links, headers
+ *
+ * Order matters: process longer patterns first (*** before ** before *)
+ * Uses non-greedy matching (.*?) to handle nested/adjacent patterns correctly
  */
 function stripMarkdown(text: string): string {
     if (!text || typeof text !== "string") return text;
 
-    return (
-        text
-            // Remove bold: **text** or __text__
-            .replace(/\*\*([^*]+)\*\*/g, "$1")
-            .replace(/__([^_]+)__/g, "$1")
-            // Remove italic: *text* or _text_
-            .replace(/\*([^*]+)\*/g, "$1")
-            .replace(/_([^_]+)_/g, "$1")
-            // Remove strikethrough: ~~text~~
-            .replace(/~~([^~]+)~~/g, "$1")
-            // Remove inline code: `text`
-            .replace(/`([^`]+)`/g, "$1")
-            // Remove links: [text](url)
-            .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-            // Remove headers: # text
-            .replace(/^#{1,6}\s+/gm, "")
-            // Clean up any double spaces
-            .replace(/  +/g, " ")
-            .trim()
-    );
+    let result = text;
+
+    // Remove links first: [text](url) - must be before other patterns
+    result = result.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+
+    // Remove inline code: `text` - preserve content inside
+    result = result.replace(/`([^`]+)`/g, "$1");
+
+    // Remove headers: # text (at line start)
+    result = result.replace(/^#{1,6}\s+/gm, "");
+
+    // Remove strikethrough: ~~text~~
+    result = result.replace(/~~(.+?)~~/g, "$1");
+
+    // Remove bold+italic combined: ***text*** (must be before ** and *)
+    result = result.replace(/\*\*\*(.+?)\*\*\*/g, "$1");
+
+    // Remove bold: **text** or __text__ (must be before single *)
+    result = result.replace(/\*\*(.+?)\*\*/g, "$1");
+    result = result.replace(/__(.+?)__/g, "$1");
+
+    // Remove italic: *text* or _text_ (single markers, non-greedy)
+    // Only match when not preceded/followed by word characters (avoid mid-word underscores)
+    result = result.replace(/(?<!\w)\*(.+?)\*(?!\w)/g, "$1");
+    result = result.replace(/(?<!\w)_(.+?)_(?!\w)/g, "$1");
+
+    // Clean up any double spaces and trim
+    result = result.replace(/  +/g, " ").trim();
+
+    return result;
 }
 
 /**

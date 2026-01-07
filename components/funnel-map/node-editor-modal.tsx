@@ -2,11 +2,11 @@
 
 /**
  * Node Editor Modal
- * Full-screen (80% viewport) modal for editing funnel node content
+ * Full-screen modal for editing funnel node content
  * Features:
- * - Collapsible AI chat drawer on left (35% width)
+ * - Collapsible AI chat drawer on left
  * - Editable form fields in center
- * - Blur-based auto-save
+ * - Blur-based auto-save with user feedback
  * - Industry benchmarks display
  * - Approve button with required field validation
  */
@@ -20,8 +20,11 @@ import {
     Loader2,
     BarChart3,
     BadgeCheck,
+    AlertCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logger } from "@/lib/client-logger";
+import { useToast } from "@/components/ui/use-toast";
 import type {
     FunnelNodeType,
     FunnelNodeDefinition,
@@ -46,14 +49,17 @@ import {
 } from "@/components/ui/tooltip";
 import { Button } from "@/components/ui/button";
 
-// Core nodes that MUST be approved before continuing
-const CORE_NODE_TYPES: FunnelNodeType[] = [
-    "registration",
-    "masterclass",
-    "core_offer",
-    "checkout",
-];
+// ============================================
+// LAYOUT CONSTANTS
+// ============================================
+const MODAL_WIDTH_VW = 90;
+const MODAL_HEIGHT_VH = 85;
+const CHAT_DRAWER_WIDTH_PERCENT = 35;
+const COLLAPSED_DRAWER_WIDTH_PX = 48;
 
+// ============================================
+// NODE TYPE CONSTANTS
+// ============================================
 // Optional nodes (upsells) - not required but recommended
 const OPTIONAL_NODE_TYPES: FunnelNodeType[] = ["upsell_1", "upsell_2"];
 
@@ -153,8 +159,10 @@ export function NodeEditorModal({
     onContentUpdate,
     onApprove,
 }: NodeEditorModalProps) {
+    const { toast } = useToast();
     const [isChatExpanded, setIsChatExpanded] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState(false);
     const [isApproving, setIsApproving] = useState(false);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
     const [showValidation, setShowValidation] = useState(false);
@@ -162,10 +170,12 @@ export function NodeEditorModal({
     const [localContent, setLocalContent] = useState<Record<string, unknown>>({});
     const pendingContentRef = useRef<Record<string, unknown> | null>(null);
 
+    // Get node definition - null check happens after all hooks
     const nodeDefinition = getNodeDefinition(nodeType);
     const benchmark = getBenchmarkForNode(nodeType, pathwayType);
-    const subheadline =
-        NODE_SUBHEADLINES[nodeType] || nodeDefinition?.description || "";
+    const subheadline = nodeDefinition
+        ? NODE_SUBHEADLINES[nodeType] || nodeDefinition.description || ""
+        : "";
 
     const isApproved = nodeData?.is_approved ?? false;
     const isOptionalNode = OPTIONAL_NODE_TYPES.includes(nodeType);
@@ -179,9 +189,11 @@ export function NodeEditorModal({
                 : nodeData?.draft_content || {};
         setLocalContent(initialContent);
         setShowValidation(false);
+        setSaveError(false);
     }, [nodeData, nodeType]);
 
     // Get current content - local state takes priority for immediate UI updates
+    // Fix issue #6: Only depend on specific nodeData fields, not entire object
     const currentContent = useMemo(() => {
         return Object.keys(localContent).length > 0
             ? localContent
@@ -189,12 +201,11 @@ export function NodeEditorModal({
                 Object.keys(nodeData.refined_content).length > 0
               ? nodeData.refined_content
               : nodeData?.draft_content || {};
-    }, [localContent, nodeData]);
+    }, [localContent, nodeData?.refined_content, nodeData?.draft_content]);
 
     // Check if all required fields are filled
     const requiredFieldsStatus = useMemo(() => {
-        if (!nodeDefinition) return { allFilled: true, emptyFields: [] as string[] };
-
+        if (!nodeDefinition) return { allFilled: false, emptyFields: [] as string[] };
         const emptyFields: string[] = [];
         for (const field of nodeDefinition.fields) {
             if (field.required) {
@@ -220,24 +231,35 @@ export function NodeEditorModal({
         setLocalContent(newContent);
         // Store pending content for blur-based save
         pendingContentRef.current = newContent;
+        // Clear any previous save error when user makes changes
+        setSaveError(false);
     }, []);
 
     // Save content to database (called on blur)
+    // Fix issue #3: Show toast on save failures
     const saveContent = useCallback(async () => {
         const contentToSave = pendingContentRef.current;
         if (!contentToSave) return;
 
         setIsSaving(true);
+        setSaveError(false);
         try {
             await onContentUpdate(contentToSave);
             setLastSaved(new Date());
             pendingContentRef.current = null;
         } catch (error) {
-            console.error("Failed to save content:", error);
+            logger.error({ error, nodeType }, "Auto-save failed");
+            setSaveError(true);
+            setLastSaved(null);
+            toast({
+                variant: "destructive",
+                title: "Auto-save Failed",
+                description: "Your changes weren't saved. Please try again.",
+            });
         } finally {
             setIsSaving(false);
         }
-    }, [onContentUpdate]);
+    }, [onContentUpdate, toast, nodeType]);
 
     // Handle blur event - trigger save
     const handleFieldBlur = useCallback(() => {
@@ -265,11 +287,24 @@ export function NodeEditorModal({
             await onApprove(currentContent);
             onClose();
         } catch (error) {
-            console.error("Failed to approve:", error);
+            logger.error({ error, nodeType }, "Failed to approve");
+            toast({
+                variant: "destructive",
+                title: "Approval Failed",
+                description: "Could not approve this node. Please try again.",
+            });
         } finally {
             setIsApproving(false);
         }
-    }, [canApprove, onApprove, currentContent, onContentUpdate, onClose]);
+    }, [
+        canApprove,
+        onApprove,
+        currentContent,
+        onContentUpdate,
+        onClose,
+        toast,
+        nodeType,
+    ]);
 
     // Save any pending content before closing
     const handleClose = useCallback(() => {
@@ -279,12 +314,15 @@ export function NodeEditorModal({
         onClose();
     }, [saveContent, onClose]);
 
+    // Null check for nodeDefinition - after all hooks are called (React rules of hooks)
     if (!nodeDefinition) {
+        logger.warn({ nodeType }, "Node definition not found");
         return null;
     }
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+            {/* Modal size: 90vw x 85vh (see LAYOUT_CONSTANTS) */}
             <DialogContent
                 className="max-w-[90vw] w-[90vw] h-[85vh] p-0 gap-0 flex flex-col"
                 onInteractOutside={(e) => e.preventDefault()}
@@ -364,6 +402,13 @@ export function NodeEditorModal({
                                                     <Loader2 className="h-3 w-3 animate-spin" />
                                                     <span>Saving...</span>
                                                 </>
+                                            ) : saveError ? (
+                                                <>
+                                                    <AlertCircle className="h-3 w-3 text-red-500" />
+                                                    <span className="text-red-600">
+                                                        Save failed
+                                                    </span>
+                                                </>
                                             ) : (
                                                 <>
                                                     <Cloud className="h-3 w-3 text-green-500" />
@@ -375,9 +420,11 @@ export function NodeEditorModal({
                                         </div>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        {lastSaved
-                                            ? `Last saved ${lastSaved.toLocaleTimeString()}`
-                                            : "Changes are saved when you leave a field"}
+                                        {saveError
+                                            ? "Changes weren't saved. Click on a field and try again."
+                                            : lastSaved
+                                              ? `Last saved ${lastSaved.toLocaleTimeString()}`
+                                              : "Changes are saved when you leave a field"}
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>

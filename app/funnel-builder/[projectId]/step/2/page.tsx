@@ -39,6 +39,56 @@ import {
 import { cn } from "@/lib/utils";
 
 /**
+ * Sanitize business context for modal
+ * Only includes fields actually needed for AI generation, excluding sensitive metadata
+ */
+function sanitizeBusinessContext(
+    profile: BusinessProfile | null
+): Record<string, unknown> {
+    if (!profile) return {};
+    return {
+        // Section 1: Customer & Problem
+        ideal_customer: profile.ideal_customer,
+        transformation: profile.transformation,
+        perceived_problem: profile.perceived_problem,
+        root_cause: profile.root_cause,
+        daily_pain_points: profile.daily_pain_points,
+        secret_desires: profile.secret_desires,
+        common_mistakes: profile.common_mistakes,
+        limiting_beliefs: profile.limiting_beliefs,
+        empowering_truths: profile.empowering_truths,
+        // Section 2: Story & Method
+        struggle_story: profile.struggle_story,
+        breakthrough_moment: profile.breakthrough_moment,
+        life_now: profile.life_now,
+        credibility_experience: profile.credibility_experience,
+        signature_method: profile.signature_method,
+        // Section 3: Offer & Proof
+        offer_name: profile.offer_name,
+        offer_type: profile.offer_type,
+        deliverables: profile.deliverables,
+        delivery_process: profile.delivery_process,
+        problem_solved: profile.problem_solved,
+        promise_outcome: profile.promise_outcome,
+        pricing: profile.pricing,
+        guarantee: profile.guarantee,
+        testimonials: profile.testimonials,
+        bonuses: profile.bonuses,
+        // Section 4: Belief Shifts
+        vehicle_belief_shift: profile.vehicle_belief_shift,
+        internal_belief_shift: profile.internal_belief_shift,
+        external_belief_shift: profile.external_belief_shift,
+        poll_questions: profile.poll_questions,
+        // Section 5: CTA & Objections
+        call_to_action: profile.call_to_action,
+        incentive: profile.incentive,
+        pricing_disclosure: profile.pricing_disclosure,
+        path_options: profile.path_options,
+        top_objections: profile.top_objections,
+    };
+}
+
+/**
  * Check if any nodes in the pathway have empty content that needs regeneration
  * Returns true if any node has fewer than 2 filled fields (needs regeneration)
  */
@@ -394,29 +444,12 @@ export default function Step2Page({
             if (!selectedNode) return;
 
             const now = new Date().toISOString();
-
-            // Update local state
-            setNodeData((prev) => {
-                const newMap = new Map(prev);
-                const existingNode = newMap.get(selectedNode);
-
-                if (existingNode) {
-                    newMap.set(selectedNode, {
-                        ...existingNode,
-                        refined_content: content,
-                        approved_content: content,
-                        status: "completed",
-                        is_approved: true,
-                        approved_at: now,
-                        updated_at: now,
-                    });
-                }
-
-                return newMap;
-            });
-
-            // Save to database
             const supabase = createClient();
+
+            // Save previous state for rollback
+            const previousNodeData = nodeData.get(selectedNode);
+
+            // Save to database first (don't update local state until DB succeeds)
             const { error } = await supabase
                 .from("funnel_node_data")
                 .update({
@@ -436,16 +469,14 @@ export default function Step2Page({
                     title: "Approval Failed",
                     description: "Failed to save approval. Please try again.",
                 });
-            } else {
-                toast({
-                    title: "Node Approved!",
-                    description: `${getNodeDefinition(selectedNode)?.title || "Node"} has been approved.`,
-                });
+                return;
+            }
 
-                // If approving registration with live event, update registration config
-                if (selectedNode === "registration" && content.access_type === "live") {
-                    // Update registration config to trigger conditional node visibility
-                    await supabase.from("registration_config").upsert(
+            // If approving registration with live event, update registration config
+            if (selectedNode === "registration" && content.access_type === "live") {
+                const { error: configError } = await supabase
+                    .from("registration_config")
+                    .upsert(
                         {
                             funnel_project_id: projectId,
                             user_id: project?.user_id || "",
@@ -456,33 +487,83 @@ export default function Step2Page({
                         { onConflict: "funnel_project_id" }
                     );
 
-                    // Update local registration config state
-                    setRegistrationConfig((prev) => ({
-                        ...prev,
-                        id: prev?.id || "",
-                        funnel_project_id: projectId,
-                        user_id: project?.user_id || "",
-                        access_type: content.access_type as
-                            | "immediate"
-                            | "live"
-                            | "scheduled",
-                        event_datetime: (content.event_datetime as string) || null,
-                        event_timezone: prev?.event_timezone || "UTC",
-                        headline: prev?.headline || null,
-                        subheadline: prev?.subheadline || null,
-                        bullet_points: prev?.bullet_points || [],
-                        cta_text: prev?.cta_text || "Register Now",
-                        confirmation_headline: prev?.confirmation_headline || null,
-                        confirmation_message: prev?.confirmation_message || null,
-                        calendar_integration: prev?.calendar_integration || {},
-                        theme_overrides: prev?.theme_overrides || {},
-                        created_at: prev?.created_at || now,
-                        updated_at: now,
-                    }));
+                if (configError) {
+                    logger.error(
+                        { configError },
+                        "Failed to update registration config"
+                    );
+                    // Rollback the approval since registration config failed
+                    await supabase
+                        .from("funnel_node_data")
+                        .update({
+                            is_approved: previousNodeData?.is_approved ?? false,
+                            approved_at: previousNodeData?.approved_at ?? null,
+                            approved_content:
+                                previousNodeData?.approved_content ?? null,
+                        })
+                        .eq("funnel_project_id", projectId)
+                        .eq("node_type", selectedNode);
+
+                    toast({
+                        variant: "destructive",
+                        title: "Approval Failed",
+                        description:
+                            "Could not update registration settings. Please try again.",
+                    });
+                    return;
                 }
+
+                // Update local registration config state
+                setRegistrationConfig((prev) => ({
+                    ...prev,
+                    id: prev?.id || "",
+                    funnel_project_id: projectId,
+                    user_id: project?.user_id || "",
+                    access_type: content.access_type as
+                        | "immediate"
+                        | "live"
+                        | "scheduled",
+                    event_datetime: (content.event_datetime as string) || null,
+                    event_timezone: prev?.event_timezone || "UTC",
+                    headline: prev?.headline || null,
+                    subheadline: prev?.subheadline || null,
+                    bullet_points: prev?.bullet_points || [],
+                    cta_text: prev?.cta_text || "Register Now",
+                    confirmation_headline: prev?.confirmation_headline || null,
+                    confirmation_message: prev?.confirmation_message || null,
+                    calendar_integration: prev?.calendar_integration || {},
+                    theme_overrides: prev?.theme_overrides || {},
+                    created_at: prev?.created_at || now,
+                    updated_at: now,
+                }));
             }
+
+            // Update local state only after all DB operations succeed
+            setNodeData((prev) => {
+                const newMap = new Map(prev);
+                const existingNode = newMap.get(selectedNode);
+
+                if (existingNode) {
+                    newMap.set(selectedNode, {
+                        ...existingNode,
+                        refined_content: content,
+                        approved_content: content,
+                        status: "completed",
+                        is_approved: true,
+                        approved_at: now,
+                        updated_at: now,
+                    });
+                }
+
+                return newMap;
+            });
+
+            toast({
+                title: "Node Approved!",
+                description: `${getNodeDefinition(selectedNode)?.title || "Node"} has been approved.`,
+            });
         },
-        [projectId, selectedNode, project?.user_id, toast]
+        [projectId, selectedNode, project?.user_id, toast, nodeData]
     );
 
     // Core nodes that MUST be approved before continuing
@@ -714,11 +795,7 @@ export default function Step2Page({
                     nodeData={nodeData.get(selectedNode) || null}
                     pathwayType={pathwayType}
                     projectId={projectId}
-                    businessContext={
-                        businessProfile
-                            ? (businessProfile as unknown as Record<string, unknown>)
-                            : {}
-                    }
+                    businessContext={sanitizeBusinessContext(businessProfile)}
                     onContentUpdate={handleModalContentUpdate}
                     onApprove={handleNodeApprove}
                 />

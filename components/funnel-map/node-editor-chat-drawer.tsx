@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Send, Loader2, User, Sparkles } from "lucide-react";
+import * as Sentry from "@sentry/nextjs";
 import { cn } from "@/lib/utils";
 import type {
     FunnelNodeType,
@@ -241,7 +242,11 @@ export function NodeEditorChatDrawer({
                 });
             }
         } catch (error) {
-            console.error("Chat error:", error);
+            Sentry.captureException(error, {
+                tags: { component: "node-editor-chat", nodeType },
+                extra: { projectId, messageLength: userMessage.content.length },
+            });
+
             setMessages((prev) => [
                 ...prev,
                 {

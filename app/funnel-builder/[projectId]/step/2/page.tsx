@@ -472,8 +472,11 @@ export default function Step2Page({
                 return;
             }
 
-            // If approving registration with live event, update registration config
-            if (selectedNode === "registration" && content.access_type === "live") {
+            // If approving registration, update registration config
+            // This controls whether the Registration Confirmation node appears in the flowchart
+            // - "live" or "scheduled" → confirmation node appears
+            // - "immediate" → confirmation node hidden
+            if (selectedNode === "registration" && content.access_type) {
                 const { error: configError } = await supabase
                     .from("registration_config")
                     .upsert(

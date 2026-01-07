@@ -9,6 +9,7 @@ import { useState } from "react";
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
@@ -77,6 +78,9 @@ export function CodeViewerDialog({
                 <DialogHeader className="flex-shrink-0">
                     <div className="flex items-center justify-between pr-8">
                         <DialogTitle>{title}</DialogTitle>
+                        <DialogDescription className="sr-only">
+                            View and copy the HTML source code for your page
+                        </DialogDescription>
                         <div className="flex items-center gap-2">
                             <Button
                                 variant="outline"

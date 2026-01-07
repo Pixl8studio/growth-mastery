@@ -128,10 +128,12 @@ IMPORTANT: The page must look PROFESSIONALLY DESIGNED, not like a quick template
 
 ### Typography Excellence
 - Use proper type hierarchy: H1 (48-64px), H2 (32-40px), H3 (24-28px), body (16-18px)
-- Line height should be 1.4-1.6 for body text, 1.1-1.2 for headings
+- CRITICAL: Headline line-height MUST be 1.1-1.2 (tight). NEVER use line-height above 1.3 for headlines.
+- Body text line-height: 1.5-1.6 for readability
 - Letter spacing: -0.02em for headings, 0 for body
 - Use ONE primary font family (Inter, DM Sans, or Nunito from Google Fonts) plus system sans-serif fallbacks
 - Limit line length to 65-75 characters for optimal readability
+- Headlines should feel compact and punchy, NOT stretched out with excessive line spacing
 
 ### Spacing & Layout
 - Consistent vertical rhythm using 8px base unit (8, 16, 24, 32, 48, 64, 96, 128px)
@@ -140,11 +142,26 @@ IMPORTANT: The page must look PROFESSIONALLY DESIGNED, not like a quick template
 - Card/element spacing: minimum 24px between elements
 - NEVER let text touch container edges - minimum 16px horizontal padding
 
-### Color & Contrast
+### Two-Column Feature Sections (Copy + Visual)
+When creating sections with copy on one side and a visual on the other:
+- Both columns should be roughly the same height (balanced visual weight)
+- The visual element should be a MEANINGFUL IMAGE, not a tiny icon card
+- Use large, engaging visuals: gradient abstract backgrounds, relevant illustrations, or photo placeholders
+- Visual should be at least 300-400px tall on desktop to match the copy height
+- Use CSS aspect-ratio or min-height to ensure visuals are substantial
+- Example visual: rounded rectangle with gradient background (linear-gradient) and subtle pattern
+
+### Color & Contrast - MANDATORY RULES
+CRITICAL - THESE ARE NON-NEGOTIABLE:
+- NEVER use light text on light backgrounds (this makes text invisible)
+- NEVER use gradient text that fades to colors too similar to the background
+- Dark text (#1a1a2e, #2d3748, #111827) on light backgrounds ONLY
+- Light text (#ffffff, #f8fafc) on dark backgrounds ONLY
+- If using gradient text, ensure ALL parts of the gradient have 4.5:1 contrast ratio against the background
+- Test every text element: can you read it easily? If not, fix the contrast.
 - Primary color for CTAs and key accents only (not overused)
 - Background colors should have subtle variation (not all #ffffff)
 - Text contrast MUST meet WCAG AA (4.5:1 for normal text, 3:1 for large text)
-- Use subtle gradients for depth (not harsh solid colors)
 - Limit color palette to 3-4 colors maximum
 
 ### Visual Polish
@@ -174,10 +191,15 @@ ${framework}
 - Use modern CSS (flexbox for components, grid for layouts)
 - Include smooth transitions for interactive states
 - Ensure accessibility (ARIA labels, semantic structure, proper focus states)
-- Use gradient backgrounds or SVG patterns for image placeholders (not blank boxes)
+- For image placeholders, use LARGE gradient backgrounds with subtle patterns, not tiny icon boxes
+- Example placeholder: <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; min-height: 350px; aspect-ratio: 4/3;"></div>
 
-## Common Mistakes to AVOID
+## Common Mistakes to AVOID - READ CAREFULLY
 
+These are the most common errors. DO NOT make them:
+- Light or gradient text on light backgrounds (UNREADABLE - biggest mistake)
+- Headline line-height too large (makes sections awkwardly tall)
+- Small icon cards instead of substantial feature images
 - Text too small or too large
 - Inconsistent spacing between sections
 - Colors that clash or lack contrast
@@ -186,6 +208,7 @@ ${framework}
 - Content touching container edges
 - Sections that feel cramped or have too little padding
 - Using more than 2-3 colors extensively
+- Gradient text effects that become invisible against the background
 
 ## Output Format
 

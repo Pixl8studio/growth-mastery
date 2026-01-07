@@ -23,16 +23,20 @@ interface ChatPanelProps {
     messages: Message[];
     isProcessing: boolean;
     onSendMessage: (message: string) => void;
+    onSelectOption?: (optionId: string, optionLabel: string) => void;
     suggestedActions: string[];
     lastEditSummary: EditSummary | null;
+    projectId?: string;
 }
 
 export function ChatPanel({
     messages,
     isProcessing,
     onSendMessage,
+    onSelectOption,
     suggestedActions,
     lastEditSummary,
+    projectId,
 }: ChatPanelProps) {
     const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -51,6 +55,7 @@ export function ChatPanel({
                     messages={messages}
                     isProcessing={isProcessing}
                     lastEditSummary={lastEditSummary}
+                    onSelectOption={onSelectOption}
                 />
             </div>
 
@@ -66,7 +71,11 @@ export function ChatPanel({
 
             {/* Chat Input */}
             <div className="border-t border-border p-4">
-                <ChatInput onSendMessage={onSendMessage} isProcessing={isProcessing} />
+                <ChatInput
+                    onSendMessage={onSendMessage}
+                    isProcessing={isProcessing}
+                    projectId={projectId}
+                />
             </div>
         </div>
     );

@@ -72,6 +72,7 @@ export function AIEditorLayout({
         messages,
         isProcessing,
         sendMessage,
+        selectOption,
         suggestedActions,
         lastEditSummary,
         status,
@@ -159,6 +160,8 @@ export function AIEditorLayout({
                 onShowVersionHistory={() => setShowVersionHistory(true)}
                 onPublish={publish}
                 onGetShareUrl={getShareUrl}
+                pageId={pageId}
+                projectId={projectId}
             />
 
             {/* Main split-pane container */}
@@ -177,8 +180,10 @@ export function AIEditorLayout({
                             messages={messages}
                             isProcessing={isProcessing}
                             onSendMessage={sendMessage}
+                            onSelectOption={selectOption}
                             suggestedActions={suggestedActions}
                             lastEditSummary={lastEditSummary}
+                            projectId={projectId}
                         />
                     </div>
                 )}

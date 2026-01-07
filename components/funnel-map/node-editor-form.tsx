@@ -13,7 +13,7 @@
 import { useState, useCallback } from "react";
 import { Plus, X, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { FunnelNodeDefinition, FunnelNodeField } from "@/types/funnel-map";
+import type { FunnelNodeDefinition, FunnelNodeField, PaymentOption } from "@/types/funnel-map";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -25,6 +25,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { PaymentOptionsEditor } from "./payment-options-editor";
 
 interface NodeEditorFormProps {
     nodeDefinition: FunnelNodeDefinition;
@@ -265,6 +266,33 @@ function FieldRenderer({
                     />
                     {showValidationError && (
                         <p className="text-xs text-red-500">This field is required</p>
+                    )}
+                </div>
+            );
+
+        case "payment_options":
+            return (
+                <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                        {label}
+                        {field.required && <span className="text-red-500 ml-1">*</span>}
+                    </Label>
+                    {field.helpText && (
+                        <p className="text-xs text-muted-foreground">
+                            {field.helpText}
+                        </p>
+                    )}
+                    <PaymentOptionsEditor
+                        value={(value as PaymentOption[]) || []}
+                        onChange={(options) => {
+                            onChange(field.key, options);
+                            onBlur?.();
+                        }}
+                    />
+                    {showValidationError && (
+                        <p className="text-xs text-red-500">
+                            At least one payment option is required
+                        </p>
                     )}
                 </div>
             );

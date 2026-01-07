@@ -11,4 +11,5 @@ export { AIChatPanel } from "./ai-chat-panel";
 export { NodeEditorModal } from "./node-editor-modal";
 export { NodeEditorForm } from "./node-editor-form";
 export { NodeEditorChatDrawer } from "./node-editor-chat-drawer";
+export { PaymentOptionsEditor } from "./payment-options-editor";
 export { LoadingExperience, LoadingIndicator } from "./loading-experience";

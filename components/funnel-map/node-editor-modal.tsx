@@ -210,11 +210,25 @@ export function NodeEditorModal({
         for (const field of nodeDefinition.fields) {
             if (field.required) {
                 const value = currentContent[field.key];
-                const isEmpty =
-                    value === null ||
-                    value === undefined ||
-                    (typeof value === "string" && !value.trim()) ||
-                    (Array.isArray(value) && value.length === 0);
+                let isEmpty = false;
+
+                if (value === null || value === undefined) {
+                    isEmpty = true;
+                } else if (typeof value === "string") {
+                    isEmpty = !value.trim();
+                } else if (Array.isArray(value)) {
+                    // For payment_options and list fields: must have at least one item
+                    isEmpty = value.length === 0;
+                } else if (field.type === "pricing" && typeof value === "object") {
+                    // For pricing fields: check if the price is set (webinar or regular)
+                    const priceObj = value as Record<string, number>;
+                    const priceValue = priceObj.webinar ?? priceObj.regular ?? 0;
+                    isEmpty = !priceValue || priceValue <= 0;
+                } else if (field.type === "payment_options" && typeof value === "object") {
+                    // For payment_options stored as object (edge case)
+                    isEmpty = Object.keys(value as object).length === 0;
+                }
+
                 if (isEmpty) {
                     emptyFields.push(field.key);
                 }
@@ -291,7 +305,7 @@ export function NodeEditorModal({
             toast({
                 variant: "destructive",
                 title: "Approval Failed",
-                description: "Could not approve this node. Please try again.",
+                description: "Could not approve this step. Please try again.",
             });
         } finally {
             setIsApproving(false);
@@ -373,9 +387,9 @@ export function NodeEditorModal({
                                         </TooltipTrigger>
                                         <TooltipContent>
                                             {isApproved
-                                                ? "This node is already approved"
+                                                ? "This step is already approved"
                                                 : canApprove
-                                                  ? "Approve this node content"
+                                                  ? "Approve this step content"
                                                   : isOptionalNode
                                                     ? "Fill required fields to approve. Upsells are optional but recommended for maximum revenue."
                                                     : "Fill all required fields to approve"}

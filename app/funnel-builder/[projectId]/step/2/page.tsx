@@ -559,8 +559,8 @@ export default function Step2Page({
             });
 
             toast({
-                title: "Node Approved!",
-                description: `${getNodeDefinition(selectedNode)?.title || "Node"} has been approved.`,
+                title: "Step Approved!",
+                description: `${getNodeDefinition(selectedNode)?.title || "Step"} has been approved.`,
             });
         },
         [projectId, selectedNode, project?.user_id, toast, nodeData]
@@ -609,7 +609,7 @@ export default function Step2Page({
             completedSteps={completedSteps}
             nextDisabled={!canContinue}
             nextLabel={
-                canContinue ? "Continue to Brand Design" : "Approve Core Nodes First"
+                canContinue ? "Continue to Brand Design" : "Approve Core Steps First"
             }
             stepTitle="Funnel Map"
             stepDescription="Plan your funnel"
@@ -742,7 +742,7 @@ export default function Step2Page({
 
                     {/* Flowchart */}
                     {!isLoading && !isGenerating && hasStarted && (
-                        <div className="flex-1">
+                        <div className="flex flex-col h-full">
                             {/* Approval Progress Bar - Centered */}
                             <div className="mb-4 flex items-center justify-center rounded-lg border border-border bg-card p-4">
                                 <div className="flex items-center gap-4">
@@ -766,21 +766,23 @@ export default function Step2Page({
                                     </div>
                                     <span className="text-sm text-muted-foreground">
                                         {approvedNodes.length}/{pathwayNodes.length}{" "}
-                                        nodes approved
+                                        steps approved
                                     </span>
                                 </div>
                             </div>
 
-                            {/* React Flow Flowchart */}
-                            <FunnelFlowchart
-                                pathwayType={pathwayType}
-                                nodeData={nodeData}
-                                selectedNode={selectedNode}
-                                onNodeSelect={handleNodeSelect}
-                                isGeneratingDrafts={isGenerating}
-                                registrationConfig={registrationConfig}
-                                showBenchmarks={false}
-                            />
+                            {/* React Flow Flowchart - Fixed height to leave room for navigation buttons */}
+                            <div className="flex-1 min-h-[400px] mb-4">
+                                <FunnelFlowchart
+                                    pathwayType={pathwayType}
+                                    nodeData={nodeData}
+                                    selectedNode={selectedNode}
+                                    onNodeSelect={handleNodeSelect}
+                                    isGeneratingDrafts={isGenerating}
+                                    registrationConfig={registrationConfig}
+                                    showBenchmarks={false}
+                                />
+                            </div>
                         </div>
                     )}
                 </div>

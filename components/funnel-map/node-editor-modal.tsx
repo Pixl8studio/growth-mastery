@@ -6,19 +6,20 @@
  * Features:
  * - Collapsible AI chat drawer on left (35% width)
  * - Editable form fields in center
- * - Auto-save with indicator
+ * - Blur-based auto-save
  * - Industry benchmarks display
+ * - Approve button with required field validation
  */
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import {
-    X,
     ChevronLeft,
     ChevronRight,
     MessageSquare,
     Cloud,
     Loader2,
     BarChart3,
+    BadgeCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
@@ -43,6 +44,18 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Button } from "@/components/ui/button";
+
+// Core nodes that MUST be approved before continuing
+const CORE_NODE_TYPES: FunnelNodeType[] = [
+    "registration",
+    "masterclass",
+    "core_offer",
+    "checkout",
+];
+
+// Optional nodes (upsells) - not required but recommended
+const OPTIONAL_NODE_TYPES: FunnelNodeType[] = ["upsell_1", "upsell_2"];
 
 interface NodeEditorModalProps {
     isOpen: boolean;
@@ -53,12 +66,12 @@ interface NodeEditorModalProps {
     projectId: string;
     businessContext: Record<string, unknown>;
     onContentUpdate: (content: Record<string, unknown>) => Promise<void>;
+    onApprove?: (content: Record<string, unknown>) => Promise<void>;
 }
 
 // Node-specific subheadlines that guide users on what this step is about
 const NODE_SUBHEADLINES: Record<FunnelNodeType, string> = {
-    traffic_source:
-        "Where your ideal customers come from. We'll work on this later in the funnel building process.",
+    traffic_source: "We'll configure this at a later step.",
     registration:
         "This is where visitors sign up for your masterclass. Create compelling copy that makes them want to learn more. Ask the AI to help you craft headlines and bullet points that convert.",
     registration_confirmation:
@@ -138,65 +151,140 @@ export function NodeEditorModal({
     projectId,
     businessContext,
     onContentUpdate,
+    onApprove,
 }: NodeEditorModalProps) {
     const [isChatExpanded, setIsChatExpanded] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [isApproving, setIsApproving] = useState(false);
     const [lastSaved, setLastSaved] = useState<Date | null>(null);
-    const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const [showValidation, setShowValidation] = useState(false);
+    // Local content state for immediate UI updates
+    const [localContent, setLocalContent] = useState<Record<string, unknown>>({});
+    const pendingContentRef = useRef<Record<string, unknown> | null>(null);
 
     const nodeDefinition = getNodeDefinition(nodeType);
     const benchmark = getBenchmarkForNode(nodeType, pathwayType);
     const subheadline =
         NODE_SUBHEADLINES[nodeType] || nodeDefinition?.description || "";
 
-    // Get current content (prefer refined, fallback to draft)
-    const currentContent =
-        nodeData?.refined_content && Object.keys(nodeData.refined_content).length > 0
-            ? nodeData.refined_content
-            : nodeData?.draft_content || {};
+    const isApproved = nodeData?.is_approved ?? false;
+    const isOptionalNode = OPTIONAL_NODE_TYPES.includes(nodeType);
 
-    // Auto-save handler with debounce
-    const handleContentChange = useCallback(
-        async (newContent: Record<string, unknown>) => {
-            // Clear existing timeout
-            if (saveTimeoutRef.current) {
-                clearTimeout(saveTimeoutRef.current);
-            }
-
-            // Set saving indicator after small delay (avoid flicker)
-            const savingTimeout = setTimeout(() => setIsSaving(true), 500);
-
-            // Debounce the actual save
-            saveTimeoutRef.current = setTimeout(async () => {
-                try {
-                    await onContentUpdate(newContent);
-                    setLastSaved(new Date());
-                } catch (error) {
-                    console.error("Failed to save content:", error);
-                } finally {
-                    clearTimeout(savingTimeout);
-                    setIsSaving(false);
-                }
-            }, 1000);
-        },
-        [onContentUpdate]
-    );
-
-    // Cleanup timeout on unmount
+    // Initialize local content from nodeData
     useEffect(() => {
-        return () => {
-            if (saveTimeoutRef.current) {
-                clearTimeout(saveTimeoutRef.current);
+        const initialContent =
+            nodeData?.refined_content &&
+            Object.keys(nodeData.refined_content).length > 0
+                ? nodeData.refined_content
+                : nodeData?.draft_content || {};
+        setLocalContent(initialContent);
+        setShowValidation(false);
+    }, [nodeData, nodeType]);
+
+    // Get current content - local state takes priority for immediate UI updates
+    const currentContent = useMemo(() => {
+        return Object.keys(localContent).length > 0
+            ? localContent
+            : nodeData?.refined_content &&
+                Object.keys(nodeData.refined_content).length > 0
+              ? nodeData.refined_content
+              : nodeData?.draft_content || {};
+    }, [localContent, nodeData]);
+
+    // Check if all required fields are filled
+    const requiredFieldsStatus = useMemo(() => {
+        if (!nodeDefinition) return { allFilled: true, emptyFields: [] as string[] };
+
+        const emptyFields: string[] = [];
+        for (const field of nodeDefinition.fields) {
+            if (field.required) {
+                const value = currentContent[field.key];
+                const isEmpty =
+                    value === null ||
+                    value === undefined ||
+                    (typeof value === "string" && !value.trim()) ||
+                    (Array.isArray(value) && value.length === 0);
+                if (isEmpty) {
+                    emptyFields.push(field.key);
+                }
             }
-        };
+        }
+        return { allFilled: emptyFields.length === 0, emptyFields };
+    }, [nodeDefinition, currentContent]);
+
+    const canApprove = !isApproved && requiredFieldsStatus.allFilled;
+
+    // Handle content change - update local state immediately, save on blur
+    const handleContentChange = useCallback((newContent: Record<string, unknown>) => {
+        // Update local state immediately for responsive UI
+        setLocalContent(newContent);
+        // Store pending content for blur-based save
+        pendingContentRef.current = newContent;
     }, []);
+
+    // Save content to database (called on blur)
+    const saveContent = useCallback(async () => {
+        const contentToSave = pendingContentRef.current;
+        if (!contentToSave) return;
+
+        setIsSaving(true);
+        try {
+            await onContentUpdate(contentToSave);
+            setLastSaved(new Date());
+            pendingContentRef.current = null;
+        } catch (error) {
+            console.error("Failed to save content:", error);
+        } finally {
+            setIsSaving(false);
+        }
+    }, [onContentUpdate]);
+
+    // Handle blur event - trigger save
+    const handleFieldBlur = useCallback(() => {
+        if (pendingContentRef.current) {
+            saveContent();
+        }
+    }, [saveContent]);
+
+    // Handle approve button click
+    const handleApprove = useCallback(async () => {
+        if (!canApprove || !onApprove) {
+            // Show validation indicators if trying to approve with empty required fields
+            setShowValidation(true);
+            return;
+        }
+
+        setIsApproving(true);
+        try {
+            // Save any pending content first
+            if (pendingContentRef.current) {
+                await onContentUpdate(pendingContentRef.current);
+                pendingContentRef.current = null;
+            }
+            // Then approve
+            await onApprove(currentContent);
+            onClose();
+        } catch (error) {
+            console.error("Failed to approve:", error);
+        } finally {
+            setIsApproving(false);
+        }
+    }, [canApprove, onApprove, currentContent, onContentUpdate, onClose]);
+
+    // Save any pending content before closing
+    const handleClose = useCallback(() => {
+        if (pendingContentRef.current) {
+            saveContent();
+        }
+        onClose();
+    }, [saveContent, onClose]);
 
     if (!nodeDefinition) {
         return null;
     }
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
             <DialogContent
                 className="max-w-[90vw] w-[90vw] h-[85vh] p-0 gap-0 flex flex-col"
                 onInteractOutside={(e) => e.preventDefault()}
@@ -213,8 +301,60 @@ export function NodeEditorModal({
                             </p>
                         </div>
 
-                        {/* Auto-save indicator - no custom close button, Dialog provides one */}
+                        {/* Approve button, Auto-save indicator */}
                         <div className="flex items-center gap-4 mr-8">
+                            {/* Approve button - show for non-approved nodes with onApprove handler */}
+                            {onApprove && !isApproved && (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <span>
+                                                <Button
+                                                    onClick={handleApprove}
+                                                    disabled={
+                                                        !canApprove || isApproving
+                                                    }
+                                                    className={cn(
+                                                        "gap-2",
+                                                        canApprove
+                                                            ? "bg-green-600 hover:bg-green-700 text-white"
+                                                            : "bg-muted text-muted-foreground cursor-not-allowed"
+                                                    )}
+                                                    size="sm"
+                                                >
+                                                    {isApproving ? (
+                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                    ) : (
+                                                        <BadgeCheck className="h-4 w-4" />
+                                                    )}
+                                                    {isApproving
+                                                        ? "Approving..."
+                                                        : "Approve"}
+                                                </Button>
+                                            </span>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            {isApproved
+                                                ? "This node is already approved"
+                                                : canApprove
+                                                  ? "Approve this node content"
+                                                  : isOptionalNode
+                                                    ? "Fill required fields to approve. Upsells are optional but recommended for maximum revenue."
+                                                    : "Fill all required fields to approve"}
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            )}
+
+                            {/* Already approved indicator */}
+                            {isApproved && (
+                                <div className="flex items-center gap-2 text-sm text-green-600">
+                                    <BadgeCheck className="h-4 w-4" />
+                                    <span>Approved</span>
+                                </div>
+                            )}
+
+                            {/* Auto-save indicator */}
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -228,7 +368,7 @@ export function NodeEditorModal({
                                                 <>
                                                     <Cloud className="h-3 w-3 text-green-500" />
                                                     <span className="text-green-600">
-                                                        Autosave On
+                                                        Saved
                                                     </span>
                                                 </>
                                             )}
@@ -237,7 +377,7 @@ export function NodeEditorModal({
                                     <TooltipContent>
                                         {lastSaved
                                             ? `Last saved ${lastSaved.toLocaleTimeString()}`
-                                            : "Changes are saved automatically"}
+                                            : "Changes are saved when you leave a field"}
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
@@ -316,6 +456,9 @@ export function NodeEditorModal({
                                 nodeDefinition={nodeDefinition}
                                 content={currentContent}
                                 onChange={handleContentChange}
+                                onBlur={handleFieldBlur}
+                                showValidation={showValidation}
+                                emptyRequiredFields={requiredFieldsStatus.emptyFields}
                             />
                         </div>
                     </div>

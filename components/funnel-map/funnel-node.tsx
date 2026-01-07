@@ -25,7 +25,6 @@ import {
     Heart,
     Check,
     Loader2,
-    Pencil,
     Sparkles,
     CheckCircle,
     CalendarCheck,
@@ -177,13 +176,7 @@ function FunnelNodeComponent({ data }: FunnelNodeComponentProps) {
         }
     };
 
-    const handleApprove = (e: React.MouseEvent) => {
-        e.stopPropagation();
-        if (onApprove && !isApproved) {
-            onApprove();
-        }
-    };
-
+    // Status badge - only show generating state (approved shown via checkmark indicator)
     const getStatusBadge = () => {
         if (isGenerating || isRegenerating) {
             return (
@@ -193,69 +186,9 @@ function FunnelNodeComponent({ data }: FunnelNodeComponentProps) {
                 </span>
             );
         }
-
-        // Show approved badge if approved
-        if (isApproved) {
-            return (
-                <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                    <BadgeCheck className="h-3 w-3" />
-                    Approved
-                </span>
-            );
-        }
-
-        switch (status) {
-            case "completed":
-                return (
-                    <span className="flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                        <Check className="h-3 w-3" />
-                        Complete
-                    </span>
-                );
-            case "refined":
-                return (
-                    <span className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
-                        <Sparkles className="h-3 w-3" />
-                        Refined
-                    </span>
-                );
-            case "in_progress":
-                return (
-                    <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-                        <Pencil className="h-3 w-3" />
-                        In Progress
-                    </span>
-                );
-            default:
-                return (
-                    <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-600">
-                        Draft
-                    </span>
-                );
-        }
+        // No status badges - approval state shown via checkmark indicator in top-right
+        return null;
     };
-
-    // Calculate completion percentage for this node
-    const getCompletionPercentage = () => {
-        if (!nodeData) return 0;
-        const content = nodeData.refined_content || nodeData.draft_content;
-        if (!content || typeof content !== "object") return 0;
-
-        const totalFields = definition.fields.length;
-        if (totalFields === 0) return 0;
-
-        const filledFields = Object.keys(content).filter((key) => {
-            const value = content[key as keyof typeof content];
-            if (Array.isArray(value)) return value.length > 0;
-            if (typeof value === "string") return value.trim().length > 0;
-            return value !== null && value !== undefined;
-        }).length;
-
-        return Math.round((filledFields / totalFields) * 100);
-    };
-
-    const completionPercentage = getCompletionPercentage();
-    const canApprove = !isApproved && status !== "draft" && completionPercentage > 0;
 
     return (
         <>
@@ -318,29 +251,8 @@ function FunnelNodeComponent({ data }: FunnelNodeComponentProps) {
                     </div>
                 </div>
 
-                {/* Status & Progress */}
-                <div className="mt-3 flex items-center justify-between">
-                    {getStatusBadge()}
-
-                    {!isGenerating && !isRegenerating && completionPercentage > 0 && (
-                        <div className="flex items-center gap-2">
-                            <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-200">
-                                <div
-                                    className={cn(
-                                        "h-full rounded-full transition-all duration-300",
-                                        completionPercentage === 100
-                                            ? "bg-green-500"
-                                            : "bg-primary"
-                                    )}
-                                    style={{ width: `${completionPercentage}%` }}
-                                />
-                            </div>
-                            <span className="text-xs text-muted-foreground">
-                                {completionPercentage}%
-                            </span>
-                        </div>
-                    )}
-                </div>
+                {/* Status - only shows generating state */}
+                {getStatusBadge() && <div className="mt-3">{getStatusBadge()}</div>}
 
                 {/* Framework badge */}
                 {definition.framework && (
@@ -352,48 +264,32 @@ function FunnelNodeComponent({ data }: FunnelNodeComponentProps) {
                     </div>
                 )}
 
-                {/* Action buttons - Approve & Regenerate (not shown for non-clickable nodes) */}
+                {/* Regenerate button (not shown for non-clickable nodes) */}
                 {!isNonClickable &&
                     !isGenerating &&
                     !isRegenerating &&
-                    (onApprove || onRegenerate) && (
-                        <div className="mt-3 flex items-center gap-2 border-t border-slate-200 pt-3">
-                            {/* Approve button */}
-                            {onApprove && canApprove && (
-                                <button
-                                    onClick={handleApprove}
-                                    className={cn(
-                                        "flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
-                                        "bg-green-100 text-green-700 hover:bg-green-200"
-                                    )}
-                                >
-                                    <BadgeCheck className="h-3 w-3" />
-                                    Approve
-                                </button>
-                            )}
-
-                            {/* Regenerate button */}
-                            {onRegenerate && nodeData && (
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <button
-                                                onClick={handleRegenerate}
-                                                className={cn(
-                                                    "flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
-                                                    "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                                                )}
-                                            >
-                                                <RefreshCw className="h-3 w-3" />
-                                                Regenerate
-                                            </button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>Generate new AI draft for this node</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                            )}
+                    onRegenerate &&
+                    nodeData && (
+                        <div className="mt-3 border-t border-slate-200 pt-3">
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <button
+                                            onClick={handleRegenerate}
+                                            className={cn(
+                                                "flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                                                "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                            )}
+                                        >
+                                            <RefreshCw className="h-3 w-3" />
+                                            Regenerate
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Generate new AI draft for this node</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                         </div>
                     )}
 

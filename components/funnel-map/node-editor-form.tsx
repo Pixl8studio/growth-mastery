@@ -30,6 +30,9 @@ interface NodeEditorFormProps {
     nodeDefinition: FunnelNodeDefinition;
     content: Record<string, unknown>;
     onChange: (newContent: Record<string, unknown>) => void;
+    onBlur?: () => void;
+    showValidation?: boolean;
+    emptyRequiredFields?: string[];
 }
 
 // Convert snake_case or camelCase to user-friendly label
@@ -91,12 +94,23 @@ interface FieldRendererProps {
     field: FunnelNodeField;
     value: unknown;
     onChange: (key: string, value: unknown) => void;
+    onBlur?: () => void;
+    showValidationError?: boolean;
 }
 
-function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
+function FieldRenderer({
+    field,
+    value,
+    onChange,
+    onBlur,
+    showValidationError,
+}: FieldRendererProps) {
     const label = formatFieldLabel(field.key, field.label);
     // Strip markdown from display value to show clean text in form fields
     const cleanValue = stripMarkdownFromValue(value);
+
+    // Validation error styling
+    const errorClass = showValidationError ? "border-red-500 ring-1 ring-red-500" : "";
 
     switch (field.type) {
         case "text":
@@ -115,9 +129,13 @@ function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                         id={field.key}
                         value={(cleanValue as string) || ""}
                         onChange={(e) => onChange(field.key, e.target.value)}
+                        onBlur={onBlur}
                         placeholder={field.placeholder}
-                        className="w-full"
+                        className={cn("w-full", errorClass)}
                     />
+                    {showValidationError && (
+                        <p className="text-xs text-red-500">This field is required</p>
+                    )}
                 </div>
             );
 
@@ -137,9 +155,13 @@ function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                         id={field.key}
                         value={(cleanValue as string) || ""}
                         onChange={(e) => onChange(field.key, e.target.value)}
+                        onBlur={onBlur}
                         placeholder={field.placeholder}
-                        className="w-full min-h-[100px] resize-y"
+                        className={cn("w-full min-h-[100px] resize-y", errorClass)}
                     />
+                    {showValidationError && (
+                        <p className="text-xs text-red-500">This field is required</p>
+                    )}
                 </div>
             );
 
@@ -149,7 +171,9 @@ function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                     field={field}
                     value={value}
                     onChange={onChange}
+                    onBlur={onBlur}
                     label={label}
+                    showValidationError={showValidationError}
                 />
             );
 
@@ -159,7 +183,9 @@ function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                     field={field}
                     value={value}
                     onChange={onChange}
+                    onBlur={onBlur}
                     label={label}
+                    showValidationError={showValidationError}
                 />
             );
 
@@ -177,9 +203,13 @@ function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                     )}
                     <Select
                         value={(value as string) || ""}
-                        onValueChange={(newValue) => onChange(field.key, newValue)}
+                        onValueChange={(newValue) => {
+                            onChange(field.key, newValue);
+                            // Trigger blur on select change since there's no blur event
+                            onBlur?.();
+                        }}
                     >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className={cn("w-full", errorClass)}>
                             <SelectValue
                                 placeholder={
                                     field.placeholder || `Select ${label.toLowerCase()}`
@@ -194,6 +224,9 @@ function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                             ))}
                         </SelectContent>
                     </Select>
+                    {showValidationError && (
+                        <p className="text-xs text-red-500">This field is required</p>
+                    )}
                 </div>
             );
 
@@ -214,8 +247,12 @@ function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                         type="datetime-local"
                         value={(value as string) || ""}
                         onChange={(e) => onChange(field.key, e.target.value)}
-                        className="w-full"
+                        onBlur={onBlur}
+                        className={cn("w-full", errorClass)}
                     />
+                    {showValidationError && (
+                        <p className="text-xs text-red-500">This field is required</p>
+                    )}
                 </div>
             );
 
@@ -228,12 +265,16 @@ function ListFieldRenderer({
     field,
     value,
     onChange,
+    onBlur,
     label,
+    showValidationError,
 }: {
     field: FunnelNodeField;
     value: unknown;
     onChange: (key: string, value: unknown) => void;
+    onBlur?: () => void;
     label: string;
+    showValidationError?: boolean;
 }) {
     // Strip markdown from list items for display
     const rawItems = Array.isArray(value) ? value : [];
@@ -248,6 +289,7 @@ function ListFieldRenderer({
     const removeItem = (index: number) => {
         const newItems = rawItems.filter((_, i) => i !== index);
         onChange(field.key, newItems);
+        onBlur?.();
     };
 
     const updateItem = (index: number, newValue: string) => {
@@ -255,6 +297,8 @@ function ListFieldRenderer({
         newItems[index] = newValue;
         onChange(field.key, newItems);
     };
+
+    const errorClass = showValidationError ? "border-red-500 ring-1 ring-red-500" : "";
 
     return (
         <div className="space-y-2">
@@ -274,8 +318,9 @@ function ListFieldRenderer({
                         <Input
                             value={item as string}
                             onChange={(e) => updateItem(index, e.target.value)}
+                            onBlur={onBlur}
                             placeholder={field.placeholder || `Item ${index + 1}`}
-                            className="flex-1"
+                            className={cn("flex-1", errorClass)}
                         />
                         <button
                             type="button"
@@ -295,6 +340,9 @@ function ListFieldRenderer({
                     Add item
                 </button>
             </div>
+            {showValidationError && (
+                <p className="text-xs text-red-500">This field is required</p>
+            )}
         </div>
     );
 }
@@ -303,12 +351,16 @@ function PricingFieldRenderer({
     field,
     value,
     onChange,
+    onBlur,
     label,
+    showValidationError,
 }: {
     field: FunnelNodeField;
     value: unknown;
     onChange: (key: string, value: unknown) => void;
+    onBlur?: () => void;
     label: string;
+    showValidationError?: boolean;
 }) {
     // Handle various pricing formats
     const getPriceValue = (): string => {
@@ -325,6 +377,8 @@ function PricingFieldRenderer({
         // Store as object with webinar price for consistency
         onChange(field.key, { webinar: numericPrice, regular: numericPrice });
     };
+
+    const errorClass = showValidationError ? "border-red-500 ring-1 ring-red-500" : "";
 
     return (
         <div className="space-y-2">
@@ -346,10 +400,14 @@ function PricingFieldRenderer({
                     step="0.01"
                     value={getPriceValue()}
                     onChange={(e) => handlePriceChange(e.target.value)}
+                    onBlur={onBlur}
                     placeholder="0.00"
-                    className="pl-7"
+                    className={cn("pl-7", errorClass)}
                 />
             </div>
+            {showValidationError && (
+                <p className="text-xs text-red-500">This field is required</p>
+            )}
         </div>
     );
 }
@@ -376,6 +434,9 @@ export function NodeEditorForm({
     nodeDefinition,
     content,
     onChange,
+    onBlur,
+    showValidation,
+    emptyRequiredFields = [],
 }: NodeEditorFormProps) {
     const [isOrderBumpExpanded, setIsOrderBumpExpanded] = useState(false);
 
@@ -406,6 +467,10 @@ export function NodeEditorForm({
                     field={field}
                     value={content[field.key]}
                     onChange={handleFieldChange}
+                    onBlur={onBlur}
+                    showValidationError={
+                        showValidation && emptyRequiredFields.includes(field.key)
+                    }
                 />
             ))}
 
@@ -438,6 +503,11 @@ export function NodeEditorForm({
                                         field={field}
                                         value={content[field.key]}
                                         onChange={handleFieldChange}
+                                        onBlur={onBlur}
+                                        showValidationError={
+                                            showValidation &&
+                                            emptyRequiredFields.includes(field.key)
+                                        }
                                     />
                                 ))}
                             </div>

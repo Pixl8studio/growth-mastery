@@ -332,8 +332,7 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
     {
         id: "traffic_source",
         title: "Traffic Source",
-        description:
-            "Where your ideal customers come from. We'll work on this later in the funnel building process.",
+        description: "We'll configure this at a later step.",
         icon: "Globe",
         color: "blue",
         pathways: ["direct_purchase", "book_call"],

@@ -14,8 +14,7 @@ import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
 import { FunnelFlowchart } from "@/components/funnel-map";
 import { NodeEditorModal } from "@/components/funnel-map/node-editor-modal";
-import { Sparkles, Loader2, Check, RefreshCw, CreditCard, Phone } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Sparkles, Loader2, Check, CreditCard, Phone, BadgeCheck } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
@@ -389,17 +388,125 @@ export default function Step2Page({
         [projectId, selectedNode]
     );
 
-    // Calculate completion
-    const pathwayNodes = getNodesForPathway(pathwayType);
-    const completedNodes = pathwayNodes.filter((node) => {
-        const data = nodeData.get(node.id);
-        return data?.status === "completed" || data?.status === "refined";
-    });
-    const completionPercentage = Math.round(
-        (completedNodes.length / pathwayNodes.length) * 100
+    // Handle node approval from modal
+    const handleNodeApprove = useCallback(
+        async (content: Record<string, unknown>) => {
+            if (!selectedNode) return;
+
+            const now = new Date().toISOString();
+
+            // Update local state
+            setNodeData((prev) => {
+                const newMap = new Map(prev);
+                const existingNode = newMap.get(selectedNode);
+
+                if (existingNode) {
+                    newMap.set(selectedNode, {
+                        ...existingNode,
+                        refined_content: content,
+                        approved_content: content,
+                        status: "completed",
+                        is_approved: true,
+                        approved_at: now,
+                        updated_at: now,
+                    });
+                }
+
+                return newMap;
+            });
+
+            // Save to database
+            const supabase = createClient();
+            const { error } = await supabase
+                .from("funnel_node_data")
+                .update({
+                    refined_content: content,
+                    approved_content: content,
+                    status: "completed",
+                    is_approved: true,
+                    approved_at: now,
+                })
+                .eq("funnel_project_id", projectId)
+                .eq("node_type", selectedNode);
+
+            if (error) {
+                logger.error({ error }, "Failed to approve node");
+                toast({
+                    variant: "destructive",
+                    title: "Approval Failed",
+                    description: "Failed to save approval. Please try again.",
+                });
+            } else {
+                toast({
+                    title: "Node Approved!",
+                    description: `${getNodeDefinition(selectedNode)?.title || "Node"} has been approved.`,
+                });
+
+                // If approving registration with live event, update registration config
+                if (selectedNode === "registration" && content.access_type === "live") {
+                    // Update registration config to trigger conditional node visibility
+                    await supabase.from("registration_config").upsert(
+                        {
+                            funnel_project_id: projectId,
+                            user_id: project?.user_id || "",
+                            access_type: content.access_type as string,
+                            event_datetime: (content.event_datetime as string) || null,
+                            updated_at: now,
+                        },
+                        { onConflict: "funnel_project_id" }
+                    );
+
+                    // Update local registration config state
+                    setRegistrationConfig((prev) => ({
+                        ...prev,
+                        id: prev?.id || "",
+                        funnel_project_id: projectId,
+                        user_id: project?.user_id || "",
+                        access_type: content.access_type as
+                            | "immediate"
+                            | "live"
+                            | "scheduled",
+                        event_datetime: (content.event_datetime as string) || null,
+                        event_timezone: prev?.event_timezone || "UTC",
+                        headline: prev?.headline || null,
+                        subheadline: prev?.subheadline || null,
+                        bullet_points: prev?.bullet_points || [],
+                        cta_text: prev?.cta_text || "Register Now",
+                        confirmation_headline: prev?.confirmation_headline || null,
+                        confirmation_message: prev?.confirmation_message || null,
+                        calendar_integration: prev?.calendar_integration || {},
+                        theme_overrides: prev?.theme_overrides || {},
+                        created_at: prev?.created_at || now,
+                        updated_at: now,
+                    }));
+                }
+            }
+        },
+        [projectId, selectedNode, project?.user_id, toast]
     );
+
+    // Core nodes that MUST be approved before continuing
+    const CORE_NODE_TYPES: FunnelNodeType[] = [
+        "registration",
+        "masterclass",
+        "core_offer",
+        "checkout",
+    ];
+
+    // Calculate approval progress
+    const pathwayNodes = getNodesForPathway(pathwayType, registrationConfig);
+    const approvedNodes = pathwayNodes.filter((node) => {
+        const data = nodeData.get(node.id);
+        return data?.is_approved === true;
+    });
     const hasStarted = nodeData.size > 0;
-    const canContinue = completionPercentage >= 50; // Require at least 50% completion
+
+    // Check if all core nodes are approved
+    const coreNodesApproved = CORE_NODE_TYPES.every((nodeType) => {
+        const data = nodeData.get(nodeType);
+        return data?.is_approved === true;
+    });
+    const canContinue = coreNodesApproved;
 
     // Check if business profile is complete enough
     const hasBusinessProfile =
@@ -420,7 +527,9 @@ export default function Step2Page({
             funnelName={project?.name}
             completedSteps={completedSteps}
             nextDisabled={!canContinue}
-            nextLabel={canContinue ? "Continue to Brand Design" : "Complete Map First"}
+            nextLabel={
+                canContinue ? "Continue to Brand Design" : "Approve Core Nodes First"
+            }
             stepTitle="Funnel Map"
             stepDescription="Plan your funnel"
         >
@@ -553,41 +662,32 @@ export default function Step2Page({
                     {/* Flowchart */}
                     {!isLoading && !isGenerating && hasStarted && (
                         <div className="flex-1">
-                            {/* Progress Bar */}
-                            <div className="mb-4 flex items-center justify-between rounded-lg border border-border bg-card p-4">
+                            {/* Approval Progress Bar - Centered */}
+                            <div className="mb-4 flex items-center justify-center rounded-lg border border-border bg-card p-4">
                                 <div className="flex items-center gap-4">
+                                    <BadgeCheck className="h-5 w-5 text-primary" />
                                     <span className="text-sm font-medium text-foreground">
-                                        Funnel Completion
+                                        Funnel Progress
                                     </span>
-                                    <div className="h-2 w-32 overflow-hidden rounded-full bg-muted">
+                                    <div className="h-2 w-40 overflow-hidden rounded-full bg-muted">
                                         <div
                                             className={cn(
                                                 "h-full rounded-full transition-all duration-500",
-                                                completionPercentage === 100
+                                                approvedNodes.length ===
+                                                    pathwayNodes.length
                                                     ? "bg-green-500"
                                                     : "bg-primary"
                                             )}
                                             style={{
-                                                width: `${completionPercentage}%`,
+                                                width: `${pathwayNodes.length > 0 ? (approvedNodes.length / pathwayNodes.length) * 100 : 0}%`,
                                             }}
                                         />
                                     </div>
                                     <span className="text-sm text-muted-foreground">
-                                        {completedNodes.length}/{pathwayNodes.length}{" "}
-                                        nodes refined
+                                        {approvedNodes.length}/{pathwayNodes.length}{" "}
+                                        nodes approved
                                     </span>
                                 </div>
-
-                                <Button
-                                    variant="outline"
-                                    size="sm"
-                                    onClick={() => handleGenerateDrafts()}
-                                    disabled={isGenerating}
-                                    className="gap-2"
-                                >
-                                    <RefreshCw className="h-4 w-4" />
-                                    Regenerate Drafts
-                                </Button>
                             </div>
 
                             {/* React Flow Flowchart */}
@@ -620,6 +720,7 @@ export default function Step2Page({
                             : {}
                     }
                     onContentUpdate={handleModalContentUpdate}
+                    onApprove={handleNodeApprove}
                 />
             )}
         </StepLayout>

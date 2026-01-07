@@ -1,6 +1,6 @@
 /**
  * OfferEditor Component Tests
- * Tests offer editing with features, bonuses, and 7 P's framework
+ * Tests offer editing with features, bonuses, and Irresistible Offer Framework
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";

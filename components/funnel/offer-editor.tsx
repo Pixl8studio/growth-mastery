@@ -12,7 +12,7 @@ interface OfferData {
     features: string[];
     bonuses: string[];
     guarantee?: string | null;
-    // 7 P's Framework
+    // Irresistible Offer Framework
     promise?: string;
     person?: string;
     process?: string;
@@ -130,7 +130,7 @@ export function OfferEditor({
 
     const tabs = [
         { id: "core" as TabType, label: "Core Offer", emoji: "💰" },
-        { id: "framework" as TabType, label: "7 P's Framework", emoji: "🎯" },
+        { id: "framework" as TabType, label: "Irresistible Offer Framework", emoji: "🎯" },
         { id: "features" as TabType, label: "Features & Bonuses", emoji: "✨" },
     ];
 
@@ -334,7 +334,7 @@ export function OfferEditor({
                     </div>
                 )}
 
-                {/* 7 P's FRAMEWORK TAB */}
+                {/* IRRESISTIBLE OFFER FRAMEWORK TAB */}
                 {activeTab === "framework" && (
                     <div className="space-y-6">
                         {/* Promise */}

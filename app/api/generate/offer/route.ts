@@ -228,7 +228,7 @@ export async function POST(request: NextRequest) {
             "Offer generated successfully"
         );
 
-        // Save offer to database with 7 P's framework
+        // Save offer to database with Irresistible Offer Framework
         const { data: savedOffer, error: saveError } = await supabase
             .from("offers")
             .insert({
@@ -241,7 +241,7 @@ export async function POST(request: NextRequest) {
                 features: generatedOffer.features,
                 bonuses: generatedOffer.bonuses,
                 guarantee: generatedOffer.guarantee,
-                // 7 P's Framework
+                // Irresistible Offer Framework
                 promise: generatedOffer.promise,
                 person: generatedOffer.person,
                 process: generatedOffer.process,

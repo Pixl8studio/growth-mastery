@@ -47,7 +47,7 @@ const ICON_MAP = {
 
 const STEPS_DATA = [
     { number: 1, title: "Intake", description: "Multiple input options" },
-    { number: 2, title: "Define Offer", description: "7 P's framework" },
+    { number: 2, title: "Funnel Map", description: "Plan your funnel" },
     { number: 3, title: "Brand Design", description: "Visual identity" },
     { number: 4, title: "Presentation Structure", description: "AI-generated outline" },
     { number: 5, title: "Create Presentation", description: "Generate Slides" },

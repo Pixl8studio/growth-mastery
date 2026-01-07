@@ -84,7 +84,7 @@ Create 3 alternative offer variations:
 2. PREMIUM: Higher price point ($${Math.round(baseOffer.price * 1.5)}-$${Math.round(baseOffer.price * 2)}), comprehensive features, more bonuses, enhanced support
 3. SCALE-OPTIMIZED: Mid-tier sweet spot ($${Math.round(baseOffer.price * 0.8)}-$${Math.round(baseOffer.price * 1.2)}), best conversion potential, balanced value
 
-Each variation should include all 7 P's fields and be strategically different.
+Each variation should include all Irresistible Offer Framework fields and be strategically different.
 
 Return ONLY a JSON object:
 {

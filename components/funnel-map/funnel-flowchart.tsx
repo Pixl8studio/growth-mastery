@@ -45,7 +45,7 @@ interface FunnelFlowchartProps {
     onNodeRegenerate?: (nodeType: FunnelNodeType) => void;
     isGeneratingDrafts?: boolean;
     registrationConfig?: RegistrationConfig | null;
-    showBenchmarks?: boolean;
+    showBenchmarks?: boolean; // Deprecated - benchmarks now shown in modal only
 }
 
 // Custom node types for React Flow
@@ -55,8 +55,8 @@ const nodeTypes = {
     funnelNode: FunnelNode,
 } as NodeTypes;
 
-// Node spacing
-const NODE_SPACING_Y = 160; // Increased for action buttons
+// Node spacing - uniform spacing between all nodes
+const NODE_SPACING_Y = 200; // Increased for better visual separation
 
 // Color mappings - extended for new node types
 const NODE_COLORS: Record<string, { bg: string; border: string; text: string }> = {
@@ -136,7 +136,7 @@ export function FunnelFlowchart({
     onNodeRegenerate,
     isGeneratingDrafts = false,
     registrationConfig,
-    showBenchmarks = true,
+    showBenchmarks = false, // Default to false - benchmarks now shown in modal only
 }: FunnelFlowchartProps) {
     // Get nodes for the selected pathway, filtering conditional nodes
     const pathwayNodes = useMemo(
@@ -229,6 +229,11 @@ export function FunnelFlowchart({
 
     const onNodeClick = useCallback(
         (_: React.MouseEvent, node: Node) => {
+            // Check if this node is non-clickable (like Traffic Source)
+            const nodeDef = FUNNEL_NODE_DEFINITIONS.find((n) => n.id === node.id);
+            if (nodeDef?.isNonClickable) {
+                return; // Don't select non-clickable nodes
+            }
             onNodeSelect(node.id as FunnelNodeType);
         },
         [onNodeSelect]

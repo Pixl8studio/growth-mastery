@@ -152,10 +152,13 @@ function FunnelNodeComponent({ data }: FunnelNodeComponentProps) {
         onApprove,
         onRegenerate,
         pathwayType,
-        showBenchmarks = true,
+        showBenchmarks = false, // Default to false - benchmarks now shown in modal only
     } = data;
     const Icon = ICONS[definition.icon] || Globe;
     const [isRegenerating, setIsRegenerating] = useState(false);
+
+    // Check if this is a non-clickable node (like Traffic Source)
+    const isNonClickable = definition.isNonClickable ?? false;
 
     const isApproved = nodeData?.is_approved ?? false;
     const benchmark = showBenchmarks
@@ -263,12 +266,14 @@ function FunnelNodeComponent({ data }: FunnelNodeComponentProps) {
             />
 
             <div
-                onClick={onSelect}
+                onClick={isNonClickable ? undefined : onSelect}
                 className={cn(
-                    "group relative cursor-pointer rounded-xl border-2 p-4 shadow-sm transition-all duration-200",
-                    "hover:shadow-lg hover:-translate-y-0.5",
+                    "group relative rounded-xl border-2 p-4 shadow-sm transition-all duration-200",
+                    // Only show pointer cursor and hover effects for clickable nodes
+                    !isNonClickable && "cursor-pointer hover:shadow-lg hover:-translate-y-0.5",
+                    isNonClickable && "cursor-default opacity-80",
                     colors.bg,
-                    isSelected
+                    isSelected && !isNonClickable
                         ? "ring-2 ring-primary ring-offset-2 border-primary"
                         : colors.border,
                     (isGenerating || isRegenerating) && "animate-pulse",
@@ -346,8 +351,8 @@ function FunnelNodeComponent({ data }: FunnelNodeComponentProps) {
                     </div>
                 )}
 
-                {/* Action buttons - Approve & Regenerate */}
-                {!isGenerating && !isRegenerating && (onApprove || onRegenerate) && (
+                {/* Action buttons - Approve & Regenerate (not shown for non-clickable nodes) */}
+                {!isNonClickable && !isGenerating && !isRegenerating && (onApprove || onRegenerate) && (
                     <div className="mt-3 flex items-center gap-2 border-t border-slate-200 pt-3">
                         {/* Approve button */}
                         {onApprove && canApprove && (

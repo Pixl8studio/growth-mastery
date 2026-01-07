@@ -1,18 +1,22 @@
 "use client";
 
 /**
- * Step 2: Visual Funnel Co-Creation Experience
+ * Step 2: Funnel Map
  * Interactive flowchart for mapping customer journey with AI-assisted drafts
+ * Features:
+ * - Pathway selection (Direct Purchase vs Book a Call)
+ * - Auto-generation of drafts on page load
+ * - 80% viewport modal editor with AI chat
  */
 
 import { useState, useEffect, useCallback } from "react";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
-import { FunnelFlowchart, AIChatPanel } from "@/components/funnel-map";
+import { FunnelFlowchart } from "@/components/funnel-map";
+import { NodeEditorModal } from "@/components/funnel-map/node-editor-modal";
 import {
     Sparkles,
     Loader2,
-    ArrowRight,
     Check,
     RefreshCw,
     CreditCard,
@@ -29,12 +33,14 @@ import type {
     FunnelNodeData,
     FunnelMapConfig,
     PathwayType,
-    ConversationMessage,
+    RegistrationConfig,
 } from "@/types/funnel-map";
 import {
     PATHWAY_DEFINITIONS,
     getNodesForPathway,
     determinePathwayFromPrice,
+    LOADING_MESSAGES,
+    FUNNEL_NODE_DEFINITIONS,
 } from "@/types/funnel-map";
 import { cn } from "@/lib/utils";
 
@@ -59,8 +65,21 @@ export default function Step2Page({
     const [isGenerating, setIsGenerating] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
     const [pathwayType, setPathwayType] = useState<PathwayType>("direct_purchase");
+    const [showPathwaySelection, setShowPathwaySelection] = useState(false);
+    const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+    const [isEditorOpen, setIsEditorOpen] = useState(false);
+    const [registrationConfig, setRegistrationConfig] = useState<RegistrationConfig | null>(null);
 
     const { completedSteps } = useStepCompletion(projectId);
+
+    // Cycle loading messages during generation
+    useEffect(() => {
+        if (!isGenerating) return;
+        const interval = setInterval(() => {
+            setLoadingMessageIndex((prev) => (prev + 1) % LOADING_MESSAGES.length);
+        }, 3000);
+        return () => clearInterval(interval);
+    }, [isGenerating]);
 
     // Resolve params
     useEffect(() => {
@@ -120,18 +139,32 @@ export default function Step2Page({
                     setPathwayType(configData.pathway_type);
                 }
 
+                // Load registration config for conditional nodes
+                const { data: regConfig } = await supabase
+                    .from("registration_config")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .single();
+
+                if (regConfig) {
+                    setRegistrationConfig(regConfig);
+                }
+
                 // Load funnel node data
                 const { data: nodesData } = await supabase
                     .from("funnel_node_data")
                     .select("*")
                     .eq("funnel_project_id", projectId);
 
-                if (nodesData) {
+                if (nodesData && nodesData.length > 0) {
                     const nodeMap = new Map<FunnelNodeType, FunnelNodeData>();
                     nodesData.forEach((node) => {
                         nodeMap.set(node.node_type as FunnelNodeType, node);
                     });
                     setNodeData(nodeMap);
+                } else {
+                    // No drafts yet - show pathway selection
+                    setShowPathwaySelection(true);
                 }
             } catch (error) {
                 logger.error({ error }, "Failed to load funnel map data");
@@ -143,15 +176,18 @@ export default function Step2Page({
         loadData();
     }, [projectId]);
 
-    // Generate initial drafts
-    const handleGenerateDrafts = async () => {
+    // Generate initial drafts (auto-triggered after pathway selection)
+    const handleGenerateDrafts = async (selectedPathway?: PathwayType) => {
+        const pathway = selectedPathway || pathwayType;
         setIsGenerating(true);
+        setShowPathwaySelection(false);
+        setLoadingMessageIndex(0);
 
         try {
             const response = await fetch("/api/funnel-map/generate-drafts", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ projectId, pathwayType }),
+                body: JSON.stringify({ projectId, pathwayType: pathway }),
             });
 
             if (!response.ok) {
@@ -214,30 +250,41 @@ export default function Step2Page({
         }
     };
 
-    // Handle pathway change
-    const handlePathwayChange = async (newPathway: PathwayType) => {
+    // Handle pathway selection and auto-generate drafts
+    const handlePathwaySelect = async (newPathway: PathwayType) => {
         setPathwayType(newPathway);
-
-        // If drafts were already generated, regenerate for new pathway
-        if (mapConfig?.drafts_generated) {
-            await handleGenerateDrafts();
-        }
+        // Auto-generate drafts after pathway selection
+        await handleGenerateDrafts(newPathway);
     };
 
-    // Handle node selection
+    // Handle node selection - opens modal editor
     const handleNodeSelect = (nodeType: FunnelNodeType) => {
+        // Don't open modal for non-clickable nodes
+        const nodeDef = FUNNEL_NODE_DEFINITIONS.find((n) => n.id === nodeType);
+        if (nodeDef?.isNonClickable) return;
+
         setSelectedNode(nodeType);
+        setIsEditorOpen(true);
     };
 
-    // Handle content update from AI chat
-    const handleContentUpdate = useCallback(
-        (nodeType: FunnelNodeType, content: Record<string, unknown>) => {
+    // Handle modal close
+    const handleEditorClose = () => {
+        setIsEditorOpen(false);
+        setSelectedNode(null);
+    };
+
+    // Handle content update from modal editor (for selected node)
+    const handleModalContentUpdate = useCallback(
+        async (content: Record<string, unknown>) => {
+            if (!selectedNode) return;
+
+            // Update local state
             setNodeData((prev) => {
                 const newMap = new Map(prev);
-                const existingNode = newMap.get(nodeType);
+                const existingNode = newMap.get(selectedNode);
 
                 if (existingNode) {
-                    newMap.set(nodeType, {
+                    newMap.set(selectedNode, {
                         ...existingNode,
                         refined_content: content,
                         status: "refined",
@@ -250,46 +297,20 @@ export default function Step2Page({
 
             // Save to database
             const supabase = createClient();
-            supabase
+            const { error } = await supabase
                 .from("funnel_node_data")
                 .update({
                     refined_content: content,
                     status: "refined",
                 })
                 .eq("funnel_project_id", projectId)
-                .eq("node_type", nodeType)
-                .then(({ error }) => {
-                    if (error) {
-                        logger.error({ error }, "Failed to save content update");
-                    }
-                });
+                .eq("node_type", selectedNode);
+
+            if (error) {
+                logger.error({ error }, "Failed to save content update");
+            }
         },
-        [projectId]
-    );
-
-    // Handle conversation update
-    const handleConversationUpdate = useCallback(
-        (nodeType: FunnelNodeType, messages: ConversationMessage[]) => {
-            setNodeData((prev) => {
-                const newMap = new Map(prev);
-                const existingNode = newMap.get(nodeType);
-
-                if (existingNode) {
-                    newMap.set(nodeType, {
-                        ...existingNode,
-                        conversation_history: messages,
-                        status:
-                            existingNode.status === "draft"
-                                ? "in_progress"
-                                : existingNode.status,
-                        updated_at: new Date().toISOString(),
-                    });
-                }
-
-                return newMap;
-            });
-        },
-        []
+        [projectId, selectedNode]
     );
 
     // Calculate completion
@@ -324,17 +345,12 @@ export default function Step2Page({
             completedSteps={completedSteps}
             nextDisabled={!canContinue}
             nextLabel={canContinue ? "Continue to Brand Design" : "Complete Map First"}
-            stepTitle="Map Your Funnel"
-            stepDescription="Visualize your customer journey with AI-generated content for each step"
+            stepTitle="Funnel Map"
+            stepDescription="Plan your funnel"
         >
-            <div className="flex h-[calc(100vh-200px)] min-h-[600px] gap-0">
+            <div className="flex h-[calc(100vh-200px)] min-h-[600px] flex-col">
                 {/* Main Content Area */}
-                <div
-                    className={cn(
-                        "flex flex-1 flex-col transition-all duration-300",
-                        selectedNode ? "w-[60%]" : "w-full"
-                    )}
-                >
+                <div className="flex flex-1 flex-col">
                     {/* Dependency Warning */}
                     {!hasBusinessProfile && !isLoading && (
                         <div className="mb-4">
@@ -347,94 +363,70 @@ export default function Step2Page({
                         </div>
                     )}
 
-                    {/* Pathway Selection */}
-                    {hasBusinessProfile && !hasStarted && (
-                        <div className="mb-6 rounded-lg border border-border bg-card p-6">
-                            <h3 className="mb-4 text-lg font-semibold text-foreground">
-                                Choose Your Purchase Pathway
-                            </h3>
-                            <p className="mb-4 text-sm text-muted-foreground">
-                                Based on your offer price, we recommend the{" "}
-                                <span className="font-medium text-primary">
-                                    {PATHWAY_DEFINITIONS[pathwayType].title}
-                                </span>{" "}
-                                pathway.
-                            </p>
+                    {/* Pathway Selection - clicking a pathway auto-triggers generation */}
+                    {hasBusinessProfile && showPathwaySelection && !isGenerating && (
+                        <div className="flex flex-1 flex-col items-center justify-center p-8">
+                            <div className="max-w-2xl w-full rounded-lg border border-border bg-card p-8">
+                                <h3 className="mb-2 text-xl font-semibold text-foreground text-center">
+                                    Choose Your Purchase Pathway
+                                </h3>
+                                <p className="mb-6 text-sm text-muted-foreground text-center">
+                                    Based on your offer price, we recommend the{" "}
+                                    <span className="font-medium text-primary">
+                                        {PATHWAY_DEFINITIONS[pathwayType].title}
+                                    </span>{" "}
+                                    pathway. Click to select and begin.
+                                </p>
 
-                            <div className="grid gap-4 md:grid-cols-2">
-                                {(
-                                    Object.entries(PATHWAY_DEFINITIONS) as [
-                                        PathwayType,
-                                        (typeof PATHWAY_DEFINITIONS)[PathwayType],
-                                    ][]
-                                ).map(([key, pathway]) => (
-                                    <button
-                                        key={key}
-                                        onClick={() =>
-                                            handlePathwayChange(key as PathwayType)
-                                        }
-                                        className={cn(
-                                            "flex items-start gap-4 rounded-lg border-2 p-4 text-left transition-all",
-                                            pathwayType === key
-                                                ? "border-primary bg-primary/5 ring-2 ring-primary ring-offset-2"
-                                                : "border-border hover:border-primary/50"
-                                        )}
-                                    >
-                                        <div
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    {(
+                                        Object.entries(PATHWAY_DEFINITIONS) as [
+                                            PathwayType,
+                                            (typeof PATHWAY_DEFINITIONS)[PathwayType],
+                                        ][]
+                                    ).map(([key, pathway]) => (
+                                        <button
+                                            key={key}
+                                            onClick={() => handlePathwaySelect(key as PathwayType)}
                                             className={cn(
-                                                "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                                                "flex items-start gap-4 rounded-lg border-2 p-4 text-left transition-all hover:shadow-md",
                                                 pathwayType === key
-                                                    ? "bg-primary text-primary-foreground"
-                                                    : "bg-muted text-muted-foreground"
+                                                    ? "border-primary bg-primary/5"
+                                                    : "border-border hover:border-primary/50"
                                             )}
                                         >
-                                            {key === "direct_purchase" ? (
-                                                <CreditCard className="h-5 w-5" />
-                                            ) : (
-                                                <Phone className="h-5 w-5" />
+                                            <div
+                                                className={cn(
+                                                    "flex h-10 w-10 shrink-0 items-center justify-center rounded-lg",
+                                                    pathwayType === key
+                                                        ? "bg-primary text-primary-foreground"
+                                                        : "bg-muted text-muted-foreground"
+                                                )}
+                                            >
+                                                {key === "direct_purchase" ? (
+                                                    <CreditCard className="h-5 w-5" />
+                                                ) : (
+                                                    <Phone className="h-5 w-5" />
+                                                )}
+                                            </div>
+                                            <div className="flex-1">
+                                                <h4 className="font-semibold text-foreground">
+                                                    {pathway.title}
+                                                </h4>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {pathway.description}
+                                                </p>
+                                                <p className="mt-1 text-xs font-medium text-primary">
+                                                    {pathway.priceThreshold}
+                                                </p>
+                                            </div>
+                                            {pathwayType === key && (
+                                                <Check className="h-5 w-5 text-primary" />
                                             )}
-                                        </div>
-                                        <div>
-                                            <h4 className="font-semibold text-foreground">
-                                                {pathway.title}
-                                            </h4>
-                                            <p className="text-sm text-muted-foreground">
-                                                {pathway.description}
-                                            </p>
-                                            <p className="mt-1 text-xs font-medium text-primary">
-                                                {pathway.priceThreshold}
-                                            </p>
-                                        </div>
-                                        {pathwayType === key && (
-                                            <Check className="ml-auto h-5 w-5 text-primary" />
-                                        )}
-                                    </button>
-                                ))}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
-                    )}
-
-                    {/* Generate Drafts Button */}
-                    {hasBusinessProfile && !hasStarted && (
-                        <div className="mb-6 flex justify-center">
-                            <Button
-                                size="lg"
-                                onClick={handleGenerateDrafts}
-                                disabled={isGenerating}
-                                className="gap-2 px-8"
-                            >
-                                {isGenerating ? (
-                                    <>
-                                        <Loader2 className="h-5 w-5 animate-spin" />
-                                        Generating Your Funnel...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Sparkles className="h-5 w-5" />
-                                        Generate AI Drafts
-                                    </>
-                                )}
-                            </Button>
                         </div>
                     )}
 
@@ -445,22 +437,37 @@ export default function Step2Page({
                         </div>
                     )}
 
-                    {/* Generating State */}
+                    {/* Full-screen Generating State with cycling messages */}
                     {isGenerating && (
-                        <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-primary/20 bg-primary/5 p-8">
-                            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-                                <Sparkles className="h-8 w-8 animate-pulse text-primary" />
-                            </div>
-                            <h3 className="mb-2 text-xl font-semibold text-foreground">
-                                Creating Your Funnel Map
-                            </h3>
-                            <p className="text-center text-muted-foreground">
-                                AI is analyzing your business profile and generating
-                                personalized content for each step of your funnel...
-                            </p>
-                            <div className="mt-6 flex items-center gap-2 text-sm text-muted-foreground">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                                <span>This takes about 30-60 seconds</span>
+                        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm">
+                            <div className="max-w-md text-center p-8">
+                                <div className="mb-6 flex h-20 w-20 mx-auto items-center justify-center rounded-full bg-primary/10">
+                                    <Sparkles className="h-10 w-10 animate-pulse text-primary" />
+                                </div>
+                                <h3 className="mb-4 text-2xl font-semibold text-foreground">
+                                    Creating Your Funnel Map
+                                </h3>
+                                <p className="text-muted-foreground mb-6 h-12 transition-all duration-500">
+                                    {LOADING_MESSAGES[loadingMessageIndex]}
+                                </p>
+                                <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                    <span>This takes about 30-60 seconds</span>
+                                </div>
+                                {/* Progress dots */}
+                                <div className="mt-6 flex justify-center gap-1">
+                                    {LOADING_MESSAGES.map((_, idx) => (
+                                        <div
+                                            key={idx}
+                                            className={cn(
+                                                "h-2 w-2 rounded-full transition-all duration-300",
+                                                idx === loadingMessageIndex
+                                                    ? "bg-primary w-6"
+                                                    : "bg-muted"
+                                            )}
+                                        />
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     )}
@@ -512,45 +519,27 @@ export default function Step2Page({
                                 selectedNode={selectedNode}
                                 onNodeSelect={handleNodeSelect}
                                 isGeneratingDrafts={isGenerating}
+                                registrationConfig={registrationConfig}
+                                showBenchmarks={false}
                             />
                         </div>
                     )}
-
-                    {/* Empty State (after profile, before generation) */}
-                    {!isLoading &&
-                        !isGenerating &&
-                        !hasStarted &&
-                        hasBusinessProfile && (
-                            <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border p-8 text-center">
-                                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
-                                    <ArrowRight className="h-8 w-8 text-muted-foreground" />
-                                </div>
-                                <h3 className="mb-2 text-xl font-semibold text-foreground">
-                                    Ready to Map Your Funnel
-                                </h3>
-                                <p className="max-w-md text-muted-foreground">
-                                    Click "Generate AI Drafts" above to create
-                                    personalized content for each step of your customer
-                                    journey.
-                                </p>
-                            </div>
-                        )}
                 </div>
-
-                {/* AI Chat Panel */}
-                {selectedNode && hasStarted && (
-                    <div className="w-[40%] min-w-[360px] max-w-[500px]">
-                        <AIChatPanel
-                            nodeType={selectedNode}
-                            nodeData={nodeData.get(selectedNode) || null}
-                            projectId={projectId}
-                            onClose={() => setSelectedNode(null)}
-                            onContentUpdate={handleContentUpdate}
-                            onConversationUpdate={handleConversationUpdate}
-                        />
-                    </div>
-                )}
             </div>
+
+            {/* Node Editor Modal */}
+            {selectedNode && (
+                <NodeEditorModal
+                    isOpen={isEditorOpen}
+                    onClose={handleEditorClose}
+                    nodeType={selectedNode}
+                    nodeData={nodeData.get(selectedNode) || null}
+                    pathwayType={pathwayType}
+                    projectId={projectId}
+                    businessContext={businessProfile || {}}
+                    onContentUpdate={handleModalContentUpdate}
+                />
+            )}
         </StepLayout>
     );
 }

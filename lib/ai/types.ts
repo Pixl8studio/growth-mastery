@@ -35,7 +35,7 @@ export interface OfferGeneration {
     features: string[];
     bonuses: string[];
     guarantee: string;
-    // 7 P's Framework
+    // Irresistible Offer Framework
     promise: string;
     person: string;
     process: string;

@@ -11,12 +11,18 @@
  * Performance considerations:
  * - Regex patterns use alternation which can cause backtracking on large inputs
  * - Current implementation is optimized for typical user message sizes (< 10KB)
+ * - Input length is validated before regex operations to prevent ReDoS
  * - If processing very large inputs becomes necessary, consider:
  *   1. Adding input length validation at the caller level (already done in chat route)
  *   2. Using regex timeout libraries like safe-regex or re2
  *   3. Processing content in chunks
  * - Current risk is minimal: chat API limits HTML to 1MB and messages are typically short
  */
+
+import * as Sentry from "@sentry/nextjs";
+
+/** Maximum message length to process with regex (100KB) */
+const MAX_SANITIZE_LENGTH = 100 * 1024;
 
 /**
  * Sanitize user content to prevent prompt injection
@@ -32,6 +38,20 @@
  * should pass through unchanged.
  */
 export function sanitizeUserContent(content: string): string {
+    // Skip regex processing for excessively long inputs to prevent ReDoS
+    // Return content unchanged - the caller is responsible for size limits
+    if (content.length > MAX_SANITIZE_LENGTH) {
+        Sentry.addBreadcrumb({
+            category: "security.sanitization",
+            message: "Content exceeded max sanitize length, skipped regex",
+            level: "warning",
+            data: { contentLength: content.length, maxLength: MAX_SANITIZE_LENGTH },
+        });
+        return content;
+    }
+
+    const originalContent = content;
+
     // Remove any attempts to inject system-level instructions
     let sanitized = content
         // [system] and [assistant] in brackets are clear prompt injection attempts
@@ -54,6 +74,19 @@ export function sanitizeUserContent(content: string): string {
         /(?:^|[.!?]\s*)ignore\s+(previous|all|above)\s+instructions(?:\s*[.!?\n]|$)/gim,
         "[filtered]"
     );
+
+    // Add breadcrumb when sanitization was applied (for observability)
+    if (sanitized !== originalContent) {
+        Sentry.addBreadcrumb({
+            category: "security.sanitization",
+            message: "Prompt injection patterns filtered from user content",
+            level: "info",
+            data: {
+                originalLength: originalContent.length,
+                sanitizedLength: sanitized.length,
+            },
+        });
+    }
 
     return sanitized;
 }

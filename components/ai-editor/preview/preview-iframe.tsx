@@ -118,6 +118,12 @@ export function PreviewIframe({
         /**
          * Content Security Policy for Preview Iframe
          *
+         * IMPLEMENTATION NOTE: CSP is applied via <meta> tag rather than HTTP headers
+         * because blob: URLs cannot have HTTP headers attached. The browser creates
+         * blob URLs client-side, bypassing any server that could set headers. While
+         * <meta> tags can theoretically be overridden by preceding scripts, this is
+         * mitigated by our control over the HTML generation (AI-generated, not user-submitted).
+         *
          * This CSP provides defense-in-depth against XSS in AI-generated HTML.
          * Trade-offs and limitations:
          *
@@ -140,7 +146,9 @@ export function PreviewIframe({
          *   Users who need these features should note they work in production only.
          *
          * - img-src *: Allows images from any source to support user-uploaded content
-         *   and external image URLs in landing pages.
+         *   and external image URLs in landing pages. Consider restricting to specific
+         *   domains (e.g., our Supabase storage) for production pages if exfiltration
+         *   risk is a concern.
          *
          * NOTE: These restrictions are for preview only. Published pages can be
          * configured with different CSP based on business requirements.

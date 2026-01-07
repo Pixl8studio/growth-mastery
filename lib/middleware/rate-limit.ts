@@ -109,6 +109,18 @@ const imageUploadRatelimit = new Ratelimit({
     prefix: "ratelimit:image-upload",
 });
 
+/**
+ * Rate limiter for AI editor chat
+ * Limits: 150 requests per hour per user (AI conversations)
+ * Rationale: Consistent with funnel-chat, allows sustained editing sessions
+ */
+const aiEditorChatRatelimit = new Ratelimit({
+    redis: kv,
+    limiter: Ratelimit.slidingWindow(150, "1 h"),
+    analytics: true,
+    prefix: "ratelimit:ai-editor-chat",
+});
+
 export type RateLimitEndpoint =
     | "scraping"
     | "brand-colors"
@@ -118,7 +130,8 @@ export type RateLimitEndpoint =
     | "image-generation"
     | "funnel-chat"
     | "funnel-drafts"
-    | "image-upload";
+    | "image-upload"
+    | "ai-editor-chat";
 
 /**
  * Rate limit check result with metadata for headers
@@ -155,6 +168,7 @@ export async function checkRateLimitWithInfo(
             "funnel-chat": funnelChatRatelimit,
             "funnel-drafts": funnelDraftsRatelimit,
             "image-upload": imageUploadRatelimit,
+            "ai-editor-chat": aiEditorChatRatelimit,
         };
 
         const limiter = limiterMap[endpoint];

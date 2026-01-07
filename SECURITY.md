@@ -54,7 +54,8 @@ Rate limiting prevents abuse of expensive operations:
 | --------------------------------- | ----- | -------- | ------------------ |
 | `/api/funnel-map/chat`            | 150   | 1 hour   | AI conversations   |
 | `/api/funnel-map/generate-drafts` | 10    | 1 hour   | Parallel AI calls  |
-| `/api/ai-editor/upload`           | 30    | 1 minute | Storage operations |
+| `/api/ai-editor/chat`             | 150   | 1 hour   | AI conversations   |
+| `/api/pages/upload-image`         | 30    | 1 minute | Storage operations |
 
 ### Rate Limit Headers
 
@@ -63,11 +64,6 @@ Rate-limited endpoints return headers on both success and 429 responses:
 - `X-RateLimit-Limit`: Maximum requests allowed
 - `X-RateLimit-Remaining`: Requests remaining
 - `X-RateLimit-Reset`: ISO timestamp when limit resets
-
-### Future Enhancement
-
-Consider adding rate limiting to `/api/ai-editor/chat` endpoint for consistency with
-other AI-powered routes.
 
 ## Image Upload Security
 
@@ -145,7 +141,28 @@ All tables use Supabase RLS policies:
 ### Sensitive Operations
 
 - Slug collision checks use array queries (not `.single()`) to avoid false positives
-- Transaction rollbacks are best-effort for publish fields only (documented in code)
+- Unicode homograph attacks are prevented by normalizing slugs before validation
+
+### Transaction Consistency
+
+The Supabase JavaScript client does not support traditional ACID transactions for
+complex multi-field updates. Our approach:
+
+**Eventual Consistency Model:**
+
+- Page updates that fail after partial completion use best-effort rollback for publish
+  fields only (slug, published_url, published_at)
+- Other fields (title, html_content, status, version) are NOT rolled back
+
+**Why This Is Acceptable:**
+
+1. Most update failures are network/timeout issues where no changes were persisted
+2. Slug/URL fields are prioritized for rollback (prevent orphaned public URLs)
+3. Client-side state retains correct data for retry
+4. The user experience degrades gracefully (can retry the operation)
+
+**Future Enhancement:** Consider using Supabase RPC with PostgreSQL stored procedures
+for truly atomic publish operations if consistency issues are observed in production.
 
 ## Reporting Security Issues
 

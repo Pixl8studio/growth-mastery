@@ -11,6 +11,11 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { checkHtmlSize } from "@/lib/validation/html";
+import {
+    isReservedSlug,
+    validateSlugFormat,
+    normalizeHomographs,
+} from "@/lib/constants/slugs";
 
 /**
  * Standard error response format
@@ -42,48 +47,8 @@ interface RouteParams {
     }>;
 }
 
-/**
- * Reserved slugs that could conflict with app routes
- */
-const RESERVED_SLUGS = [
-    "admin",
-    "api",
-    "auth",
-    "app",
-    "dashboard",
-    "login",
-    "logout",
-    "signup",
-    "register",
-    "settings",
-    "profile",
-    "account",
-    "billing",
-    "help",
-    "support",
-    "docs",
-    "blog",
-    "about",
-    "contact",
-    "privacy",
-    "terms",
-    "ai-editor",
-    "funnel",
-    "funnels",
-    "project",
-    "projects",
-    "page",
-    "pages",
-    "p",
-    "preview",
-];
-
-/**
- * Check if a slug is reserved
- */
-function isReservedSlug(slug: string): boolean {
-    return RESERVED_SLUGS.includes(slug.toLowerCase());
-}
+// Note: RESERVED_SLUGS, isReservedSlug, and validateSlugFormat are imported from
+// @/lib/constants/slugs for centralized management and Unicode homograph protection
 
 /**
  * Generate a cryptographically random slug suffix
@@ -243,18 +208,22 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
         // Handle slug and published URL when publishing
         if (slug !== undefined) {
-            // Validate slug format
-            if (!/^[a-z0-9-]+$/.test(slug) || slug.length < 3 || slug.length > 50) {
+            // Normalize Unicode homographs before validation (e.g., Cyrillic 'а' -> Latin 'a')
+            const normalizedSlug = normalizeHomographs(slug.toLowerCase());
+
+            // Validate slug format using centralized validation
+            const formatValidation = validateSlugFormat(normalizedSlug);
+            if (!formatValidation.valid) {
                 return createErrorResponse(
-                    "Invalid slug format",
+                    formatValidation.error,
                     400,
                     "INVALID_SLUG",
                     "Slug must be 3-50 characters and contain only lowercase letters, numbers, and hyphens"
                 );
             }
 
-            // Check if slug is reserved
-            if (isReservedSlug(slug)) {
+            // Check if slug is reserved (using normalized slug to prevent homograph bypass)
+            if (isReservedSlug(normalizedSlug)) {
                 return createErrorResponse(
                     "This URL is reserved. Please choose a different one.",
                     400,
@@ -264,10 +233,11 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
             // Check if slug is already taken (by another page)
             // Note: Don't use .single() - it throws when no rows found (which is success case)
+            // Use normalized slug for DB query to ensure consistent comparison
             const { data: existingSlugs } = await supabase
                 .from("ai_editor_pages")
                 .select("id")
-                .eq("slug", slug)
+                .eq("slug", normalizedSlug)
                 .neq("id", pageId);
 
             if (existingSlugs && existingSlugs.length > 0) {
@@ -278,7 +248,8 @@ export async function PUT(request: Request, { params }: RouteParams) {
                 );
             }
 
-            updates.slug = slug;
+            // Store the normalized slug
+            updates.slug = normalizedSlug;
         }
 
         // Generate published URL when publishing

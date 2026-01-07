@@ -5,7 +5,7 @@
  */
 
 import * as Sentry from "@sentry/nextjs";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import {
@@ -14,6 +14,24 @@ import {
 } from "@/lib/ai-editor/chat-processor";
 import { sanitizeUserContent } from "@/lib/ai/sanitize";
 import { checkHtmlSize, DEFAULT_MAX_HTML_SIZE } from "@/lib/validation/html";
+import {
+    checkRateLimitWithInfo,
+    getRateLimitIdentifier,
+    addRateLimitHeaders,
+    type RateLimitResult,
+} from "@/lib/middleware/rate-limit";
+
+/** Error codes for standardized error responses */
+const ErrorCode = {
+    AUTH_REQUIRED: "AUTH_REQUIRED",
+    RATE_LIMITED: "RATE_LIMITED",
+    INVALID_REQUEST: "INVALID_REQUEST",
+    CONTENT_TOO_LARGE: "CONTENT_TOO_LARGE",
+    PAGE_NOT_FOUND: "PAGE_NOT_FOUND",
+    ACCESS_DENIED: "ACCESS_DENIED",
+    PROCESSING_ERROR: "PROCESSING_ERROR",
+    INTERNAL_ERROR: "INTERNAL_ERROR",
+} as const;
 
 interface ImageAttachment {
     id: string;
@@ -98,8 +116,9 @@ interface ChatRequest {
     imageAttachments?: ImageAttachment[];
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
     const startTime = Date.now();
+    let rateLimitInfo: RateLimitResult["info"] = null;
 
     try {
         const supabase = await createClient();
@@ -110,7 +129,20 @@ export async function POST(request: Request) {
         } = await supabase.auth.getUser();
 
         if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return NextResponse.json(
+                { error: "Unauthorized", code: ErrorCode.AUTH_REQUIRED },
+                { status: 401 }
+            );
+        }
+
+        // Check rate limit
+        const rateLimitResult = await checkRateLimitWithInfo(
+            getRateLimitIdentifier(request, user.id),
+            "ai-editor-chat"
+        );
+        rateLimitInfo = rateLimitResult.info;
+        if (rateLimitResult.blocked) {
+            return rateLimitResult.response!;
         }
 
         // Parse request body
@@ -126,14 +158,20 @@ export async function POST(request: Request) {
         // Validate inputs
         if (!pageId || !message) {
             return NextResponse.json(
-                { error: "pageId and message are required" },
+                {
+                    error: "pageId and message are required",
+                    code: ErrorCode.INVALID_REQUEST,
+                },
                 { status: 400 }
             );
         }
 
         if (!currentHtml) {
             return NextResponse.json(
-                { error: "currentHtml is required" },
+                {
+                    error: "currentHtml is required",
+                    code: ErrorCode.INVALID_REQUEST,
+                },
                 { status: 400 }
             );
         }
@@ -148,6 +186,7 @@ export async function POST(request: Request) {
             return NextResponse.json(
                 {
                     error: "HTML content is too large",
+                    code: ErrorCode.CONTENT_TOO_LARGE,
                     details: `Maximum size is ${DEFAULT_MAX_HTML_SIZE / 1024 / 1024}MB`,
                 },
                 { status: 400 }
@@ -198,13 +237,19 @@ export async function POST(request: Request) {
 
         if (pageError || !page) {
             logger.error({ error: pageError, pageId }, "Page not found");
-            return NextResponse.json({ error: "Page not found" }, { status: 404 });
+            return NextResponse.json(
+                { error: "Page not found", code: ErrorCode.PAGE_NOT_FOUND },
+                { status: 404 }
+            );
         }
 
         // Verify ownership through the user_id on the page itself
         if (page.user_id !== user.id) {
             return NextResponse.json(
-                { error: "You don't have access to this page" },
+                {
+                    error: "You don't have access to this page",
+                    code: ErrorCode.ACCESS_DENIED,
+                },
                 { status: 403 }
             );
         }
@@ -383,7 +428,7 @@ export async function POST(request: Request) {
             "AI edit request completed"
         );
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             success: true,
             response: result.explanation,
             updatedHtml: result.updatedHtml,
@@ -393,6 +438,8 @@ export async function POST(request: Request) {
             processingTime: result.processingTime,
             version: (page.version || 1) + (result.editsApplied > 0 ? 1 : 0),
         });
+
+        return addRateLimitHeaders(response, rateLimitInfo);
     } catch (error) {
         const errorMessage =
             error instanceof Error ? error.message : "Unknown error occurred";
@@ -422,6 +469,7 @@ export async function POST(request: Request) {
         return NextResponse.json(
             {
                 error: "Edit request failed",
+                code: ErrorCode.PROCESSING_ERROR,
                 details: errorMessage,
                 type: error?.constructor?.name || "Unknown",
             },

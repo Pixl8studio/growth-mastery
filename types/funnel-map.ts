@@ -58,6 +58,22 @@ export type NodeStatus = "draft" | "in_progress" | "refined" | "completed";
 export type AccessType = "immediate" | "live" | "scheduled";
 
 // ============================================
+// PAYMENT OPTIONS (for offers)
+// ============================================
+
+export type PaymentType = "one_time" | "fixed_payments" | "recurring";
+export type PaymentFrequency = "weekly" | "biweekly" | "monthly" | "quarterly" | "annually";
+
+export interface PaymentOption {
+    id: string;
+    description: string; // Customer-facing description (e.g., "Pay in Full", "3 Easy Payments")
+    amount: number; // Payment amount
+    paymentType: PaymentType;
+    numberOfPayments?: number; // Only for fixed_payments
+    frequency?: PaymentFrequency; // Only for fixed_payments or recurring
+}
+
+// ============================================
 // NODE DEFINITIONS
 // ============================================
 
@@ -88,7 +104,7 @@ export interface FunnelNodeDefinition {
 export interface FunnelNodeField {
     key: string;
     label: string;
-    type: "text" | "textarea" | "list" | "pricing" | "select" | "datetime";
+    type: "text" | "textarea" | "list" | "pricing" | "select" | "datetime" | "payment_options";
     required?: boolean;
     aiPrompt?: string;
     // For select fields
@@ -368,6 +384,7 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "event_datetime",
                 label: "Event Date & Time",
                 type: "datetime",
+                required: true,
                 helpText: "When is the live event or scheduled replay?",
             },
             {
@@ -381,24 +398,28 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "subheadline",
                 label: "Subheadline",
                 type: "text",
+                required: true,
                 placeholder: "Supporting detail that adds credibility or urgency",
             },
             {
                 key: "bullet_points",
                 label: "Key Benefits",
                 type: "list",
+                required: true,
                 helpText: "3-5 compelling reasons to attend",
             },
             {
                 key: "social_proof",
                 label: "Social Proof Element",
                 type: "textarea",
+                required: true,
                 placeholder: "e.g., 'Join 10,000+ entrepreneurs who have...'",
             },
             {
                 key: "cta_text",
                 label: "Call-to-Action Button Text",
                 type: "text",
+                required: true,
                 placeholder: "e.g., 'Reserve My Free Seat'",
             },
         ],
@@ -426,24 +447,28 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "confirmation_message",
                 label: "Confirmation Message",
                 type: "textarea",
+                required: true,
                 placeholder: "Thank them and set expectations for the event",
             },
             {
                 key: "calendar_instructions",
                 label: "Calendar Instructions",
                 type: "textarea",
+                required: true,
                 placeholder: "How to add to calendar, what to expect",
             },
             {
                 key: "pre_event_content",
                 label: "Pre-Event Content",
                 type: "textarea",
-                helpText: "Optional content to engage registrants before the event",
+                required: true,
+                helpText: "Content to engage registrants before the event",
             },
             {
                 key: "share_prompt",
                 label: "Social Share Prompt",
                 type: "text",
+                required: true,
                 placeholder: "Encourage sharing with friends",
             },
         ],
@@ -468,48 +493,56 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "promise",
                 label: "The Big Promise",
                 type: "textarea",
+                required: true,
                 helpText: "What transformation will they achieve?",
             },
             {
                 key: "hook",
                 label: "Opening Hook",
                 type: "textarea",
+                required: true,
                 placeholder: "The attention-grabbing opening that pulls them in",
             },
             {
                 key: "origin_story",
                 label: "Your Origin Story",
                 type: "textarea",
+                required: true,
                 helpText: "How you discovered this solution",
             },
             {
                 key: "content_pillars",
                 label: "3 Key Steps/Secrets",
                 type: "list",
+                required: true,
                 helpText: "The 3 main teaching points that lead to the offer",
             },
             {
                 key: "poll_questions",
                 label: "Engagement Poll Questions",
                 type: "list",
+                required: true,
                 helpText: "Questions to engage viewers during the presentation",
             },
             {
                 key: "belief_shifts",
                 label: "Belief Shifts",
                 type: "textarea",
+                required: true,
                 helpText: "Vehicle, Internal, External beliefs to address",
             },
             {
                 key: "transition_to_offer",
                 label: "Transition to Offer",
                 type: "textarea",
+                required: true,
                 placeholder: "How you bridge from content to pitch",
             },
             {
                 key: "offer_messaging",
                 label: "Offer Messaging Preview",
                 type: "textarea",
+                required: true,
                 helpText: "Key points that set up the offer reveal",
             },
         ],
@@ -535,53 +568,63 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "person",
                 label: "Person - Who is this specifically for?",
                 type: "textarea",
+                required: true,
                 helpText: "Paint a vivid picture of your ideal customer",
             },
             {
                 key: "problem",
                 label: "Problem - What painful problem does this solve?",
                 type: "textarea",
+                required: true,
                 helpText: "The core frustration driving them to seek a solution",
             },
             {
                 key: "product",
                 label: "Product - What exactly do they get?",
                 type: "textarea",
+                required: true,
                 helpText: "Modules, deliverables, access details",
             },
             {
                 key: "process",
                 label: "Process - How does the transformation work?",
                 type: "textarea",
+                required: true,
                 helpText: "The step-by-step journey from A to B",
             },
             {
                 key: "proof",
                 label: "Proof - What results have others achieved?",
                 type: "textarea",
+                required: true,
                 helpText: "Testimonials, case studies, credentials",
             },
             {
-                key: "price",
-                label: "Price",
-                type: "pricing",
+                key: "payment_options",
+                label: "Payment Options",
+                type: "payment_options",
+                required: true,
+                helpText: "Define payment plans for your offer (e.g., Pay in Full, 3 Payments, Monthly)",
             },
             {
                 key: "guarantee",
                 label: "Guarantee",
                 type: "textarea",
+                required: true,
                 placeholder: "Your risk reversal offer",
             },
             {
                 key: "urgency",
                 label: "Urgency/Scarcity Element",
                 type: "text",
+                required: true,
                 placeholder: "Why act now?",
             },
             {
                 key: "bonuses",
                 label: "Bonuses",
                 type: "list",
+                required: true,
                 helpText: "Additional value included with the offer",
             },
         ],
@@ -601,40 +644,39 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "headline",
                 label: "Checkout Headline",
                 type: "text",
+                required: true,
                 placeholder: "e.g., 'Complete Your Order'",
             },
             {
                 key: "order_summary",
                 label: "Order Summary Text",
                 type: "textarea",
+                required: true,
                 helpText: "Reinforce value at point of purchase",
             },
             {
                 key: "guarantee_reminder",
                 label: "Guarantee Reminder",
                 type: "textarea",
+                required: true,
                 placeholder: "Reassure them about the risk-free purchase",
             },
             {
                 key: "urgency_element",
                 label: "Urgency/Scarcity Element",
                 type: "text",
+                required: true,
                 placeholder: "Limited time or availability messaging",
             },
             {
                 key: "trust_elements",
                 label: "Trust Elements",
                 type: "list",
+                required: true,
                 helpText: "Security badges, testimonials, guarantees to display",
             },
-            {
-                key: "payment_options",
-                label: "Payment Options",
-                type: "textarea",
-                helpText: "Payment plans, methods available",
-            },
         ],
-        // Order Bump fields shown in collapsible accordion section
+        // Order Bump fields shown in collapsible accordion section - OPTIONAL
         orderBumpFields: [
             {
                 key: "order_bump_headline",
@@ -688,23 +730,28 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "description",
                 label: "Description",
                 type: "textarea",
+                required: true,
                 helpText: "1-2 sentences explaining the value",
             },
             {
                 key: "promise",
                 label: "Promise",
                 type: "text",
+                required: true,
                 placeholder: "What quick win does this provide?",
             },
             {
-                key: "price",
-                label: "Price",
-                type: "pricing",
+                key: "payment_options",
+                label: "Payment Options",
+                type: "payment_options",
+                required: true,
+                helpText: "Define payment options for your order bump",
             },
             {
                 key: "original_value",
                 label: "Original Value",
                 type: "text",
+                required: true,
                 placeholder: "Show the perceived value (e.g., $297 Value)",
             },
         ],
@@ -730,42 +777,51 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "promise",
                 label: "Promise - Additional outcome",
                 type: "textarea",
+                required: true,
                 helpText: "What additional result will this provide?",
             },
             {
                 key: "person",
                 label: "Person - Who needs this upgrade?",
                 type: "textarea",
+                required: true,
             },
             {
                 key: "problem",
                 label: "Problem - What gap does this fill?",
                 type: "textarea",
+                required: true,
             },
             {
                 key: "product",
                 label: "Product - What do they get?",
                 type: "textarea",
+                required: true,
             },
             {
                 key: "process",
                 label: "Process - How does it enhance results?",
                 type: "textarea",
+                required: true,
             },
             {
                 key: "proof",
                 label: "Proof - Success stories",
                 type: "textarea",
+                required: true,
             },
             {
-                key: "price",
-                label: "Price",
-                type: "pricing",
+                key: "payment_options",
+                label: "Payment Options",
+                type: "payment_options",
+                required: true,
+                helpText: "Define payment options for this upsell",
             },
             {
                 key: "time_limit",
                 label: "Time Limit",
                 type: "text",
+                required: true,
                 placeholder: "e.g., 'This offer expires in 15 minutes'",
             },
         ],
@@ -790,41 +846,50 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "promise",
                 label: "Promise",
                 type: "textarea",
+                required: true,
             },
             {
                 key: "person",
                 label: "Person",
                 type: "textarea",
+                required: true,
             },
             {
                 key: "problem",
                 label: "Problem",
                 type: "textarea",
+                required: true,
             },
             {
                 key: "product",
                 label: "Product",
                 type: "textarea",
+                required: true,
             },
             {
                 key: "process",
                 label: "Process",
                 type: "textarea",
+                required: true,
             },
             {
                 key: "proof",
                 label: "Proof",
                 type: "textarea",
+                required: true,
             },
             {
-                key: "price",
-                label: "Price",
-                type: "pricing",
+                key: "payment_options",
+                label: "Payment Options",
+                type: "payment_options",
+                required: true,
+                helpText: "Define payment options for this upsell",
             },
             {
                 key: "is_downsell",
                 label: "Offer as Downsell?",
                 type: "select",
+                required: true,
                 options: [
                     { value: "no", label: "No - Show as Upsell" },
                     {
@@ -848,18 +913,21 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "booking_headline",
                 label: "Booking Page Headline",
                 type: "text",
+                required: true,
                 placeholder: "e.g., 'Schedule Your Strategy Call'",
             },
             {
                 key: "call_description",
                 label: "What to Expect on the Call",
                 type: "textarea",
+                required: true,
                 helpText: "Set expectations for what the call covers",
             },
             {
                 key: "call_duration",
                 label: "Call Duration",
                 type: "select",
+                required: true,
                 options: [
                     { value: "15", label: "15 minutes" },
                     { value: "30", label: "30 minutes" },
@@ -871,12 +939,14 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "qualification_questions",
                 label: "Pre-Call Qualification Questions",
                 type: "list",
+                required: true,
                 helpText: "Questions to screen and prepare prospects",
             },
             {
                 key: "calendar_type",
                 label: "Calendar Integration",
                 type: "select",
+                required: true,
                 options: [
                     { value: "calendly", label: "Calendly" },
                     { value: "acuity", label: "Acuity Scheduling" },
@@ -888,6 +958,7 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "calendar_url",
                 label: "Calendar URL",
                 type: "text",
+                required: true,
                 placeholder: "Your scheduling link",
             },
         ],
@@ -912,24 +983,28 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "confirmation_message",
                 label: "Confirmation Message",
                 type: "textarea",
+                required: true,
                 placeholder: "Thank them and prep them for the call",
             },
             {
                 key: "preparation_steps",
                 label: "How to Prepare for the Call",
                 type: "list",
+                required: true,
                 helpText: "Steps they should take before the call",
             },
             {
                 key: "pre_call_content",
                 label: "Pre-Call Content",
                 type: "textarea",
+                required: true,
                 helpText: "Video, PDF, or resource to watch before call",
             },
             {
                 key: "what_to_bring",
                 label: "What to Bring/Have Ready",
                 type: "list",
+                required: true,
             },
         ],
     },
@@ -945,30 +1020,35 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "call_script_outline",
                 label: "Call Script Outline",
                 type: "textarea",
+                required: true,
                 helpText: "Key talking points and flow of the call",
             },
             {
                 key: "discovery_questions",
                 label: "Discovery Questions",
                 type: "list",
+                required: true,
                 helpText: "Questions to understand their situation",
             },
             {
                 key: "objection_handlers",
                 label: "Key Objection Handlers",
                 type: "list",
+                required: true,
                 helpText: "Common objections and how to address them",
             },
             {
                 key: "close_technique",
                 label: "Closing Technique",
                 type: "textarea",
+                required: true,
                 placeholder: "Your method for asking for the sale",
             },
             {
                 key: "follow_up_sequence",
                 label: "Follow-up Sequence",
                 type: "textarea",
+                required: true,
                 helpText: "What happens after the call",
             },
         ],
@@ -986,36 +1066,42 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 key: "headline",
                 label: "Thank You Headline",
                 type: "text",
+                required: true,
                 placeholder: "e.g., 'Welcome to the Family!'",
             },
             {
                 key: "confirmation_message",
                 label: "Confirmation Message",
                 type: "textarea",
+                required: true,
                 placeholder: "Celebrate their decision and set expectations",
             },
             {
                 key: "next_steps",
                 label: "Next Steps",
                 type: "list",
+                required: true,
                 helpText: "What they should do right now",
             },
             {
                 key: "access_instructions",
                 label: "Access Instructions",
                 type: "textarea",
+                required: true,
                 helpText: "How to access what they purchased",
             },
             {
                 key: "community_invite",
                 label: "Community Invitation",
                 type: "textarea",
+                required: true,
                 placeholder: "Invite to Facebook group, Slack, etc.",
             },
             {
                 key: "share_prompt",
                 label: "Social Share Prompt",
                 type: "text",
+                required: true,
                 helpText: "Encourage them to share their purchase",
             },
         ],

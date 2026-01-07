@@ -212,6 +212,7 @@ export function NodeEditorChatDrawer({
                     currentContent,
                     conversationHistory: messages,
                     definition: nodeDefinition,
+                    businessContext,
                 }),
             });
 
@@ -267,6 +268,7 @@ export function NodeEditorChatDrawer({
         nodeType,
         nodeDefinition,
         currentContent,
+        businessContext,
         messages,
         onSuggestedChanges,
     ]);

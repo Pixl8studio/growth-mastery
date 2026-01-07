@@ -286,7 +286,7 @@ function FunnelNodeComponent({ data }: FunnelNodeComponentProps) {
                                         </button>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        <p>Generate new AI draft for this node</p>
+                                        <p>Generate new AI draft for this step</p>
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>

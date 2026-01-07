@@ -28,6 +28,7 @@ interface NodeEditorChatDrawerProps {
     currentContent: Record<string, unknown>;
     businessContext: Record<string, unknown>;
     onSuggestedChanges: (changes: Record<string, unknown>) => void;
+    existingHistory?: ConversationMessage[];
 }
 
 // Custom opening messages that guide users into productive conversations
@@ -132,6 +133,7 @@ export function NodeEditorChatDrawer({
     currentContent,
     businessContext,
     onSuggestedChanges,
+    existingHistory,
 }: NodeEditorChatDrawerProps) {
     const [messages, setMessages] = useState<ConversationMessage[]>([]);
     const [inputValue, setInputValue] = useState("");
@@ -140,24 +142,36 @@ export function NodeEditorChatDrawer({
     const scrollRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-    // Initialize with opening message
+    // Initialize chat - use existing history or show opening message
     useEffect(() => {
         if (!hasInitialized) {
-            const openingMessage =
-                NODE_OPENING_MESSAGES[nodeType] ||
-                `I'm here to help you complete the ${nodeDefinition.title}. What would you like to work on?`;
+            // If there's existing conversation history, use it
+            if (existingHistory && existingHistory.length > 0) {
+                setMessages(existingHistory);
+            } else {
+                // No existing history - show personalized opening message after brief delay
+                // This gives the drawer time to animate in smoothly
+                const openingMessage =
+                    NODE_OPENING_MESSAGES[nodeType] ||
+                    `I'm here to help you complete the ${nodeDefinition.title}. What would you like to work on?`;
 
-            setMessages([
-                {
-                    id: "opening",
-                    role: "assistant",
-                    content: openingMessage,
-                    timestamp: new Date().toISOString(),
-                },
-            ]);
+                // Small delay for animation to complete
+                const timer = setTimeout(() => {
+                    setMessages([
+                        {
+                            id: "opening",
+                            role: "assistant",
+                            content: openingMessage,
+                            timestamp: new Date().toISOString(),
+                        },
+                    ]);
+                }, 150);
+
+                return () => clearTimeout(timer);
+            }
             setHasInitialized(true);
         }
-    }, [nodeType, nodeDefinition.title, hasInitialized]);
+    }, [nodeType, nodeDefinition.title, hasInitialized, existingHistory]);
 
     // Reset when node type changes
     useEffect(() => {
@@ -196,6 +210,7 @@ export function NodeEditorChatDrawer({
                     message: userMessage.content,
                     currentContent,
                     conversationHistory: messages,
+                    definition: nodeDefinition,
                 }),
             });
 
@@ -245,6 +260,7 @@ export function NodeEditorChatDrawer({
         isLoading,
         projectId,
         nodeType,
+        nodeDefinition,
         currentContent,
         messages,
         onSuggestedChanges,

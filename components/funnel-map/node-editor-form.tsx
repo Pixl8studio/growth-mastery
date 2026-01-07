@@ -43,6 +43,50 @@ function formatFieldLabel(key: string, providedLabel?: string): string {
         .trim();
 }
 
+/**
+ * Strip markdown syntax from text to display clean values in form fields
+ * Removes: **bold**, *italic*, __underline__, ~~strikethrough~~, `code`, links, headers
+ */
+function stripMarkdown(text: string): string {
+    if (!text || typeof text !== "string") return text;
+
+    return (
+        text
+            // Remove bold: **text** or __text__
+            .replace(/\*\*([^*]+)\*\*/g, "$1")
+            .replace(/__([^_]+)__/g, "$1")
+            // Remove italic: *text* or _text_
+            .replace(/\*([^*]+)\*/g, "$1")
+            .replace(/_([^_]+)_/g, "$1")
+            // Remove strikethrough: ~~text~~
+            .replace(/~~([^~]+)~~/g, "$1")
+            // Remove inline code: `text`
+            .replace(/`([^`]+)`/g, "$1")
+            // Remove links: [text](url)
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+            // Remove headers: # text
+            .replace(/^#{1,6}\s+/gm, "")
+            // Clean up any double spaces
+            .replace(/  +/g, " ")
+            .trim()
+    );
+}
+
+/**
+ * Strip markdown from a value, handling strings and arrays
+ */
+function stripMarkdownFromValue(value: unknown): unknown {
+    if (typeof value === "string") {
+        return stripMarkdown(value);
+    }
+    if (Array.isArray(value)) {
+        return value.map((item) =>
+            typeof item === "string" ? stripMarkdown(item) : item
+        );
+    }
+    return value;
+}
+
 interface FieldRendererProps {
     field: FunnelNodeField;
     value: unknown;
@@ -51,6 +95,8 @@ interface FieldRendererProps {
 
 function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
     const label = formatFieldLabel(field.key, field.label);
+    // Strip markdown from display value to show clean text in form fields
+    const cleanValue = stripMarkdownFromValue(value);
 
     switch (field.type) {
         case "text":
@@ -67,7 +113,7 @@ function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                     )}
                     <Input
                         id={field.key}
-                        value={(value as string) || ""}
+                        value={(cleanValue as string) || ""}
                         onChange={(e) => onChange(field.key, e.target.value)}
                         placeholder={field.placeholder}
                         className="w-full"
@@ -89,7 +135,7 @@ function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                     )}
                     <Textarea
                         id={field.key}
-                        value={(value as string) || ""}
+                        value={(cleanValue as string) || ""}
                         onChange={(e) => onChange(field.key, e.target.value)}
                         placeholder={field.placeholder}
                         className="w-full min-h-[100px] resize-y"
@@ -189,19 +235,23 @@ function ListFieldRenderer({
     onChange: (key: string, value: unknown) => void;
     label: string;
 }) {
-    const items = Array.isArray(value) ? value : [];
+    // Strip markdown from list items for display
+    const rawItems = Array.isArray(value) ? value : [];
+    const items = rawItems.map((item) =>
+        typeof item === "string" ? stripMarkdown(item) : item
+    );
 
     const addItem = () => {
-        onChange(field.key, [...items, ""]);
+        onChange(field.key, [...rawItems, ""]);
     };
 
     const removeItem = (index: number) => {
-        const newItems = items.filter((_, i) => i !== index);
+        const newItems = rawItems.filter((_, i) => i !== index);
         onChange(field.key, newItems);
     };
 
     const updateItem = (index: number, newValue: string) => {
-        const newItems = [...items];
+        const newItems = [...rawItems];
         newItems[index] = newValue;
         onChange(field.key, newItems);
     };
@@ -304,6 +354,24 @@ function PricingFieldRenderer({
     );
 }
 
+/**
+ * Check if a field should be visible based on current content values
+ * Returns true if field should be shown, false if it should be hidden
+ */
+function shouldShowField(
+    field: FunnelNodeField,
+    content: Record<string, unknown>
+): boolean {
+    // Conditional visibility for event_datetime: only show for "live" access type
+    if (field.key === "event_datetime") {
+        const accessType = content.access_type;
+        return accessType === "live";
+    }
+
+    // All other fields are always visible
+    return true;
+}
+
 export function NodeEditorForm({
     nodeDefinition,
     content,
@@ -324,10 +392,15 @@ export function NodeEditorForm({
     const hasOrderBumpFields =
         nodeDefinition.orderBumpFields && nodeDefinition.orderBumpFields.length > 0;
 
+    // Filter fields based on conditional visibility
+    const visibleFields = nodeDefinition.fields.filter((field) =>
+        shouldShowField(field, content)
+    );
+
     return (
         <div className="space-y-6">
             {/* Main fields */}
-            {nodeDefinition.fields.map((field) => (
+            {visibleFields.map((field) => (
                 <FieldRenderer
                     key={field.key}
                     field={field}

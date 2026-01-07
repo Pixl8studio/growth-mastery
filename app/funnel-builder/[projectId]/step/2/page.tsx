@@ -34,8 +34,51 @@ import {
     determinePathwayFromPrice,
     LOADING_MESSAGES,
     FUNNEL_NODE_DEFINITIONS,
+    getEffectiveContent,
+    getNodeDefinition,
 } from "@/types/funnel-map";
 import { cn } from "@/lib/utils";
+
+/**
+ * Check if any nodes in the pathway have empty content that needs regeneration
+ * Returns true if any node has fewer than 2 filled fields (needs regeneration)
+ */
+function checkForEmptyNodes(
+    nodesData: FunnelNodeData[],
+    pathway: PathwayType
+): boolean {
+    const pathwayNodes = getNodesForPathway(pathway);
+
+    for (const nodeDef of pathwayNodes) {
+        // Skip non-clickable nodes (like traffic_source)
+        if (nodeDef.isNonClickable) continue;
+
+        const nodeData = nodesData.find((n) => n.node_type === nodeDef.id);
+
+        // If node doesn't exist in data, it needs generation
+        if (!nodeData) {
+            return true;
+        }
+
+        // Get the effective content (draft, refined, or approved)
+        const content = getEffectiveContent(nodeData);
+
+        // If content is empty object or has very few fields, needs regeneration
+        const filledFields = Object.entries(content).filter(([, value]) => {
+            if (value === null || value === undefined) return false;
+            if (typeof value === "string" && !value.trim()) return false;
+            if (Array.isArray(value) && value.length === 0) return false;
+            return true;
+        });
+
+        // If less than 2 fields filled, consider it empty and needing regeneration
+        if (filledFields.length < 2) {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 export default function Step2Page({
     params,
@@ -63,8 +106,22 @@ export default function Step2Page({
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [registrationConfig, setRegistrationConfig] =
         useState<RegistrationConfig | null>(null);
+    const [needsRegeneration, setNeedsRegeneration] = useState(false);
 
     const { completedSteps } = useStepCompletion(projectId);
+
+    // Auto-trigger regeneration when empty nodes detected
+    useEffect(() => {
+        if (needsRegeneration && !isGenerating && pathwayType) {
+            setNeedsRegeneration(false);
+            // Small delay to let the UI settle
+            const timer = setTimeout(() => {
+                handleGenerateDrafts(pathwayType);
+            }, 500);
+            return () => clearTimeout(timer);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [needsRegeneration, isGenerating, pathwayType]);
 
     // Cycle loading messages during generation
     useEffect(() => {
@@ -155,7 +212,32 @@ export default function Step2Page({
                     nodesData.forEach((node) => {
                         nodeMap.set(node.node_type as FunnelNodeType, node);
                     });
-                    setNodeData(nodeMap);
+
+                    // Check if any nodes have empty content that needs regeneration
+                    const determinedPathway =
+                        configData?.pathway_type ||
+                        determinePathwayFromPrice(
+                            businessProfile?.pricing?.webinar ||
+                                businessProfile?.pricing?.regular ||
+                                null
+                        );
+
+                    const hasEmptyNodes = checkForEmptyNodes(
+                        nodesData,
+                        determinedPathway
+                    );
+
+                    if (hasEmptyNodes) {
+                        // Auto-trigger regeneration for funnels with empty fields
+                        logger.info(
+                            { projectId },
+                            "Detected empty fields, auto-triggering regeneration"
+                        );
+                        setNodeData(nodeMap); // Show existing data while regenerating
+                        setNeedsRegeneration(true);
+                    } else {
+                        setNodeData(nodeMap);
+                    }
                 } else {
                     // No drafts yet - show pathway selection
                     setShowPathwaySelection(true);

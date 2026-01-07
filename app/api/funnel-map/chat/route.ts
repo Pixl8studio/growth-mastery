@@ -67,9 +67,12 @@ const ConversationMessageSchema = z.object({
 const FunnelNodeFieldSchema = z.object({
     key: z.string(),
     label: z.string(),
-    type: z.enum(["text", "textarea", "list", "pricing"]),
+    type: z.enum(["text", "textarea", "list", "pricing", "select", "datetime"]),
     required: z.boolean().optional(),
     aiPrompt: z.string().optional(),
+    helpText: z.string().optional(),
+    placeholder: z.string().optional(),
+    options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
 });
 
 const FunnelNodeDefinitionSchema = z.object({

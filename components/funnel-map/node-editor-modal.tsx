@@ -213,8 +213,8 @@ export function NodeEditorModal({
                             </p>
                         </div>
 
-                        {/* Auto-save indicator */}
-                        <div className="flex items-center gap-4">
+                        {/* Auto-save indicator - no custom close button, Dialog provides one */}
+                        <div className="flex items-center gap-4 mr-8">
                             <TooltipProvider>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -241,13 +241,6 @@ export function NodeEditorModal({
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
-
-                            <button
-                                onClick={onClose}
-                                className="rounded-md p-1.5 hover:bg-muted transition-colors"
-                            >
-                                <X className="h-5 w-5" />
-                            </button>
                         </div>
                     </div>
                 </DialogHeader>

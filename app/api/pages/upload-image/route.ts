@@ -7,12 +7,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import * as Sentry from "@sentry/nextjs";
+import {
+    checkRateLimitWithInfo,
+    addRateLimitHeaders,
+    type RateLimitResult,
+} from "@/lib/middleware/rate-limit";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export async function POST(request: NextRequest) {
     const requestLogger = logger.child({ handler: "upload-image" });
+    let rateLimitInfo: RateLimitResult["info"] = null;
 
     try {
         const supabase = await createClient();
@@ -24,6 +30,16 @@ export async function POST(request: NextRequest) {
 
         if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // Check rate limit and store info for success response headers
+        const rateLimitResult = await checkRateLimitWithInfo(
+            `user:${user.id}`,
+            "image-upload"
+        );
+        rateLimitInfo = rateLimitResult.info;
+        if (rateLimitResult.blocked) {
+            return rateLimitResult.response!;
         }
 
         const formData = await request.formData();
@@ -185,12 +201,15 @@ export async function POST(request: NextRequest) {
             "Image uploaded successfully"
         );
 
-        return NextResponse.json({
+        const response = NextResponse.json({
             success: true,
             imageUrl: urlData.publicUrl,
             mediaId: mediaRecord?.id,
             filename: file.name,
         });
+
+        // Add rate limit headers to successful response
+        return addRateLimitHeaders(response, rateLimitInfo);
     } catch (error) {
         requestLogger.error({ error }, "Image upload failed");
         Sentry.captureException(error, {

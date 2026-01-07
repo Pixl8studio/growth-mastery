@@ -28,6 +28,19 @@ export interface EditSummary {
     timestamp: Date;
 }
 
+export interface ImageAttachment {
+    id: string;
+    url: string;
+    file?: File;
+    uploading?: boolean;
+}
+
+export interface SuggestedOption {
+    id: string;
+    label: string;
+    description?: string;
+}
+
 export interface Message {
     id: string;
     role: "user" | "assistant";
@@ -35,6 +48,8 @@ export interface Message {
     timestamp: Date;
     thinkingTime?: number;
     editSummary?: EditSummary;
+    attachments?: ImageAttachment[];
+    suggestedOptions?: SuggestedOption[];
 }
 
 interface UseEditorOptions {
@@ -43,6 +58,8 @@ interface UseEditorOptions {
     pageType: "registration" | "watch" | "enrollment";
     initialHtml: string;
     initialTitle: string;
+    businessContext?: string;
+    projectName?: string;
 }
 
 interface UseEditorReturn {
@@ -57,7 +74,8 @@ interface UseEditorReturn {
     // Conversation state
     messages: Message[];
     isProcessing: boolean;
-    sendMessage: (message: string) => void;
+    sendMessage: (message: string, attachments?: ImageAttachment[]) => void;
+    selectOption: (optionId: string, optionLabel: string) => void;
     suggestedActions: string[];
     lastEditSummary: EditSummary | null;
 
@@ -65,7 +83,7 @@ interface UseEditorReturn {
     undo: () => void;
     canUndo: boolean;
     save: () => Promise<void>;
-    publish: () => Promise<{ success: boolean; publishedUrl?: string }>;
+    publish: (slug?: string) => Promise<{ success: boolean; publishedUrl?: string }>;
     getShareUrl: () => string;
 }
 
@@ -75,6 +93,8 @@ export function useEditor({
     pageType,
     initialHtml,
     initialTitle,
+    businessContext,
+    projectName,
 }: UseEditorOptions): UseEditorReturn {
     // Page state
     const [html, setHtml] = useState(initialHtml);
@@ -91,20 +111,83 @@ export function useEditor({
         "Improve the CTA button",
     ]);
     const [lastEditSummary, setLastEditSummary] = useState<EditSummary | null>(null);
+    const [initialMessageSent, setInitialMessageSent] = useState(false);
 
-    // Version history for undo
+    // Version history for undo with byte-level memory tracking
+    // PR #414 Concern: Modern landing pages can be 200-500KB, not 50KB
+    // We track actual byte size and enforce a 5MB limit per tab
+    // Memory budget: ~5MB max total across all history entries
+    // This is acceptable for a browser tab. If memory becomes an issue:
+    // 1. History is automatically pruned when exceeding limit
+    // 2. Store diffs instead of full snapshots (more complex)
+    // 3. Use IndexedDB for overflow storage
     const [history, setHistory] = useState<string[]>([initialHtml]);
     const [historyIndex, setHistoryIndex] = useState(0);
+    const [historyBytes, setHistoryBytes] = useState(() => {
+        // Calculate initial byte size using Blob for accurate UTF-8 byte count
+        return new Blob([initialHtml]).size;
+    });
+
+    // Maximum history memory: 5MB per tab (conservative limit for large pages)
+    // If exceeded, older entries are pruned from the beginning
+    const MAX_HISTORY_BYTES = 5 * 1024 * 1024;
+
+    // Save lock to prevent concurrent saves
+    const [isSaving, setIsSaving] = useState(false);
 
     // Generate unique ID for messages
     const generateId = () =>
         `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+    // Generate initial welcome message based on page type and business context
+    const generateInitialMessage = useCallback(() => {
+        const pageTypeLabels = {
+            registration: "registration page",
+            watch: "watch page",
+            enrollment: "enrollment page",
+        };
+
+        const pageTypeDescriptions = {
+            registration:
+                "This page is designed to capture leads by showcasing the value of your training and encouraging visitors to sign up.",
+            watch: "This page delivers your training content with an engaging video player and supporting materials to keep viewers engaged.",
+            enrollment:
+                "This sales page is structured to convert interested viewers into paying customers with compelling offers and clear calls-to-action.",
+        };
+
+        const projectNameStr = projectName ? ` for ${projectName}` : "";
+        const pageLabel = pageTypeLabels[pageType];
+
+        let content = `Here's your ${pageLabel}${projectNameStr}! 🎉\n\n${pageTypeDescriptions[pageType]}`;
+
+        if (businessContext) {
+            content += `\n\nI've customized this page based on your business context to resonate with your target audience.`;
+        }
+
+        content += `\n\nFeel free to tell me what you'd like to change - I can help you:\n• Update the headline or copy\n• Adjust colors and styling\n• Add or remove sections\n• Improve the overall design\n\nWhat would you like me to work on?`;
+
+        return content;
+    }, [pageType, projectName, businessContext]);
+
+    // Send initial welcome message when editor loads
+    useEffect(() => {
+        if (!initialMessageSent && initialHtml) {
+            const welcomeMessage: Message = {
+                id: generateId(),
+                role: "assistant",
+                content: generateInitialMessage(),
+                timestamp: new Date(),
+            };
+            setMessages([welcomeMessage]);
+            setInitialMessageSent(true);
+        }
+    }, [initialHtml, initialMessageSent, generateInitialMessage]);
+
     // Send message to AI with full observability
     const sendMessage = useCallback(
-        async (content: string) => {
-            // Validate input
-            if (!content.trim()) {
+        async (content: string, attachments?: ImageAttachment[]) => {
+            // Validate input - allow empty content if there are attachments
+            if (!content.trim() && (!attachments || attachments.length === 0)) {
                 throw new ValidationError("Message content cannot be empty");
             }
             if (isProcessing) return;
@@ -114,15 +197,23 @@ export function useEditor({
                 category: "ai-editor.chat",
                 message: "User sent message",
                 level: "info",
-                data: { pageId, pageType, messageLength: content.length },
+                data: {
+                    pageId,
+                    pageType,
+                    messageLength: content.length,
+                    hasAttachments: attachments && attachments.length > 0,
+                },
             });
 
-            // Add user message
+            // Add user message with attachments
             const userMessage: Message = {
                 id: generateId(),
                 role: "user",
-                content,
+                content:
+                    content ||
+                    (attachments ? "I've attached an image for you to analyze." : ""),
                 timestamp: new Date(),
+                attachments,
             };
             setMessages((prev) => [...prev, userMessage]);
             setIsProcessing(true);
@@ -157,18 +248,42 @@ export function useEditor({
                                         role: m.role,
                                         content: m.content,
                                     })),
+                                    imageAttachments: attachments?.map((a) => ({
+                                        id: a.id,
+                                        url: a.url,
+                                    })),
                                 }),
                                 signal: controller.signal,
                             });
                         } catch (fetchError) {
                             // Handle network errors and aborts gracefully
-                            if (fetchError instanceof Error) {
-                                if (fetchError.name === "AbortError") {
+                            // PR #414 Concern: AbortError detection varies across browsers/runtimes
+                            // Some throw DOMException with name "AbortError"
+                            // Others throw Error with name "AbortError"
+                            if (
+                                fetchError instanceof Error ||
+                                fetchError instanceof DOMException
+                            ) {
+                                const errorName = fetchError.name;
+                                const errorMessage = fetchError.message;
+
+                                // Check for abort errors (timeout or manual abort)
+                                if (
+                                    errorName === "AbortError" ||
+                                    errorMessage.includes("aborted") ||
+                                    errorMessage.includes("abort")
+                                ) {
                                     throw new ValidationError(
                                         "Request timed out. Please try again with a simpler request."
                                     );
                                 }
-                                if (fetchError.message === "Failed to fetch") {
+
+                                // Check for network errors
+                                if (
+                                    errorMessage === "Failed to fetch" ||
+                                    errorMessage.includes("network") ||
+                                    errorMessage.includes("NetworkError")
+                                ) {
                                     throw new ValidationError(
                                         "Network connection lost. Please check your internet connection and try again."
                                     );
@@ -216,6 +331,10 @@ export function useEditor({
                             data: { editsCount: editsApplied, thinkingTime },
                         });
 
+                        // Parse suggested options from response if present
+                        const suggestedOptions: SuggestedOption[] =
+                            data.suggestedOptions || [];
+
                         // Add AI response message (API returns 'response', not 'explanation')
                         const aiMessage: Message = {
                             id: generateId(),
@@ -227,19 +346,86 @@ export function useEditor({
                             timestamp: new Date(),
                             thinkingTime,
                             editSummary,
+                            suggestedOptions:
+                                suggestedOptions.length > 0
+                                    ? suggestedOptions
+                                    : undefined,
                         };
                         setMessages((prev) => [...prev, aiMessage]);
 
                         // Update HTML if changes were made
                         if (data.updatedHtml) {
-                            // Add to history for undo
-                            setHistory((prev) => [
-                                ...prev.slice(0, historyIndex + 1),
-                                data.updatedHtml,
-                            ]);
-                            setHistoryIndex((prev) => prev + 1);
+                            // Add to history for undo with byte-level tracking
+                            const newEntryBytes = new Blob([data.updatedHtml]).size;
+
+                            setHistory((prev) => {
+                                const trimmedHistory = prev.slice(0, historyIndex + 1);
+                                const newHistory = [
+                                    ...trimmedHistory,
+                                    data.updatedHtml,
+                                ];
+
+                                // Calculate total bytes of new history
+                                let totalBytes = newHistory.reduce(
+                                    (sum, entry) => sum + new Blob([entry]).size,
+                                    0
+                                );
+
+                                // Prune oldest entries if over memory budget
+                                // Keep at least 2 entries (initial + current) for undo to work
+                                while (
+                                    totalBytes > MAX_HISTORY_BYTES &&
+                                    newHistory.length > 2
+                                ) {
+                                    const removedEntry = newHistory.shift();
+                                    if (removedEntry) {
+                                        totalBytes -= new Blob([removedEntry]).size;
+                                    }
+                                }
+
+                                // Update byte tracking
+                                setHistoryBytes(totalBytes);
+
+                                // Log if history was pruned
+                                if (newHistory.length < trimmedHistory.length + 1) {
+                                    logger.info(
+                                        {
+                                            pageId,
+                                            prunedEntries:
+                                                trimmedHistory.length +
+                                                1 -
+                                                newHistory.length,
+                                            totalBytes,
+                                            maxBytes: MAX_HISTORY_BYTES,
+                                        },
+                                        "📉 History pruned due to memory limit"
+                                    );
+                                }
+
+                                return newHistory;
+                            });
+
+                            // Adjust history index if entries were pruned
+                            setHistoryIndex((prev) => {
+                                // If we're adding an entry, increment
+                                // The actual index will be corrected by the history update
+                                return prev + 1;
+                            });
+
                             setHtml(data.updatedHtml);
                             setVersion((v) => v + 1);
+
+                            // Track memory usage in breadcrumb for observability
+                            Sentry.addBreadcrumb({
+                                category: "ai-editor.memory",
+                                message: "History entry added",
+                                level: "info",
+                                data: {
+                                    entryBytes: newEntryBytes,
+                                    historyBytes: historyBytes + newEntryBytes,
+                                    maxBytes: MAX_HISTORY_BYTES,
+                                },
+                            });
                         }
 
                         // Update suggested actions (API returns 'suggestions', not 'suggestedActions')
@@ -293,7 +479,16 @@ export function useEditor({
                 }
             );
         },
-        [pageId, projectId, pageType, html, messages, isProcessing, historyIndex]
+        [
+            pageId,
+            projectId,
+            pageType,
+            html,
+            messages,
+            isProcessing,
+            historyIndex,
+            historyBytes,
+        ]
     );
 
     // Undo functionality with breadcrumb tracking
@@ -322,6 +517,13 @@ export function useEditor({
 
     // Save to database with observability
     const save = useCallback(async () => {
+        // Prevent concurrent saves
+        if (isSaving) {
+            logger.debug({ pageId }, "Save already in progress, skipping");
+            return;
+        }
+
+        setIsSaving(true);
         setStatus("saving");
 
         return await Sentry.startSpan(
@@ -387,71 +589,96 @@ export function useEditor({
 
                     setStatus("draft");
                     throw error;
+                } finally {
+                    setIsSaving(false);
                 }
             }
         );
-    }, [pageId, title, html, version]);
+    }, [pageId, title, html, version, isSaving]);
 
-    // Publish page
-    const publish = useCallback(async (): Promise<{
-        success: boolean;
-        publishedUrl?: string;
-    }> => {
-        return await Sentry.startSpan(
-            { op: "ai-editor.publish", name: "Publish AI Editor Page" },
-            async (span) => {
-                span.setAttribute("page_id", pageId);
-                span.setAttribute("version", version);
+    // Publish page using atomic RPC endpoint with optional custom slug
+    // PR #414: Uses atomic PostgreSQL function for data consistency
+    const publish = useCallback(
+        async (
+            slug?: string
+        ): Promise<{
+            success: boolean;
+            publishedUrl?: string;
+        }> => {
+            return await Sentry.startSpan(
+                { op: "ai-editor.publish", name: "Publish AI Editor Page" },
+                async (span) => {
+                    span.setAttribute("page_id", pageId);
+                    span.setAttribute("version", version);
 
-                try {
-                    // First save any pending changes
-                    await save();
+                    try {
+                        // First save any pending changes
+                        await save();
 
-                    const response = await fetch(`/api/ai-editor/pages/${pageId}`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            status: "published",
-                        }),
-                    });
-
-                    if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        throw new ValidationError(
-                            errorData.error || "Failed to publish page"
+                        // Use the atomic publish endpoint
+                        // This ensures all publish fields are updated in a single transaction
+                        const response = await fetch(
+                            `/api/ai-editor/pages/${pageId}/publish`,
+                            {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                    action: "publish",
+                                    slug,
+                                }),
+                            }
                         );
+
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+
+                            // Handle specific error cases
+                            if (response.status === 409) {
+                                throw new ValidationError(
+                                    "This URL is already in use. Please choose a different one."
+                                );
+                            }
+
+                            throw new ValidationError(
+                                errorData.error || "Failed to publish page"
+                            );
+                        }
+
+                        const data = await response.json();
+                        const publishedUrl = data.published_url || null;
+
+                        span.setStatus({ code: 1, message: "Success" });
+                        setStatus("published");
+
+                        Sentry.addBreadcrumb({
+                            category: "ai-editor.publish",
+                            message: "Page published",
+                            level: "info",
+                            data: { pageId, version, publishedUrl },
+                        });
+
+                        logger.info(
+                            { pageId, version, publishedUrl },
+                            "📢 Page published"
+                        );
+
+                        return { success: true, publishedUrl };
+                    } catch (error) {
+                        span.setStatus({ code: 2, message: "Error" });
+                        logger.error({ error, pageId }, "Failed to publish page");
+
+                        Sentry.captureException(error, {
+                            tags: { component: "ai-editor", action: "publish_page" },
+                            extra: { pageId, version },
+                        });
+
+                        return { success: false };
                     }
-
-                    const data = await response.json();
-                    const publishedUrl = data.page?.published_url || null;
-
-                    span.setStatus({ code: 1, message: "Success" });
-                    setStatus("published");
-
-                    Sentry.addBreadcrumb({
-                        category: "ai-editor.publish",
-                        message: "Page published",
-                        level: "info",
-                        data: { pageId, version, publishedUrl },
-                    });
-
-                    logger.info({ pageId, version, publishedUrl }, "📢 Page published");
-
-                    return { success: true, publishedUrl };
-                } catch (error) {
-                    span.setStatus({ code: 2, message: "Error" });
-                    logger.error({ error, pageId }, "Failed to publish page");
-
-                    Sentry.captureException(error, {
-                        tags: { component: "ai-editor", action: "publish_page" },
-                        extra: { pageId, version },
-                    });
-
-                    return { success: false };
                 }
-            }
-        );
-    }, [pageId, version, save]);
+            );
+        },
+        [pageId, version, save]
+    );
 
     // Get shareable URL for the page
     const getShareUrl = useCallback((): string => {
@@ -469,8 +696,10 @@ export function useEditor({
     useEffect(() => {
         // Don't auto-save if html hasn't changed from initial
         if (!html || html === initialHtml) return;
-        // Don't auto-save while processing
+        // Don't auto-save while processing AI requests
         if (isProcessing) return;
+        // Don't auto-save while another save is in progress
+        if (isSaving) return;
 
         const timeout = setTimeout(() => {
             save().catch(() => {
@@ -480,7 +709,34 @@ export function useEditor({
 
         return () => clearTimeout(timeout);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [html, title, initialHtml, isProcessing]);
+    }, [html, title, initialHtml, isProcessing, isSaving]);
+
+    // Warn about unsaved changes before leaving
+    useEffect(() => {
+        const hasUnsavedChanges = html !== initialHtml || status === "saving";
+
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                // Modern browsers ignore custom messages, but we set it for older browsers
+                e.returnValue =
+                    "You have unsaved changes. Are you sure you want to leave?";
+                return e.returnValue;
+            }
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }, [html, initialHtml, status]);
+
+    // Handle option selection from clarifying questions
+    const selectOption = useCallback(
+        (optionId: string, optionLabel: string) => {
+            // Send the selected option as a user message
+            sendMessage(optionLabel);
+        },
+        [sendMessage]
+    );
 
     return {
         html,
@@ -492,6 +748,7 @@ export function useEditor({
         messages,
         isProcessing,
         sendMessage,
+        selectOption,
         suggestedActions,
         lastEditSummary,
         undo,

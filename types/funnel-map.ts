@@ -62,7 +62,12 @@ export type AccessType = "immediate" | "live" | "scheduled";
 // ============================================
 
 export type PaymentType = "one_time" | "fixed_payments" | "recurring";
-export type PaymentFrequency = "weekly" | "biweekly" | "monthly" | "quarterly" | "annually";
+export type PaymentFrequency =
+    | "weekly"
+    | "biweekly"
+    | "monthly"
+    | "quarterly"
+    | "annually";
 
 export interface PaymentOption {
     id: string;
@@ -104,7 +109,14 @@ export interface FunnelNodeDefinition {
 export interface FunnelNodeField {
     key: string;
     label: string;
-    type: "text" | "textarea" | "list" | "pricing" | "select" | "datetime" | "payment_options";
+    type:
+        | "text"
+        | "textarea"
+        | "list"
+        | "pricing"
+        | "select"
+        | "datetime"
+        | "payment_options";
     required?: boolean;
     aiPrompt?: string;
     // For select fields
@@ -604,7 +616,8 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 label: "Payment Options",
                 type: "payment_options",
                 required: true,
-                helpText: "Define payment plans for your offer (e.g., Pay in Full, 3 Payments, Monthly)",
+                helpText:
+                    "Define payment plans for your offer (e.g., Pay in Full, 3 Payments, Monthly)",
             },
             {
                 key: "guarantee",

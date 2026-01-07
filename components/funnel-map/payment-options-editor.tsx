@@ -86,7 +86,10 @@ export function PaymentOptionsEditor({
     const handleRemoveOption = useCallback(
         (id: string) => {
             const newOptions = value.filter((opt) => opt.id !== id);
-            logger.info({ optionId: id, remainingCount: newOptions.length }, "Payment option removed");
+            logger.info(
+                { optionId: id, remainingCount: newOptions.length },
+                "Payment option removed"
+            );
             onChange(newOptions);
             if (expandedOption === id) {
                 setExpandedOption(newOptions.length > 0 ? newOptions[0].id : null);
@@ -358,14 +361,17 @@ export function PaymentOptionsEditor({
                                                 <br />
                                                 <span className="text-xs">
                                                     Total: $
-                                                    {calculatePaymentPlanTotal(option).toLocaleString()}
+                                                    {calculatePaymentPlanTotal(
+                                                        option
+                                                    ).toLocaleString()}
                                                 </span>
                                             </>
                                         )}
                                         {option.paymentType === "recurring" && (
                                             <>
                                                 ${option.amount.toLocaleString()} /{" "}
-                                                {option.frequency || "month"} (recurring)
+                                                {option.frequency || "month"}{" "}
+                                                (recurring)
                                             </>
                                         )}
                                     </p>

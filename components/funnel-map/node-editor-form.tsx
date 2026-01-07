@@ -24,11 +24,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
-import {
-    Collapsible,
-    CollapsibleContent,
-    CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
 
 interface NodeEditorFormProps {
     nodeDefinition: FunnelNodeDefinition;
@@ -342,12 +338,12 @@ export function NodeEditorForm({
 
             {/* Order Bump accordion (for checkout node) */}
             {hasOrderBumpFields && (
-                <Collapsible
-                    open={isOrderBumpExpanded}
-                    onOpenChange={setIsOrderBumpExpanded}
-                    className="mt-8"
-                >
-                    <CollapsibleTrigger className="flex items-center gap-2 w-full p-4 rounded-lg border border-dashed border-lime-300 bg-lime-50 hover:bg-lime-100 transition-colors">
+                <div className="mt-8">
+                    <button
+                        type="button"
+                        onClick={() => setIsOrderBumpExpanded(!isOrderBumpExpanded)}
+                        className="flex items-center gap-2 w-full p-4 rounded-lg border border-dashed border-lime-300 bg-lime-50 hover:bg-lime-100 transition-colors"
+                    >
                         {isOrderBumpExpanded ? (
                             <ChevronDown className="h-4 w-4 text-lime-700" />
                         ) : (
@@ -359,20 +355,22 @@ export function NodeEditorForm({
                         <span className="text-xs text-lime-600 ml-2">
                             Add a quick-win offer at checkout
                         </span>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="pt-4 pl-4 border-l-2 border-lime-200 ml-2 mt-2">
-                        <div className="space-y-6">
-                            {nodeDefinition.orderBumpFields?.map((field) => (
-                                <FieldRenderer
-                                    key={field.key}
-                                    field={field}
-                                    value={content[field.key]}
-                                    onChange={handleFieldChange}
-                                />
-                            ))}
+                    </button>
+                    {isOrderBumpExpanded && (
+                        <div className="pt-4 pl-4 border-l-2 border-lime-200 ml-2 mt-2">
+                            <div className="space-y-6">
+                                {nodeDefinition.orderBumpFields?.map((field) => (
+                                    <FieldRenderer
+                                        key={field.key}
+                                        field={field}
+                                        value={content[field.key]}
+                                        onChange={handleFieldChange}
+                                    />
+                                ))}
+                            </div>
                         </div>
-                    </CollapsibleContent>
-                </Collapsible>
+                    )}
+                </div>
             )}
         </div>
     );

@@ -96,24 +96,29 @@ function MessageBubble({
                 {isUser ? (
                     <p className="text-sm">{message.content}</p>
                 ) : (
-                    <ReactMarkdown
-                        className="text-sm [&>p]:mb-2 [&>p:last-child]:mb-0 [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4"
-                        components={{
-                            // Ensure proper rendering of bold text
-                            strong: ({ children }) => (
-                                <strong className="font-semibold">{children}</strong>
-                            ),
-                            // Handle lists properly
-                            ul: ({ children }) => (
-                                <ul className="list-disc pl-4 my-2">{children}</ul>
-                            ),
-                            ol: ({ children }) => (
-                                <ol className="list-decimal pl-4 my-2">{children}</ol>
-                            ),
-                        }}
-                    >
-                        {message.content}
-                    </ReactMarkdown>
+                    <div className="text-sm [&>p]:mb-2 [&>p:last-child]:mb-0 [&>ul]:list-disc [&>ul]:pl-4 [&>ol]:list-decimal [&>ol]:pl-4">
+                        <ReactMarkdown
+                            components={{
+                                // Ensure proper rendering of bold text
+                                strong: ({ children }) => (
+                                    <strong className="font-semibold">
+                                        {children}
+                                    </strong>
+                                ),
+                                // Handle lists properly
+                                ul: ({ children }) => (
+                                    <ul className="list-disc pl-4 my-2">{children}</ul>
+                                ),
+                                ol: ({ children }) => (
+                                    <ol className="list-decimal pl-4 my-2">
+                                        {children}
+                                    </ol>
+                                ),
+                            }}
+                        >
+                            {message.content}
+                        </ReactMarkdown>
+                    </div>
                 )}
             </div>
         </div>

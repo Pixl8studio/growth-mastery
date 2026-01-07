@@ -499,7 +499,7 @@ export default function Step2Page({
                                 <Button
                                     variant="outline"
                                     size="sm"
-                                    onClick={handleGenerateDrafts}
+                                    onClick={() => handleGenerateDrafts()}
                                     disabled={isGenerating}
                                     className="gap-2"
                                 >
@@ -532,7 +532,11 @@ export default function Step2Page({
                     nodeData={nodeData.get(selectedNode) || null}
                     pathwayType={pathwayType}
                     projectId={projectId}
-                    businessContext={businessProfile || {}}
+                    businessContext={
+                        businessProfile
+                            ? (businessProfile as unknown as Record<string, unknown>)
+                            : {}
+                    }
                     onContentUpdate={handleModalContentUpdate}
                 />
             )}

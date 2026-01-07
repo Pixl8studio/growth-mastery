@@ -75,6 +75,25 @@ const FunnelNodeFieldSchema = z.object({
     options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
 });
 
+/**
+ * Zod schema for validating PaymentOption structure
+ * Ensures data integrity for payment options stored in funnel node data
+ */
+const PaymentOptionSchema = z.object({
+    id: z.string(),
+    description: z.string().min(1, "Description is required"),
+    amount: z.number().positive("Amount must be greater than $0"),
+    paymentType: z.enum(["one_time", "fixed_payments", "recurring"]),
+    numberOfPayments: z.number().int().positive().optional(),
+    frequency: z.enum(["weekly", "biweekly", "monthly", "quarterly", "annually"]).optional(),
+});
+
+/**
+ * Schema for validating an array of payment options
+ * Used when AI suggests changes to payment_options fields
+ */
+const PaymentOptionsArraySchema = z.array(PaymentOptionSchema);
+
 const FunnelNodeDefinitionSchema = z.object({
     id: FunnelNodeTypeSchema,
     title: z.string(),
@@ -451,6 +470,11 @@ You MUST respond with valid JSON in this exact format:
 /**
  * Format business context into a readable format for the AI system prompt
  * This gives the AI complete understanding of the user's business
+ *
+ * Note: Memoization was considered but not implemented because:
+ * 1. Each request creates a fresh context, so caching across requests wouldn't help
+ * 2. Within a single request, this is only called once
+ * 3. The function is simple string concatenation, not computationally expensive
  */
 function formatBusinessContextForAI(context: Record<string, unknown>): string {
     const sections: string[] = [];

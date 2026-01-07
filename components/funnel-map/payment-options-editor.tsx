@@ -7,7 +7,7 @@
  */
 
 import { useState, useCallback } from "react";
-import { Plus, Trash2, GripVertical } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logger } from "@/lib/client-logger";
 import { Button } from "@/components/ui/button";
@@ -165,7 +165,6 @@ export function PaymentOptionsEditor({
                             )
                         }
                     >
-                        <GripVertical className="h-4 w-4 text-muted-foreground" />
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
                                 <span className="text-sm font-medium text-muted-foreground">
@@ -237,7 +236,7 @@ export function PaymentOptionsEditor({
                                 <Input
                                     id={`amount-${option.id}`}
                                     type="number"
-                                    min="0"
+                                    min="0.01"
                                     step="0.01"
                                     placeholder="0.00"
                                     value={option.amount || ""}
@@ -247,7 +246,12 @@ export function PaymentOptionsEditor({
                                         })
                                     }
                                     disabled={disabled}
+                                    aria-label={`Payment amount for option ${option.description || "new option"}`}
+                                    aria-describedby={`amount-help-${option.id}`}
                                 />
+                                <p id={`amount-help-${option.id}`} className="sr-only">
+                                    Enter the amount in dollars. Minimum value is $0.01.
+                                </p>
                             </div>
 
                             {/* Payment Type */}

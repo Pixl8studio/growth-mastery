@@ -31,6 +31,7 @@ import type {
     FunnelNodeData,
     PathwayType,
     FunnelBenchmark,
+    PaymentOption,
 } from "@/types/funnel-map";
 import { getBenchmarkForNode, getNodeDefinition } from "@/types/funnel-map";
 import { NodeEditorForm } from "./node-editor-form";
@@ -58,10 +59,80 @@ const CHAT_DRAWER_WIDTH_PERCENT = 35;
 const COLLAPSED_DRAWER_WIDTH_PX = 48;
 
 // ============================================
+// VALIDATION CONSTANTS
+// ============================================
+/**
+ * Minimum valid price for offers.
+ * Business rule: $0 offers are considered empty/invalid.
+ * Offers must have a positive price to be approved.
+ */
+const MIN_VALID_PRICE = 0.01;
+
+// ============================================
 // NODE TYPE CONSTANTS
 // ============================================
 // Optional nodes (upsells) - not required but recommended
 const OPTIONAL_NODE_TYPES: FunnelNodeType[] = ["upsell_1", "upsell_2"];
+
+// ============================================
+// VALIDATION HELPERS
+// ============================================
+
+/**
+ * Validates a payment option has all required fields properly filled.
+ * Returns true if the option is valid, false otherwise.
+ */
+function isValidPaymentOption(option: PaymentOption): boolean {
+    // Must have a non-empty description
+    if (!option.description || !option.description.trim()) {
+        return false;
+    }
+    // Must have a positive amount
+    if (!option.amount || option.amount < MIN_VALID_PRICE) {
+        return false;
+    }
+    // For fixed_payments, must have valid numberOfPayments
+    if (option.paymentType === "fixed_payments") {
+        if (!option.numberOfPayments || option.numberOfPayments < 1) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/**
+ * Validates payment_options field content.
+ * Handles both array format (correct) and object format (edge case).
+ * Returns true if the content is empty/invalid, false if it has valid options.
+ */
+function isPaymentOptionsEmpty(value: unknown): boolean {
+    // Handle array format (expected format)
+    if (Array.isArray(value)) {
+        if (value.length === 0) {
+            return true;
+        }
+        // Check if at least one option is complete and valid
+        const hasValidOption = value.some((opt) =>
+            isValidPaymentOption(opt as PaymentOption)
+        );
+        return !hasValidOption;
+    }
+    // Handle object format (edge case - shouldn't normally happen)
+    if (typeof value === "object" && value !== null) {
+        const keys = Object.keys(value);
+        if (keys.length === 0) {
+            return true;
+        }
+        // If it's an object, check if it has valid payment option structure
+        // This handles cases where payment_options might be stored as { id: option } map
+        const hasValidOption = Object.values(value).some((opt) =>
+            typeof opt === "object" && opt !== null && isValidPaymentOption(opt as PaymentOption)
+        );
+        return !hasValidOption;
+    }
+    // Any other format is considered empty
+    return true;
+}
 
 interface NodeEditorModalProps {
     isOpen: boolean;
@@ -216,17 +287,17 @@ export function NodeEditorModal({
                     isEmpty = true;
                 } else if (typeof value === "string") {
                     isEmpty = !value.trim();
+                } else if (field.type === "payment_options") {
+                    // For payment_options: validate structure and required fields
+                    isEmpty = isPaymentOptionsEmpty(value);
                 } else if (Array.isArray(value)) {
-                    // For payment_options and list fields: must have at least one item
+                    // For list fields: must have at least one item
                     isEmpty = value.length === 0;
                 } else if (field.type === "pricing" && typeof value === "object") {
-                    // For pricing fields: check if the price is set (webinar or regular)
+                    // For pricing fields: check if the price meets minimum threshold
                     const priceObj = value as Record<string, number>;
                     const priceValue = priceObj.webinar ?? priceObj.regular ?? 0;
-                    isEmpty = !priceValue || priceValue <= 0;
-                } else if (field.type === "payment_options" && typeof value === "object") {
-                    // For payment_options stored as object (edge case)
-                    isEmpty = Object.keys(value as object).length === 0;
+                    isEmpty = !priceValue || priceValue < MIN_VALID_PRICE;
                 }
 
                 if (isEmpty) {

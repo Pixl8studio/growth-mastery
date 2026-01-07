@@ -10,6 +10,7 @@ import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
+import { checkHtmlSize } from "@/lib/validation/html";
 
 /**
  * Standard error response format
@@ -194,6 +195,23 @@ export async function PUT(request: Request, { params }: RouteParams) {
         const body = await request.json();
         const { title, html_content, status, version, slug } = body;
 
+        // Validate HTML content size if provided
+        if (html_content !== undefined) {
+            const htmlSizeCheck = checkHtmlSize(html_content);
+            if (!htmlSizeCheck.valid) {
+                logger.warn(
+                    { size: htmlSizeCheck.size, maxSize: htmlSizeCheck.maxSize },
+                    "HTML content too large in page update"
+                );
+                return createErrorResponse(
+                    "HTML content is too large",
+                    400,
+                    "CONTENT_TOO_LARGE",
+                    htmlSizeCheck.error
+                );
+            }
+        }
+
         // Verify ownership
         const { data: existingPage, error: fetchError } = await supabase
             .from("ai_editor_pages")
@@ -245,14 +263,14 @@ export async function PUT(request: Request, { params }: RouteParams) {
             }
 
             // Check if slug is already taken (by another page)
-            const { data: existingSlug } = await supabase
+            // Note: Don't use .single() - it throws when no rows found (which is success case)
+            const { data: existingSlugs } = await supabase
                 .from("ai_editor_pages")
                 .select("id")
                 .eq("slug", slug)
-                .neq("id", pageId)
-                .single();
+                .neq("id", pageId);
 
-            if (existingSlug) {
+            if (existingSlugs && existingSlugs.length > 0) {
                 return createErrorResponse(
                     "This URL is already taken. Please choose a different one.",
                     409,
@@ -306,8 +324,19 @@ export async function PUT(request: Request, { params }: RouteParams) {
             logger.error({ error: updateError }, "Failed to update AI editor page");
 
             // Attempt rollback if we modified slug/URL and update failed
+            // NOTE: This is a best-effort rollback for publish-related fields only
+            // (slug, published_url, published_at). Supabase doesn't support true
+            // transactions via the JS client for complex multi-field updates.
+            // Other fields (title, html_content, status, version) are NOT rolled back.
+            // This is acceptable because:
+            // 1. Most update failures are network/timeout issues where the update didn't happen
+            // 2. The slug/URL fields are the most critical to restore (prevent orphaned URLs)
+            // 3. Client-side state will still have the correct data for retry
             if (status === "published" && (originalSlug || originalPublishedUrl)) {
-                logger.info({ pageId }, "Attempting rollback of publish changes");
+                logger.info(
+                    { pageId },
+                    "Attempting best-effort rollback of publish fields"
+                );
                 try {
                     await supabase
                         .from("ai_editor_pages")

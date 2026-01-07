@@ -114,6 +114,12 @@ export function useEditor({
     const [initialMessageSent, setInitialMessageSent] = useState(false);
 
     // Version history for undo - limited to prevent memory issues in long sessions
+    // Memory budget: ~30 HTML snapshots * ~50KB average = ~1.5MB max
+    // This is acceptable for a browser tab. If memory becomes an issue:
+    // 1. Reduce MAX_HISTORY_SIZE to 15-20
+    // 2. Store diffs instead of full snapshots (more complex)
+    // 3. Implement total byte limit in addition to count limit
+    // 4. Use IndexedDB for overflow storage
     const MAX_HISTORY_SIZE = 30;
     const [history, setHistory] = useState<string[]>([initialHtml]);
     const [historyIndex, setHistoryIndex] = useState(0);

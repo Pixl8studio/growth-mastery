@@ -7,6 +7,15 @@
  * - Context-aware detection: Consider surrounding words to distinguish legitimate content
  * - Fail safe: When in doubt, let content through (false negatives are better than
  *   breaking legitimate user content)
+ *
+ * Performance considerations:
+ * - Regex patterns use alternation which can cause backtracking on large inputs
+ * - Current implementation is optimized for typical user message sizes (< 10KB)
+ * - If processing very large inputs becomes necessary, consider:
+ *   1. Adding input length validation at the caller level (already done in chat route)
+ *   2. Using regex timeout libraries like safe-regex or re2
+ *   3. Processing content in chunks
+ * - Current risk is minimal: chat API limits HTML to 1MB and messages are typically short
  */
 
 /**

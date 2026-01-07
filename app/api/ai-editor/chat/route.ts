@@ -13,6 +13,7 @@ import {
     type EditRequestOptions,
 } from "@/lib/ai-editor/chat-processor";
 import { sanitizeUserContent } from "@/lib/ai/sanitize";
+import { checkHtmlSize, DEFAULT_MAX_HTML_SIZE } from "@/lib/validation/html";
 
 interface ImageAttachment {
     id: string;
@@ -24,20 +25,25 @@ interface ImageAttachment {
 /** Maximum image size for base64 conversion (5MB) */
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 
-/** Maximum HTML content size (1MB) */
-const MAX_HTML_SIZE = 1 * 1024 * 1024;
+/** Timeout for image fetch operations (10 seconds) */
+const IMAGE_FETCH_TIMEOUT_MS = 10000;
 
 /**
  * Fetch image from URL and convert to base64
  * This ensures Anthropic can access the image even if it's behind auth
  *
- * Includes size validation to prevent memory exhaustion attacks
+ * Security measures:
+ * - Size validation to prevent memory exhaustion attacks
+ * - Timeout to prevent blocking on slow/hanging servers
  */
 async function fetchImageAsBase64(
     url: string
 ): Promise<{ base64: string; mediaType: string } | null> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), IMAGE_FETCH_TIMEOUT_MS);
+
     try {
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: controller.signal });
         if (!response.ok) {
             logger.warn({ url, status: response.status }, "Failed to fetch image");
             return null;
@@ -69,8 +75,18 @@ async function fetchImageAsBase64(
 
         return { base64, mediaType: contentType };
     } catch (error) {
-        logger.error({ error, url }, "Error fetching image for base64 conversion");
+        // Handle abort (timeout) vs other errors
+        if (error instanceof Error && error.name === "AbortError") {
+            logger.warn(
+                { url, timeout: IMAGE_FETCH_TIMEOUT_MS },
+                "Image fetch timed out"
+            );
+        } else {
+            logger.error({ error, url }, "Error fetching image for base64 conversion");
+        }
         return null;
+    } finally {
+        clearTimeout(timeoutId);
     }
 }
 
@@ -123,15 +139,16 @@ export async function POST(request: Request) {
         }
 
         // Validate HTML content size to prevent performance issues
-        if (currentHtml.length > MAX_HTML_SIZE) {
+        const htmlSizeCheck = checkHtmlSize(currentHtml);
+        if (!htmlSizeCheck.valid) {
             logger.warn(
-                { size: currentHtml.length, maxSize: MAX_HTML_SIZE },
+                { size: htmlSizeCheck.size, maxSize: htmlSizeCheck.maxSize },
                 "HTML content too large"
             );
             return NextResponse.json(
                 {
                     error: "HTML content is too large",
-                    details: `Maximum size is ${MAX_HTML_SIZE / 1024 / 1024}MB`,
+                    details: `Maximum size is ${DEFAULT_MAX_HTML_SIZE / 1024 / 1024}MB`,
                 },
                 { status: 400 }
             );

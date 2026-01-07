@@ -359,12 +359,36 @@ async function generateNodeDraft(
 
 function buildDraftSystemPrompt(
     nodeDef: (typeof FUNNEL_NODE_DEFINITIONS)[number],
-    _profile: BusinessProfile,
+    profile: BusinessProfile,
     pathwayType: PathwayType
 ): string {
     const fieldDescriptions = nodeDef.fields
         .map((f) => `- "${f.key}": ${f.label} (type: ${f.type})`)
         .join("\n");
+
+    // Add special context for upsell nodes to ensure they're always populated
+    let upsellContext = "";
+    if (nodeDef.id === "upsell_1") {
+        upsellContext = `
+## CRITICAL: Upsell 1 Strategy
+This is the PRIMARY upsell shown immediately after purchase. You MUST create a compelling complementary offer that:
+1. ACCELERATES or ENHANCES the results of the core offer (${sanitizeUserContent(profile.offer_name || "the main program")})
+2. Feels like a natural "next step" or "fast track" option
+3. Is priced higher than the main offer to increase average order value
+4. Examples: VIP coaching calls, done-for-you templates, advanced modules, mastermind access
+
+IMPORTANT: Generate COMPLETE content for ALL fields - never leave fields empty. If no specific upsell is mentioned in the business context, CREATE one that logically complements the main offer based on the transformation promise.`;
+    } else if (nodeDef.id === "upsell_2") {
+        upsellContext = `
+## CRITICAL: Upsell 2 Strategy
+This is the SECONDARY upsell for customers who may have declined the first upsell. You MUST create:
+1. Either a PREMIUM UPGRADE (for those who want more) or a DOWNSELL (more accessible option)
+2. Something that adds value but feels different from Upsell 1
+3. Could be: extended support, community access, additional resources, payment plan option
+4. Examples: 1-year membership extension, private community, resource library, implementation support
+
+IMPORTANT: Generate COMPLETE content for ALL fields - never leave fields empty. If no specific second upsell is mentioned, CREATE one that fills a different need than the first upsell.`;
+    }
 
     return `You are an expert marketing strategist and conversion copywriter creating initial drafts for a webinar funnel.
 
@@ -374,6 +398,7 @@ Generate compelling, conversion-focused content for the "${nodeDef.title}" of a 
 ## Node Description
 ${nodeDef.description}
 ${nodeDef.framework ? `Framework: ${nodeDef.framework}` : ""}
+${upsellContext}
 
 ## Funnel Pathway
 This is a "${pathwayType === "book_call" ? "Book a Call" : "Direct Purchase"}" funnel.
@@ -396,6 +421,7 @@ Respond with a JSON object containing ONLY the fields listed above. Example:
 4. For list fields, provide 3-5 items
 5. Keep text fields concise but impactful
 6. Match the brand voice and ideal customer language
+7. NEVER leave any field empty - always generate content for every field
 
 ## Important
 - User-provided business context is wrapped in <business_context> tags

@@ -58,7 +58,7 @@ Distribute slides across sections logically (hook: 5-10, problem: 8-12, agitate:
 }
 
 /**
- * 2. Generate offer details from transcript using the 7 P's Framework
+ * 2. Generate offer details from transcript using the Irresistible Offer Framework
  */
 export function createOfferGenerationPrompt(
     transcriptData: TranscriptData
@@ -66,9 +66,9 @@ export function createOfferGenerationPrompt(
     return [
         {
             role: "system",
-            content: `You are a master offer strategist who creates irresistible offers using the proven 7 P's Framework.
+            content: `You are a master offer strategist who creates irresistible offers using the proven Irresistible Offer Framework.
 
-THE 7 P's FRAMEWORK:
+THE IRRESISTIBLE OFFER FRAMEWORK (7 Ps):
 
 1. PRICE - The strategic investment point that makes your offer feel like a no-brainer
    - Deliver significantly more perceived value than cost
@@ -113,7 +113,7 @@ Create offers with 3-6 features and 3-5 bonuses. Make the offer feel premium but
         },
         {
             role: "user",
-            content: `Based on this business information, create a compelling offer using the 7 P's Framework:
+            content: `Based on this business information, create a compelling offer using the Irresistible Offer Framework:
 
 TRANSCRIPT:
 ${transcriptData.transcript_text}

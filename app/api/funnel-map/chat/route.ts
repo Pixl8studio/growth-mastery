@@ -67,9 +67,12 @@ const ConversationMessageSchema = z.object({
 const FunnelNodeFieldSchema = z.object({
     key: z.string(),
     label: z.string(),
-    type: z.enum(["text", "textarea", "list", "pricing"]),
+    type: z.enum(["text", "textarea", "list", "pricing", "select", "datetime"]),
     required: z.boolean().optional(),
     aiPrompt: z.string().optional(),
+    helpText: z.string().optional(),
+    placeholder: z.string().optional(),
+    options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
 });
 
 const FunnelNodeDefinitionSchema = z.object({
@@ -419,9 +422,10 @@ You MUST respond with valid JSON in this exact format:
 2. When the user asks to improve content, provide specific suggestions
 3. Include "suggestedChanges" ONLY when you have concrete updates to propose
 4. Keep responses concise but impactful
-5. Reference the 7 P's Framework or Perfect Webinar Framework when relevant
+5. Reference the Irresistible Offer Framework or Perfect Webinar Framework when relevant
 6. Focus on conversion-optimized, emotionally compelling copy
 7. Always maintain the user's authentic voice and brand
+8. NEVER use markdown **asterisks** for bold text - the chat UI will render formatting automatically. Write naturally without markdown syntax
 
 ## Important
 - Only include fields that are being changed in suggestedChanges

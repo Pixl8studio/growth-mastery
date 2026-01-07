@@ -300,7 +300,7 @@ describe("Funnel Map Data Flow Service", () => {
     });
 
     describe("extractCoreOfferData", () => {
-        it("should extract 7 Ps framework correctly", async () => {
+        it("should extract Irresistible Offer Framework correctly", async () => {
             const { extractCoreOfferData } = await import(
                 "@/lib/services/funnel-map-data-flow"
             );

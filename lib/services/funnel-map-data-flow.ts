@@ -114,7 +114,7 @@ export function extractMasterclassData(context: FunnelMapContext): {
 }
 
 /**
- * Extract core offer data (7 Ps Framework) from funnel map
+ * Extract core offer data (Irresistible Offer Framework) from funnel map
  * Used by enrollment page generator and offer service
  */
 export function extractCoreOfferData(context: FunnelMapContext): {
@@ -212,7 +212,7 @@ export async function syncToOffersTable(
             guarantee: coreOfferData.guarantee,
             offer_type: "main",
             features: coreOfferData.bonuses.map((b) => ({ title: b })),
-            // Store 7 Ps in metadata
+            // Store Irresistible Offer Framework fields in metadata
             metadata: {
                 seven_ps: {
                     promise: coreOfferData.promise,

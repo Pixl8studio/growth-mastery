@@ -58,7 +58,7 @@ describe("MasterSectionCard", () => {
         projectId: "project-123",
         subStepDetails: [
             { number: 1, title: "Intake", description: "Multiple input options" },
-            { number: 2, title: "Define Offer", description: "7 P's framework" },
+            { number: 2, title: "Funnel Map", description: "Plan your funnel" },
             { number: 3, title: "Brand Design", description: "Visual identity" },
         ],
     };
@@ -197,7 +197,7 @@ describe("MasterSectionCard", () => {
         fireEvent.click(showButton);
 
         expect(screen.getByText("Intake")).toBeInTheDocument();
-        expect(screen.getByText("Define Offer")).toBeInTheDocument();
+        expect(screen.getByText("Funnel Map")).toBeInTheDocument();
         expect(screen.getByText("Brand Design")).toBeInTheDocument();
     });
 

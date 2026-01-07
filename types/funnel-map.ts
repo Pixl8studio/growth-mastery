@@ -79,6 +79,10 @@ export interface FunnelNodeDefinition {
     showCondition?: (registrationConfig: RegistrationConfig | null) => boolean;
     // Industry benchmark for this node
     benchmark?: FunnelBenchmark;
+    // Non-clickable nodes are informational only (like Traffic Source)
+    isNonClickable?: boolean;
+    // Order Bump fields for checkout node (accordion section)
+    orderBumpFields?: FunnelNodeField[];
 }
 
 export interface FunnelNodeField {
@@ -328,51 +332,13 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
     {
         id: "traffic_source",
         title: "Traffic Source",
-        description: "Where your ideal customers come from",
+        description: "We'll configure this at a later step.",
         icon: "Globe",
         color: "blue",
         pathways: ["direct_purchase", "book_call"],
-        fields: [
-            {
-                key: "primary_source",
-                label: "Primary Traffic Source",
-                type: "select",
-                options: [
-                    { value: "facebook_ads", label: "Facebook/Instagram Ads" },
-                    { value: "google_ads", label: "Google Ads" },
-                    { value: "youtube_ads", label: "YouTube Ads" },
-                    { value: "organic_social", label: "Organic Social Media" },
-                    { value: "email_list", label: "Email List" },
-                    { value: "affiliates", label: "Affiliate Partners" },
-                    { value: "organic_search", label: "Organic Search (SEO)" },
-                    { value: "podcast", label: "Podcast" },
-                    { value: "other", label: "Other" },
-                ],
-                aiPrompt: "What is the main channel driving traffic?",
-            },
-            {
-                key: "audience_targeting",
-                label: "Audience Targeting",
-                type: "textarea",
-                aiPrompt: "Describe your ideal customer targeting",
-                placeholder:
-                    "Who are you targeting? What demographics, interests, or behaviors?",
-            },
-            {
-                key: "ad_angle",
-                label: "Ad Angle / Hook",
-                type: "textarea",
-                aiPrompt: "What hook will capture attention?",
-                placeholder: "What's the main angle or hook for your ads?",
-            },
-            {
-                key: "traffic_budget",
-                label: "Monthly Ad Budget",
-                type: "text",
-                placeholder: "e.g., $5,000/month",
-            },
-        ],
-        benchmark: FUNNEL_BENCHMARKS.find((b) => b.node_type === "registration")!,
+        // Non-clickable node - no fields to edit, just informational
+        isNonClickable: true,
+        fields: [],
     },
     {
         id: "registration",
@@ -552,11 +518,11 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
     {
         id: "core_offer",
         title: "Core Offer Enrollment",
-        description: "Present your offer using the 7 Ps framework",
+        description: "Present your offer using the Irresistible Offer Framework",
         icon: "Gift",
         color: "orange",
         pathways: ["direct_purchase", "book_call"],
-        framework: "7 Ps Framework",
+        framework: "Irresistible Offer Framework",
         fields: [
             {
                 key: "promise",
@@ -626,7 +592,7 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
     {
         id: "checkout",
         title: "Checkout Page",
-        description: "Secure payment processing",
+        description: "Secure payment processing with optional order bump",
         icon: "CreditCard",
         color: "emerald",
         pathways: ["direct_purchase", "book_call"],
@@ -668,6 +634,38 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
                 helpText: "Payment plans, methods available",
             },
         ],
+        // Order Bump fields shown in collapsible accordion section
+        orderBumpFields: [
+            {
+                key: "order_bump_headline",
+                label: "Order Bump Headline",
+                type: "text",
+                placeholder: "Short, compelling headline",
+            },
+            {
+                key: "order_bump_description",
+                label: "Order Bump Description",
+                type: "textarea",
+                helpText: "1-2 sentences explaining the value",
+            },
+            {
+                key: "order_bump_promise",
+                label: "Order Bump Promise",
+                type: "text",
+                placeholder: "What quick win does this provide?",
+            },
+            {
+                key: "order_bump_price",
+                label: "Order Bump Price",
+                type: "pricing",
+            },
+            {
+                key: "order_bump_original_value",
+                label: "Original Value",
+                type: "text",
+                placeholder: "Show the perceived value (e.g., $297 Value)",
+            },
+        ],
         benchmark: FUNNEL_BENCHMARKS.find((b) => b.node_type === "checkout")!,
     },
     {
@@ -677,7 +675,7 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
         icon: "Plus",
         color: "lime",
         pathways: ["direct_purchase", "book_call"],
-        framework: "7 Ps Framework",
+        framework: "Irresistible Offer Framework",
         fields: [
             {
                 key: "headline",
@@ -719,7 +717,7 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
         icon: "TrendingUp",
         color: "amber",
         pathways: ["direct_purchase", "book_call"],
-        framework: "7 Ps Framework",
+        framework: "Irresistible Offer Framework",
         fields: [
             {
                 key: "headline",
@@ -780,7 +778,7 @@ export const FUNNEL_NODE_DEFINITIONS: FunnelNodeDefinition[] = [
         icon: "ArrowUp",
         color: "yellow",
         pathways: ["direct_purchase", "book_call"],
-        framework: "7 Ps Framework",
+        framework: "Irresistible Offer Framework",
         fields: [
             {
                 key: "headline",
@@ -1044,11 +1042,10 @@ export const PATHWAY_DEFINITIONS: Record<
         nodeSequence: [
             "traffic_source",
             "registration",
-            "registration_confirmation", // Conditional
+            "registration_confirmation", // Conditional - only if access_type is live/scheduled
             "masterclass",
             "core_offer",
-            "checkout",
-            "order_bump",
+            "checkout", // Includes Order Bump as accordion section
             "upsell_1",
             "upsell_2",
             "thank_you",
@@ -1061,14 +1058,13 @@ export const PATHWAY_DEFINITIONS: Record<
         nodeSequence: [
             "traffic_source",
             "registration",
-            "registration_confirmation", // Conditional
+            "registration_confirmation", // Conditional - only if access_type is live/scheduled
             "masterclass",
             "core_offer",
             "call_booking",
             "call_booking_confirmation",
             "sales_call",
-            "checkout",
-            "order_bump",
+            "checkout", // Includes Order Bump as accordion section
             "upsell_1",
             "upsell_2",
             "thank_you",

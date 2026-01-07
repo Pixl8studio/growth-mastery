@@ -11,7 +11,7 @@ CREATE TYPE page_media_type AS ENUM(
 CREATE TABLE page_media (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   funnel_project_id UUID NOT NULL REFERENCES funnel_projects (id) ON DELETE CASCADE,
-  page_id UUID REFERENCES pages (id) ON DELETE SET NULL,
+  page_id UUID REFERENCES ai_editor_pages (id) ON DELETE SET NULL,
   user_id UUID NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
   media_type page_media_type NOT NULL,
   storage_path TEXT NOT NULL,

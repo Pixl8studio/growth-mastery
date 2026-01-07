@@ -100,6 +100,50 @@ export interface Database {
                     deleted_at?: string | null;
                 };
             };
+            page_media: {
+                Row: {
+                    id: string;
+                    funnel_project_id: string;
+                    page_id: string | null;
+                    user_id: string;
+                    media_type: "uploaded_image" | "ai_generated_image" | "pitch_video";
+                    storage_path: string;
+                    public_url: string;
+                    prompt: string | null;
+                    metadata: Json;
+                    created_at: string;
+                    updated_at: string;
+                };
+                Insert: {
+                    id?: string;
+                    funnel_project_id: string;
+                    page_id?: string | null;
+                    user_id: string;
+                    media_type: "uploaded_image" | "ai_generated_image" | "pitch_video";
+                    storage_path: string;
+                    public_url: string;
+                    prompt?: string | null;
+                    metadata?: Json;
+                    created_at?: string;
+                    updated_at?: string;
+                };
+                Update: {
+                    id?: string;
+                    funnel_project_id?: string;
+                    page_id?: string | null;
+                    user_id?: string;
+                    media_type?:
+                        | "uploaded_image"
+                        | "ai_generated_image"
+                        | "pitch_video";
+                    storage_path?: string;
+                    public_url?: string;
+                    prompt?: string | null;
+                    metadata?: Json;
+                    created_at?: string;
+                    updated_at?: string;
+                };
+            };
             // Add your tables here as you create them in Supabase
             // Example:
             // users: {
@@ -127,7 +171,7 @@ export interface Database {
             [_ in never]: never;
         };
         Enums: {
-            [_ in never]: never;
+            page_media_type: "uploaded_image" | "ai_generated_image" | "pitch_video";
         };
     };
 }

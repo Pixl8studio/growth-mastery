@@ -241,7 +241,7 @@ export default function Step2Page({
 
                 // Load registration config for conditional nodes
                 const { data: regConfig } = await supabase
-                    .from("registration_config")
+                    .from("registration_configs")
                     .select("*")
                     .eq("funnel_project_id", projectId)
                     .single();
@@ -475,7 +475,7 @@ export default function Step2Page({
             // If approving registration with live event, update registration config
             if (selectedNode === "registration" && content.access_type === "live") {
                 const { error: configError } = await supabase
-                    .from("registration_config")
+                    .from("registration_configs")
                     .upsert(
                         {
                             funnel_project_id: projectId,

@@ -213,17 +213,21 @@ export function ChatInput({ onSendMessage, isProcessing, projectId }: ChatInputP
         });
     };
 
-    // Clean up blob URLs on unmount
+    // Track attachments ref for cleanup on unmount
+    // This pattern allows us to clean up blob URLs when the component unmounts
+    // without triggering cleanup on every attachments change
+    const attachmentsRef = useRef<ImageAttachment[]>(attachments);
+    attachmentsRef.current = attachments;
+
     useEffect(() => {
+        // Cleanup function runs only on unmount
         return () => {
-            attachments.forEach((attachment) => {
+            attachmentsRef.current.forEach((attachment) => {
                 if (attachment.url.startsWith("blob:")) {
                     URL.revokeObjectURL(attachment.url);
                 }
             });
         };
-        // Only run cleanup on unmount, not on every attachments change
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const hasContent = message.trim() || attachments.length > 0;

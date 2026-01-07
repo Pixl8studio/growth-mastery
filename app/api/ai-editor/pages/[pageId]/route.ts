@@ -203,12 +203,13 @@ export async function PUT(request: Request, { params }: RouteParams) {
             }
 
             // Check if slug is already taken (by another page)
+            // Use maybeSingle() instead of single() - returns null if no match instead of throwing
             const { data: existingSlug } = await supabase
                 .from("ai_editor_pages")
                 .select("id")
                 .eq("slug", slug)
                 .neq("id", pageId)
-                .single();
+                .maybeSingle();
 
             if (existingSlug) {
                 return NextResponse.json(
@@ -233,7 +234,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
             updates.published_at = new Date().toISOString();
         }
 
-        // Update the page
+        // Update the page (handle unique constraint violations)
         const { data: updatedPage, error: updateError } = await supabase
             .from("ai_editor_pages")
             .update(updates)
@@ -242,6 +243,20 @@ export async function PUT(request: Request, { params }: RouteParams) {
             .single();
 
         if (updateError) {
+            // Handle unique constraint violation (race condition on slug)
+            if (updateError.code === "23505") {
+                logger.warn(
+                    { error: updateError, slug: updates.slug },
+                    "Slug already taken (unique constraint violation)"
+                );
+                return NextResponse.json(
+                    {
+                        error: "This URL is already taken. Please choose a different one.",
+                    },
+                    { status: 409 }
+                );
+            }
+
             logger.error({ error: updateError }, "Failed to update AI editor page");
             return NextResponse.json(
                 { error: "Failed to update page" },

@@ -260,9 +260,14 @@ export function useEditor({
                         span.setAttribute("thinking_time_seconds", thinkingTime);
 
                         if (!response.ok) {
-                            const _errorBody = await response
+                            const errorBody = await response
                                 .text()
                                 .catch(() => "Unknown error");
+                            // Log error body for debugging
+                            logger.error(
+                                { errorBody, status: response.status },
+                                "AI request failed"
+                            );
                             // Provide user-friendly error messages based on status
                             const userMessage =
                                 response.status === 500

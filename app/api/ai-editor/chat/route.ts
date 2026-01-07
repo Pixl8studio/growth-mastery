@@ -6,6 +6,7 @@
 
 import * as Sentry from "@sentry/nextjs";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import {
@@ -13,7 +14,49 @@ import {
     type EditRequestOptions,
 } from "@/lib/ai-editor/chat-processor";
 
-interface ImageAttachment {
+// Validation constants
+const MAX_MESSAGE_LENGTH = 10000;
+const MAX_HTML_SIZE = 500000; // 500KB
+const MAX_IMAGE_ATTACHMENTS = 5;
+
+// Zod schema for request validation
+const ImageAttachmentSchema = z.object({
+    id: z.string().min(1),
+    url: z.string().url(),
+});
+
+const ChatRequestSchema = z.object({
+    pageId: z.string().uuid("Invalid page ID format"),
+    message: z
+        .string()
+        .min(1, "Message cannot be empty")
+        .max(
+            MAX_MESSAGE_LENGTH,
+            `Message must be under ${MAX_MESSAGE_LENGTH} characters`
+        ),
+    currentHtml: z
+        .string()
+        .min(1, "HTML content is required")
+        .max(MAX_HTML_SIZE, "HTML content too large"),
+    conversationHistory: z
+        .array(
+            z.object({
+                role: z.enum(["user", "assistant"]),
+                content: z.string(),
+            })
+        )
+        .optional()
+        .default([]),
+    imageAttachments: z
+        .array(ImageAttachmentSchema)
+        .max(MAX_IMAGE_ATTACHMENTS, `Maximum ${MAX_IMAGE_ATTACHMENTS} images allowed`)
+        .optional()
+        .default([]),
+});
+
+type ChatRequest = z.infer<typeof ChatRequestSchema>;
+
+interface ProcessedImageAttachment {
     id: string;
     url: string;
     base64?: string;
@@ -21,12 +64,105 @@ interface ImageAttachment {
 }
 
 /**
+ * Validate URL is safe to fetch (prevents SSRF attacks)
+ * Only allows HTTPS URLs from trusted domains
+ */
+function isAllowedImageUrl(url: string): boolean {
+    try {
+        const parsedUrl = new URL(url);
+
+        // Block internal IPs and localhost
+        const blockedHostnames = [
+            "localhost",
+            "127.0.0.1",
+            "0.0.0.0",
+            "169.254.169.254", // AWS metadata
+            "metadata.google.internal", // GCP metadata
+            "100.100.100.200", // Azure metadata
+        ];
+
+        if (blockedHostnames.includes(parsedUrl.hostname)) {
+            logger.warn(
+                { url, hostname: parsedUrl.hostname },
+                "Blocked internal hostname"
+            );
+            return false;
+        }
+
+        // Block private IP ranges
+        const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+        if (ipv4Regex.test(parsedUrl.hostname)) {
+            const parts = parsedUrl.hostname.split(".").map(Number);
+            // 10.x.x.x, 172.16-31.x.x, 192.168.x.x
+            if (
+                parts[0] === 10 ||
+                (parts[0] === 172 && parts[1] >= 16 && parts[1] <= 31) ||
+                (parts[0] === 192 && parts[1] === 168)
+            ) {
+                logger.warn(
+                    { url, hostname: parsedUrl.hostname },
+                    "Blocked private IP"
+                );
+                return false;
+            }
+        }
+
+        // Only allow HTTPS
+        if (parsedUrl.protocol !== "https:") {
+            logger.warn({ url, protocol: parsedUrl.protocol }, "Blocked non-HTTPS URL");
+            return false;
+        }
+
+        // Allow only trusted domains - compare hostname properly to prevent bypass
+        // e.g. "https://app.growthmastery.ai.evil.com" should NOT match
+        const allowedDomains = [
+            process.env.NEXT_PUBLIC_SUPABASE_URL,
+            process.env.NEXT_PUBLIC_APP_URL,
+        ].filter(Boolean);
+
+        const isAllowed = allowedDomains.some((domain) => {
+            if (!domain) return false;
+            try {
+                const allowedUrl = new URL(domain);
+                // Compare protocol and hostname exactly - prevents subdomain attacks
+                return (
+                    parsedUrl.protocol === allowedUrl.protocol &&
+                    parsedUrl.hostname === allowedUrl.hostname
+                );
+            } catch {
+                return false;
+            }
+        });
+
+        if (!isAllowed) {
+            logger.warn({ url, allowedDomains }, "Blocked unauthorized domain");
+            return false;
+        }
+
+        return true;
+    } catch {
+        logger.warn({ url }, "Failed to parse URL");
+        return false;
+    }
+}
+
+// Valid image content types for fetched images
+const VALID_IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+
+/**
  * Fetch image from URL and convert to base64
  * This ensures Anthropic can access the image even if it's behind auth
+ * Includes SSRF protection via URL validation and content-type verification
  */
 async function fetchImageAsBase64(
     url: string
 ): Promise<{ base64: string; mediaType: string } | null> {
+    // Validate URL before fetching (SSRF protection)
+    if (!isAllowedImageUrl(url)) {
+        return null;
+    }
+
     try {
         const response = await fetch(url);
         if (!response.ok) {
@@ -34,8 +170,30 @@ async function fetchImageAsBase64(
             return null;
         }
 
-        const contentType = response.headers.get("content-type") || "image/jpeg";
+        // Validate content-type is an allowed image type
+        const contentType = response.headers.get("content-type");
+        if (
+            !contentType ||
+            !VALID_IMAGE_TYPES.some((type) => contentType.startsWith(type))
+        ) {
+            logger.warn(
+                { url, contentType, validTypes: VALID_IMAGE_TYPES },
+                "Rejected non-image content type"
+            );
+            return null;
+        }
+
         const buffer = await response.arrayBuffer();
+
+        // Validate image size to prevent memory exhaustion
+        if (buffer.byteLength > MAX_IMAGE_SIZE) {
+            logger.warn(
+                { url, size: buffer.byteLength, maxSize: MAX_IMAGE_SIZE },
+                "Image too large"
+            );
+            return null;
+        }
+
         const base64 = Buffer.from(buffer).toString("base64");
 
         return { base64, mediaType: contentType };
@@ -43,14 +201,6 @@ async function fetchImageAsBase64(
         logger.error({ error, url }, "Error fetching image for base64 conversion");
         return null;
     }
-}
-
-interface ChatRequest {
-    pageId: string;
-    message: string;
-    currentHtml: string;
-    conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>;
-    imageAttachments?: ImageAttachment[];
 }
 
 export async function POST(request: Request) {
@@ -68,30 +218,28 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // Parse request body
-        const body: ChatRequest = await request.json();
-        const {
-            pageId,
-            message,
-            currentHtml,
-            conversationHistory = [],
-            imageAttachments = [],
-        } = body;
-
-        // Validate inputs
-        if (!pageId || !message) {
+        // Parse and validate request body with Zod
+        let body: ChatRequest;
+        try {
+            const rawBody = await request.json();
+            body = ChatRequestSchema.parse(rawBody);
+        } catch (parseError) {
+            if (parseError instanceof z.ZodError) {
+                const firstError = parseError.issues[0];
+                logger.warn({ issues: parseError.issues }, "Request validation failed");
+                return NextResponse.json(
+                    { error: firstError?.message || "Invalid request" },
+                    { status: 400 }
+                );
+            }
             return NextResponse.json(
-                { error: "pageId and message are required" },
+                { error: "Invalid request body" },
                 { status: 400 }
             );
         }
 
-        if (!currentHtml) {
-            return NextResponse.json(
-                { error: "currentHtml is required" },
-                { status: 400 }
-            );
-        }
+        const { pageId, message, currentHtml, conversationHistory, imageAttachments } =
+            body;
 
         // Fetch the page and verify ownership
         const { data: page, error: pageError } = await supabase
@@ -136,21 +284,21 @@ export async function POST(request: Request) {
             "Processing AI edit request"
         );
 
-        // Convert image URLs to base64 for safe Anthropic API access
-        const processedAttachments: ImageAttachment[] = [];
-        for (const attachment of imageAttachments) {
-            const imageData = await fetchImageAsBase64(attachment.url);
-            if (imageData) {
-                processedAttachments.push({
-                    ...attachment,
-                    base64: imageData.base64,
-                    mediaType: imageData.mediaType,
-                });
-            } else {
+        // Convert image URLs to base64 for safe Anthropic API access (parallel processing)
+        const processedAttachments: ProcessedImageAttachment[] = await Promise.all(
+            imageAttachments.map(async (attachment) => {
+                const imageData = await fetchImageAsBase64(attachment.url);
+                if (imageData) {
+                    return {
+                        ...attachment,
+                        base64: imageData.base64,
+                        mediaType: imageData.mediaType,
+                    };
+                }
                 // Fall back to URL if base64 conversion fails
-                processedAttachments.push(attachment);
-            }
-        }
+                return attachment;
+            })
+        );
 
         // Process the edit request with detailed error handling
         let result;

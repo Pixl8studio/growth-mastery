@@ -11,7 +11,15 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
-import { X, ChevronLeft, ChevronRight, MessageSquare, Cloud, Loader2, BarChart3 } from "lucide-react";
+import {
+    X,
+    ChevronLeft,
+    ChevronRight,
+    MessageSquare,
+    Cloud,
+    Loader2,
+    BarChart3,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import type {
     FunnelNodeType,
@@ -49,20 +57,33 @@ interface NodeEditorModalProps {
 
 // Node-specific subheadlines that guide users on what this step is about
 const NODE_SUBHEADLINES: Record<FunnelNodeType, string> = {
-    traffic_source: "Where your ideal customers come from. We'll work on this later in the funnel building process.",
-    registration: "This is where visitors sign up for your masterclass. Create compelling copy that makes them want to learn more. Ask the AI to help you craft headlines and bullet points that convert.",
-    registration_confirmation: "Confirm their registration and build excitement for the upcoming event. Use this to set expectations and encourage calendar saves.",
-    masterclass: "The strategic heart of your funnel. Define your presentation content, key teaching points, and the journey from education to offer. The AI can help you structure your content for maximum impact.",
-    core_offer: "Present your offer using the Irresistible Offer Framework. Define the transformation you provide, who it's for, and why they should act now. Let the AI help you craft compelling copy.",
-    checkout: "The final step before purchase. Reinforce value, address objections, and make the buying decision easy. The order bump section lets you add a quick win offer.",
-    order_bump: "A quick-win add-on at checkout. Keep it simple, valuable, and priced as an impulse buy.",
+    traffic_source:
+        "Where your ideal customers come from. We'll work on this later in the funnel building process.",
+    registration:
+        "This is where visitors sign up for your masterclass. Create compelling copy that makes them want to learn more. Ask the AI to help you craft headlines and bullet points that convert.",
+    registration_confirmation:
+        "Confirm their registration and build excitement for the upcoming event. Use this to set expectations and encourage calendar saves.",
+    masterclass:
+        "The strategic heart of your funnel. Define your presentation content, key teaching points, and the journey from education to offer. The AI can help you structure your content for maximum impact.",
+    core_offer:
+        "Present your offer using the Irresistible Offer Framework. Define the transformation you provide, who it's for, and why they should act now. Let the AI help you craft compelling copy.",
+    checkout:
+        "The final step before purchase. Reinforce value, address objections, and make the buying decision easy. The order bump section lets you add a quick win offer.",
+    order_bump:
+        "A quick-win add-on at checkout. Keep it simple, valuable, and priced as an impulse buy.",
     upsells: "Post-purchase offers to increase order value.",
-    upsell_1: "Your primary upsell immediately after purchase. Offer something that enhances their results. The AI can help you position it effectively.",
-    upsell_2: "A secondary offer or downsell. Consider offering a lighter version if they declined the first upsell.",
-    call_booking: "For high-ticket offers, this is where prospects book a call with you. Make the process simple and set clear expectations.",
-    call_booking_confirmation: "Confirm their booking and prepare them for the call. Include preparation steps and what to expect.",
-    sales_call: "Your call script and objection handlers. The AI can help you prepare for common questions and closing techniques.",
-    thank_you: "Celebrate their purchase and guide next steps. This is the start of your customer relationship.",
+    upsell_1:
+        "Your primary upsell immediately after purchase. Offer something that enhances their results. The AI can help you position it effectively.",
+    upsell_2:
+        "A secondary offer or downsell. Consider offering a lighter version if they declined the first upsell.",
+    call_booking:
+        "For high-ticket offers, this is where prospects book a call with you. Make the process simple and set clear expectations.",
+    call_booking_confirmation:
+        "Confirm their booking and prepare them for the call. Include preparation steps and what to expect.",
+    sales_call:
+        "Your call script and objection handlers. The AI can help you prepare for common questions and closing techniques.",
+    thank_you:
+        "Celebrate their purchase and guide next steps. This is the start of your customer relationship.",
 };
 
 function BenchmarkDisplay({ benchmark }: { benchmark: FunnelBenchmark }) {
@@ -70,25 +91,37 @@ function BenchmarkDisplay({ benchmark }: { benchmark: FunnelBenchmark }) {
         <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
             <div className="flex items-center gap-2 mb-3">
                 <BarChart3 className="h-4 w-4 text-slate-600" />
-                <h4 className="font-medium text-sm text-slate-700">Industry Benchmarks</h4>
+                <h4 className="font-medium text-sm text-slate-700">
+                    Industry Benchmarks
+                </h4>
             </div>
-            <p className="text-xs text-slate-600 mb-3">{benchmark.metric_description}</p>
+            <p className="text-xs text-slate-600 mb-3">
+                {benchmark.metric_description}
+            </p>
             <div className="grid grid-cols-4 gap-2 text-center">
                 <div className="rounded-md bg-white p-2 border border-slate-200">
                     <div className="text-xs text-slate-500">Low</div>
-                    <div className="font-semibold text-slate-700">{benchmark.conversion_rate_low}%</div>
+                    <div className="font-semibold text-slate-700">
+                        {benchmark.conversion_rate_low}%
+                    </div>
                 </div>
                 <div className="rounded-md bg-blue-50 p-2 border border-blue-200">
                     <div className="text-xs text-blue-600">Typical</div>
-                    <div className="font-semibold text-blue-700">{benchmark.conversion_rate_median}%</div>
+                    <div className="font-semibold text-blue-700">
+                        {benchmark.conversion_rate_median}%
+                    </div>
                 </div>
                 <div className="rounded-md bg-green-50 p-2 border border-green-200">
                     <div className="text-xs text-green-600">High</div>
-                    <div className="font-semibold text-green-700">{benchmark.conversion_rate_high}%</div>
+                    <div className="font-semibold text-green-700">
+                        {benchmark.conversion_rate_high}%
+                    </div>
                 </div>
                 <div className="rounded-md bg-purple-50 p-2 border border-purple-200">
                     <div className="text-xs text-purple-600">Elite</div>
-                    <div className="font-semibold text-purple-700">{benchmark.conversion_rate_elite}%</div>
+                    <div className="font-semibold text-purple-700">
+                        {benchmark.conversion_rate_elite}%
+                    </div>
                 </div>
             </div>
             <p className="text-xs text-slate-400 mt-2">Source: {benchmark.source}</p>
@@ -113,12 +146,14 @@ export function NodeEditorModal({
 
     const nodeDefinition = getNodeDefinition(nodeType);
     const benchmark = getBenchmarkForNode(nodeType, pathwayType);
-    const subheadline = NODE_SUBHEADLINES[nodeType] || nodeDefinition?.description || "";
+    const subheadline =
+        NODE_SUBHEADLINES[nodeType] || nodeDefinition?.description || "";
 
     // Get current content (prefer refined, fallback to draft)
-    const currentContent = nodeData?.refined_content && Object.keys(nodeData.refined_content).length > 0
-        ? nodeData.refined_content
-        : nodeData?.draft_content || {};
+    const currentContent =
+        nodeData?.refined_content && Object.keys(nodeData.refined_content).length > 0
+            ? nodeData.refined_content
+            : nodeData?.draft_content || {};
 
     // Auto-save handler with debounce
     const handleContentChange = useCallback(
@@ -192,7 +227,9 @@ export function NodeEditorModal({
                                             ) : (
                                                 <>
                                                     <Cloud className="h-3 w-3 text-green-500" />
-                                                    <span className="text-green-600">Autosave On</span>
+                                                    <span className="text-green-600">
+                                                        Autosave On
+                                                    </span>
                                                 </>
                                             )}
                                         </div>
@@ -230,7 +267,9 @@ export function NodeEditorModal({
                                 <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/30">
                                     <div className="flex items-center gap-2">
                                         <MessageSquare className="h-4 w-4 text-primary" />
-                                        <span className="font-medium text-sm">AI Assistant</span>
+                                        <span className="font-medium text-sm">
+                                            AI Assistant
+                                        </span>
                                     </div>
                                     <button
                                         onClick={() => setIsChatExpanded(false)}

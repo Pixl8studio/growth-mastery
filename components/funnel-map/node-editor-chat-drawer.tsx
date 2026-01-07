@@ -12,7 +12,11 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Send, Loader2, User, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { FunnelNodeType, FunnelNodeDefinition, ConversationMessage } from "@/types/funnel-map";
+import type {
+    FunnelNodeType,
+    FunnelNodeDefinition,
+    ConversationMessage,
+} from "@/types/funnel-map";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import ReactMarkdown from "react-markdown";
@@ -28,20 +32,34 @@ interface NodeEditorChatDrawerProps {
 
 // Custom opening messages that guide users into productive conversations
 const NODE_OPENING_MESSAGES: Record<FunnelNodeType, string> = {
-    traffic_source: "Let's plan where your ideal customers will come from. What platforms or channels have worked best for you in the past?",
-    registration: "I'm here to help you create a registration page that converts! Based on your business profile, I can see you help people achieve transformation. What's the one thing you want visitors to feel when they land on this page - curiosity, urgency, or excitement?",
-    registration_confirmation: "Great, let's make sure people are excited after registering! What do you want them to do before the event - prepare something specific, share with friends, or simply mark their calendar?",
-    masterclass: "This is the heart of your funnel - your masterclass content. I see you have expertise in your field. What's the single biggest 'aha moment' you want viewers to experience during your presentation?",
-    core_offer: "Now for the exciting part - your irresistible offer! Using the Irresistible Offer Framework, let's craft something your ideal customers can't refuse. What transformation do you promise, and how quickly can they expect to see results?",
-    checkout: "Let's optimize your checkout page for conversions. What's the main objection someone might have right before purchasing? I can help you address it directly on this page.",
-    order_bump: "Order bumps work best when they're a quick win that complements the main offer. What's something small but valuable you could offer for under $50 that enhances their results?",
-    upsells: "Let's create compelling upsell offers that increase your average order value.",
-    upsell_1: "Your first upsell should be something that accelerates or enhances the results of your main offer. What would make your buyers say 'I need that too!' right after purchasing?",
-    upsell_2: "For your second offer, consider either a premium upgrade or a downsell for those who passed on the first upsell. What complementary product or service could you offer here?",
-    call_booking: "For high-ticket offers, the call booking page is crucial. What should prospects know about you or the process that would make them excited to book a call?",
-    call_booking_confirmation: "After someone books a call, we want them showing up prepared and ready to buy. What homework or preparation should they do before the call?",
-    sales_call: "Let's structure your sales call for success. What are the top 3 objections you typically hear, and how do you address them?",
-    thank_you: "The thank you page is the start of your customer relationship! What's the first thing you want new customers to do after purchasing?",
+    traffic_source:
+        "Let's plan where your ideal customers will come from. What platforms or channels have worked best for you in the past?",
+    registration:
+        "I'm here to help you create a registration page that converts! Based on your business profile, I can see you help people achieve transformation. What's the one thing you want visitors to feel when they land on this page - curiosity, urgency, or excitement?",
+    registration_confirmation:
+        "Great, let's make sure people are excited after registering! What do you want them to do before the event - prepare something specific, share with friends, or simply mark their calendar?",
+    masterclass:
+        "This is the heart of your funnel - your masterclass content. I see you have expertise in your field. What's the single biggest 'aha moment' you want viewers to experience during your presentation?",
+    core_offer:
+        "Now for the exciting part - your irresistible offer! Using the Irresistible Offer Framework, let's craft something your ideal customers can't refuse. What transformation do you promise, and how quickly can they expect to see results?",
+    checkout:
+        "Let's optimize your checkout page for conversions. What's the main objection someone might have right before purchasing? I can help you address it directly on this page.",
+    order_bump:
+        "Order bumps work best when they're a quick win that complements the main offer. What's something small but valuable you could offer for under $50 that enhances their results?",
+    upsells:
+        "Let's create compelling upsell offers that increase your average order value.",
+    upsell_1:
+        "Your first upsell should be something that accelerates or enhances the results of your main offer. What would make your buyers say 'I need that too!' right after purchasing?",
+    upsell_2:
+        "For your second offer, consider either a premium upgrade or a downsell for those who passed on the first upsell. What complementary product or service could you offer here?",
+    call_booking:
+        "For high-ticket offers, the call booking page is crucial. What should prospects know about you or the process that would make them excited to book a call?",
+    call_booking_confirmation:
+        "After someone books a call, we want them showing up prepared and ready to buy. What homework or preparation should they do before the call?",
+    sales_call:
+        "Let's structure your sales call for success. What are the top 3 objections you typically hear, and how do you address them?",
+    thank_you:
+        "The thank you page is the start of your customer relationship! What's the first thing you want new customers to do after purchasing?",
 };
 
 function MessageBubble({
@@ -56,10 +74,16 @@ function MessageBubble({
             <div
                 className={cn(
                     "flex h-8 w-8 shrink-0 items-center justify-center rounded-full",
-                    isUser ? "bg-primary text-primary-foreground" : "bg-purple-100 text-purple-700"
+                    isUser
+                        ? "bg-primary text-primary-foreground"
+                        : "bg-purple-100 text-purple-700"
                 )}
             >
-                {isUser ? <User className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                {isUser ? (
+                    <User className="h-4 w-4" />
+                ) : (
+                    <Sparkles className="h-4 w-4" />
+                )}
             </div>
             <div
                 className={cn(
@@ -114,7 +138,8 @@ export function NodeEditorChatDrawer({
     // Initialize with opening message
     useEffect(() => {
         if (!hasInitialized) {
-            const openingMessage = NODE_OPENING_MESSAGES[nodeType] ||
+            const openingMessage =
+                NODE_OPENING_MESSAGES[nodeType] ||
                 `I'm here to help you complete the ${nodeDefinition.title}. What would you like to work on?`;
 
             setMessages([
@@ -186,7 +211,10 @@ export function NodeEditorChatDrawer({
             setMessages((prev) => [...prev, assistantMessage]);
 
             // Apply suggested changes if any
-            if (data.suggestedChanges && Object.keys(data.suggestedChanges).length > 0) {
+            if (
+                data.suggestedChanges &&
+                Object.keys(data.suggestedChanges).length > 0
+            ) {
                 onSuggestedChanges({
                     ...currentContent,
                     ...data.suggestedChanges,
@@ -199,14 +227,23 @@ export function NodeEditorChatDrawer({
                 {
                     id: `error-${Date.now()}`,
                     role: "assistant",
-                    content: "I apologize, but I encountered an issue processing your request. Could you try rephrasing your question?",
+                    content:
+                        "I apologize, but I encountered an issue processing your request. Could you try rephrasing your question?",
                     timestamp: new Date().toISOString(),
                 },
             ]);
         } finally {
             setIsLoading(false);
         }
-    }, [inputValue, isLoading, projectId, nodeType, currentContent, messages, onSuggestedChanges]);
+    }, [
+        inputValue,
+        isLoading,
+        projectId,
+        nodeType,
+        currentContent,
+        messages,
+        onSuggestedChanges,
+    ]);
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === "Enter" && !e.shiftKey) {

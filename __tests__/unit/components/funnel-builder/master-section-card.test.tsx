@@ -197,7 +197,7 @@ describe("MasterSectionCard", () => {
         fireEvent.click(showButton);
 
         expect(screen.getByText("Intake")).toBeInTheDocument();
-        expect(screen.getByText("Define Offer")).toBeInTheDocument();
+        expect(screen.getByText("Funnel Map")).toBeInTheDocument();
         expect(screen.getByText("Brand Design")).toBeInTheDocument();
     });
 

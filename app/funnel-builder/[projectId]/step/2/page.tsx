@@ -14,14 +14,7 @@ import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
 import { FunnelFlowchart } from "@/components/funnel-map";
 import { NodeEditorModal } from "@/components/funnel-map/node-editor-modal";
-import {
-    Sparkles,
-    Loader2,
-    Check,
-    RefreshCw,
-    CreditCard,
-    Phone,
-} from "lucide-react";
+import { Sparkles, Loader2, Check, RefreshCw, CreditCard, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
@@ -68,7 +61,8 @@ export default function Step2Page({
     const [showPathwaySelection, setShowPathwaySelection] = useState(false);
     const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
     const [isEditorOpen, setIsEditorOpen] = useState(false);
-    const [registrationConfig, setRegistrationConfig] = useState<RegistrationConfig | null>(null);
+    const [registrationConfig, setRegistrationConfig] =
+        useState<RegistrationConfig | null>(null);
 
     const { completedSteps } = useStepCompletion(projectId);
 
@@ -387,7 +381,9 @@ export default function Step2Page({
                                     ).map(([key, pathway]) => (
                                         <button
                                             key={key}
-                                            onClick={() => handlePathwaySelect(key as PathwayType)}
+                                            onClick={() =>
+                                                handlePathwaySelect(key as PathwayType)
+                                            }
                                             className={cn(
                                                 "flex items-start gap-4 rounded-lg border-2 p-4 text-left transition-all hover:shadow-md",
                                                 pathwayType === key

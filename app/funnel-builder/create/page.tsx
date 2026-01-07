@@ -185,8 +185,9 @@ export default function CreateFunnelPage() {
                                 <span className="mr-2 font-bold text-primary">1.</span>
                                 <div>
                                     <strong>Business Profile</strong> - Share your
-                                    business info, define your offer with the Irresistible
-                                    Offer Framework, and design your brand identity
+                                    business info, define your offer with the
+                                    Irresistible Offer Framework, and design your brand
+                                    identity
                                 </div>
                             </li>
                             <li className="flex items-start">

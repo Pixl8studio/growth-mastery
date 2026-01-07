@@ -270,7 +270,8 @@ function FunnelNodeComponent({ data }: FunnelNodeComponentProps) {
                 className={cn(
                     "group relative rounded-xl border-2 p-4 shadow-sm transition-all duration-200",
                     // Only show pointer cursor and hover effects for clickable nodes
-                    !isNonClickable && "cursor-pointer hover:shadow-lg hover:-translate-y-0.5",
+                    !isNonClickable &&
+                        "cursor-pointer hover:shadow-lg hover:-translate-y-0.5",
                     isNonClickable && "cursor-default opacity-80",
                     colors.bg,
                     isSelected && !isNonClickable
@@ -352,46 +353,49 @@ function FunnelNodeComponent({ data }: FunnelNodeComponentProps) {
                 )}
 
                 {/* Action buttons - Approve & Regenerate (not shown for non-clickable nodes) */}
-                {!isNonClickable && !isGenerating && !isRegenerating && (onApprove || onRegenerate) && (
-                    <div className="mt-3 flex items-center gap-2 border-t border-slate-200 pt-3">
-                        {/* Approve button */}
-                        {onApprove && canApprove && (
-                            <button
-                                onClick={handleApprove}
-                                className={cn(
-                                    "flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
-                                    "bg-green-100 text-green-700 hover:bg-green-200"
-                                )}
-                            >
-                                <BadgeCheck className="h-3 w-3" />
-                                Approve
-                            </button>
-                        )}
+                {!isNonClickable &&
+                    !isGenerating &&
+                    !isRegenerating &&
+                    (onApprove || onRegenerate) && (
+                        <div className="mt-3 flex items-center gap-2 border-t border-slate-200 pt-3">
+                            {/* Approve button */}
+                            {onApprove && canApprove && (
+                                <button
+                                    onClick={handleApprove}
+                                    className={cn(
+                                        "flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                                        "bg-green-100 text-green-700 hover:bg-green-200"
+                                    )}
+                                >
+                                    <BadgeCheck className="h-3 w-3" />
+                                    Approve
+                                </button>
+                            )}
 
-                        {/* Regenerate button */}
-                        {onRegenerate && nodeData && (
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <button
-                                            onClick={handleRegenerate}
-                                            className={cn(
-                                                "flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
-                                                "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                                            )}
-                                        >
-                                            <RefreshCw className="h-3 w-3" />
-                                            Regenerate
-                                        </button>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>Generate new AI draft for this node</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                        )}
-                    </div>
-                )}
+                            {/* Regenerate button */}
+                            {onRegenerate && nodeData && (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <button
+                                                onClick={handleRegenerate}
+                                                className={cn(
+                                                    "flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium transition-colors",
+                                                    "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                                )}
+                                            >
+                                                <RefreshCw className="h-3 w-3" />
+                                                Regenerate
+                                            </button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Generate new AI draft for this node</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            )}
+                        </div>
+                    )}
 
                 {/* Selection indicator */}
                 {isSelected && !isApproved && (

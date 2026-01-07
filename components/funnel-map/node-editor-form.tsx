@@ -65,7 +65,9 @@ function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                         {field.required && <span className="text-red-500 ml-1">*</span>}
                     </Label>
                     {field.helpText && (
-                        <p className="text-xs text-muted-foreground">{field.helpText}</p>
+                        <p className="text-xs text-muted-foreground">
+                            {field.helpText}
+                        </p>
                     )}
                     <Input
                         id={field.key}
@@ -85,7 +87,9 @@ function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                         {field.required && <span className="text-red-500 ml-1">*</span>}
                     </Label>
                     {field.helpText && (
-                        <p className="text-xs text-muted-foreground">{field.helpText}</p>
+                        <p className="text-xs text-muted-foreground">
+                            {field.helpText}
+                        </p>
                     )}
                     <Textarea
                         id={field.key}
@@ -98,10 +102,24 @@ function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
             );
 
         case "list":
-            return <ListFieldRenderer field={field} value={value} onChange={onChange} label={label} />;
+            return (
+                <ListFieldRenderer
+                    field={field}
+                    value={value}
+                    onChange={onChange}
+                    label={label}
+                />
+            );
 
         case "pricing":
-            return <PricingFieldRenderer field={field} value={value} onChange={onChange} label={label} />;
+            return (
+                <PricingFieldRenderer
+                    field={field}
+                    value={value}
+                    onChange={onChange}
+                    label={label}
+                />
+            );
 
         case "select":
             return (
@@ -111,14 +129,20 @@ function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                         {field.required && <span className="text-red-500 ml-1">*</span>}
                     </Label>
                     {field.helpText && (
-                        <p className="text-xs text-muted-foreground">{field.helpText}</p>
+                        <p className="text-xs text-muted-foreground">
+                            {field.helpText}
+                        </p>
                     )}
                     <Select
                         value={(value as string) || ""}
                         onValueChange={(newValue) => onChange(field.key, newValue)}
                     >
                         <SelectTrigger className="w-full">
-                            <SelectValue placeholder={field.placeholder || `Select ${label.toLowerCase()}`} />
+                            <SelectValue
+                                placeholder={
+                                    field.placeholder || `Select ${label.toLowerCase()}`
+                                }
+                            />
                         </SelectTrigger>
                         <SelectContent>
                             {field.options?.map((option) => (
@@ -139,7 +163,9 @@ function FieldRenderer({ field, value, onChange }: FieldRendererProps) {
                         {field.required && <span className="text-red-500 ml-1">*</span>}
                     </Label>
                     {field.helpText && (
-                        <p className="text-xs text-muted-foreground">{field.helpText}</p>
+                        <p className="text-xs text-muted-foreground">
+                            {field.helpText}
+                        </p>
                     )}
                     <Input
                         id={field.key}
@@ -196,7 +222,9 @@ function ListFieldRenderer({
             <div className="space-y-2">
                 {items.map((item, index) => (
                     <div key={index} className="flex items-center gap-2">
-                        <span className="text-xs text-muted-foreground w-6">{index + 1}.</span>
+                        <span className="text-xs text-muted-foreground w-6">
+                            {index + 1}.
+                        </span>
                         <Input
                             value={item as string}
                             onChange={(e) => updateItem(index, e.target.value)}
@@ -262,7 +290,9 @@ function PricingFieldRenderer({
                 <p className="text-xs text-muted-foreground">{field.helpText}</p>
             )}
             <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                    $
+                </span>
                 <Input
                     id={field.key}
                     type="number"
@@ -295,7 +325,8 @@ export function NodeEditorForm({
         [content, onChange]
     );
 
-    const hasOrderBumpFields = nodeDefinition.orderBumpFields && nodeDefinition.orderBumpFields.length > 0;
+    const hasOrderBumpFields =
+        nodeDefinition.orderBumpFields && nodeDefinition.orderBumpFields.length > 0;
 
     return (
         <div className="space-y-6">

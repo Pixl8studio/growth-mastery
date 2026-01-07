@@ -28,6 +28,19 @@ export interface EditSummary {
     timestamp: Date;
 }
 
+export interface ImageAttachment {
+    id: string;
+    url: string;
+    file?: File;
+    uploading?: boolean;
+}
+
+export interface SuggestedOption {
+    id: string;
+    label: string;
+    description?: string;
+}
+
 export interface Message {
     id: string;
     role: "user" | "assistant";
@@ -35,6 +48,8 @@ export interface Message {
     timestamp: Date;
     thinkingTime?: number;
     editSummary?: EditSummary;
+    attachments?: ImageAttachment[];
+    suggestedOptions?: SuggestedOption[];
 }
 
 interface UseEditorOptions {
@@ -43,6 +58,8 @@ interface UseEditorOptions {
     pageType: "registration" | "watch" | "enrollment";
     initialHtml: string;
     initialTitle: string;
+    businessContext?: string;
+    projectName?: string;
 }
 
 interface UseEditorReturn {
@@ -57,7 +74,8 @@ interface UseEditorReturn {
     // Conversation state
     messages: Message[];
     isProcessing: boolean;
-    sendMessage: (message: string) => void;
+    sendMessage: (message: string, attachments?: ImageAttachment[]) => void;
+    selectOption: (optionId: string, optionLabel: string) => void;
     suggestedActions: string[];
     lastEditSummary: EditSummary | null;
 
@@ -65,7 +83,7 @@ interface UseEditorReturn {
     undo: () => void;
     canUndo: boolean;
     save: () => Promise<void>;
-    publish: () => Promise<{ success: boolean; publishedUrl?: string }>;
+    publish: (slug?: string) => Promise<{ success: boolean; publishedUrl?: string }>;
     getShareUrl: () => string;
 }
 
@@ -75,6 +93,8 @@ export function useEditor({
     pageType,
     initialHtml,
     initialTitle,
+    businessContext,
+    projectName,
 }: UseEditorOptions): UseEditorReturn {
     // Page state
     const [html, setHtml] = useState(initialHtml);
@@ -91,6 +111,7 @@ export function useEditor({
         "Improve the CTA button",
     ]);
     const [lastEditSummary, setLastEditSummary] = useState<EditSummary | null>(null);
+    const [initialMessageSent, setInitialMessageSent] = useState(false);
 
     // Version history for undo
     const [history, setHistory] = useState<string[]>([initialHtml]);
@@ -100,11 +121,55 @@ export function useEditor({
     const generateId = () =>
         `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
+    // Generate initial welcome message based on page type and business context
+    const generateInitialMessage = useCallback(() => {
+        const pageTypeLabels = {
+            registration: "registration page",
+            watch: "watch page",
+            enrollment: "enrollment page",
+        };
+
+        const pageTypeDescriptions = {
+            registration:
+                "This page is designed to capture leads by showcasing the value of your training and encouraging visitors to sign up.",
+            watch: "This page delivers your training content with an engaging video player and supporting materials to keep viewers engaged.",
+            enrollment:
+                "This sales page is structured to convert interested viewers into paying customers with compelling offers and clear calls-to-action.",
+        };
+
+        const projectNameStr = projectName ? ` for ${projectName}` : "";
+        const pageLabel = pageTypeLabels[pageType];
+
+        let content = `Here's your ${pageLabel}${projectNameStr}! 🎉\n\n${pageTypeDescriptions[pageType]}`;
+
+        if (businessContext) {
+            content += `\n\nI've customized this page based on your business context to resonate with your target audience.`;
+        }
+
+        content += `\n\nFeel free to tell me what you'd like to change - I can help you:\n• Update the headline or copy\n• Adjust colors and styling\n• Add or remove sections\n• Improve the overall design\n\nWhat would you like me to work on?`;
+
+        return content;
+    }, [pageType, projectName, businessContext]);
+
+    // Send initial welcome message when editor loads
+    useEffect(() => {
+        if (!initialMessageSent && initialHtml) {
+            const welcomeMessage: Message = {
+                id: generateId(),
+                role: "assistant",
+                content: generateInitialMessage(),
+                timestamp: new Date(),
+            };
+            setMessages([welcomeMessage]);
+            setInitialMessageSent(true);
+        }
+    }, [initialHtml, initialMessageSent, generateInitialMessage]);
+
     // Send message to AI with full observability
     const sendMessage = useCallback(
-        async (content: string) => {
-            // Validate input
-            if (!content.trim()) {
+        async (content: string, attachments?: ImageAttachment[]) => {
+            // Validate input - allow empty content if there are attachments
+            if (!content.trim() && (!attachments || attachments.length === 0)) {
                 throw new ValidationError("Message content cannot be empty");
             }
             if (isProcessing) return;
@@ -114,15 +179,23 @@ export function useEditor({
                 category: "ai-editor.chat",
                 message: "User sent message",
                 level: "info",
-                data: { pageId, pageType, messageLength: content.length },
+                data: {
+                    pageId,
+                    pageType,
+                    messageLength: content.length,
+                    hasAttachments: attachments && attachments.length > 0,
+                },
             });
 
-            // Add user message
+            // Add user message with attachments
             const userMessage: Message = {
                 id: generateId(),
                 role: "user",
-                content,
+                content:
+                    content ||
+                    (attachments ? "I've attached an image for you to analyze." : ""),
                 timestamp: new Date(),
+                attachments,
             };
             setMessages((prev) => [...prev, userMessage]);
             setIsProcessing(true);
@@ -156,6 +229,10 @@ export function useEditor({
                                     conversationHistory: messages.map((m) => ({
                                         role: m.role,
                                         content: m.content,
+                                    })),
+                                    imageAttachments: attachments?.map((a) => ({
+                                        id: a.id,
+                                        url: a.url,
                                     })),
                                 }),
                                 signal: controller.signal,
@@ -216,6 +293,10 @@ export function useEditor({
                             data: { editsCount: editsApplied, thinkingTime },
                         });
 
+                        // Parse suggested options from response if present
+                        const suggestedOptions: SuggestedOption[] =
+                            data.suggestedOptions || [];
+
                         // Add AI response message (API returns 'response', not 'explanation')
                         const aiMessage: Message = {
                             id: generateId(),
@@ -227,6 +308,10 @@ export function useEditor({
                             timestamp: new Date(),
                             thinkingTime,
                             editSummary,
+                            suggestedOptions:
+                                suggestedOptions.length > 0
+                                    ? suggestedOptions
+                                    : undefined,
                         };
                         setMessages((prev) => [...prev, aiMessage]);
 
@@ -392,66 +477,75 @@ export function useEditor({
         );
     }, [pageId, title, html, version]);
 
-    // Publish page
-    const publish = useCallback(async (): Promise<{
-        success: boolean;
-        publishedUrl?: string;
-    }> => {
-        return await Sentry.startSpan(
-            { op: "ai-editor.publish", name: "Publish AI Editor Page" },
-            async (span) => {
-                span.setAttribute("page_id", pageId);
-                span.setAttribute("version", version);
+    // Publish page with optional custom slug
+    const publish = useCallback(
+        async (
+            slug?: string
+        ): Promise<{
+            success: boolean;
+            publishedUrl?: string;
+        }> => {
+            return await Sentry.startSpan(
+                { op: "ai-editor.publish", name: "Publish AI Editor Page" },
+                async (span) => {
+                    span.setAttribute("page_id", pageId);
+                    span.setAttribute("version", version);
 
-                try {
-                    // First save any pending changes
-                    await save();
+                    try {
+                        // First save any pending changes
+                        await save();
 
-                    const response = await fetch(`/api/ai-editor/pages/${pageId}`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            status: "published",
-                        }),
-                    });
+                        const response = await fetch(`/api/ai-editor/pages/${pageId}`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                status: "published",
+                                slug,
+                            }),
+                        });
 
-                    if (!response.ok) {
-                        const errorData = await response.json().catch(() => ({}));
-                        throw new ValidationError(
-                            errorData.error || "Failed to publish page"
+                        if (!response.ok) {
+                            const errorData = await response.json().catch(() => ({}));
+                            throw new ValidationError(
+                                errorData.error || "Failed to publish page"
+                            );
+                        }
+
+                        const data = await response.json();
+                        const publishedUrl = data.page?.published_url || null;
+
+                        span.setStatus({ code: 1, message: "Success" });
+                        setStatus("published");
+
+                        Sentry.addBreadcrumb({
+                            category: "ai-editor.publish",
+                            message: "Page published",
+                            level: "info",
+                            data: { pageId, version, publishedUrl },
+                        });
+
+                        logger.info(
+                            { pageId, version, publishedUrl },
+                            "📢 Page published"
                         );
+
+                        return { success: true, publishedUrl };
+                    } catch (error) {
+                        span.setStatus({ code: 2, message: "Error" });
+                        logger.error({ error, pageId }, "Failed to publish page");
+
+                        Sentry.captureException(error, {
+                            tags: { component: "ai-editor", action: "publish_page" },
+                            extra: { pageId, version },
+                        });
+
+                        return { success: false };
                     }
-
-                    const data = await response.json();
-                    const publishedUrl = data.page?.published_url || null;
-
-                    span.setStatus({ code: 1, message: "Success" });
-                    setStatus("published");
-
-                    Sentry.addBreadcrumb({
-                        category: "ai-editor.publish",
-                        message: "Page published",
-                        level: "info",
-                        data: { pageId, version, publishedUrl },
-                    });
-
-                    logger.info({ pageId, version, publishedUrl }, "📢 Page published");
-
-                    return { success: true, publishedUrl };
-                } catch (error) {
-                    span.setStatus({ code: 2, message: "Error" });
-                    logger.error({ error, pageId }, "Failed to publish page");
-
-                    Sentry.captureException(error, {
-                        tags: { component: "ai-editor", action: "publish_page" },
-                        extra: { pageId, version },
-                    });
-
-                    return { success: false };
                 }
-            }
-        );
-    }, [pageId, version, save]);
+            );
+        },
+        [pageId, version, save]
+    );
 
     // Get shareable URL for the page
     const getShareUrl = useCallback((): string => {
@@ -482,6 +576,15 @@ export function useEditor({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [html, title, initialHtml, isProcessing]);
 
+    // Handle option selection from clarifying questions
+    const selectOption = useCallback(
+        (optionId: string, optionLabel: string) => {
+            // Send the selected option as a user message
+            sendMessage(optionLabel);
+        },
+        [sendMessage]
+    );
+
     return {
         html,
         setHtml,
@@ -492,6 +595,7 @@ export function useEditor({
         messages,
         isProcessing,
         sendMessage,
+        selectOption,
         suggestedActions,
         lastEditSummary,
         undo,

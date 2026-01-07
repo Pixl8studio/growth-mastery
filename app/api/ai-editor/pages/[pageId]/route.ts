@@ -17,6 +17,17 @@ interface RouteParams {
 }
 
 /**
+ * Generate a URL-safe slug from a title
+ */
+function generateSlug(title: string): string {
+    return title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .substring(0, 50);
+}
+
+/**
  * GET - Retrieve a single AI editor page
  */
 export async function GET(request: Request, { params }: RouteParams) {
@@ -90,12 +101,12 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
         // Parse body
         const body = await request.json();
-        const { title, html_content, status, version } = body;
+        const { title, html_content, status, version, slug } = body;
 
         // Verify ownership
         const { data: existingPage, error: fetchError } = await supabase
             .from("ai_editor_pages")
-            .select("*, funnel_projects!inner(user_id)")
+            .select("*, funnel_projects!inner(user_id, name)")
             .eq("id", pageId)
             .single();
 
@@ -119,6 +130,47 @@ export async function PUT(request: Request, { params }: RouteParams) {
         if (html_content !== undefined) updates.html_content = html_content;
         if (status !== undefined) updates.status = status;
         if (version !== undefined) updates.version = version;
+
+        // Handle slug and published URL when publishing
+        if (slug !== undefined) {
+            // Validate slug format
+            if (!/^[a-z0-9-]+$/.test(slug) || slug.length < 3 || slug.length > 50) {
+                return NextResponse.json(
+                    { error: "Invalid slug format" },
+                    { status: 400 }
+                );
+            }
+
+            // Check if slug is already taken (by another page)
+            const { data: existingSlug } = await supabase
+                .from("ai_editor_pages")
+                .select("id")
+                .eq("slug", slug)
+                .neq("id", pageId)
+                .single();
+
+            if (existingSlug) {
+                return NextResponse.json(
+                    {
+                        error: "This URL is already taken. Please choose a different one.",
+                    },
+                    { status: 409 }
+                );
+            }
+
+            updates.slug = slug;
+        }
+
+        // Generate published URL when publishing
+        if (status === "published") {
+            const pageSlug =
+                slug || existingPage.slug || generateSlug(existingPage.title);
+            const baseUrl =
+                process.env.NEXT_PUBLIC_APP_URL || "https://app.growthmastery.ai";
+            updates.slug = pageSlug;
+            updates.published_url = `${baseUrl}/p/${pageSlug}`;
+            updates.published_at = new Date().toISOString();
+        }
 
         // Update the page
         const { data: updatedPage, error: updateError } = await supabase

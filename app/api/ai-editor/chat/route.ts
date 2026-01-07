@@ -13,11 +13,17 @@ import {
     type EditRequestOptions,
 } from "@/lib/ai-editor/chat-processor";
 
+interface ImageAttachment {
+    id: string;
+    url: string;
+}
+
 interface ChatRequest {
     pageId: string;
     message: string;
     currentHtml: string;
     conversationHistory?: Array<{ role: "user" | "assistant"; content: string }>;
+    imageAttachments?: ImageAttachment[];
 }
 
 export async function POST(request: Request) {
@@ -37,7 +43,13 @@ export async function POST(request: Request) {
 
         // Parse request body
         const body: ChatRequest = await request.json();
-        const { pageId, message, currentHtml, conversationHistory = [] } = body;
+        const {
+            pageId,
+            message,
+            currentHtml,
+            conversationHistory = [],
+            imageAttachments = [],
+        } = body;
 
         // Validate inputs
         if (!pageId || !message) {
@@ -106,6 +118,7 @@ export async function POST(request: Request) {
                 currentHtml,
                 conversationHistory,
                 projectName,
+                imageAttachments,
             };
 
             logger.info(
@@ -236,6 +249,7 @@ export async function POST(request: Request) {
             updatedHtml: result.updatedHtml,
             editsApplied: result.editsApplied,
             suggestions: result.suggestions,
+            suggestedOptions: result.suggestedOptions,
             processingTime: result.processingTime,
             version: (page.version || 1) + (result.editsApplied > 0 ? 1 : 0),
         });

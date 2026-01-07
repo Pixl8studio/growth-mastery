@@ -106,56 +106,93 @@ export async function aggregateFunnelContext(
                   .limit(1)
                   .single();
 
-        // Fetch all data in parallel
-        const [projectResult, intakeResult, offerResult, brandResult, deckResult] =
-            await Promise.all([
-                supabase
-                    .from("funnel_projects")
-                    .select("*")
-                    .eq("id", projectId)
-                    .single(),
-                supabase
-                    .from("vapi_transcripts")
-                    .select("extracted_data, transcript_text")
-                    .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false })
-                    .limit(1)
-                    .single(),
-                offerQuery,
-                supabase
-                    .from("brand_designs")
-                    .select("*")
-                    .eq("funnel_project_id", projectId)
-                    .single(),
-                deckQuery,
-            ]);
+        // Fetch all data in parallel (including business_profiles from Step 1 wizard)
+        const [
+            projectResult,
+            intakeResult,
+            offerResult,
+            brandResult,
+            deckResult,
+            businessProfileResult,
+        ] = await Promise.all([
+            supabase.from("funnel_projects").select("*").eq("id", projectId).single(),
+            supabase
+                .from("vapi_transcripts")
+                .select("extracted_data, transcript_text")
+                .eq("funnel_project_id", projectId)
+                .order("created_at", { ascending: false })
+                .limit(1)
+                .single(),
+            offerQuery,
+            supabase
+                .from("brand_designs")
+                .select("*")
+                .eq("funnel_project_id", projectId)
+                .single(),
+            deckQuery,
+            // Fetch business profile from Step 1 wizard
+            supabase
+                .from("business_profiles")
+                .select("*")
+                .eq("funnel_project_id", projectId)
+                .single(),
+        ]);
 
         const project = projectResult.data;
         const intake = intakeResult.data?.extracted_data || {};
         const offer = offerResult.data || {};
         const brand = brandResult.data || {};
         const deck = deckResult.data || {};
+        const businessProfile = businessProfileResult.data || {};
 
-        // Extract and normalize context
+        // Extract and normalize context (businessProfile takes priority when available)
         const context: BusinessContext = {
-            // Step 1: Business Foundation
-            businessName: project?.name || intake.business_name || "Your Business",
+            // Step 1: Business Foundation (prefer businessProfile from Step 1 wizard)
+            businessName:
+                project?.name ||
+                businessProfile.offer_name ||
+                intake.business_name ||
+                "Your Business",
             businessType: intake.business_type || "coaching",
-            industry: intake.industry || intake.niche || "business",
+            industry:
+                businessProfile.ideal_customer ||
+                intake.industry ||
+                intake.niche ||
+                "business",
             targetAudience:
-                intake.target_audience || intake.ideal_customer || "entrepreneurs",
-            primaryOffer: intake.primary_offer || offer.name || "Training Program",
+                businessProfile.ideal_customer ||
+                intake.target_audience ||
+                intake.ideal_customer ||
+                "entrepreneurs",
+            primaryOffer:
+                businessProfile.offer_name ||
+                intake.primary_offer ||
+                offer.name ||
+                "Training Program",
 
-            // Step 2: Offer Definition
-            productName: offer.name || intake.program_name || "Premium Training",
-            pricePoint: offer.price ? `$${offer.price}` : intake.price_point || "$997",
+            // Step 2: Offer Definition (prefer businessProfile for offer details)
+            productName:
+                businessProfile.offer_name ||
+                offer.name ||
+                intake.program_name ||
+                "Premium Training",
+            pricePoint: businessProfile.pricing?.regular
+                ? `$${businessProfile.pricing.regular}`
+                : offer.price
+                  ? `$${offer.price}`
+                  : intake.price_point || "$997",
             pricingModel: offer.pricing_model || intake.pricing_model || "one-time",
             transformationPromise:
+                businessProfile.transformation ||
                 offer.transformation_promise ||
                 intake.transformation ||
                 "Transform your business with proven strategies",
-            keyBenefits: extractBenefits(offer, intake),
-            deliveryFormat: offer.delivery_format || intake.format || "online training",
+            keyBenefits: extractBenefits(offer, intake, businessProfile),
+            deliveryFormat:
+                businessProfile.deliverables ||
+                offer.delivery_format ||
+                intake.format ||
+                "online training",
             timeline: offer.timeline || intake.timeline || "4 weeks",
 
             // Step 3: Brand Design
@@ -174,15 +211,20 @@ export async function aggregateFunnelContext(
                 energy: brand.personality_traits?.energy || "dynamic",
             },
 
-            // Step 4: Audience Profile
+            // Step 4: Audience Profile (prefer businessProfile from Step 1 wizard)
             idealCustomerAvatar:
+                businessProfile.ideal_customer ||
                 intake.ideal_customer_avatar ||
                 intake.target_audience ||
                 "Business owners looking to scale",
-            painPoints: extractPainPoints(intake, deck),
-            desires: extractDesires(intake, deck),
-            objections: extractObjections(intake, deck),
-            founderStory: intake.founder_story || intake.background || "",
+            painPoints: extractPainPoints(intake, deck, businessProfile),
+            desires: extractDesires(intake, deck, businessProfile),
+            objections: extractObjections(intake, deck, businessProfile),
+            founderStory:
+                businessProfile.struggle_story ||
+                intake.founder_story ||
+                intake.background ||
+                "",
 
             // Additional context from deck
             trainingTitle: deck.metadata?.title || offer.name || project?.name,
@@ -195,7 +237,12 @@ export async function aggregateFunnelContext(
         };
 
         logger.info(
-            { projectId, hasIntake: !!intakeResult.data, hasBrand: !!brandResult.data },
+            {
+                projectId,
+                hasIntake: !!intakeResult.data,
+                hasBrand: !!brandResult.data,
+                hasBusinessProfile: !!businessProfileResult.data,
+            },
             "Aggregated funnel context"
         );
 
@@ -207,10 +254,15 @@ export async function aggregateFunnelContext(
 }
 
 /**
- * Extract benefits from offer and intake data
+ * Extract benefits from offer, intake, and business profile data
  */
-function extractBenefits(offer: any, intake: any): string[] {
+function extractBenefits(offer: any, intake: any, businessProfile: any): string[] {
     const benefits: string[] = [];
+
+    // Prefer business profile benefits from Step 1 wizard
+    if (businessProfile.benefits && Array.isArray(businessProfile.benefits)) {
+        benefits.push(...businessProfile.benefits);
+    }
 
     if (offer.benefits && Array.isArray(offer.benefits)) {
         benefits.push(...offer.benefits);
@@ -238,10 +290,15 @@ function extractBenefits(offer: any, intake: any): string[] {
 }
 
 /**
- * Extract pain points from intake and deck
+ * Extract pain points from intake, deck, and business profile
  */
-function extractPainPoints(intake: any, deck: any): string[] {
+function extractPainPoints(intake: any, deck: any, businessProfile: any): string[] {
     const painPoints: string[] = [];
+
+    // Prefer business profile pain points from Step 1 wizard
+    if (businessProfile.pain_points && Array.isArray(businessProfile.pain_points)) {
+        painPoints.push(...businessProfile.pain_points);
+    }
 
     if (intake.pain_points && Array.isArray(intake.pain_points)) {
         painPoints.push(...intake.pain_points);
@@ -277,10 +334,15 @@ function extractPainPoints(intake: any, deck: any): string[] {
 }
 
 /**
- * Extract desires from intake and deck
+ * Extract desires from intake, deck, and business profile
  */
-function extractDesires(intake: any, deck: any): string[] {
+function extractDesires(intake: any, deck: any, businessProfile: any): string[] {
     const desires: string[] = [];
+
+    // Prefer business profile desires from Step 1 wizard
+    if (businessProfile.desires && Array.isArray(businessProfile.desires)) {
+        desires.push(...businessProfile.desires);
+    }
 
     if (intake.desires && Array.isArray(intake.desires)) {
         desires.push(...intake.desires);
@@ -307,10 +369,15 @@ function extractDesires(intake: any, deck: any): string[] {
 }
 
 /**
- * Extract objections from intake and deck
+ * Extract objections from intake, deck, and business profile
  */
-function extractObjections(intake: any, deck: any): string[] {
+function extractObjections(intake: any, deck: any, businessProfile: any): string[] {
     const objections: string[] = [];
+
+    // Prefer business profile objections from Step 1 wizard
+    if (businessProfile.objections && Array.isArray(businessProfile.objections)) {
+        objections.push(...businessProfile.objections);
+    }
 
     if (intake.objections && Array.isArray(intake.objections)) {
         objections.push(...intake.objections);

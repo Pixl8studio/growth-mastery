@@ -3,17 +3,20 @@
 /**
  * Preview Iframe
  * Sandboxed iframe for rendering HTML content
+ * Uses blob URL approach to avoid sandbox escape warnings while maintaining functionality
  */
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+import { logger } from "@/lib/client-logger";
 
 interface PreviewIframeProps {
     html: string;
     deviceMode: "desktop" | "tablet" | "mobile";
     isProcessing: boolean;
     refreshKey?: number;
+    onPreviewError?: (error: string) => void;
 }
 
 const viewportWidths = {
@@ -22,69 +25,155 @@ const viewportWidths = {
     mobile: 375,
 };
 
+// Timeout for preview loading (in ms)
+const PREVIEW_TIMEOUT = 10000;
+
 export function PreviewIframe({
     html,
     deviceMode,
     isProcessing,
     refreshKey = 0,
+    onPreviewError,
 }: PreviewIframeProps) {
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [scrollPosition, setScrollPosition] = useState(0);
+    const [previewError, setPreviewError] = useState<string | null>(null);
+    const [blobUrl, setBlobUrl] = useState<string | null>(null);
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const previousBlobUrlRef = useRef<string | null>(null);
+    const loadingCancelledRef = useRef(false);
 
-    // Update iframe content when HTML changes
-    useEffect(() => {
-        const iframe = iframeRef.current;
-        if (!iframe) return;
-
-        // Save scroll position
-        try {
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-            if (iframeDoc) {
-                requestAnimationFrame(() => {
-                    setScrollPosition(iframeDoc.documentElement.scrollTop || 0);
-                });
+    // Validate HTML structure
+    const validateHtml = useCallback(
+        (htmlContent: string): { valid: boolean; error?: string } => {
+            if (!htmlContent || htmlContent.trim().length === 0) {
+                return { valid: false, error: "No HTML content to display" };
             }
-        } catch {
-            // Cross-origin iframe, ignore
+
+            // Check for basic HTML structure
+            const hasHtmlTag = /<html/i.test(htmlContent);
+            const hasBodyTag = /<body/i.test(htmlContent);
+            const hasClosingHtml = /<\/html>/i.test(htmlContent);
+            const hasClosingBody = /<\/body>/i.test(htmlContent);
+
+            if (!hasHtmlTag || !hasBodyTag) {
+                return {
+                    valid: false,
+                    error: "HTML structure is incomplete - missing required tags",
+                };
+            }
+
+            if (!hasClosingHtml || !hasClosingBody) {
+                return {
+                    valid: false,
+                    error: "HTML structure is incomplete - missing closing tags",
+                };
+            }
+
+            // Count opening and closing div tags
+            const openDivCount = (htmlContent.match(/<div/gi) || []).length;
+            const closeDivCount = (htmlContent.match(/<\/div>/gi) || []).length;
+
+            if (openDivCount !== closeDivCount) {
+                return {
+                    valid: false,
+                    error: `HTML has unbalanced div tags (${openDivCount} open, ${closeDivCount} close)`,
+                };
+            }
+
+            return { valid: true };
+        },
+        []
+    );
+
+    // Create blob URL for iframe content
+    useEffect(() => {
+        const fullHtml = html || getPlaceholderHtml();
+
+        // Validate HTML before creating blob
+        const validation = validateHtml(fullHtml);
+        if (!validation.valid && html) {
+            // Only show error for user-provided HTML, not placeholder
+            setPreviewError(validation.error || "Invalid HTML structure");
+            onPreviewError?.(validation.error || "Invalid HTML structure");
+            setIsLoading(false);
+            return;
         }
 
-        requestAnimationFrame(() => {
-            setIsLoading(true);
-        });
+        setPreviewError(null);
+        setIsLoading(true);
+        loadingCancelledRef.current = false;
 
-        // Use srcdoc for sandboxed content
-        const fullHtml = html || getPlaceholderHtml();
-        iframe.srcdoc = fullHtml;
+        // Clean up previous blob URL
+        if (previousBlobUrlRef.current) {
+            URL.revokeObjectURL(previousBlobUrlRef.current);
+        }
 
-        // Handle load event
-        const handleLoad = () => {
-            setIsLoading(false);
+        // Create new blob URL
+        const blob = new Blob([fullHtml], { type: "text/html" });
+        const newBlobUrl = URL.createObjectURL(blob);
+        setBlobUrl(newBlobUrl);
+        previousBlobUrlRef.current = newBlobUrl;
 
-            // Restore scroll position
-            try {
-                const iframeDoc =
-                    iframe.contentDocument || iframe.contentWindow?.document;
-                if (iframeDoc) {
-                    iframeDoc.documentElement.scrollTop = scrollPosition;
-                }
-            } catch {
-                // Cross-origin iframe, ignore
+        // Set timeout for loading
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+        timeoutRef.current = setTimeout(() => {
+            if (!loadingCancelledRef.current) {
+                logger.warn(
+                    { html: html?.substring(0, 200) },
+                    "Preview loading timeout"
+                );
+                setPreviewError(
+                    "Preview is taking too long to load. The HTML may have issues."
+                );
+                setIsLoading(false);
             }
+        }, PREVIEW_TIMEOUT);
 
-            // Add flash effect for edited elements (handled by edit-applier)
+        return () => {
+            loadingCancelledRef.current = true;
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
         };
+    }, [html, refreshKey, validateHtml, onPreviewError]);
 
-        iframe.addEventListener("load", handleLoad);
-        return () => iframe.removeEventListener("load", handleLoad);
-    }, [html, refreshKey]);
+    // Clean up blob URL on unmount
+    useEffect(() => {
+        return () => {
+            if (previousBlobUrlRef.current) {
+                URL.revokeObjectURL(previousBlobUrlRef.current);
+            }
+        };
+    }, []);
+
+    // Handle iframe load
+    const handleLoad = useCallback(() => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+        setIsLoading(false);
+        setPreviewError(null);
+    }, []);
+
+    // Handle iframe error
+    const handleError = useCallback(() => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+        setIsLoading(false);
+        setPreviewError("Failed to load preview");
+        onPreviewError?.("Failed to load preview");
+    }, [onPreviewError]);
 
     const width = viewportWidths[deviceMode];
 
     return (
         <div className="relative h-full w-full">
             {/* Loading Overlay */}
-            {(isLoading || isProcessing) && (
+            {(isLoading || isProcessing) && !previewError && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-sm">
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin" />
@@ -97,11 +186,30 @@ export function PreviewIframe({
                 </div>
             )}
 
-            {/* Iframe */}
+            {/* Error Overlay */}
+            {previewError && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80">
+                    <div className="max-w-md rounded-lg border border-destructive/20 bg-destructive/5 p-6 text-center">
+                        <AlertCircle className="mx-auto mb-3 h-8 w-8 text-destructive" />
+                        <h3 className="mb-2 font-semibold text-destructive">
+                            Preview Error
+                        </h3>
+                        <p className="text-sm text-muted-foreground">{previewError}</p>
+                        <p className="mt-3 text-xs text-muted-foreground">
+                            Ask the AI to fix this issue in the chat.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Iframe - Using blob URL to avoid sandbox escape warning */}
             <iframe
                 ref={iframeRef}
                 title="Page Preview"
-                sandbox="allow-scripts allow-same-origin"
+                src={blobUrl || "about:blank"}
+                sandbox="allow-scripts"
+                onLoad={handleLoad}
+                onError={handleError}
                 className={cn("border-0 bg-white", "transition-all duration-300")}
                 style={{
                     width: deviceMode === "desktop" ? "100%" : `${width}px`,

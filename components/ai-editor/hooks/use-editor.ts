@@ -576,6 +576,24 @@ export function useEditor({
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [html, title, initialHtml, isProcessing]);
 
+    // Warn about unsaved changes before leaving
+    useEffect(() => {
+        const hasUnsavedChanges = html !== initialHtml || status === "saving";
+
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (hasUnsavedChanges) {
+                e.preventDefault();
+                // Modern browsers ignore custom messages, but we set it for older browsers
+                e.returnValue =
+                    "You have unsaved changes. Are you sure you want to leave?";
+                return e.returnValue;
+            }
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    }, [html, initialHtml, status]);
+
     // Handle option selection from clarifying questions
     const selectOption = useCallback(
         (optionId: string, optionLabel: string) => {

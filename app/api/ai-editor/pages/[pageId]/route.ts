@@ -17,14 +17,65 @@ interface RouteParams {
 }
 
 /**
+ * Reserved slugs that could conflict with app routes
+ */
+const RESERVED_SLUGS = [
+    "admin",
+    "api",
+    "auth",
+    "app",
+    "dashboard",
+    "login",
+    "logout",
+    "signup",
+    "register",
+    "settings",
+    "profile",
+    "account",
+    "billing",
+    "help",
+    "support",
+    "docs",
+    "blog",
+    "about",
+    "contact",
+    "privacy",
+    "terms",
+    "ai-editor",
+    "funnel",
+    "funnels",
+    "project",
+    "projects",
+    "page",
+    "pages",
+    "p",
+    "preview",
+];
+
+/**
+ * Check if a slug is reserved
+ */
+function isReservedSlug(slug: string): boolean {
+    return RESERVED_SLUGS.includes(slug.toLowerCase());
+}
+
+/**
  * Generate a URL-safe slug from a title
  */
 function generateSlug(title: string): string {
-    return title
+    let slug = title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-|-$/g, "")
         .substring(0, 50);
+
+    // Append random suffix if reserved
+    if (isReservedSlug(slug)) {
+        const suffix = Math.random().toString(36).substring(2, 6);
+        slug = `${slug}-${suffix}`;
+    }
+
+    return slug;
 }
 
 /**
@@ -137,6 +188,16 @@ export async function PUT(request: Request, { params }: RouteParams) {
             if (!/^[a-z0-9-]+$/.test(slug) || slug.length < 3 || slug.length > 50) {
                 return NextResponse.json(
                     { error: "Invalid slug format" },
+                    { status: 400 }
+                );
+            }
+
+            // Check if slug is reserved
+            if (isReservedSlug(slug)) {
+                return NextResponse.json(
+                    {
+                        error: "This URL is reserved. Please choose a different one.",
+                    },
                     { status: 400 }
                 );
             }

@@ -45,12 +45,12 @@ export function PreviewIframe({
 
     // Validate HTML structure
     const validateHtml = useCallback(
-        (htmlContent: string): { valid: boolean; error?: string } => {
+        (htmlContent: string): { valid: boolean; warning?: string; error?: string } => {
             if (!htmlContent || htmlContent.trim().length === 0) {
                 return { valid: false, error: "No HTML content to display" };
             }
 
-            // Check for basic HTML structure
+            // Check for basic HTML structure - these are critical
             const hasHtmlTag = /<html/i.test(htmlContent);
             const hasBodyTag = /<body/i.test(htmlContent);
             const hasClosingHtml = /<\/html>/i.test(htmlContent);
@@ -70,14 +70,20 @@ export function PreviewIframe({
                 };
             }
 
-            // Count opening and closing div tags
+            // Count opening and closing div tags - this is a warning only
+            // Simple tag counting can fail on divs in comments, CDATA, or script content
             const openDivCount = (htmlContent.match(/<div/gi) || []).length;
             const closeDivCount = (htmlContent.match(/<\/div>/gi) || []).length;
 
             if (openDivCount !== closeDivCount) {
+                // Log warning but don't block - the browser will handle malformed HTML
+                logger.warn(
+                    { openDivCount, closeDivCount },
+                    "Unbalanced div tags detected (may be false positive)"
+                );
                 return {
-                    valid: false,
-                    error: `HTML has unbalanced div tags (${openDivCount} open, ${closeDivCount} close)`,
+                    valid: true,
+                    warning: `Unbalanced div tags (${openDivCount} open, ${closeDivCount} close) - preview may not render correctly`,
                 };
             }
 

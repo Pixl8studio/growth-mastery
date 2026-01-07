@@ -16,6 +16,33 @@ import {
 interface ImageAttachment {
     id: string;
     url: string;
+    base64?: string;
+    mediaType?: string;
+}
+
+/**
+ * Fetch image from URL and convert to base64
+ * This ensures Anthropic can access the image even if it's behind auth
+ */
+async function fetchImageAsBase64(
+    url: string
+): Promise<{ base64: string; mediaType: string } | null> {
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            logger.warn({ url, status: response.status }, "Failed to fetch image");
+            return null;
+        }
+
+        const contentType = response.headers.get("content-type") || "image/jpeg";
+        const buffer = await response.arrayBuffer();
+        const base64 = Buffer.from(buffer).toString("base64");
+
+        return { base64, mediaType: contentType };
+    } catch (error) {
+        logger.error({ error, url }, "Error fetching image for base64 conversion");
+        return null;
+    }
 }
 
 interface ChatRequest {
@@ -104,9 +131,26 @@ export async function POST(request: Request) {
                 pageId,
                 messageLength: message.length,
                 pageType: page.page_type,
+                imageCount: imageAttachments.length,
             },
             "Processing AI edit request"
         );
+
+        // Convert image URLs to base64 for safe Anthropic API access
+        const processedAttachments: ImageAttachment[] = [];
+        for (const attachment of imageAttachments) {
+            const imageData = await fetchImageAsBase64(attachment.url);
+            if (imageData) {
+                processedAttachments.push({
+                    ...attachment,
+                    base64: imageData.base64,
+                    mediaType: imageData.mediaType,
+                });
+            } else {
+                // Fall back to URL if base64 conversion fails
+                processedAttachments.push(attachment);
+            }
+        }
 
         // Process the edit request with detailed error handling
         let result;
@@ -118,7 +162,7 @@ export async function POST(request: Request) {
                 currentHtml,
                 conversationHistory,
                 projectName,
-                imageAttachments,
+                imageAttachments: processedAttachments,
             };
 
             logger.info(

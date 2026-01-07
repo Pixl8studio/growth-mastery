@@ -99,7 +99,7 @@ export function ChatInput({ onSendMessage, isProcessing, projectId }: ChatInputP
             }
 
             const formData = new FormData();
-            formData.append("file", file);
+            formData.append("image", file);
             formData.append("projectId", projectId);
 
             try {
@@ -201,10 +201,30 @@ export function ChatInput({ onSendMessage, isProcessing, projectId }: ChatInputP
         };
     }, [handleFileSelect]);
 
-    // Remove attachment
+    // Remove attachment and clean up blob URL
     const removeAttachment = (id: string) => {
-        setAttachments((prev) => prev.filter((a) => a.id !== id));
+        setAttachments((prev) => {
+            const attachment = prev.find((a) => a.id === id);
+            // Revoke blob URL to prevent memory leak
+            if (attachment?.url.startsWith("blob:")) {
+                URL.revokeObjectURL(attachment.url);
+            }
+            return prev.filter((a) => a.id !== id);
+        });
     };
+
+    // Clean up blob URLs on unmount
+    useEffect(() => {
+        return () => {
+            attachments.forEach((attachment) => {
+                if (attachment.url.startsWith("blob:")) {
+                    URL.revokeObjectURL(attachment.url);
+                }
+            });
+        };
+        // Only run cleanup on unmount, not on every attachments change
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const hasContent = message.trim() || attachments.length > 0;
     const isUploading = attachments.some((a) => a.uploading);

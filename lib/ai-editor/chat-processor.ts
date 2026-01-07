@@ -13,6 +13,8 @@ const anthropic = new Anthropic();
 export interface ImageAttachment {
     id: string;
     url: string;
+    base64?: string;
+    mediaType?: string;
 }
 
 export interface SuggestedOption {
@@ -379,15 +381,32 @@ function buildEditUserMessageContent(
     // Build content blocks for vision API
     const contentBlocks: Anthropic.MessageCreateParams["messages"][0]["content"] = [];
 
-    // Add image content blocks first
+    // Add image content blocks first - prefer base64 over URL for reliability
     for (const image of imageAttachments) {
-        (contentBlocks as Anthropic.ContentBlockParam[]).push({
-            type: "image",
-            source: {
-                type: "url",
-                url: image.url,
-            },
-        });
+        if (image.base64 && image.mediaType) {
+            // Use base64 encoding for better reliability (works even if URL requires auth)
+            (contentBlocks as Anthropic.ContentBlockParam[]).push({
+                type: "image",
+                source: {
+                    type: "base64",
+                    media_type: image.mediaType as
+                        | "image/jpeg"
+                        | "image/png"
+                        | "image/gif"
+                        | "image/webp",
+                    data: image.base64,
+                },
+            });
+        } else {
+            // Fall back to URL
+            (contentBlocks as Anthropic.ContentBlockParam[]).push({
+                type: "image",
+                source: {
+                    type: "url",
+                    url: image.url,
+                },
+            });
+        }
     }
 
     // Add text content

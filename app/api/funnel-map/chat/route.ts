@@ -67,7 +67,15 @@ const ConversationMessageSchema = z.object({
 const FunnelNodeFieldSchema = z.object({
     key: z.string(),
     label: z.string(),
-    type: z.enum(["text", "textarea", "list", "pricing", "select", "datetime", "payment_options"]),
+    type: z.enum([
+        "text",
+        "textarea",
+        "list",
+        "pricing",
+        "select",
+        "datetime",
+        "payment_options",
+    ]),
     required: z.boolean().optional(),
     aiPrompt: z.string().optional(),
     helpText: z.string().optional(),
@@ -85,7 +93,9 @@ const PaymentOptionSchema = z.object({
     amount: z.number().positive("Amount must be greater than $0"),
     paymentType: z.enum(["one_time", "fixed_payments", "recurring"]),
     numberOfPayments: z.number().int().positive().optional(),
-    frequency: z.enum(["weekly", "biweekly", "monthly", "quarterly", "annually"]).optional(),
+    frequency: z
+        .enum(["weekly", "biweekly", "monthly", "quarterly", "annually"])
+        .optional(),
 });
 
 /**
@@ -217,7 +227,11 @@ export async function POST(request: NextRequest) {
 
         // Build conversation for AI with sliding window (only last N messages for context)
         const recentHistory = conversationHistory.slice(-MAX_CONVERSATION_MESSAGES_AI);
-        const systemPrompt = buildSystemPrompt(definition, currentContent, businessContext);
+        const systemPrompt = buildSystemPrompt(
+            definition,
+            currentContent,
+            businessContext
+        );
         const messages: AIMessage[] = [
             { role: "system", content: systemPrompt },
             ...recentHistory.map((msg) => ({
@@ -418,9 +432,10 @@ function buildSystemPrompt(
             : "No content has been generated yet.";
 
     // Format business profile context for the AI to understand the user's business
-    const businessContextStr = businessContext && Object.keys(businessContext).length > 0
-        ? formatBusinessContextForAI(businessContext)
-        : "";
+    const businessContextStr =
+        businessContext && Object.keys(businessContext).length > 0
+            ? formatBusinessContextForAI(businessContext)
+            : "";
 
     return `You are an expert marketing strategist and copywriter helping to refine content for a "${definition.title}" in a webinar funnel.
 
@@ -481,15 +496,23 @@ function formatBusinessContextForAI(context: Record<string, unknown>): string {
 
     // Section 1: Ideal Customer & Core Problem
     const customerInfo: string[] = [];
-    if (context.ideal_customer) customerInfo.push(`Ideal Customer: ${context.ideal_customer}`);
-    if (context.transformation) customerInfo.push(`Transformation: ${context.transformation}`);
-    if (context.perceived_problem) customerInfo.push(`Perceived Problem: ${context.perceived_problem}`);
+    if (context.ideal_customer)
+        customerInfo.push(`Ideal Customer: ${context.ideal_customer}`);
+    if (context.transformation)
+        customerInfo.push(`Transformation: ${context.transformation}`);
+    if (context.perceived_problem)
+        customerInfo.push(`Perceived Problem: ${context.perceived_problem}`);
     if (context.root_cause) customerInfo.push(`Root Cause: ${context.root_cause}`);
-    if (context.daily_pain_points) customerInfo.push(`Daily Pain Points: ${context.daily_pain_points}`);
-    if (context.secret_desires) customerInfo.push(`Secret Desires: ${context.secret_desires}`);
-    if (context.common_mistakes) customerInfo.push(`Common Mistakes: ${context.common_mistakes}`);
-    if (context.limiting_beliefs) customerInfo.push(`Limiting Beliefs: ${context.limiting_beliefs}`);
-    if (context.empowering_truths) customerInfo.push(`Empowering Truths: ${context.empowering_truths}`);
+    if (context.daily_pain_points)
+        customerInfo.push(`Daily Pain Points: ${context.daily_pain_points}`);
+    if (context.secret_desires)
+        customerInfo.push(`Secret Desires: ${context.secret_desires}`);
+    if (context.common_mistakes)
+        customerInfo.push(`Common Mistakes: ${context.common_mistakes}`);
+    if (context.limiting_beliefs)
+        customerInfo.push(`Limiting Beliefs: ${context.limiting_beliefs}`);
+    if (context.empowering_truths)
+        customerInfo.push(`Empowering Truths: ${context.empowering_truths}`);
 
     if (customerInfo.length > 0) {
         sections.push(`### Ideal Customer & Problem\n${customerInfo.join("\n")}`);
@@ -497,11 +520,15 @@ function formatBusinessContextForAI(context: Record<string, unknown>): string {
 
     // Section 2: Story & Method
     const storyInfo: string[] = [];
-    if (context.struggle_story) storyInfo.push(`Struggle Story: ${context.struggle_story}`);
-    if (context.breakthrough_moment) storyInfo.push(`Breakthrough: ${context.breakthrough_moment}`);
+    if (context.struggle_story)
+        storyInfo.push(`Struggle Story: ${context.struggle_story}`);
+    if (context.breakthrough_moment)
+        storyInfo.push(`Breakthrough: ${context.breakthrough_moment}`);
     if (context.life_now) storyInfo.push(`Life Now: ${context.life_now}`);
-    if (context.credibility_experience) storyInfo.push(`Credibility: ${context.credibility_experience}`);
-    if (context.signature_method) storyInfo.push(`Signature Method: ${context.signature_method}`);
+    if (context.credibility_experience)
+        storyInfo.push(`Credibility: ${context.credibility_experience}`);
+    if (context.signature_method)
+        storyInfo.push(`Signature Method: ${context.signature_method}`);
 
     if (storyInfo.length > 0) {
         sections.push(`### Story & Signature Method\n${storyInfo.join("\n")}`);
@@ -512,9 +539,12 @@ function formatBusinessContextForAI(context: Record<string, unknown>): string {
     if (context.offer_name) offerInfo.push(`Offer Name: ${context.offer_name}`);
     if (context.offer_type) offerInfo.push(`Offer Type: ${context.offer_type}`);
     if (context.deliverables) offerInfo.push(`Deliverables: ${context.deliverables}`);
-    if (context.delivery_process) offerInfo.push(`Delivery Process: ${context.delivery_process}`);
-    if (context.problem_solved) offerInfo.push(`Problem Solved: ${context.problem_solved}`);
-    if (context.promise_outcome) offerInfo.push(`Promise/Outcome: ${context.promise_outcome}`);
+    if (context.delivery_process)
+        offerInfo.push(`Delivery Process: ${context.delivery_process}`);
+    if (context.problem_solved)
+        offerInfo.push(`Problem Solved: ${context.problem_solved}`);
+    if (context.promise_outcome)
+        offerInfo.push(`Promise/Outcome: ${context.promise_outcome}`);
     if (context.pricing) {
         const pricing = context.pricing as { regular?: number; webinar?: number };
         if (pricing.regular) offerInfo.push(`Regular Price: $${pricing.regular}`);
@@ -530,41 +560,66 @@ function formatBusinessContextForAI(context: Record<string, unknown>): string {
 
     // Section 4: Belief Shifts
     const beliefInfo: string[] = [];
-    if (context.vehicle_belief_shift && typeof context.vehicle_belief_shift === 'object') {
+    if (
+        context.vehicle_belief_shift &&
+        typeof context.vehicle_belief_shift === "object"
+    ) {
         const vbs = context.vehicle_belief_shift as Record<string, unknown>;
-        if (vbs.outdated_model) beliefInfo.push(`Outdated Model to Replace: ${vbs.outdated_model}`);
+        if (vbs.outdated_model)
+            beliefInfo.push(`Outdated Model to Replace: ${vbs.outdated_model}`);
         if (vbs.new_model) beliefInfo.push(`New Model: ${vbs.new_model}`);
         if (vbs.key_insights && Array.isArray(vbs.key_insights)) {
-            beliefInfo.push(`Key Insights: ${(vbs.key_insights as string[]).join(", ")}`);
+            beliefInfo.push(
+                `Key Insights: ${(vbs.key_insights as string[]).join(", ")}`
+            );
         }
     }
-    if (context.internal_belief_shift && typeof context.internal_belief_shift === 'object') {
+    if (
+        context.internal_belief_shift &&
+        typeof context.internal_belief_shift === "object"
+    ) {
         const ibs = context.internal_belief_shift as Record<string, unknown>;
-        if (ibs.limiting_belief) beliefInfo.push(`Limiting Belief to Address: ${ibs.limiting_belief}`);
+        if (ibs.limiting_belief)
+            beliefInfo.push(`Limiting Belief to Address: ${ibs.limiting_belief}`);
         if (ibs.mindset_reframes && Array.isArray(ibs.mindset_reframes)) {
-            beliefInfo.push(`Mindset Reframes: ${(ibs.mindset_reframes as string[]).join(", ")}`);
+            beliefInfo.push(
+                `Mindset Reframes: ${(ibs.mindset_reframes as string[]).join(", ")}`
+            );
         }
     }
-    if (context.external_belief_shift && typeof context.external_belief_shift === 'object') {
+    if (
+        context.external_belief_shift &&
+        typeof context.external_belief_shift === "object"
+    ) {
         const ebs = context.external_belief_shift as Record<string, unknown>;
-        if (ebs.external_obstacles) beliefInfo.push(`External Obstacles: ${ebs.external_obstacles}`);
+        if (ebs.external_obstacles)
+            beliefInfo.push(`External Obstacles: ${ebs.external_obstacles}`);
         if (ebs.fastest_path) beliefInfo.push(`Fastest Path: ${ebs.fastest_path}`);
     }
 
     if (beliefInfo.length > 0) {
-        sections.push(`### Belief Shifts (for Teaching Content)\n${beliefInfo.join("\n")}`);
+        sections.push(
+            `### Belief Shifts (for Teaching Content)\n${beliefInfo.join("\n")}`
+        );
     }
 
     // Section 5: CTA & Objections
     const ctaInfo: string[] = [];
-    if (context.call_to_action) ctaInfo.push(`Call to Action: ${context.call_to_action}`);
+    if (context.call_to_action)
+        ctaInfo.push(`Call to Action: ${context.call_to_action}`);
     if (context.incentive) ctaInfo.push(`Incentive: ${context.incentive}`);
-    if (context.pricing_disclosure) ctaInfo.push(`Pricing Disclosure: ${context.pricing_disclosure}`);
+    if (context.pricing_disclosure)
+        ctaInfo.push(`Pricing Disclosure: ${context.pricing_disclosure}`);
     if (context.path_options) ctaInfo.push(`Path Options: ${context.path_options}`);
     if (context.top_objections && Array.isArray(context.top_objections)) {
-        const objections = context.top_objections as Array<{ objection: string; response: string }>;
+        const objections = context.top_objections as Array<{
+            objection: string;
+            response: string;
+        }>;
         if (objections.length > 0) {
-            const objList = objections.map((o) => `- "${o.objection}" → ${o.response}`).join("\n");
+            const objList = objections
+                .map((o) => `- "${o.objection}" → ${o.response}`)
+                .join("\n");
             ctaInfo.push(`Top Objections & Responses:\n${objList}`);
         }
     }

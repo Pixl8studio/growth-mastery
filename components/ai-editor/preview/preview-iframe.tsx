@@ -2,7 +2,35 @@
 
 /**
  * Preview Iframe
- * Sandboxed iframe for rendering HTML content
+ * Sandboxed iframe for rendering HTML content with Content Security Policy
+ *
+ * ## Security Features
+ *
+ * This component implements a Content Security Policy (CSP) to protect against XSS
+ * and other injection attacks while still allowing necessary functionality.
+ *
+ * ## CSP Font CDN Limitations (PR #414)
+ *
+ * The CSP allows fonts from:
+ * - fonts.googleapis.com (Google Fonts stylesheets)
+ * - fonts.gstatic.com (Google Fonts font files)
+ *
+ * **IMPORTANT LIMITATION**: If the AI generates landing pages that use fonts from
+ * other CDNs (e.g., Adobe Fonts, Font Squirrel, custom CDNs), those fonts will be
+ * blocked by CSP and fall back to system fonts.
+ *
+ * Supported font sources:
+ * - Google Fonts (recommended) - fully supported
+ * - Self-hosted fonts (embedded as data: URIs) - supported
+ * - System fonts - always available
+ *
+ * Unsupported font sources (will be blocked):
+ * - Adobe Fonts (use.typekit.net)
+ * - Font Squirrel CDN
+ * - Custom font CDNs
+ *
+ * To add support for additional font CDNs, update the CSP_META_TAG below.
+ * Trade-off: Each additional CDN increases attack surface.
  */
 
 import { useRef, useEffect, useState } from "react";
@@ -21,6 +49,64 @@ const viewportWidths = {
     tablet: 768,
     mobile: 375,
 };
+
+/**
+ * Content Security Policy for iframe content
+ *
+ * This CSP allows:
+ * - Inline scripts (required for AI-generated interactive elements)
+ * - Inline styles (required for AI-generated styling)
+ * - Images from any HTTPS source and data URIs
+ * - Fonts from Google Fonts CDN and data URIs
+ * - Media from any HTTPS source
+ *
+ * Security trade-offs documented above.
+ */
+const CSP_META_TAG = `<meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  script-src 'self' 'unsafe-inline' 'unsafe-eval';
+  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+  font-src 'self' data: https://fonts.gstatic.com;
+  img-src 'self' data: blob: https:;
+  media-src 'self' https:;
+  connect-src 'self' https:;
+  frame-src 'none';
+">`
+    .replace(/\s+/g, " ")
+    .trim();
+
+/**
+ * Inject CSP meta tag into HTML content
+ * Adds security headers while preserving existing content
+ */
+function injectCsp(html: string): string {
+    if (!html) return html;
+
+    // Check if CSP already exists
+    if (html.includes("Content-Security-Policy")) {
+        return html;
+    }
+
+    // Inject CSP into <head>
+    if (html.includes("<head>")) {
+        return html.replace("<head>", `<head>\n  ${CSP_META_TAG}`);
+    }
+
+    // If no <head>, inject after <html>
+    if (html.includes("<html")) {
+        const htmlTagEnd = html.indexOf(">", html.indexOf("<html"));
+        if (htmlTagEnd !== -1) {
+            return (
+                html.slice(0, htmlTagEnd + 1) +
+                `\n<head>\n  ${CSP_META_TAG}\n</head>` +
+                html.slice(htmlTagEnd + 1)
+            );
+        }
+    }
+
+    // Fallback: prepend CSP
+    return `<!DOCTYPE html>\n<html>\n<head>\n  ${CSP_META_TAG}\n</head>\n<body>\n${html}\n</body>\n</html>`;
+}
 
 export function PreviewIframe({
     html,
@@ -54,7 +140,8 @@ export function PreviewIframe({
         });
 
         // Use srcdoc for sandboxed content
-        const fullHtml = html || getPlaceholderHtml();
+        // Inject CSP for security (PR #414)
+        const fullHtml = injectCsp(html || getPlaceholderHtml());
         iframe.srcdoc = fullHtml;
 
         // Handle load event

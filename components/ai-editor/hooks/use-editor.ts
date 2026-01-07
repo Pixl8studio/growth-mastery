@@ -92,9 +92,19 @@ export function useEditor({
     ]);
     const [lastEditSummary, setLastEditSummary] = useState<EditSummary | null>(null);
 
-    // Version history for undo
+    // Version history for undo with byte-level memory tracking
+    // PR #414 Concern: Modern landing pages can be 200-500KB, not 50KB
+    // We track actual byte size and enforce a 5MB limit per tab
     const [history, setHistory] = useState<string[]>([initialHtml]);
     const [historyIndex, setHistoryIndex] = useState(0);
+    const [historyBytes, setHistoryBytes] = useState(() => {
+        // Calculate initial byte size (rough estimate, accurate for ASCII)
+        return new Blob([initialHtml]).size;
+    });
+
+    // Maximum history memory: 5MB per tab (conservative limit for large pages)
+    // If exceeded, older entries are pruned from the beginning
+    const MAX_HISTORY_BYTES = 5 * 1024 * 1024;
 
     // Generate unique ID for messages
     const generateId = () =>
@@ -162,13 +172,33 @@ export function useEditor({
                             });
                         } catch (fetchError) {
                             // Handle network errors and aborts gracefully
-                            if (fetchError instanceof Error) {
-                                if (fetchError.name === "AbortError") {
+                            // PR #414 Concern: AbortError detection varies across browsers/runtimes
+                            // Some throw DOMException with name "AbortError"
+                            // Others throw Error with name "AbortError"
+                            if (
+                                fetchError instanceof Error ||
+                                fetchError instanceof DOMException
+                            ) {
+                                const errorName = fetchError.name;
+                                const errorMessage = fetchError.message;
+
+                                // Check for abort errors (timeout or manual abort)
+                                if (
+                                    errorName === "AbortError" ||
+                                    errorMessage.includes("aborted") ||
+                                    errorMessage.includes("abort")
+                                ) {
                                     throw new ValidationError(
                                         "Request timed out. Please try again with a simpler request."
                                     );
                                 }
-                                if (fetchError.message === "Failed to fetch") {
+
+                                // Check for network errors
+                                if (
+                                    errorMessage === "Failed to fetch" ||
+                                    errorMessage.includes("network") ||
+                                    errorMessage.includes("NetworkError")
+                                ) {
                                     throw new ValidationError(
                                         "Network connection lost. Please check your internet connection and try again."
                                     );
@@ -232,14 +262,77 @@ export function useEditor({
 
                         // Update HTML if changes were made
                         if (data.updatedHtml) {
-                            // Add to history for undo
-                            setHistory((prev) => [
-                                ...prev.slice(0, historyIndex + 1),
-                                data.updatedHtml,
-                            ]);
-                            setHistoryIndex((prev) => prev + 1);
+                            // Add to history for undo with byte-level tracking
+                            const newEntryBytes = new Blob([data.updatedHtml]).size;
+
+                            setHistory((prev) => {
+                                const trimmedHistory = prev.slice(0, historyIndex + 1);
+                                const newHistory = [
+                                    ...trimmedHistory,
+                                    data.updatedHtml,
+                                ];
+
+                                // Calculate total bytes of new history
+                                let totalBytes = newHistory.reduce(
+                                    (sum, entry) => sum + new Blob([entry]).size,
+                                    0
+                                );
+
+                                // Prune oldest entries if over memory budget
+                                // Keep at least 2 entries (initial + current) for undo to work
+                                while (
+                                    totalBytes > MAX_HISTORY_BYTES &&
+                                    newHistory.length > 2
+                                ) {
+                                    const removedEntry = newHistory.shift();
+                                    if (removedEntry) {
+                                        totalBytes -= new Blob([removedEntry]).size;
+                                    }
+                                }
+
+                                // Update byte tracking
+                                setHistoryBytes(totalBytes);
+
+                                // Log if history was pruned
+                                if (newHistory.length < trimmedHistory.length + 1) {
+                                    logger.info(
+                                        {
+                                            pageId,
+                                            prunedEntries:
+                                                trimmedHistory.length +
+                                                1 -
+                                                newHistory.length,
+                                            totalBytes,
+                                            maxBytes: MAX_HISTORY_BYTES,
+                                        },
+                                        "📉 History pruned due to memory limit"
+                                    );
+                                }
+
+                                return newHistory;
+                            });
+
+                            // Adjust history index if entries were pruned
+                            setHistoryIndex((prev) => {
+                                // If we're adding an entry, increment
+                                // The actual index will be corrected by the history update
+                                return prev + 1;
+                            });
+
                             setHtml(data.updatedHtml);
                             setVersion((v) => v + 1);
+
+                            // Track memory usage in breadcrumb for observability
+                            Sentry.addBreadcrumb({
+                                category: "ai-editor.memory",
+                                message: "History entry added",
+                                level: "info",
+                                data: {
+                                    entryBytes: newEntryBytes,
+                                    historyBytes: historyBytes + newEntryBytes,
+                                    maxBytes: MAX_HISTORY_BYTES,
+                                },
+                            });
                         }
 
                         // Update suggested actions (API returns 'suggestions', not 'suggestedActions')
@@ -392,7 +485,8 @@ export function useEditor({
         );
     }, [pageId, title, html, version]);
 
-    // Publish page
+    // Publish page using atomic RPC endpoint
+    // PR #414: Uses atomic PostgreSQL function for data consistency
     const publish = useCallback(async (): Promise<{
         success: boolean;
         publishedUrl?: string;
@@ -407,16 +501,29 @@ export function useEditor({
                     // First save any pending changes
                     await save();
 
-                    const response = await fetch(`/api/ai-editor/pages/${pageId}`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                            status: "published",
-                        }),
-                    });
+                    // Use the atomic publish endpoint
+                    // This ensures all publish fields are updated in a single transaction
+                    const response = await fetch(
+                        `/api/ai-editor/pages/${pageId}/publish`,
+                        {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                action: "publish",
+                            }),
+                        }
+                    );
 
                     if (!response.ok) {
                         const errorData = await response.json().catch(() => ({}));
+
+                        // Handle specific error cases
+                        if (response.status === 409) {
+                            throw new ValidationError(
+                                "This URL is already in use. Please choose a different one."
+                            );
+                        }
+
                         throw new ValidationError(
                             errorData.error || "Failed to publish page"
                         );

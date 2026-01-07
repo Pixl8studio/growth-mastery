@@ -481,7 +481,11 @@ export default function Step2Page({
                 const validAccessTypes = ["immediate", "live", "scheduled"] as const;
                 const accessType = content.access_type as string;
 
-                if (!validAccessTypes.includes(accessType as typeof validAccessTypes[number])) {
+                if (
+                    !validAccessTypes.includes(
+                        accessType as (typeof validAccessTypes)[number]
+                    )
+                ) {
                     logger.error(
                         { accessType, validTypes: validAccessTypes },
                         "Invalid access_type value"
@@ -489,7 +493,8 @@ export default function Step2Page({
                     toast({
                         variant: "destructive",
                         title: "Invalid Access Type",
-                        description: "Please select a valid access type (Immediate, Live Event, or Scheduled).",
+                        description:
+                            "Please select a valid access type (Immediate, Live Event, or Scheduled).",
                     });
                     return;
                 }

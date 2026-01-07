@@ -13,7 +13,11 @@
 import { useState, useCallback } from "react";
 import { Plus, X, ChevronDown, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { FunnelNodeDefinition, FunnelNodeField, PaymentOption } from "@/types/funnel-map";
+import type {
+    FunnelNodeDefinition,
+    FunnelNodeField,
+    PaymentOption,
+} from "@/types/funnel-map";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";

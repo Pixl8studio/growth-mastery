@@ -176,13 +176,20 @@ export async function POST(request: Request) {
             }
 
             // Create version record
+            // PR #414: Store AI explanation for better audit trails
+            // Format: "User: [request] | AI: [explanation]" (truncated to 500 chars)
+            const userRequest = message.substring(0, 150);
+            const aiExplanation =
+                result.explanation?.substring(0, 300) || "Changes applied";
+            const changeDescription = `User: ${userRequest}${message.length > 150 ? "..." : ""} | AI: ${aiExplanation}${(result.explanation?.length || 0) > 300 ? "..." : ""}`;
+
             const { error: versionError } = await supabase
                 .from("ai_editor_versions")
                 .insert({
                     page_id: pageId,
                     version: newVersion,
                     html_content: result.updatedHtml,
-                    change_description: message.substring(0, 200),
+                    change_description: changeDescription.substring(0, 500),
                 });
 
             if (versionError) {

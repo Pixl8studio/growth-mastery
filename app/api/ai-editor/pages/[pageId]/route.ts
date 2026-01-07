@@ -90,7 +90,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
         // Parse body
         const body = await request.json();
-        const { title, html_content, status, version } = body;
+        const { title, html_content, status, version, change_description } = body;
 
         // Verify ownership
         const { data: existingPage, error: fetchError } = await supabase
@@ -137,6 +137,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
         }
 
         // Create version record if HTML changed
+        // PR #414: Accept custom change_description for better audit trails
         if (html_content !== undefined && html_content !== existingPage.html_content) {
             const { error: versionError } = await supabase
                 .from("ai_editor_versions")
@@ -144,7 +145,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
                     page_id: pageId,
                     version: version || (existingPage.version || 0) + 1,
                     html_content,
-                    change_description: "Manual save",
+                    change_description: change_description || "Manual save",
                 });
 
             if (versionError) {

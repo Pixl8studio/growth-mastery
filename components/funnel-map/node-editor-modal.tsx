@@ -125,8 +125,11 @@ function isPaymentOptionsEmpty(value: unknown): boolean {
         }
         // If it's an object, check if it has valid payment option structure
         // This handles cases where payment_options might be stored as { id: option } map
-        const hasValidOption = Object.values(value).some((opt) =>
-            typeof opt === "object" && opt !== null && isValidPaymentOption(opt as PaymentOption)
+        const hasValidOption = Object.values(value).some(
+            (opt) =>
+                typeof opt === "object" &&
+                opt !== null &&
+                isValidPaymentOption(opt as PaymentOption)
         );
         return !hasValidOption;
     }

@@ -115,8 +115,27 @@ export function PreviewIframe({
             URL.revokeObjectURL(previousBlobUrlRef.current);
         }
 
-        // Inject CSP meta tag to restrict script execution and connections
-        // This provides defense-in-depth against XSS in AI-generated HTML
+        /**
+         * Content Security Policy for Preview Iframe
+         *
+         * This CSP provides defense-in-depth against XSS in AI-generated HTML.
+         * Trade-offs and limitations:
+         *
+         * - script-src 'unsafe-inline': Allows inline scripts which is necessary for
+         *   AI-generated interactive elements (buttons, forms). This weakens XSS
+         *   protection but is required for functionality. The iframe sandbox
+         *   provides additional isolation.
+         *
+         * - connect-src 'none': Prevents all network requests (fetch, XHR, WebSocket).
+         *   This blocks analytics, tracking pixels, and external API calls in preview.
+         *   Users who need these features should note they work in production only.
+         *
+         * - img-src *: Allows images from any source to support user-uploaded content
+         *   and external image URLs in landing pages.
+         *
+         * NOTE: These restrictions are for preview only. Published pages can be
+         * configured with different CSP based on business requirements.
+         */
         const cspMeta = `<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src * data: blob:; connect-src 'none'; frame-ancestors 'none';">`;
         const htmlWithCsp = fullHtml.replace(/<head[^>]*>/i, `$&\n    ${cspMeta}`);
 

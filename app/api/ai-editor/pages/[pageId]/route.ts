@@ -6,6 +6,7 @@
  */
 
 import * as Sentry from "@sentry/nextjs";
+import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
@@ -84,7 +85,16 @@ function isReservedSlug(slug: string): boolean {
 }
 
 /**
+ * Generate a cryptographically random slug suffix
+ * Returns 8 hex characters (~32 bits of entropy, 4 billion possibilities)
+ */
+function generateRandomSuffix(): string {
+    return crypto.randomBytes(4).toString("hex");
+}
+
+/**
  * Generate a URL-safe slug from a title
+ * Uses crypto for better entropy when appending random suffixes
  */
 function generateSlug(title: string): string {
     let slug = title
@@ -93,10 +103,10 @@ function generateSlug(title: string): string {
         .replace(/^-|-$/g, "")
         .substring(0, 50);
 
-    // Append random suffix if reserved
-    if (isReservedSlug(slug)) {
-        const suffix = Math.random().toString(36).substring(2, 6);
-        slug = `${slug}-${suffix}`;
+    // Append random suffix if reserved or empty
+    if (isReservedSlug(slug) || !slug) {
+        const suffix = generateRandomSuffix();
+        slug = slug ? `${slug}-${suffix}` : `page-${suffix}`;
     }
 
     return slug;

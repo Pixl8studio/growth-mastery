@@ -21,9 +21,17 @@ interface ImageAttachment {
     mediaType?: string;
 }
 
+/** Maximum image size for base64 conversion (5MB) */
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
+/** Maximum HTML content size (1MB) */
+const MAX_HTML_SIZE = 1 * 1024 * 1024;
+
 /**
  * Fetch image from URL and convert to base64
  * This ensures Anthropic can access the image even if it's behind auth
+ *
+ * Includes size validation to prevent memory exhaustion attacks
  */
 async function fetchImageAsBase64(
     url: string
@@ -35,8 +43,28 @@ async function fetchImageAsBase64(
             return null;
         }
 
+        // Check content length before downloading to prevent memory exhaustion
+        const contentLength = response.headers.get("content-length");
+        if (contentLength && parseInt(contentLength, 10) > MAX_IMAGE_SIZE) {
+            logger.warn(
+                { url, size: contentLength, maxSize: MAX_IMAGE_SIZE },
+                "Image too large for processing"
+            );
+            return null;
+        }
+
         const contentType = response.headers.get("content-type") || "image/jpeg";
         const buffer = await response.arrayBuffer();
+
+        // Double-check actual size after download (content-length may be missing/wrong)
+        if (buffer.byteLength > MAX_IMAGE_SIZE) {
+            logger.warn(
+                { url, actualSize: buffer.byteLength, maxSize: MAX_IMAGE_SIZE },
+                "Image exceeded size limit after download"
+            );
+            return null;
+        }
+
         const base64 = Buffer.from(buffer).toString("base64");
 
         return { base64, mediaType: contentType };
@@ -94,20 +122,52 @@ export async function POST(request: Request) {
             );
         }
 
+        // Validate HTML content size to prevent performance issues
+        if (currentHtml.length > MAX_HTML_SIZE) {
+            logger.warn(
+                { size: currentHtml.length, maxSize: MAX_HTML_SIZE },
+                "HTML content too large"
+            );
+            return NextResponse.json(
+                {
+                    error: "HTML content is too large",
+                    details: `Maximum size is ${MAX_HTML_SIZE / 1024 / 1024}MB`,
+                },
+                { status: 400 }
+            );
+        }
+
         // Sanitize user message to prevent prompt injection
         const sanitizedMessage = sanitizeUserContent(message);
 
         // Validate image URLs - only allow our storage URLs or data URLs
+        // Use exact hostname check to prevent SSRF via lookalike domains
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const allowedOrigin = supabaseUrl ? new URL(supabaseUrl).origin : null;
+
         const validatedAttachments = imageAttachments.filter((attachment) => {
+            // Allow data URLs directly
+            if (attachment.url.startsWith("data:image/")) {
+                return true;
+            }
+
             try {
                 const url = new URL(attachment.url);
-                // Allow Supabase storage URLs and data URLs
-                return (
-                    url.hostname.includes("supabase") ||
-                    attachment.url.startsWith("data:image/")
+                // Strict origin check - only allow exact Supabase project origin
+                if (allowedOrigin && url.origin === allowedOrigin) {
+                    return true;
+                }
+                logger.warn(
+                    { url: attachment.url, allowedOrigin },
+                    "Rejected image URL: origin mismatch"
                 );
+                return false;
             } catch {
                 // Invalid URL format
+                logger.warn(
+                    { url: attachment.url },
+                    "Rejected image URL: invalid format"
+                );
                 return false;
             }
         });

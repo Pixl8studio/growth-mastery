@@ -1,6 +1,12 @@
 /**
  * AI Content Sanitization Utilities
  * Prevents prompt injection attacks by sanitizing user-provided content
+ *
+ * Design principles:
+ * - Minimize false positives: Only filter content that is clearly an injection attempt
+ * - Context-aware detection: Consider surrounding words to distinguish legitimate content
+ * - Fail safe: When in doubt, let content through (false negatives are better than
+ *   breaking legitimate user content)
  */
 
 /**
@@ -8,17 +14,37 @@
  * Uses XML-style delimiters to clearly separate user content from system instructions
  *
  * Protections include:
- * - Removing [system] and [assistant] role markers
- * - Filtering instruction override attempts
- * - Sanitizing markdown headers that might be interpreted as instructions
+ * - Removing [system] and [assistant] role markers (brackets are a clear signal)
+ * - Filtering specific instruction override patterns
+ * - Sanitizing markdown headers that appear to be directive headers
+ *
+ * Note: This prioritizes avoiding false positives. Legitimate content like
+ * "## System Requirements" or "ignore previous instructions from the manual"
+ * should pass through unchanged.
  */
 export function sanitizeUserContent(content: string): string {
     // Remove any attempts to inject system-level instructions
-    const sanitized = content
+    let sanitized = content
+        // [system] and [assistant] in brackets are clear prompt injection attempts
         .replace(/\[system\]/gi, "[user_input]")
-        .replace(/\[assistant\]/gi, "[user_input]")
-        .replace(/##\s*(system|instructions|ignore)/gi, "## user_content")
-        .replace(/ignore (previous|all|above) instructions/gi, "[filtered]");
+        .replace(/\[assistant\]/gi, "[user_input]");
+
+    // Sanitize markdown headers that are ONLY "## System" or "## Instructions" alone
+    // This avoids false positives like "## System Requirements" or "## Instructions for Users"
+    // Only match when followed by a newline, colon, or end of string (not additional words)
+    sanitized = sanitized.replace(
+        /^(##\s*)(system|instructions)(\s*[:\n]|$)/gim,
+        "$1user_content$3"
+    );
+
+    // Filter instruction override attempts - be specific about the pattern
+    // Must be a standalone command, not part of a longer sentence like
+    // "ignore previous instructions from the manual"
+    // Look for patterns that are clearly directive (start of line or after punctuation)
+    sanitized = sanitized.replace(
+        /(?:^|[.!?]\s*)ignore\s+(previous|all|above)\s+instructions(?:\s*[.!?\n]|$)/gim,
+        "[filtered]"
+    );
 
     return sanitized;
 }
@@ -26,10 +52,16 @@ export function sanitizeUserContent(content: string): string {
 /**
  * Sanitize AI-generated content to ensure it doesn't contain injection attempts
  * Lighter sanitization since this is output, not input
+ *
+ * This removes bracketed role markers that could be interpreted as prompt structure
+ * and standalone directive headers. Less aggressive than input sanitization.
  */
 export function sanitizeAIOutput(content: string): string {
-    return content
-        .replace(/\[system\]/gi, "")
-        .replace(/\[assistant\]/gi, "")
-        .replace(/##\s*(system|instructions)/gi, "");
+    return (
+        content
+            .replace(/\[system\]/gi, "")
+            .replace(/\[assistant\]/gi, "")
+            // Only match standalone headers, not "## System Requirements" etc.
+            .replace(/^(##\s*)(system|instructions)(\s*[:\n]|$)/gim, "$1$3")
+    );
 }

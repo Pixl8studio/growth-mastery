@@ -113,7 +113,8 @@ export function useEditor({
     const [lastEditSummary, setLastEditSummary] = useState<EditSummary | null>(null);
     const [initialMessageSent, setInitialMessageSent] = useState(false);
 
-    // Version history for undo
+    // Version history for undo - limited to prevent memory issues in long sessions
+    const MAX_HISTORY_SIZE = 30;
     const [history, setHistory] = useState<string[]>([initialHtml]);
     const [historyIndex, setHistoryIndex] = useState(0);
 
@@ -320,12 +321,26 @@ export function useEditor({
 
                         // Update HTML if changes were made
                         if (data.updatedHtml) {
-                            // Add to history for undo
-                            setHistory((prev) => [
-                                ...prev.slice(0, historyIndex + 1),
-                                data.updatedHtml,
-                            ]);
-                            setHistoryIndex((prev) => prev + 1);
+                            // Add to history for undo (limited to MAX_HISTORY_SIZE)
+                            setHistory((prev) => {
+                                const newHistory = [
+                                    ...prev.slice(0, historyIndex + 1),
+                                    data.updatedHtml,
+                                ];
+                                // Trim old history if exceeding limit
+                                if (newHistory.length > MAX_HISTORY_SIZE) {
+                                    const trimAmount =
+                                        newHistory.length - MAX_HISTORY_SIZE;
+                                    return newHistory.slice(trimAmount);
+                                }
+                                return newHistory;
+                            });
+                            // Adjust history index if we trimmed
+                            setHistoryIndex((prev) => {
+                                const newIndex = prev + 1;
+                                // If we would exceed MAX_HISTORY_SIZE, cap at max - 1
+                                return Math.min(newIndex, MAX_HISTORY_SIZE - 1);
+                            });
                             setHtml(data.updatedHtml);
                             setVersion((v) => v + 1);
                         }

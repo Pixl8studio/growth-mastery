@@ -477,13 +477,30 @@ export default function Step2Page({
             // - "live" or "scheduled" → confirmation node appears
             // - "immediate" → confirmation node hidden
             if (selectedNode === "registration" && content.access_type) {
+                // Validate access_type before upsert
+                const validAccessTypes = ["immediate", "live", "scheduled"] as const;
+                const accessType = content.access_type as string;
+
+                if (!validAccessTypes.includes(accessType as typeof validAccessTypes[number])) {
+                    logger.error(
+                        { accessType, validTypes: validAccessTypes },
+                        "Invalid access_type value"
+                    );
+                    toast({
+                        variant: "destructive",
+                        title: "Invalid Access Type",
+                        description: "Please select a valid access type (Immediate, Live Event, or Scheduled).",
+                    });
+                    return;
+                }
+
                 const { error: configError } = await supabase
                     .from("registration_config")
                     .upsert(
                         {
                             funnel_project_id: projectId,
                             user_id: project?.user_id || "",
-                            access_type: content.access_type as string,
+                            access_type: accessType,
                             event_datetime: (content.event_datetime as string) || null,
                             updated_at: now,
                         },

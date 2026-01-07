@@ -9,6 +9,7 @@
 import { useState, useCallback } from "react";
 import { Plus, Trash2, GripVertical } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { logger } from "@/lib/client-logger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,7 +43,19 @@ const FREQUENCY_OPTIONS: { value: PaymentFrequency; label: string }[] = [
 ];
 
 function generateId(): string {
-    return `po_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    return `po_${crypto.randomUUID()}`;
+}
+
+/**
+ * Calculate the total cost for a payment option
+ * For fixed_payments, multiplies amount by number of payments
+ * For one_time and recurring, returns the amount as-is
+ */
+function calculatePaymentPlanTotal(option: PaymentOption): number {
+    if (option.paymentType === "fixed_payments" && option.numberOfPayments) {
+        return option.amount * option.numberOfPayments;
+    }
+    return option.amount;
 }
 
 function createDefaultOption(): PaymentOption {
@@ -65,6 +78,7 @@ export function PaymentOptionsEditor({
 
     const handleAddOption = useCallback(() => {
         const newOption = createDefaultOption();
+        logger.info({ optionId: newOption.id }, "Payment option added");
         onChange([...value, newOption]);
         setExpandedOption(newOption.id);
     }, [value, onChange]);
@@ -72,6 +86,7 @@ export function PaymentOptionsEditor({
     const handleRemoveOption = useCallback(
         (id: string) => {
             const newOptions = value.filter((opt) => opt.id !== id);
+            logger.info({ optionId: id, remainingCount: newOptions.length }, "Payment option removed");
             onChange(newOptions);
             if (expandedOption === id) {
                 setExpandedOption(newOptions.length > 0 ? newOptions[0].id : null);
@@ -339,10 +354,7 @@ export function PaymentOptionsEditor({
                                                 <br />
                                                 <span className="text-xs">
                                                     Total: $
-                                                    {(
-                                                        option.amount *
-                                                        (option.numberOfPayments || 3)
-                                                    ).toLocaleString()}
+                                                    {calculatePaymentPlanTotal(option).toLocaleString()}
                                                 </span>
                                             </>
                                         )}

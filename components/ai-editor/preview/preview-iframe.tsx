@@ -92,7 +92,7 @@ export function PreviewIframe({
         []
     );
 
-    // Create blob URL for iframe content
+    // Create blob URL for iframe content with CSP headers
     useEffect(() => {
         const fullHtml = html || getPlaceholderHtml();
 
@@ -115,8 +115,13 @@ export function PreviewIframe({
             URL.revokeObjectURL(previousBlobUrlRef.current);
         }
 
-        // Create new blob URL
-        const blob = new Blob([fullHtml], { type: "text/html" });
+        // Inject CSP meta tag to restrict script execution and connections
+        // This provides defense-in-depth against XSS in AI-generated HTML
+        const cspMeta = `<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src * data: blob:; connect-src 'none'; frame-ancestors 'none';">`;
+        const htmlWithCsp = fullHtml.replace(/<head[^>]*>/i, `$&\n    ${cspMeta}`);
+
+        // Create new blob URL with CSP-protected HTML
+        const blob = new Blob([htmlWithCsp], { type: "text/html" });
         const newBlobUrl = URL.createObjectURL(blob);
         setBlobUrl(newBlobUrl);
         previousBlobUrlRef.current = newBlobUrl;

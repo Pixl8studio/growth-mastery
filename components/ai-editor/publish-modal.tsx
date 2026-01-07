@@ -152,11 +152,15 @@ export function PublishModal({
 
     // Get preview URL based on selected domain
     const getPreviewUrl = useCallback(() => {
-        const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+        // Use environment variable for consistent URL across environments
+        // Falls back to window.location.origin for local development
+        const baseUrl =
+            process.env.NEXT_PUBLIC_APP_URL ||
+            (typeof window !== "undefined" ? window.location.origin : "");
 
         if (selectedDomain === "default") {
-            // Default domain - use growthmastery.ai subdomain structure
-            return `${baseUrl}/${slug}`;
+            // Default domain - use growthmastery.ai path structure
+            return `${baseUrl}/p/${slug}`;
         }
 
         // Custom domain
@@ -165,7 +169,7 @@ export function PublishModal({
             return `https://${domain.domain}/${slug}`;
         }
 
-        return `${baseUrl}/${slug}`;
+        return `${baseUrl}/p/${slug}`;
     }, [selectedDomain, slug, customDomains]);
 
     // Handle publish

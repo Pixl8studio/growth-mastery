@@ -117,6 +117,9 @@ export function useEditor({
     const [history, setHistory] = useState<string[]>([initialHtml]);
     const [historyIndex, setHistoryIndex] = useState(0);
 
+    // Save lock to prevent concurrent saves
+    const [isSaving, setIsSaving] = useState(false);
+
     // Generate unique ID for messages
     const generateId = () =>
         `msg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -407,6 +410,13 @@ export function useEditor({
 
     // Save to database with observability
     const save = useCallback(async () => {
+        // Prevent concurrent saves
+        if (isSaving) {
+            logger.debug({ pageId }, "Save already in progress, skipping");
+            return;
+        }
+
+        setIsSaving(true);
         setStatus("saving");
 
         return await Sentry.startSpan(
@@ -472,10 +482,12 @@ export function useEditor({
 
                     setStatus("draft");
                     throw error;
+                } finally {
+                    setIsSaving(false);
                 }
             }
         );
-    }, [pageId, title, html, version]);
+    }, [pageId, title, html, version, isSaving]);
 
     // Publish page with optional custom slug
     const publish = useCallback(
@@ -563,8 +575,10 @@ export function useEditor({
     useEffect(() => {
         // Don't auto-save if html hasn't changed from initial
         if (!html || html === initialHtml) return;
-        // Don't auto-save while processing
+        // Don't auto-save while processing AI requests
         if (isProcessing) return;
+        // Don't auto-save while another save is in progress
+        if (isSaving) return;
 
         const timeout = setTimeout(() => {
             save().catch(() => {
@@ -574,7 +588,7 @@ export function useEditor({
 
         return () => clearTimeout(timeout);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [html, title, initialHtml, isProcessing]);
+    }, [html, title, initialHtml, isProcessing, isSaving]);
 
     // Warn about unsaved changes before leaving
     useEffect(() => {

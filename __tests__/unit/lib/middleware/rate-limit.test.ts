@@ -138,6 +138,34 @@ describe("lib/middleware/rate-limit", () => {
             expect(mockLimit).toHaveBeenCalledWith("user:123");
         });
 
+        it("should use image-upload rate limiter for image uploads", async () => {
+            mockLimit.mockResolvedValue({
+                success: true,
+                limit: 30,
+                remaining: 15,
+                reset: Date.now() + 60000,
+            });
+
+            const result = await checkRateLimit("user:123", "image-upload");
+
+            expect(result).toBeNull();
+            expect(mockLimit).toHaveBeenCalledWith("user:123");
+        });
+
+        it("should block excessive image uploads", async () => {
+            mockLimit.mockResolvedValue({
+                success: false,
+                limit: 30,
+                remaining: 0,
+                reset: Date.now() + 60000,
+            });
+
+            const result = await checkRateLimit("user:123", "image-upload");
+
+            expect(result).not.toBeNull();
+            expect(result?.status).toBe(429);
+        });
+
         it("should allow request gracefully when rate limiting fails", async () => {
             mockLimit.mockRejectedValue(new Error("Redis connection failed"));
 

@@ -416,4 +416,147 @@ describe("useEditor", () => {
             );
         });
     });
+
+    describe("selectOption functionality", () => {
+        it("should send the selected option label as a message", async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    response: "Applied blue color",
+                    updatedHtml: "<h1 style='color: blue'>Title</h1>",
+                    editsApplied: 1,
+                    suggestions: [],
+                }),
+            });
+
+            const { result } = renderHook(() => useEditor(defaultOptions));
+
+            await act(async () => {
+                result.current.selectOption("option-1", "Make it blue");
+            });
+
+            // Should have called sendMessage with the option label
+            expect(mockFetch).toHaveBeenCalledWith(
+                "/api/ai-editor/chat",
+                expect.objectContaining({
+                    method: "POST",
+                    body: expect.stringContaining("Make it blue"),
+                })
+            );
+        });
+
+        it("should add user message with option label", async () => {
+            mockFetch.mockResolvedValueOnce({
+                ok: true,
+                json: async () => ({
+                    response: "Done",
+                    updatedHtml: "<h1>Updated</h1>",
+                    editsApplied: 1,
+                    suggestions: [],
+                }),
+            });
+
+            const { result } = renderHook(() => useEditor(defaultOptions));
+
+            await act(async () => {
+                result.current.selectOption("opt-123", "Add more contrast");
+            });
+
+            // User message should contain the option label
+            const userMessage = result.current.messages.find(
+                (m) => m.role === "user" && m.content === "Add more contrast"
+            );
+            expect(userMessage).toBeDefined();
+        });
+    });
+
+    describe("save locking (race condition prevention)", () => {
+        it("should prevent concurrent saves", async () => {
+            let saveCount = 0;
+            mockFetch.mockImplementation(async () => {
+                saveCount++;
+                // Simulate slow save
+                await new Promise((resolve) => setTimeout(resolve, 50));
+                return {
+                    ok: true,
+                    json: async () => ({ success: true }),
+                };
+            });
+
+            const { result } = renderHook(() => useEditor(defaultOptions));
+
+            // Try to trigger multiple saves at once
+            const savePromise1 = act(async () => {
+                await result.current.save();
+            });
+
+            // Second save should be skipped because first is in progress
+            const savePromise2 = act(async () => {
+                await result.current.save();
+            });
+
+            await Promise.all([savePromise1, savePromise2]);
+
+            // Should only have made one actual save call
+            // (second was blocked by the save lock)
+            expect(saveCount).toBe(1);
+        });
+
+        it("should allow save after previous save completes", async () => {
+            let saveCount = 0;
+            mockFetch.mockImplementation(async () => {
+                saveCount++;
+                return {
+                    ok: true,
+                    json: async () => ({ success: true }),
+                };
+            });
+
+            const { result } = renderHook(() => useEditor(defaultOptions));
+
+            // First save
+            await act(async () => {
+                await result.current.save();
+            });
+
+            // Second save should work after first completes
+            await act(async () => {
+                await result.current.save();
+            });
+
+            expect(saveCount).toBe(2);
+        });
+
+        it("should unlock after save fails", async () => {
+            let saveCount = 0;
+            mockFetch
+                .mockRejectedValueOnce(new Error("Network error"))
+                .mockImplementation(async () => {
+                    saveCount++;
+                    return {
+                        ok: true,
+                        json: async () => ({ success: true }),
+                    };
+                });
+
+            const { result } = renderHook(() => useEditor(defaultOptions));
+
+            // First save fails
+            await act(async () => {
+                try {
+                    await result.current.save();
+                } catch {
+                    // Expected error
+                }
+            });
+
+            // Second save should still work after first fails
+            await act(async () => {
+                await result.current.save();
+            });
+
+            expect(saveCount).toBe(1);
+            expect(result.current.status).toBe("draft");
+        });
+    });
 });

@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import * as Sentry from "@sentry/nextjs";
+import { checkRateLimit } from "@/lib/middleware/rate-limit";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -24,6 +25,15 @@ export async function POST(request: NextRequest) {
 
         if (!user) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
+        // Check rate limit
+        const rateLimitResponse = await checkRateLimit(
+            `user:${user.id}`,
+            "image-upload"
+        );
+        if (rateLimitResponse) {
+            return rateLimitResponse;
         }
 
         const formData = await request.formData();

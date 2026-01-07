@@ -10,6 +10,30 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 
+/**
+ * Standard error response format
+ */
+interface ErrorResponse {
+    error: string;
+    code?: string;
+    details?: string;
+}
+
+/**
+ * Create a standardized error response
+ */
+function createErrorResponse(
+    error: string,
+    status: number,
+    code?: string,
+    details?: string
+): NextResponse<ErrorResponse> {
+    return NextResponse.json(
+        { error, ...(code && { code }), ...(details && { details }) },
+        { status }
+    );
+}
+
 interface RouteParams {
     params: Promise<{
         pageId: string;
@@ -91,7 +115,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         } = await supabase.auth.getUser();
 
         if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return createErrorResponse("Unauthorized", 401, "AUTH_REQUIRED");
         }
 
         const { data: page, error } = await supabase
@@ -108,13 +132,14 @@ export async function GET(request: Request, { params }: RouteParams) {
             .single();
 
         if (error || !page) {
-            return NextResponse.json({ error: "Page not found" }, { status: 404 });
+            return createErrorResponse("Page not found", 404, "PAGE_NOT_FOUND");
         }
 
         if (page.funnel_projects.user_id !== user.id) {
-            return NextResponse.json(
-                { error: "You don't have access to this page" },
-                { status: 403 }
+            return createErrorResponse(
+                "You don't have access to this page",
+                403,
+                "ACCESS_DENIED"
             );
         }
 
@@ -130,7 +155,12 @@ export async function GET(request: Request, { params }: RouteParams) {
             },
         });
 
-        return NextResponse.json({ error: "Failed to get page" }, { status: 500 });
+        return createErrorResponse(
+            "Failed to get page",
+            500,
+            "INTERNAL_ERROR",
+            error instanceof Error ? error.message : undefined
+        );
     }
 }
 
@@ -147,7 +177,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
         } = await supabase.auth.getUser();
 
         if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return createErrorResponse("Unauthorized", 401, "AUTH_REQUIRED");
         }
 
         // Parse body
@@ -162,13 +192,14 @@ export async function PUT(request: Request, { params }: RouteParams) {
             .single();
 
         if (fetchError || !existingPage) {
-            return NextResponse.json({ error: "Page not found" }, { status: 404 });
+            return createErrorResponse("Page not found", 404, "PAGE_NOT_FOUND");
         }
 
         if (existingPage.funnel_projects.user_id !== user.id) {
-            return NextResponse.json(
-                { error: "You don't have access to this page" },
-                { status: 403 }
+            return createErrorResponse(
+                "You don't have access to this page",
+                403,
+                "ACCESS_DENIED"
             );
         }
 
@@ -186,19 +217,20 @@ export async function PUT(request: Request, { params }: RouteParams) {
         if (slug !== undefined) {
             // Validate slug format
             if (!/^[a-z0-9-]+$/.test(slug) || slug.length < 3 || slug.length > 50) {
-                return NextResponse.json(
-                    { error: "Invalid slug format" },
-                    { status: 400 }
+                return createErrorResponse(
+                    "Invalid slug format",
+                    400,
+                    "INVALID_SLUG",
+                    "Slug must be 3-50 characters and contain only lowercase letters, numbers, and hyphens"
                 );
             }
 
             // Check if slug is reserved
             if (isReservedSlug(slug)) {
-                return NextResponse.json(
-                    {
-                        error: "This URL is reserved. Please choose a different one.",
-                    },
-                    { status: 400 }
+                return createErrorResponse(
+                    "This URL is reserved. Please choose a different one.",
+                    400,
+                    "RESERVED_SLUG"
                 );
             }
 
@@ -211,11 +243,10 @@ export async function PUT(request: Request, { params }: RouteParams) {
                 .single();
 
             if (existingSlug) {
-                return NextResponse.json(
-                    {
-                        error: "This URL is already taken. Please choose a different one.",
-                    },
-                    { status: 409 }
+                return createErrorResponse(
+                    "This URL is already taken. Please choose a different one.",
+                    409,
+                    "SLUG_TAKEN"
                 );
             }
 
@@ -223,14 +254,34 @@ export async function PUT(request: Request, { params }: RouteParams) {
         }
 
         // Generate published URL when publishing
+        // Store original values for potential rollback
+        const originalSlug = existingPage.slug;
+        const originalPublishedUrl = existingPage.published_url;
+        const originalPublishedAt = existingPage.published_at;
+
         if (status === "published") {
-            const pageSlug =
-                slug || existingPage.slug || generateSlug(existingPage.title);
-            const baseUrl =
-                process.env.NEXT_PUBLIC_APP_URL || "https://app.growthmastery.ai";
-            updates.slug = pageSlug;
-            updates.published_url = `${baseUrl}/p/${pageSlug}`;
-            updates.published_at = new Date().toISOString();
+            try {
+                const pageSlug =
+                    slug || existingPage.slug || generateSlug(existingPage.title);
+                const baseUrl =
+                    process.env.NEXT_PUBLIC_APP_URL || "https://app.growthmastery.ai";
+
+                // Validate the generated URL
+                if (!pageSlug) {
+                    throw new Error("Failed to generate slug");
+                }
+
+                updates.slug = pageSlug;
+                updates.published_url = `${baseUrl}/p/${pageSlug}`;
+                updates.published_at = new Date().toISOString();
+            } catch (error) {
+                logger.error({ error }, "Failed to generate published URL");
+                return createErrorResponse(
+                    "Failed to generate published URL",
+                    500,
+                    "URL_GENERATION_FAILED"
+                );
+            }
         }
 
         // Update the page
@@ -243,9 +294,29 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
         if (updateError) {
             logger.error({ error: updateError }, "Failed to update AI editor page");
-            return NextResponse.json(
-                { error: "Failed to update page" },
-                { status: 500 }
+
+            // Attempt rollback if we modified slug/URL and update failed
+            if (status === "published" && (originalSlug || originalPublishedUrl)) {
+                logger.info({ pageId }, "Attempting rollback of publish changes");
+                try {
+                    await supabase
+                        .from("ai_editor_pages")
+                        .update({
+                            slug: originalSlug,
+                            published_url: originalPublishedUrl,
+                            published_at: originalPublishedAt,
+                        })
+                        .eq("id", pageId);
+                } catch (rollbackError) {
+                    logger.error({ error: rollbackError, pageId }, "Rollback failed");
+                }
+            }
+
+            return createErrorResponse(
+                "Failed to update page",
+                500,
+                "UPDATE_FAILED",
+                updateError.message
             );
         }
 
@@ -279,7 +350,12 @@ export async function PUT(request: Request, { params }: RouteParams) {
             },
         });
 
-        return NextResponse.json({ error: "Failed to update page" }, { status: 500 });
+        return createErrorResponse(
+            "Failed to update page",
+            500,
+            "INTERNAL_ERROR",
+            error instanceof Error ? error.message : undefined
+        );
     }
 }
 
@@ -296,7 +372,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
         } = await supabase.auth.getUser();
 
         if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return createErrorResponse("Unauthorized", 401, "AUTH_REQUIRED");
         }
 
         // Verify ownership
@@ -307,13 +383,14 @@ export async function DELETE(request: Request, { params }: RouteParams) {
             .single();
 
         if (fetchError || !existingPage) {
-            return NextResponse.json({ error: "Page not found" }, { status: 404 });
+            return createErrorResponse("Page not found", 404, "PAGE_NOT_FOUND");
         }
 
         if (existingPage.funnel_projects.user_id !== user.id) {
-            return NextResponse.json(
-                { error: "You don't have access to this page" },
-                { status: 403 }
+            return createErrorResponse(
+                "You don't have access to this page",
+                403,
+                "ACCESS_DENIED"
             );
         }
 
@@ -325,9 +402,11 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
         if (deleteError) {
             logger.error({ error: deleteError }, "Failed to delete AI editor page");
-            return NextResponse.json(
-                { error: "Failed to delete page" },
-                { status: 500 }
+            return createErrorResponse(
+                "Failed to delete page",
+                500,
+                "DELETE_FAILED",
+                deleteError.message
             );
         }
 
@@ -345,6 +424,11 @@ export async function DELETE(request: Request, { params }: RouteParams) {
             },
         });
 
-        return NextResponse.json({ error: "Failed to delete page" }, { status: 500 });
+        return createErrorResponse(
+            "Failed to delete page",
+            500,
+            "INTERNAL_ERROR",
+            error instanceof Error ? error.message : undefined
+        );
     }
 }

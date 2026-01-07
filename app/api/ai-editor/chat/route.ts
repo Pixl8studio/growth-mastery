@@ -12,6 +12,7 @@ import {
     processEditRequest,
     type EditRequestOptions,
 } from "@/lib/ai-editor/chat-processor";
+import { sanitizeUserContent } from "@/lib/ai/sanitize";
 
 interface ImageAttachment {
     id: string;
@@ -93,6 +94,24 @@ export async function POST(request: Request) {
             );
         }
 
+        // Sanitize user message to prevent prompt injection
+        const sanitizedMessage = sanitizeUserContent(message);
+
+        // Validate image URLs - only allow our storage URLs or data URLs
+        const validatedAttachments = imageAttachments.filter((attachment) => {
+            try {
+                const url = new URL(attachment.url);
+                // Allow Supabase storage URLs and data URLs
+                return (
+                    url.hostname.includes("supabase") ||
+                    attachment.url.startsWith("data:image/")
+                );
+            } catch {
+                // Invalid URL format
+                return false;
+            }
+        });
+
         // Fetch the page and verify ownership
         const { data: page, error: pageError } = await supabase
             .from("ai_editor_pages")
@@ -129,16 +148,16 @@ export async function POST(request: Request) {
             {
                 userId: user.id,
                 pageId,
-                messageLength: message.length,
+                messageLength: sanitizedMessage.length,
                 pageType: page.page_type,
-                imageCount: imageAttachments.length,
+                imageCount: validatedAttachments.length,
             },
             "Processing AI edit request"
         );
 
         // Convert image URLs to base64 for safe Anthropic API access
         const processedAttachments: ImageAttachment[] = [];
-        for (const attachment of imageAttachments) {
+        for (const attachment of validatedAttachments) {
             const imageData = await fetchImageAsBase64(attachment.url);
             if (imageData) {
                 processedAttachments.push({
@@ -158,7 +177,7 @@ export async function POST(request: Request) {
             const editOptions: EditRequestOptions = {
                 pageId,
                 pageType: page.page_type,
-                userMessage: message,
+                userMessage: sanitizedMessage,
                 currentHtml,
                 conversationHistory,
                 projectName,
@@ -207,7 +226,7 @@ export async function POST(request: Request) {
                 extra: {
                     pageId,
                     pageType: page.page_type,
-                    messageLength: message.length,
+                    messageLength: sanitizedMessage.length,
                 },
             });
 
@@ -249,7 +268,7 @@ export async function POST(request: Request) {
 
         // Update conversation history
         const newMessages = [
-            { role: "user", content: message },
+            { role: "user", content: sanitizedMessage },
             { role: "assistant", content: result.explanation },
         ];
 

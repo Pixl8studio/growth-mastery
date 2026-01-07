@@ -55,6 +55,14 @@ export function ChatInput({ onSendMessage, isProcessing, projectId }: ChatInputP
         if (attachments.some((a) => a.uploading)) return;
 
         onSendMessage(message.trim(), attachments.length > 0 ? attachments : undefined);
+
+        // Revoke blob URLs before clearing to prevent memory leak
+        attachments.forEach((attachment) => {
+            if (attachment.url.startsWith("blob:")) {
+                URL.revokeObjectURL(attachment.url);
+            }
+        });
+
         setMessage("");
         setAttachments([]);
 

@@ -6,14 +6,76 @@
  */
 
 import * as Sentry from "@sentry/nextjs";
+import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
+import { checkHtmlSize } from "@/lib/validation/html";
+import {
+    isReservedSlug,
+    validateSlugFormat,
+    normalizeHomographs,
+} from "@/lib/constants/slugs";
+
+/**
+ * Standard error response format
+ */
+interface ErrorResponse {
+    error: string;
+    code?: string;
+    details?: string;
+}
+
+/**
+ * Create a standardized error response
+ */
+function createErrorResponse(
+    error: string,
+    status: number,
+    code?: string,
+    details?: string
+): NextResponse<ErrorResponse> {
+    return NextResponse.json(
+        { error, ...(code && { code }), ...(details && { details }) },
+        { status }
+    );
+}
 
 interface RouteParams {
     params: Promise<{
         pageId: string;
     }>;
+}
+
+// Note: RESERVED_SLUGS, isReservedSlug, and validateSlugFormat are imported from
+// @/lib/constants/slugs for centralized management and Unicode homograph protection
+
+/**
+ * Generate a cryptographically random slug suffix
+ * Returns 8 hex characters (~32 bits of entropy, 4 billion possibilities)
+ */
+function generateRandomSuffix(): string {
+    return crypto.randomBytes(4).toString("hex");
+}
+
+/**
+ * Generate a URL-safe slug from a title
+ * Uses crypto for better entropy when appending random suffixes
+ */
+function generateSlug(title: string): string {
+    let slug = title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "")
+        .substring(0, 50);
+
+    // Append random suffix if reserved or empty
+    if (isReservedSlug(slug) || !slug) {
+        const suffix = generateRandomSuffix();
+        slug = slug ? `${slug}-${suffix}` : `page-${suffix}`;
+    }
+
+    return slug;
 }
 
 /**
@@ -29,7 +91,7 @@ export async function GET(request: Request, { params }: RouteParams) {
         } = await supabase.auth.getUser();
 
         if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return createErrorResponse("Unauthorized", 401, "AUTH_REQUIRED");
         }
 
         const { data: page, error } = await supabase
@@ -46,13 +108,14 @@ export async function GET(request: Request, { params }: RouteParams) {
             .single();
 
         if (error || !page) {
-            return NextResponse.json({ error: "Page not found" }, { status: 404 });
+            return createErrorResponse("Page not found", 404, "PAGE_NOT_FOUND");
         }
 
         if (page.funnel_projects.user_id !== user.id) {
-            return NextResponse.json(
-                { error: "You don't have access to this page" },
-                { status: 403 }
+            return createErrorResponse(
+                "You don't have access to this page",
+                403,
+                "ACCESS_DENIED"
             );
         }
 
@@ -68,7 +131,12 @@ export async function GET(request: Request, { params }: RouteParams) {
             },
         });
 
-        return NextResponse.json({ error: "Failed to get page" }, { status: 500 });
+        return createErrorResponse(
+            "Failed to get page",
+            500,
+            "INTERNAL_ERROR",
+            error instanceof Error ? error.message : undefined
+        );
     }
 }
 
@@ -85,28 +153,46 @@ export async function PUT(request: Request, { params }: RouteParams) {
         } = await supabase.auth.getUser();
 
         if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return createErrorResponse("Unauthorized", 401, "AUTH_REQUIRED");
         }
 
         // Parse body
         const body = await request.json();
-        const { title, html_content, status, version, change_description } = body;
+        const { title, html_content, status, version, slug, change_description } = body;
+
+        // Validate HTML content size if provided
+        if (html_content !== undefined) {
+            const htmlSizeCheck = checkHtmlSize(html_content);
+            if (!htmlSizeCheck.valid) {
+                logger.warn(
+                    { size: htmlSizeCheck.size, maxSize: htmlSizeCheck.maxSize },
+                    "HTML content too large in page update"
+                );
+                return createErrorResponse(
+                    "HTML content is too large",
+                    400,
+                    "CONTENT_TOO_LARGE",
+                    htmlSizeCheck.error
+                );
+            }
+        }
 
         // Verify ownership
         const { data: existingPage, error: fetchError } = await supabase
             .from("ai_editor_pages")
-            .select("*, funnel_projects!inner(user_id)")
+            .select("*, funnel_projects!inner(user_id, name)")
             .eq("id", pageId)
             .single();
 
         if (fetchError || !existingPage) {
-            return NextResponse.json({ error: "Page not found" }, { status: 404 });
+            return createErrorResponse("Page not found", 404, "PAGE_NOT_FOUND");
         }
 
         if (existingPage.funnel_projects.user_id !== user.id) {
-            return NextResponse.json(
-                { error: "You don't have access to this page" },
-                { status: 403 }
+            return createErrorResponse(
+                "You don't have access to this page",
+                403,
+                "ACCESS_DENIED"
             );
         }
 
@@ -120,6 +206,83 @@ export async function PUT(request: Request, { params }: RouteParams) {
         if (status !== undefined) updates.status = status;
         if (version !== undefined) updates.version = version;
 
+        // Handle slug and published URL when publishing
+        if (slug !== undefined) {
+            // Normalize Unicode homographs before validation (e.g., Cyrillic 'а' -> Latin 'a')
+            const normalizedSlug = normalizeHomographs(slug.toLowerCase());
+
+            // Validate slug format using centralized validation
+            const formatValidation = validateSlugFormat(normalizedSlug);
+            if (!formatValidation.valid) {
+                return createErrorResponse(
+                    formatValidation.error,
+                    400,
+                    "INVALID_SLUG",
+                    "Slug must be 3-50 characters and contain only lowercase letters, numbers, and hyphens"
+                );
+            }
+
+            // Check if slug is reserved (using normalized slug to prevent homograph bypass)
+            if (isReservedSlug(normalizedSlug)) {
+                return createErrorResponse(
+                    "This URL is reserved. Please choose a different one.",
+                    400,
+                    "RESERVED_SLUG"
+                );
+            }
+
+            // Check if slug is already taken (by another page)
+            // Note: Don't use .single() - it throws when no rows found (which is success case)
+            // Use normalized slug for DB query to ensure consistent comparison
+            const { data: existingSlugs } = await supabase
+                .from("ai_editor_pages")
+                .select("id")
+                .eq("slug", normalizedSlug)
+                .neq("id", pageId);
+
+            if (existingSlugs && existingSlugs.length > 0) {
+                return createErrorResponse(
+                    "This URL is already taken. Please choose a different one.",
+                    409,
+                    "SLUG_TAKEN"
+                );
+            }
+
+            // Store the normalized slug
+            updates.slug = normalizedSlug;
+        }
+
+        // Generate published URL when publishing
+        // Store original values for potential rollback
+        const originalSlug = existingPage.slug;
+        const originalPublishedUrl = existingPage.published_url;
+        const originalPublishedAt = existingPage.published_at;
+
+        if (status === "published") {
+            try {
+                const pageSlug =
+                    slug || existingPage.slug || generateSlug(existingPage.title);
+                const baseUrl =
+                    process.env.NEXT_PUBLIC_APP_URL || "https://app.growthmastery.ai";
+
+                // Validate the generated URL
+                if (!pageSlug) {
+                    throw new Error("Failed to generate slug");
+                }
+
+                updates.slug = pageSlug;
+                updates.published_url = `${baseUrl}/p/${pageSlug}`;
+                updates.published_at = new Date().toISOString();
+            } catch (error) {
+                logger.error({ error }, "Failed to generate published URL");
+                return createErrorResponse(
+                    "Failed to generate published URL",
+                    500,
+                    "URL_GENERATION_FAILED"
+                );
+            }
+        }
+
         // Update the page
         const { data: updatedPage, error: updateError } = await supabase
             .from("ai_editor_pages")
@@ -130,9 +293,40 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
         if (updateError) {
             logger.error({ error: updateError }, "Failed to update AI editor page");
-            return NextResponse.json(
-                { error: "Failed to update page" },
-                { status: 500 }
+
+            // Attempt rollback if we modified slug/URL and update failed
+            // NOTE: This is a best-effort rollback for publish-related fields only
+            // (slug, published_url, published_at). Supabase doesn't support true
+            // transactions via the JS client for complex multi-field updates.
+            // Other fields (title, html_content, status, version) are NOT rolled back.
+            // This is acceptable because:
+            // 1. Most update failures are network/timeout issues where the update didn't happen
+            // 2. The slug/URL fields are the most critical to restore (prevent orphaned URLs)
+            // 3. Client-side state will still have the correct data for retry
+            if (status === "published" && (originalSlug || originalPublishedUrl)) {
+                logger.info(
+                    { pageId },
+                    "Attempting best-effort rollback of publish fields"
+                );
+                try {
+                    await supabase
+                        .from("ai_editor_pages")
+                        .update({
+                            slug: originalSlug,
+                            published_url: originalPublishedUrl,
+                            published_at: originalPublishedAt,
+                        })
+                        .eq("id", pageId);
+                } catch (rollbackError) {
+                    logger.error({ error: rollbackError, pageId }, "Rollback failed");
+                }
+            }
+
+            return createErrorResponse(
+                "Failed to update page",
+                500,
+                "UPDATE_FAILED",
+                updateError.message
             );
         }
 
@@ -167,7 +361,12 @@ export async function PUT(request: Request, { params }: RouteParams) {
             },
         });
 
-        return NextResponse.json({ error: "Failed to update page" }, { status: 500 });
+        return createErrorResponse(
+            "Failed to update page",
+            500,
+            "INTERNAL_ERROR",
+            error instanceof Error ? error.message : undefined
+        );
     }
 }
 
@@ -184,7 +383,7 @@ export async function DELETE(request: Request, { params }: RouteParams) {
         } = await supabase.auth.getUser();
 
         if (!user) {
-            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+            return createErrorResponse("Unauthorized", 401, "AUTH_REQUIRED");
         }
 
         // Verify ownership
@@ -195,13 +394,14 @@ export async function DELETE(request: Request, { params }: RouteParams) {
             .single();
 
         if (fetchError || !existingPage) {
-            return NextResponse.json({ error: "Page not found" }, { status: 404 });
+            return createErrorResponse("Page not found", 404, "PAGE_NOT_FOUND");
         }
 
         if (existingPage.funnel_projects.user_id !== user.id) {
-            return NextResponse.json(
-                { error: "You don't have access to this page" },
-                { status: 403 }
+            return createErrorResponse(
+                "You don't have access to this page",
+                403,
+                "ACCESS_DENIED"
             );
         }
 
@@ -213,9 +413,11 @@ export async function DELETE(request: Request, { params }: RouteParams) {
 
         if (deleteError) {
             logger.error({ error: deleteError }, "Failed to delete AI editor page");
-            return NextResponse.json(
-                { error: "Failed to delete page" },
-                { status: 500 }
+            return createErrorResponse(
+                "Failed to delete page",
+                500,
+                "DELETE_FAILED",
+                deleteError.message
             );
         }
 
@@ -233,6 +435,11 @@ export async function DELETE(request: Request, { params }: RouteParams) {
             },
         });
 
-        return NextResponse.json({ error: "Failed to delete page" }, { status: 500 });
+        return createErrorResponse(
+            "Failed to delete page",
+            500,
+            "INTERNAL_ERROR",
+            error instanceof Error ? error.message : undefined
+        );
     }
 }

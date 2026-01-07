@@ -2,6 +2,18 @@
  * AI Content Sanitization Utilities
  * Prevents prompt injection attacks by sanitizing user-provided content
  *
+ * Design principles:
+ * - Minimize false positives: Only filter content that is clearly an injection attempt
+ * - Context-aware detection: Consider surrounding words to distinguish legitimate content
+ * - Fail safe: When in doubt, let content through (false negatives are better than
+ *   breaking legitimate user content)
+ *
+ * Performance considerations:
+ * - Regex patterns use alternation which can cause backtracking on large inputs
+ * - Current implementation is optimized for typical user message sizes (< 10KB)
+ * - Input length is validated before regex operations to prevent ReDoS
+ * - Current risk is minimal: chat API limits HTML to 1MB and messages are typically short
+ *
  * PR #414 Improvements:
  * - Maximum length protection to prevent ReDoS attacks
  * - Security event tracking with Sentry
@@ -53,10 +65,14 @@ function trackSecurityEvent(
  *
  * Protections include:
  * - Maximum length enforcement (ReDoS protection)
- * - Removing [system] and [assistant] role markers
- * - Filtering instruction override attempts
- * - Sanitizing markdown headers that might be interpreted as instructions
+ * - Removing [system] and [assistant] role markers (brackets are a clear signal)
+ * - Filtering specific instruction override patterns
+ * - Sanitizing markdown headers that appear to be directive headers
  * - Detecting and logging security events
+ *
+ * Note: This prioritizes avoiding false positives. Legitimate content like
+ * "## System Requirements" or "ignore previous instructions from the manual"
+ * should pass through unchanged.
  *
  * @param content - User-provided content to sanitize
  * @returns Sanitized content safe for AI processing
@@ -77,14 +93,13 @@ export function sanitizeUserContent(content: string): string {
         securityEventsDetected++;
     }
 
-    // Detect and replace role markers
-    // Use simple string patterns to avoid ReDoS
+    const originalContent = sanitized;
+
+    // Detect role markers (for tracking)
     const roleMarkerPatterns = [
         { pattern: /\[system\]/gi, type: "role_marker_detected" as const },
         { pattern: /\[assistant\]/gi, type: "role_marker_detected" as const },
         { pattern: /\[human\]/gi, type: "role_marker_detected" as const },
-        { pattern: /<system>/gi, type: "role_marker_detected" as const },
-        { pattern: /<assistant>/gi, type: "role_marker_detected" as const },
     ];
 
     for (const { pattern, type } of roleMarkerPatterns) {
@@ -98,50 +113,37 @@ export function sanitizeUserContent(content: string): string {
     }
 
     // Apply sanitization replacements
+    // [system] and [assistant] in brackets are clear prompt injection attempts
     sanitized = sanitized
-        // Role markers
         .replace(/\[system\]/gi, "[user_input]")
         .replace(/\[assistant\]/gi, "[user_input]")
-        .replace(/\[human\]/gi, "[user_input]")
-        .replace(/<system>/gi, "&lt;system&gt;")
-        .replace(/<assistant>/gi, "&lt;assistant&gt;")
-        // Markdown headers that could be interpreted as instructions
-        .replace(/##\s*(system|instructions|ignore)/gi, "## user_content")
-        // Instruction override attempts (simple patterns to avoid ReDoS)
-        .replace(/ignore previous instructions/gi, "[filtered]")
-        .replace(/ignore all instructions/gi, "[filtered]")
-        .replace(/ignore above instructions/gi, "[filtered]")
-        .replace(/disregard previous/gi, "[filtered]")
-        .replace(/forget your instructions/gi, "[filtered]")
-        .replace(/new instructions:/gi, "[filtered]")
-        .replace(/override:/gi, "[filtered]");
+        .replace(/\[human\]/gi, "[user_input]");
 
-    // Check for other injection patterns
-    const injectionPatterns = [
-        /ignore.*instructions/gi,
-        /disregard.*rules/gi,
-        /you are now/gi,
-        /pretend you are/gi,
-        /act as if/gi,
-        /from now on/gi,
-        /your new role/gi,
-    ];
+    // Sanitize markdown headers that are ONLY "## System" or "## Instructions" alone
+    // This avoids false positives like "## System Requirements" or "## Instructions for Users"
+    // Only match when followed by a newline, colon, or end of string (not additional words)
+    sanitized = sanitized.replace(
+        /^(##\s*)(system|instructions)(\s*[:\n]|$)/gim,
+        "$1user_content$3"
+    );
 
-    for (const pattern of injectionPatterns) {
-        if (pattern.test(sanitized)) {
-            trackSecurityEvent("instruction_override_attempt", {
-                pattern: pattern.source,
-                contentPreview: sanitized.slice(0, 100),
-            });
-            securityEventsDetected++;
-        }
+    // Filter instruction override attempts - be specific about the pattern
+    // Must be a standalone command, not part of a longer sentence like
+    // "ignore previous instructions from the manual"
+    // Look for patterns that are clearly directive (start of line or after punctuation)
+    const originalBeforeFilter = sanitized;
+    sanitized = sanitized.replace(
+        /(?:^|[.!?]\s*)ignore\s+(previous|all|above)\s+instructions(?:\s*[.!?\n]|$)/gim,
+        "[filtered]"
+    );
+
+    if (sanitized !== originalBeforeFilter) {
+        trackSecurityEvent("instruction_override_attempt", {
+            pattern: "ignore instructions directive",
+            contentPreview: originalBeforeFilter.slice(0, 100),
+        });
+        securityEventsDetected++;
     }
-
-    // Apply final injection pattern filtering
-    sanitized = sanitized
-        .replace(/you are now/gi, "[filtered]")
-        .replace(/pretend you are/gi, "[filtered]")
-        .replace(/your new role/gi, "[filtered]");
 
     // Log summary if security events were detected
     if (securityEventsDetected > 0) {
@@ -155,12 +157,28 @@ export function sanitizeUserContent(content: string): string {
         );
     }
 
+    // Add breadcrumb when sanitization was applied (for observability)
+    if (sanitized !== originalContent) {
+        Sentry.addBreadcrumb({
+            category: "security.sanitization",
+            message: "Prompt injection patterns filtered from user content",
+            level: "info",
+            data: {
+                originalLength: originalContent.length,
+                sanitizedLength: sanitized.length,
+            },
+        });
+    }
+
     return sanitized;
 }
 
 /**
  * Sanitize AI-generated content to ensure it doesn't contain injection attempts
  * Lighter sanitization since this is output, not input
+ *
+ * This removes bracketed role markers that could be interpreted as prompt structure
+ * and standalone directive headers. Less aggressive than input sanitization.
  *
  * @param content - AI-generated content to sanitize
  * @returns Sanitized content safe for display
@@ -174,10 +192,13 @@ export function sanitizeAIOutput(content: string): string {
         sanitized = sanitized.slice(0, MAX_SANITIZE_LENGTH);
     }
 
-    return sanitized
-        .replace(/\[system\]/gi, "")
-        .replace(/\[assistant\]/gi, "")
-        .replace(/##\s*(system|instructions)/gi, "");
+    return (
+        sanitized
+            .replace(/\[system\]/gi, "")
+            .replace(/\[assistant\]/gi, "")
+            // Only match standalone headers, not "## System Requirements" etc.
+            .replace(/^(##\s*)(system|instructions)(\s*[:\n]|$)/gim, "$1$3")
+    );
 }
 
 /**

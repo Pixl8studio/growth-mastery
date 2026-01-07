@@ -5,7 +5,6 @@
  * Scrollable conversation history with user and AI messages
  */
 
-import { cn } from "@/lib/utils";
 import { UserMessage } from "./user-message";
 import { AIMessage } from "./ai-message";
 import { ThinkingIndicator } from "./thinking-indicator";
@@ -15,12 +14,14 @@ interface MessageThreadProps {
     messages: Message[];
     isProcessing: boolean;
     lastEditSummary: EditSummary | null;
+    onSelectOption?: (optionId: string, optionLabel: string) => void;
 }
 
 export function MessageThread({
     messages,
     isProcessing,
-    lastEditSummary,
+    lastEditSummary: _lastEditSummary,
+    onSelectOption,
 }: MessageThreadProps) {
     if (messages.length === 0 && !isProcessing) {
         return (
@@ -57,6 +58,7 @@ export function MessageThread({
                         <UserMessage
                             content={message.content}
                             timestamp={message.timestamp}
+                            attachments={message.attachments}
                         />
                     ) : (
                         <AIMessage
@@ -64,6 +66,8 @@ export function MessageThread({
                             timestamp={message.timestamp}
                             thinkingTime={message.thinkingTime}
                             editSummary={message.editSummary}
+                            suggestedOptions={message.suggestedOptions}
+                            onSelectOption={onSelectOption}
                         />
                     )}
                 </div>

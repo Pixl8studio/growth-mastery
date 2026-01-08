@@ -1,7 +1,7 @@
 ---
 description: Automate PR iteration until code reviewer approves - autonomous merge readiness
 argument-hint: [pr-number]
-version: 1.0.0
+version: 1.1.0
 ---
 
 # /merge-ready - Autonomous Merge Readiness Agent
@@ -40,6 +40,20 @@ This command assumes:
 - You are in the same Claude session that wrote the original code (context preserved)
 - The user has already reviewed the Vercel preview and approved the UX
 - A PR exists or you have uncommitted changes ready to become a PR
+
+### Required Environment Variables
+
+For database migrations (if needed):
+- `SUPABASE_PROJECT_ID` - Your Supabase project reference ID
+- `SUPABASE_TOKEN` - Supabase Management API token (service role)
+
+For GitHub issue creation:
+- `GITHUB_TOKEN` - GitHub personal access token or available automatically in GitHub Actions
+
+**Security Note**: Never hardcode these credentials. Set them via:
+- Local development: Export in your shell or use `.env.local`
+- CI/CD: Configure as GitHub Secrets
+- Claude Code: Set via environment before running
 
 ---
 
@@ -88,15 +102,33 @@ Repeat until approved:
 If Vercel deployment or code review isn't ready:
 
 ```
-Waiting for code review analysis... (typically 2-3 minutes)
+Waiting for code review analysis... (typically 2-3 minutes, up to 10 for large PRs)
 ```
 
-Poll every 60 seconds for up to 10 minutes:
+Use adaptive polling with increasing intervals to reduce API load:
+
+| Attempt | Wait Time | Cumulative |
+|---------|-----------|------------|
+| 1-3     | 30 seconds | 1.5 min |
+| 4-6     | 60 seconds | 4.5 min |
+| 7-10    | 90 seconds | 10.5 min |
+| 11-12   | 120 seconds | 14.5 min |
+
+Maximum wait: 15 minutes (12 poll attempts). For large PRs with extensive changes,
+the code reviewer may take longer to analyze.
+
 ```bash
-# Check for claude[bot] comment
-curl -s "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
-  jq -r '[.[] | select(.user.login == "claude[bot]")] | length'
+# Check for claude[bot] comment count
+COMMENT_COUNT=$(curl -s "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
+  jq -r '[.[] | select(.user.login == "claude[bot]")] | length')
+
+# Compare with previous count to detect new analysis
+if [ "$COMMENT_COUNT" -gt "$PREVIOUS_COUNT" ]; then
+  echo "New code review available"
+fi
 ```
+
+If timeout reached without new analysis, report status and suggest manual check.
 
 ### Step 2: Parse Feedback
 
@@ -128,13 +160,21 @@ After fixing all blocking issues:
 ```bash
 git add -A
 git commit -m "$(cat <<'EOF'
-Address code reviewer concerns
+♻️ Address code reviewer concerns
 
 - [List each fix made]
+- [Reference specific concerns by number if applicable]
 EOF
 )"
 git push
 ```
+
+For security fixes, use the security emoji:
+```bash
+git commit -m "🔒 Fix security vulnerability from code review"
+```
+
+Follow project commit conventions from `.cursor/rules/git-interaction.mdc`.
 
 ### Step 5: Wait for Re-analysis
 
@@ -147,40 +187,69 @@ comment (compare timestamps or comment counts).
 
 ### Step 6: Check New Verdict
 
-Parse the latest code reviewer comment for the new verdict:
+Parse the latest code reviewer comment for the new verdict.
 
+**Note**: These verdicts are specific to the claude[bot] code reviewer output format, not
+standard GitHub review API statuses. The bot posts its analysis as a PR comment with
+a verdict section.
+
+**Continue iterating** (not yet approved):
 - **REQUEST CHANGES**: Return to Step 2 with the new feedback
-- **APPROVE with Recommendations**: Continue iterating - this is close but not done
-- **APPROVE with minor suggestions**: SUCCESS - proceed to completion
-- **APPROVE**: SUCCESS - proceed to completion
+- **APPROVE with Recommendations**: Has blocking recommendations to address
+
+**Success** (proceed to completion):
+- **APPROVE with minor suggestions**: Minor non-blocking suggestions only
+- **APPROVE**: Full approval with no remaining concerns
+
+The key distinction: "Recommendations" implies actionable items that should be addressed,
+while "minor suggestions" are truly optional improvements.
 
 </iteration-loop>
 
 <database-migrations>
 If any of your fixes required database schema changes:
 
+**Important**: Apply migrations AFTER pushing code fixes but BEFORE the final approval
+check. This ensures the code and database schema are in sync when the reviewer
+re-analyzes.
+
 1. Generate the migration SQL
-2. Apply it using the Supabase Management API:
+2. Verify environment variables are set:
+   ```bash
+   # These must be set in your environment - never hardcode credentials
+   # SUPABASE_PROJECT_ID and SUPABASE_TOKEN should be configured as:
+   # - GitHub Secrets for CI/CD
+   # - Local environment variables for development
+   # - Passed to Claude Code via environment
 
-```bash
-SUPABASE_PROJECT_ID="ufndmgxmlceuoapgvfco"
-SUPABASE_TOKEN="sbp_e2d3403dd355541de7f82f37ef53d288635cda45"
+   if [ -z "$SUPABASE_PROJECT_ID" ] || [ -z "$SUPABASE_TOKEN" ]; then
+     echo "Error: SUPABASE_PROJECT_ID and SUPABASE_TOKEN must be set"
+     exit 1
+   fi
+   ```
 
-SQL="YOUR MIGRATION SQL HERE"
+3. Apply using the Supabase Management API:
+   ```bash
+   SQL="YOUR MIGRATION SQL HERE"
 
-curl -s -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_ID}/database/query" \
-  -H "Authorization: Bearer ${SUPABASE_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d "$(echo "$SQL" | jq -Rs '{query: .}')"
-```
+   curl -s -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_ID}/database/query" \
+     -H "Authorization: Bearer ${SUPABASE_TOKEN}" \
+     -H "Content-Type: application/json" \
+     -d "$(echo "$SQL" | jq -Rs '{query: .}')"
+   ```
 
-For multi-statement migrations, execute statements separately.
+4. Handle the response:
+   ```bash
+   # Empty array [] = success for DDL statements
+   # Error object = failure, check message and retry
+   ```
 
-Empty array `[]` response indicates success for DDL statements.
+For multi-statement migrations, execute statements separately to isolate failures.
 
 After applying migrations:
 - Run `pnpm db:types` to regenerate TypeScript types
 - Commit the type changes if any
+- Push before waiting for re-analysis
 </database-migrations>
 
 <completion>
@@ -195,20 +264,36 @@ Confirm:
 
 ### 2. Create Completion Issue
 
-Create a GitHub issue to signal merge readiness:
+Create a GitHub issue to signal merge readiness.
+
+**Note**: `GITHUB_TOKEN` is automatically available in GitHub Actions. For local
+development, set it as an environment variable with `repo` scope permissions.
 
 ```bash
-curl -X POST "https://api.github.com/repos/Pixl8studio/growth-mastery/issues" \
-  -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d "$(cat <<'EOF'
+# Verify token is available
+if [ -z "$GITHUB_TOKEN" ]; then
+  echo "Warning: GITHUB_TOKEN not set - skipping issue creation"
+  echo "The PR is still ready to merge, but no tracking issue was created."
+else
+  RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+    "https://api.github.com/repos/Pixl8studio/growth-mastery/issues" \
+    -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d "$(cat <<'EOF'
 {
   "title": "✅ PR #{pr_number} Ready to Merge: {pr_title}",
   "body": "## Merge Ready Summary\n\n**PR:** #{pr_number}\n**Branch:** {branch_name}\n\n### What Was Done\n{summary_of_changes}\n\n### Code Review Iterations\n{number_of_iterations} iteration(s) to reach approval\n\n### Issues Addressed\n{list_of_issues_fixed}\n\n### Why It's Merge Ready\n- Code reviewer verdict: **APPROVE**\n- Vercel preview: **Deployed successfully**\n- All blocking concerns resolved\n- Database migrations applied (if any)\n\n### Next Steps\n1. Review the PR at: {pr_url}\n2. Merge when ready\n3. Close this issue after merge",
   "labels": ["merge-ready", "automated"]
 }
 EOF
-)"
+)")
+
+  HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+  if [ "$HTTP_CODE" -ne 201 ]; then
+    echo "Warning: Failed to create GitHub issue (HTTP $HTTP_CODE)"
+    echo "The PR is still ready to merge - issue creation is non-blocking."
+  fi
+fi
 ```
 
 ### 3. Report to User

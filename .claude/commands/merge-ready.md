@@ -1,7 +1,7 @@
 ---
 description: Automate PR iteration until code reviewer approves - autonomous merge readiness
 argument-hint: [pr-number]
-version: 1.1.0
+version: 1.2.0
 ---
 
 # /merge-ready - Autonomous Merge Readiness Agent
@@ -189,67 +189,145 @@ comment (compare timestamps or comment counts).
 
 Parse the latest code reviewer comment for the new verdict.
 
-**Note**: These verdicts are specific to the claude[bot] code reviewer output format, not
-standard GitHub review API statuses. The bot posts its analysis as a PR comment with
-a verdict section.
+#### Verified Verdict Formats
+
+Based on actual claude[bot] output analysis, the verdict appears in this format:
+
+```markdown
+## 🎯 Verdict: **VERDICT_TEXT**
+```
+
+**Observed verdict values** (from PR #416 and similar):
+- `REQUEST CHANGES` - Has blocking issues that must be fixed
+- `APPROVE` - Full approval, no concerns
+- `⚠️ REQUEST CHANGES` - Variant with warning emoji (treat as REQUEST CHANGES)
+
+**Parsing logic with fallback**:
+```bash
+# Extract verdict from claude[bot] comment
+VERDICT=$(echo "$COMMENT_BODY" | grep -oP '(?<=## 🎯 Verdict: \*\*)[^*]+' | head -1)
+
+# Fallback: try without emoji
+if [ -z "$VERDICT" ]; then
+  VERDICT=$(echo "$COMMENT_BODY" | grep -oP '(?<=Verdict: \*\*)[^*]+' | head -1)
+fi
+
+# Normalize variations
+VERDICT=$(echo "$VERDICT" | sed 's/^⚠️ //')  # Remove leading warning emoji
+
+# Decision logic
+case "$VERDICT" in
+  "REQUEST CHANGES")
+    echo "Continue iterating"
+    ;;
+  "APPROVE"|"APPROVE with minor suggestions")
+    echo "Success - proceed to completion"
+    ;;
+  *)
+    echo "Unknown verdict: $VERDICT - treating as needs review"
+    # Fallback: check for approval keywords in comment body
+    if echo "$COMMENT_BODY" | grep -qi "ready to merge\|lgtm\|ship it"; then
+      echo "Detected approval language - proceeding"
+    else
+      echo "Continuing iteration to be safe"
+    fi
+    ;;
+esac
+```
 
 **Continue iterating** (not yet approved):
-- **REQUEST CHANGES**: Return to Step 2 with the new feedback
-- **APPROVE with Recommendations**: Has blocking recommendations to address
+- `REQUEST CHANGES` - Has blocking issues to address
+- Unknown/unparseable verdict - Continue to be safe
 
 **Success** (proceed to completion):
-- **APPROVE with minor suggestions**: Minor non-blocking suggestions only
-- **APPROVE**: Full approval with no remaining concerns
+- `APPROVE` - Full approval
+- `APPROVE with minor suggestions` - Approved with optional improvements
 
-The key distinction: "Recommendations" implies actionable items that should be addressed,
-while "minor suggestions" are truly optional improvements.
+**Important**: If verdict parsing fails consistently, report the raw verdict text to the
+user and ask for manual interpretation. Don't infinite loop on parsing errors.
 
 </iteration-loop>
 
 <database-migrations>
 If any of your fixes required database schema changes:
 
-**Important**: Apply migrations AFTER pushing code fixes but BEFORE the final approval
-check. This ensures the code and database schema are in sync when the reviewer
-re-analyzes.
+### Environment Safety
 
-1. Generate the migration SQL
-2. Verify environment variables are set:
-   ```bash
-   # These must be set in your environment - never hardcode credentials
-   # SUPABASE_PROJECT_ID and SUPABASE_TOKEN should be configured as:
-   # - GitHub Secrets for CI/CD
-   # - Local environment variables for development
-   # - Passed to Claude Code via environment
+**CRITICAL**: This section applies to DEVELOPMENT and PREVIEW environments only.
 
-   if [ -z "$SUPABASE_PROJECT_ID" ] || [ -z "$SUPABASE_TOKEN" ]; then
-     echo "Error: SUPABASE_PROJECT_ID and SUPABASE_TOKEN must be set"
-     exit 1
-   fi
-   ```
+| Environment | When to Apply | Notes |
+|-------------|---------------|-------|
+| Development | During iteration | Safe to experiment |
+| Preview/Staging | After code approval | Test before production |
+| Production | AFTER PR merge | Never during iteration |
 
-3. Apply using the Supabase Management API:
-   ```bash
-   SQL="YOUR MIGRATION SQL HERE"
+**Do NOT apply migrations to production during the iteration loop.** Production migrations
+should be handled by your deployment pipeline after the PR is merged.
 
-   curl -s -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_ID}/database/query" \
-     -H "Authorization: Bearer ${SUPABASE_TOKEN}" \
-     -H "Content-Type: application/json" \
-     -d "$(echo "$SQL" | jq -Rs '{query: .}')"
-   ```
+### Migration Workflow
 
-4. Handle the response:
-   ```bash
-   # Empty array [] = success for DDL statements
-   # Error object = failure, check message and retry
-   ```
+1. **Create migration file** in `supabase/migrations/` following project conventions
+2. **Test locally** using `supabase db reset` or preview branch
+3. **Commit migration file** with your code fixes
+4. **Apply to preview environment** only if needed for Vercel preview to work
 
-For multi-statement migrations, execute statements separately to isolate failures.
+### Applying to Preview/Development
 
-After applying migrations:
+Verify environment variables are set:
+```bash
+# These must be set in your environment - never hardcode credentials
+if [ -z "$SUPABASE_PROJECT_ID" ] || [ -z "$SUPABASE_TOKEN" ]; then
+  echo "Error: SUPABASE_PROJECT_ID and SUPABASE_TOKEN must be set"
+  exit 1
+fi
+
+# VERIFY you're targeting the correct environment
+echo "Target project: $SUPABASE_PROJECT_ID"
+# Should match your development/preview project, NOT production
+```
+
+Apply using the Supabase Management API:
+```bash
+SQL="YOUR MIGRATION SQL HERE"
+
+RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+  "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_ID}/database/query" \
+  -H "Authorization: Bearer ${SUPABASE_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "$(echo "$SQL" | jq -Rs '{query: .}')")
+
+HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+BODY=$(echo "$RESPONSE" | sed '$d')
+
+if [ "$HTTP_CODE" -ne 200 ]; then
+  echo "Migration failed (HTTP $HTTP_CODE): $BODY"
+  exit 1
+fi
+```
+
+### Rollback Instructions
+
+If migration needs to be reverted (iteration continues with different approach):
+
+```bash
+# Generate rollback SQL (inverse of migration)
+ROLLBACK_SQL="DROP TABLE IF EXISTS new_table; -- or ALTER TABLE ... DROP COLUMN ..."
+
+# Apply rollback
+curl -s -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_ID}/database/query" \
+  -H "Authorization: Bearer ${SUPABASE_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d "$(echo "$ROLLBACK_SQL" | jq -Rs '{query: .}')"
+```
+
+**Document rollback SQL** in a comment at the top of your migration file for safety.
+
+### After Applying Migrations
+
 - Run `pnpm db:types` to regenerate TypeScript types
 - Commit the type changes if any
 - Push before waiting for re-analysis
+- Note in PR description that migrations were applied to preview
 </database-migrations>
 
 <completion>
@@ -289,9 +367,23 @@ EOF
 )")
 
   HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+  RESPONSE_BODY=$(echo "$RESPONSE" | sed '$d')
+
   if [ "$HTTP_CODE" -ne 201 ]; then
     echo "Warning: Failed to create GitHub issue (HTTP $HTTP_CODE)"
     echo "The PR is still ready to merge - issue creation is non-blocking."
+
+    # Log failure details for debugging
+    echo "--- GitHub API Error Details ---"
+    case "$HTTP_CODE" in
+      401) echo "Cause: Authentication failed - check GITHUB_TOKEN validity" ;;
+      403) echo "Cause: Rate limited or insufficient permissions (needs 'repo' scope)" ;;
+      404) echo "Cause: Repository not found or token lacks access" ;;
+      422) echo "Cause: Validation failed - check issue title/body format" ;;
+      *)   echo "Cause: Unknown - see response body below" ;;
+    esac
+    echo "Response: $RESPONSE_BODY"
+    echo "--------------------------------"
   fi
 fi
 ```
@@ -349,12 +441,187 @@ again. The command will:
 <stuck-iterations>
 If the code reviewer keeps finding new issues after 5+ iterations:
 
-1. Summarize the pattern of issues
-2. Ask if there's a fundamental design problem to address
-3. Consider whether some issues should be declined with explanation (per /address-pr-comments patterns)
+### Concrete Recovery Steps
 
-Don't give up - iterate until approval. But do flag if there seems to be a deeper issue.
+**At 5 iterations**: Pause and analyze the pattern
+
+```
+⚠️ ITERATION CHECK: 5 attempts without approval
+
+Pattern Analysis:
+- Are issues in the same file/area? → Possible architectural problem
+- Are issues different each time? → May be chasing edge cases
+- Are issues getting more minor? → Progress is being made
+- Are issues severity increasing? → Fixes may be introducing bugs
+```
+
+**At 7 iterations**: Create a summary issue and notify user
+
+```bash
+# Create issue documenting the iteration pattern
+curl -X POST "https://api.github.com/repos/Pixl8studio/growth-mastery/issues" \
+  -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "🔄 PR #X requires attention - 7+ review iterations",
+    "body": "## Iteration Summary\n\n**Iterations:** 7\n**PR:** #X\n\n### Issue Pattern\n[List recurring themes]\n\n### Recommendation\n[Architectural review / design discussion / scope reduction]\n\n### Options\n1. Continue iterating (may need 3-5 more)\n2. Schedule design review\n3. Split PR into smaller changes",
+    "labels": ["needs-attention", "review-stuck"]
+  }'
+```
+
+**At 10 iterations**: Mandatory pause
+
+Stop iteration and report to user:
+```
+═══════════════════════════════════════════════════════════════
+           ⚠️ MERGE-READY PAUSED: Manual Review Required
+═══════════════════════════════════════════════════════════════
+
+After 10 iterations, approval has not been achieved.
+
+Summary:
+- Total iterations: 10
+- Issues addressed: [count]
+- Recurring patterns: [list]
+
+Recommendation: This PR may need:
+□ Architectural review before continuing
+□ Scope reduction (split into smaller PRs)
+□ Design discussion with stakeholders
+
+PR URL: {url}
+Review issue created: {issue_url}
+
+Run /merge-ready {pr} to resume after addressing root cause.
+═══════════════════════════════════════════════════════════════
+```
+
+### Declining Invalid Feedback
+
+If code reviewer feedback seems incorrect (per /address-pr-comments patterns):
+
+1. Add thumbs-down reaction to the comment
+2. Reply with explanation of why feedback doesn't apply
+3. Document the decline in your commit message
+4. Continue to next iteration - reviewer will re-evaluate
+
+Valid decline reasons:
+- Bot lacks context about project requirements
+- Suggestion contradicts explicit user requirements
+- Issue is a false positive (code is correct)
+- Suggestion would break existing functionality
 </stuck-iterations>
+
+---
+
+## Operational Considerations
+
+<observability>
+### Logging and Monitoring
+
+This command runs autonomously for extended periods. Use project logging standards for
+visibility into operations.
+
+**Structured logging** (per `.cursor/rules/frontend/typescript-coding-standards.mdc`):
+
+When implementing fixes, use Pino logger for tracking:
+```typescript
+import { logger } from "@/lib/logger";
+
+logger.info({ pr, iteration, verdict }, "Code review iteration complete");
+logger.warn({ pr, iteration, timeout }, "Waiting for code review analysis");
+logger.error({ pr, error, attempt }, "Failed to apply migration");
+```
+
+**Sentry integration** for error tracking:
+```typescript
+import * as Sentry from "@sentry/nextjs";
+
+// Add breadcrumb for major phases
+Sentry.addBreadcrumb({
+  category: "merge-ready",
+  message: `Iteration ${iteration} - fixing ${issueCount} issues`,
+  level: "info",
+  data: { pr, iteration, issueCount }
+});
+
+// Report failures
+Sentry.captureException(error, {
+  tags: { command: "merge-ready", phase: "migration" },
+  extra: { pr, iteration, lastVerdict }
+});
+```
+
+This ensures autonomous operations are visible in your monitoring dashboards.
+</observability>
+
+<rate-limiting>
+### API Rate Limits
+
+The polling strategy must respect GitHub API rate limits.
+
+**GitHub API limits**:
+- Authenticated: 5,000 requests/hour
+- Per-repository: Additional limits may apply
+
+**Our usage pattern** (12 polls over 15 minutes):
+- ~48 requests/hour for polling (well under limit)
+- Additional requests for PR comments, issue creation
+
+**Rate limit detection**:
+```bash
+# Check remaining rate limit
+RATE_INFO=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+  "https://api.github.com/rate_limit")
+REMAINING=$(echo "$RATE_INFO" | jq '.resources.core.remaining')
+
+if [ "$REMAINING" -lt 100 ]; then
+  echo "Warning: GitHub API rate limit low ($REMAINING remaining)"
+  echo "Increasing poll interval to conserve quota"
+  # Double poll intervals when rate limited
+fi
+```
+
+**If rate limited** (HTTP 403 with rate limit headers):
+1. Parse `X-RateLimit-Reset` header for reset time
+2. Wait until reset (or report to user if > 30 minutes)
+3. Resume with longer polling intervals
+</rate-limiting>
+
+<concurrent-prs>
+### Concurrent PR Handling
+
+Multiple PRs can use this command simultaneously, but consider:
+
+**Resource contention**:
+- Each PR uses its own polling cycle
+- API rate limits are shared across all PRs
+- Database migrations could conflict if targeting same tables
+
+**Recommendations**:
+1. Run one `/merge-ready` per repository at a time when possible
+2. If running multiple, stagger start times by 5+ minutes
+3. Monitor rate limit consumption across all sessions
+4. Use separate database environments for each PR's migrations
+
+**No explicit locking is implemented** - this command is stateless by design. Multiple
+concurrent executions won't corrupt state, but may exhaust API quotas faster.
+</concurrent-prs>
+
+<timeouts>
+### Execution Timeouts
+
+To prevent runaway processes:
+
+| Phase | Timeout | Action on Timeout |
+|-------|---------|-------------------|
+| Wait for analysis | 15 minutes | Report and suggest manual check |
+| Single iteration | 30 minutes | Report partial progress |
+| Total execution | 2 hours | Mandatory pause, create summary issue |
+
+The 2-hour total timeout provides a safety net. Most PRs should reach approval in
+30-60 minutes (2-4 iterations).
+</timeouts>
 
 ---
 

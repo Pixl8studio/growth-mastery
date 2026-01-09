@@ -1274,6 +1274,9 @@ or
 **Parsing implementation with fallback handling**:
 
 ```bash
+# Initialize parse failure counter (track across iterations)
+PARSE_FAILURES=${PARSE_FAILURES:-0}
+
 # Get the latest claude[bot] comment
 COMMENT_BODY=$(curl -s --connect-timeout 10 --max-time 30 \
   "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
@@ -1282,6 +1285,7 @@ COMMENT_BODY=$(curl -s --connect-timeout 10 --max-time 30 \
 # Validate we got a response
 if [ -z "$COMMENT_BODY" ]; then
   echo "Warning: No claude[bot] comment found or API request failed"
+  ((PARSE_FAILURES++))
 fi
 
 # Extract verdict - primary pattern (with emoji)
@@ -1295,6 +1299,13 @@ fi
 # Fallback 2: try with just "Verdict:" anywhere
 if [ -z "$VERDICT" ]; then
   VERDICT=$(echo "$COMMENT_BODY" | grep -oP '(?<=Verdict: \*\*)[^*]+' | head -1)
+fi
+
+# Track parse attempts for safety check
+if [ -z "$VERDICT" ]; then
+  ((PARSE_FAILURES++))
+else
+  PARSE_FAILURES=0  # Reset on successful parse
 fi
 
 # Normalize variations (remove leading emoji/whitespace)

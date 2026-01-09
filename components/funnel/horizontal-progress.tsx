@@ -17,21 +17,36 @@ interface Step {
     shortTitle: string;
 }
 
+/**
+ * Step data for all 17 funnel steps
+ * Organized by Master Step sections:
+ * - Business Profile (1-3)
+ * - Presentation Materials (4-6)
+ * - Funnel Pages (7-14)
+ * - Traffic Agents (15-17)
+ */
 const STEPS: Step[] = [
-    { number: 1, title: "AI Intake Call", shortTitle: "Intake" },
-    { number: 2, title: "Define Offer", shortTitle: "Offer" },
+    // Business Profile (Master Step 1)
+    { number: 1, title: "Define Context", shortTitle: "Context" },
+    { number: 2, title: "Funnel Map", shortTitle: "Map" },
     { number: 3, title: "Brand Design", shortTitle: "Brand" },
-    { number: 4, title: "Deck Structure", shortTitle: "Structure" },
-    { number: 5, title: "Gamma Presentation", shortTitle: "Slides" },
-    { number: 6, title: "Enrollment Page", shortTitle: "Enrollment" },
-    { number: 7, title: "Talk Track", shortTitle: "Script" },
-    { number: 8, title: "Upload Video", shortTitle: "Video" },
-    { number: 9, title: "Watch Page", shortTitle: "Watch" },
-    { number: 10, title: "Registration", shortTitle: "Register" },
-    { number: 11, title: "Flow Setup", shortTitle: "Flow" },
-    { number: 12, title: "AI Follow-Up", shortTitle: "Follow-Up" },
-    { number: 13, title: "Marketing Content", shortTitle: "Marketing" },
-    { number: 14, title: "Ads Manager", shortTitle: "Ads" },
+    // Presentation Materials (Master Step 2)
+    { number: 4, title: "Presentation Structure", shortTitle: "Structure" },
+    { number: 5, title: "Create Presentation", shortTitle: "Slides" },
+    { number: 6, title: "Upload Video", shortTitle: "Video" },
+    // Funnel Pages (Master Step 3)
+    { number: 7, title: "Registration Pages", shortTitle: "Register" },
+    { number: 8, title: "Confirmation Pages", shortTitle: "Confirm" },
+    { number: 9, title: "Watch Pages", shortTitle: "Watch" },
+    { number: 10, title: "Enrollment Pages", shortTitle: "Enroll" },
+    { number: 11, title: "Call Booking Pages", shortTitle: "Booking" },
+    { number: 12, title: "Checkout Pages", shortTitle: "Checkout" },
+    { number: 13, title: "Upsell Pages", shortTitle: "Upsell" },
+    { number: 14, title: "Thank You Pages", shortTitle: "Thanks" },
+    // Traffic Agents (Master Step 4)
+    { number: 15, title: "AI Follow-Up Engine", shortTitle: "Follow-Up" },
+    { number: 16, title: "Marketing Content Engine", shortTitle: "Content" },
+    { number: 17, title: "Meta Ads Manager", shortTitle: "Ads" },
 ];
 
 interface HorizontalProgressProps {

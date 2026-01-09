@@ -10,22 +10,29 @@ export const APP_CONFIG = {
 } as const;
 
 export const FUNNEL_CONFIG = {
-    totalSteps: 14,
+    totalSteps: 17,
     stepNames: [
-        "AI Intake Call",
-        "Define Offer",
+        // Business Profile (Master Step 1)
+        "Define Context",
+        "Funnel Map",
         "Brand Design",
-        "Deck Structure",
-        "Gamma Presentation",
-        "Enrollment Page",
-        "Talk Track",
+        // Presentation Materials (Master Step 2)
+        "Presentation Structure",
+        "Create Presentation",
         "Upload Video",
-        "Watch Page",
-        "Registration Page",
-        "Flow Configuration",
-        "AI Follow-Up",
-        "Marketing Content",
-        "Ads Campaign",
+        // Funnel Pages (Master Step 3)
+        "Registration Pages",
+        "Confirmation Pages",
+        "Watch Pages",
+        "Enrollment Pages",
+        "Call Booking Pages",
+        "Checkout Pages",
+        "Upsell Pages",
+        "Thank You Pages",
+        // Traffic Agents (Master Step 4)
+        "AI Follow-Up Engine",
+        "Marketing Content Engine",
+        "Meta Ads Manager",
     ],
     deckStructure: {
         totalSlides: 60,

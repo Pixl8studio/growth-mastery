@@ -44,18 +44,17 @@ interface Message {
 
 const FUNNEL_STEPS: Array<{ step: number; name: string; path: string }> = [
     { step: 1, name: "AI Intake", path: "/step/1" },
-    { step: 2, name: "Define Offer", path: "/step/2" },
-    { step: 3, name: "Deck Structure", path: "/step/3" },
-    { step: 4, name: "Generate Deck", path: "/step/4" },
-    { step: 5, name: "Enrollment Page", path: "/step/5" },
-    { step: 6, name: "Talk Track", path: "/step/6" },
-    { step: 7, name: "Pitch Video", path: "/step/7" },
+    { step: 2, name: "Funnel Map", path: "/step/2" },
+    { step: 3, name: "Brand Design", path: "/step/3" },
+    { step: 4, name: "Presentation Structure", path: "/step/4" },
+    { step: 5, name: "Create Presentation", path: "/step/5" },
+    { step: 6, name: "Upload Video", path: "/step/6" },
+    { step: 7, name: "Enrollment Page", path: "/step/7" },
     { step: 8, name: "Watch Page", path: "/step/8" },
     { step: 9, name: "Registration", path: "/step/9" },
-    { step: 10, name: "Funnel Flow", path: "/step/10" },
-    { step: 11, name: "AI Follow-Up", path: "/step/11" },
+    { step: 10, name: "AI Follow-Up", path: "/step/10" },
+    { step: 11, name: "Meta Ads Manager", path: "/step/11" },
     { step: 12, name: "Marketing Content", path: "/step/12" },
-    { step: 13, name: "Ads Manager", path: "/step/13" },
 ];
 
 export function AdvancedAIAssistant() {

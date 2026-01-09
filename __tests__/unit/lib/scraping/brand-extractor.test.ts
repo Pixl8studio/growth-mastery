@@ -114,6 +114,95 @@ describe("extractBrandFromHtml", () => {
         expect(result.colors.primary).toBe("#0000FF");
     });
 
+    it("should handle raw RGB triplet CSS variables (Shopify format)", async () => {
+        // Shopify themes use raw RGB triplets like "10, 53, 2" for CSS variables
+        // These are used with rgb(var(--color-name)) in the actual CSS
+        const html = `
+            <html>
+                <head>
+                    <style data-shopify>
+                        :root {
+                            --color-base-text: 10, 53, 2;
+                            --color-base-background-1: 216, 169, 78;
+                            --color-base-accent-1: 241, 62, 11;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <p>Content</p>
+                </body>
+            </html>
+        `;
+
+        const result = await extractBrandFromHtml(html);
+
+        // The dark green should be extracted and converted to hex
+        // 10, 53, 2 -> #0A3502
+        expect(result.colors.primary).toMatch(/^#[0-9A-F]{6}$/);
+        // Should extract the accent color (241, 62, 11 -> #F13E0B)
+        expect(result.colors.accent).toMatch(/^#[0-9A-F]{6}$/);
+    });
+
+    it("should convert raw RGB triplet with various spacing", async () => {
+        const html = `
+            <html>
+                <head>
+                    <style>
+                        :root {
+                            --primary-color: 59,130,246;
+                            --secondary-color: 139, 92, 246;
+                            --accent-color: 236,  72,  153;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <p>Content</p>
+                </body>
+            </html>
+        `;
+
+        const result = await extractBrandFromHtml(html);
+
+        // 59, 130, 246 -> #3B82F6
+        expect(result.colors.primary).toBe("#3B82F6");
+        // 139, 92, 246 -> #8B5CF6
+        expect(result.colors.secondary).toBe("#8B5CF6");
+        // 236, 72, 153 -> #EC4899
+        expect(result.colors.accent).toBe("#EC4899");
+    });
+
+    it("should extract brand colors from Shopify Dawn theme format", async () => {
+        // Real-world test case based on airplantnina.com structure
+        const html = `
+            <html>
+                <head>
+                    <style data-shopify>
+                        :root {
+                            --color-base-text: 10, 53, 2;
+                            --color-shadow: 10, 53, 2;
+                            --color-base-background-1: 216, 169, 78;
+                            --color-base-background-2: 242, 248, 225;
+                            --color-base-solid-button-labels: 255, 255, 255;
+                            --color-base-outline-button-labels: 71, 97, 84;
+                            --color-base-accent-1: 241, 62, 11;
+                            --color-base-accent-2: 253, 70, 52;
+                        }
+                    </style>
+                </head>
+                <body>
+                    <p>Content</p>
+                </body>
+            </html>
+        `;
+
+        const result = await extractBrandFromHtml(html);
+
+        // Should extract actual brand colors, not defaults
+        expect(result.confidence.colors).toBeGreaterThan(0);
+        // The accent color (241, 62, 11) should be extracted
+        expect(result.colors.accent).toMatch(/^#[0-9A-F]{6}$/);
+    });
+
     it("should calculate confidence based on color count", async () => {
         const htmlWithManyColors = `
             <html>

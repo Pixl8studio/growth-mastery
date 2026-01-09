@@ -152,6 +152,32 @@ function hslToHex(hsl: string): string | null {
 }
 
 /**
+ * Convert raw RGB triplet (e.g., "10, 53, 2") to Hex
+ * Shopify themes commonly use this format for CSS variables
+ */
+function rawRgbTripletToHex(triplet: string): string | null {
+    // Match pattern: "R, G, B" or "R,G,B" with optional spaces
+    const match = triplet.match(/^(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})$/);
+    if (!match) return null;
+
+    const r = parseInt(match[1]);
+    const g = parseInt(match[2]);
+    const b = parseInt(match[3]);
+
+    // Validate RGB values are in range
+    if (r > 255 || g > 255 || b > 255) return null;
+
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1).toUpperCase()}`;
+}
+
+/**
+ * Check if a string looks like a raw RGB triplet (e.g., "10, 53, 2")
+ */
+function isRawRgbTriplet(value: string): boolean {
+    return /^\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}$/.test(value.trim());
+}
+
+/**
  * Normalize any color format to Hex
  */
 function normalizeColor(color: string): string | null {
@@ -174,6 +200,13 @@ function normalizeColor(color: string): string | null {
     // HSL/HSLA
     if (trimmed.startsWith("hsl")) {
         return hslToHex(trimmed);
+    }
+
+    // Raw RGB triplet (Shopify theme format: "10, 53, 2")
+    // Must check this before named colors since it's a specific format
+    const rawRgbResult = rawRgbTripletToHex(trimmed);
+    if (rawRgbResult) {
+        return rawRgbResult;
     }
 
     // Named colors (common ones)
@@ -328,6 +361,7 @@ function extractCssVariables(css: string): Map<string, string> {
             value.startsWith("#") ||
             value.startsWith("rgb") ||
             value.startsWith("hsl") ||
+            isRawRgbTriplet(value) || // Shopify theme format: "10, 53, 2"
             /^(red|blue|green|yellow|purple|orange|pink|gray|grey|white|black)$/i.test(
                 value
             );

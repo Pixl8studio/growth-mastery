@@ -5,6 +5,12 @@
 
 "use server";
 
+/**
+ * Total number of funnel steps in the wizard.
+ * Update this constant when adding or removing steps.
+ */
+export const TOTAL_FUNNEL_STEPS = 12;
+
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import type {
@@ -100,7 +106,7 @@ export async function getStepCompletionStatus(
         } = await supabase.auth.getUser();
 
         if (!user) {
-            return Array.from({ length: 12 }, (_, i) => ({
+            return Array.from({ length: TOTAL_FUNNEL_STEPS }, (_, i) => ({
                 step: i + 1,
                 isCompleted: false,
                 hasContent: false,
@@ -204,7 +210,9 @@ export async function getStepCompletionStatus(
                 .eq("funnel_project_id", projectId)
                 .eq("user_id", user.id),
 
-            // Step 11: Meta Ads Manager (Ad Campaigns)
+            // Step 11: Meta Ads Manager (Paid Ad Campaigns)
+            // Note: Both paid ads and organic content use marketing_content_briefs table,
+            // differentiated by campaign_type. See /app/ads-manager/page.tsx for reference.
             supabase
                 .from("marketing_content_briefs")
                 .select("id", { count: "exact", head: true })
@@ -212,7 +220,8 @@ export async function getStepCompletionStatus(
                 .eq("user_id", user.id)
                 .eq("campaign_type", "paid_ad"),
 
-            // Step 12: Marketing Content (Organic content)
+            // Step 12: Marketing Content Engine (Organic content)
+            // Uses same table as Step 11 with different campaign_type filter.
             supabase
                 .from("marketing_content_briefs")
                 .select("id", { count: "exact", head: true })
@@ -303,7 +312,7 @@ export async function getStepCompletionStatus(
 
         const completedCount = completionStatus.filter((s) => s.isCompleted).length;
         requestLogger.info(
-            { completedSteps: completedCount, totalSteps: 12 },
+            { completedSteps: completedCount, totalSteps: TOTAL_FUNNEL_STEPS },
             "Step completion status retrieved"
         );
 
@@ -311,7 +320,7 @@ export async function getStepCompletionStatus(
     } catch (error) {
         requestLogger.error({ error }, "Failed to check step completion");
         // Return empty completion status on error
-        return Array.from({ length: 12 }, (_, i) => ({
+        return Array.from({ length: TOTAL_FUNNEL_STEPS }, (_, i) => ({
             step: i + 1,
             isCompleted: false,
             hasContent: false,

@@ -16,6 +16,7 @@ import {
     getMasterStepForSubStep,
     calculateMasterStepCompletion,
 } from "@/app/funnel-builder/master-steps-config";
+import { TOTAL_FUNNEL_STEPS } from "@/app/funnel-builder/completion-utils";
 
 interface Step {
     number: number;
@@ -86,8 +87,9 @@ export function StepperNav({
     }, [expandedMasterStep, onMasterStepExpanded]);
 
     // Calculate overall completion
-    const totalSteps = 12;
-    const completionPercentage = Math.round((completedSteps.length / totalSteps) * 100);
+    const completionPercentage = Math.round(
+        (completedSteps.length / TOTAL_FUNNEL_STEPS) * 100
+    );
 
     return (
         <nav className={cn("space-y-2", className)}>

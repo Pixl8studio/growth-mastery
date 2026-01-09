@@ -39,7 +39,7 @@ const STEPS: Step[] = [
     { number: 8, title: "Watch Page", description: "Video landing" },
     { number: 9, title: "Registration", description: "Lead capture" },
     { number: 10, title: "AI Follow-Up", description: "Smart automation" },
-    { number: 11, title: "Meta Ads Manager", description: "Meta/Instagram ads" },
+    { number: 11, title: "Call Booking", description: "Schedule discovery calls" },
     { number: 12, title: "Marketing Content", description: "Social content engine" },
 ];
 

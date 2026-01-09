@@ -2,7 +2,15 @@
  * Type definitions for the Pages feature
  */
 
-export type PageType = "enrollment" | "watch" | "registration";
+export type PageType =
+    | "enrollment"
+    | "watch"
+    | "registration"
+    | "confirmation"
+    | "call_booking"
+    | "checkout"
+    | "upsell"
+    | "thank_you";
 
 export interface PageWebhookConfig {
     webhook_enabled: boolean | null;

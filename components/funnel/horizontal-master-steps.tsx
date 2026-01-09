@@ -28,7 +28,7 @@ import {
 } from "@/app/funnel-builder/master-steps-config";
 import { ComingSoonBadge } from "@/components/ui/coming-soon-overlay";
 
-// Only Marketing Content (step 12) is coming soon - AI Follow-Up and Meta Ads Manager are live
+// Only Marketing Content (step 12) is coming soon - AI Follow-Up and Call Booking are live
 const COMING_SOON_STEPS = [12];
 
 interface HorizontalMasterStepsProps {
@@ -56,7 +56,7 @@ const STEPS_DATA = [
     { number: 8, title: "Watch Page", description: "Video landing" },
     { number: 9, title: "Registration", description: "Lead capture" },
     { number: 10, title: "AI Follow-Up", description: "Smart automation" },
-    { number: 11, title: "Meta Ads Manager", description: "Meta/Instagram ads" },
+    { number: 11, title: "Call Booking", description: "Schedule discovery calls" },
     { number: 12, title: "Marketing Content", description: "Social content engine" },
 ];
 

@@ -53,7 +53,7 @@ const FUNNEL_STEPS: Array<{ step: number; name: string; path: string }> = [
     { step: 8, name: "Watch Page", path: "/step/8" },
     { step: 9, name: "Registration", path: "/step/9" },
     { step: 10, name: "AI Follow-Up", path: "/step/10" },
-    { step: 11, name: "Meta Ads Manager", path: "/step/11" },
+    { step: 11, name: "Call Booking Pages", path: "/step/11" },
     { step: 12, name: "Marketing Content", path: "/step/12" },
 ];
 

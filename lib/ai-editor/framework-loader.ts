@@ -5,7 +5,15 @@
 
 import { logger } from "@/lib/logger";
 
-export type PageType = "registration" | "watch" | "enrollment";
+export type PageType =
+    | "registration"
+    | "watch"
+    | "enrollment"
+    | "confirmation"
+    | "call_booking"
+    | "checkout"
+    | "upsell"
+    | "thank_you";
 
 export interface PageFramework {
     pageType: PageType;
@@ -48,6 +56,16 @@ export function getPageFramework(pageType: PageType): PageFramework {
             return getWatchFramework();
         case "enrollment":
             return getEnrollmentFramework();
+        case "confirmation":
+            return getConfirmationFramework();
+        case "call_booking":
+            return getCallBookingFramework();
+        case "checkout":
+            return getCheckoutFramework();
+        case "upsell":
+            return getUpsellFramework();
+        case "thank_you":
+            return getThankYouFramework();
         default:
             throw new Error(`Unknown page type: ${pageType}`);
     }
@@ -597,6 +615,633 @@ Pricing Card: p-8 rounded-3xl, middle tier lg:scale-105 with highlight border`,
             "Trust building sequence through the page",
             "Multiple CTAs at decision points",
             "Middle pricing tier highlighted (lg:scale-105)",
+        ],
+    };
+}
+
+/**
+ * Confirmation Page Framework
+ * Post-registration confirmation with event prep
+ */
+function getConfirmationFramework(): PageFramework {
+    return {
+        pageType: "confirmation",
+        sections: [
+            {
+                order: 1,
+                name: "Confirmation Hero",
+                purpose: "Celebrate registration success, confirm next steps",
+                structure: `
+[CHECKMARK ICON] - Large success indicator
+[HEADLINE] - "You're In! See You at the Training."
+[SUBHEADLINE] - "We just sent a confirmation email to [EMAIL]. Check your inbox!"
+[EVENT DETAILS] - Date, Time, Duration in a card format`,
+            },
+            {
+                order: 2,
+                name: "Add to Calendar",
+                purpose: "Increase show-up rate with calendar integration",
+                structure: `
+[HEADLINE] - "Add This to Your Calendar"
+[CALENDAR BUTTONS] - Google Calendar, Apple Calendar, Outlook
+[REMINDER TEXT] - "We'll also send you a reminder 15 minutes before we start."`,
+            },
+            {
+                order: 3,
+                name: "What to Expect",
+                purpose: "Set expectations, build anticipation",
+                structure: `
+[HEADLINE] - "What to Expect in This Training"
+[EXPECTATION CARDS] - 3-4 cards with:
+  - Icon
+  - Title (What they'll learn/get)
+  - Description
+[DURATION STATEMENT] - "The full training is [X] minutes of pure value."`,
+            },
+            {
+                order: 4,
+                name: "Preparation Checklist",
+                purpose: "Engagement pre-work, increase commitment",
+                structure: `
+[HEADLINE] - "Get Ready for Maximum Results"
+[CHECKLIST ITEMS] - 3-5 items with checkboxes:
+  - Check your email for the access link
+  - Set aside uninterrupted time
+  - Prepare questions
+  - Have a notebook ready
+  - Clear your calendar`,
+            },
+            {
+                order: 5,
+                name: "Share Section",
+                purpose: "Viral growth through social sharing",
+                structure: `
+[HEADLINE] - "Know Someone Who Needs This?"
+[SUBHEADLINE] - "Share this training with a friend or colleague"
+[SHARE BUTTONS] - Twitter, LinkedIn, Facebook, Email
+[SHARE TEXT] - Pre-populated social share message`,
+            },
+        ],
+        designSystem: {
+            colorArchitecture: `
+--success: Green/emerald for confirmation
+--primary: Brand color for CTAs
+--background: Light, celebratory feel
+--card: White elevated cards
+--muted: Subtle backgrounds`,
+            typography: `
+H1: text-5xl md:text-6xl font-bold
+H2: text-3xl md:text-4xl font-bold
+H3: text-xl md:text-2xl font-semibold
+Body: text-base md:text-lg leading-relaxed
+Button: text-base md:text-lg font-semibold`,
+            spacing: `
+Section padding: py-16 md:py-24
+Container: max-w-3xl (focused content)
+Card padding: p-6 md:p-8
+Element gaps: gap-6 md:gap-8`,
+            visualEffects: `
+Success animation: Checkmark with scale-in and fade
+Confetti or celebration visual element
+Card shadows: shadow-soft with hover:shadow-float
+Button hover: scale-105 transition`,
+            componentPatterns: `
+Success Icon: w-20 h-20 rounded-full bg-success/10 with checkmark
+Event Card: p-6 rounded-xl bg-card border-2 border-success/20
+Calendar Buttons: Grid of 3 buttons with calendar icons
+Checklist Items: Interactive checkboxes with check animation`,
+        },
+        copyPrinciples: {
+            headlines: `
+- Celebratory tone: "You're In!" vs. "Registration Confirmed"
+- Action-oriented: Tell them what to do next
+- Personal: Use their email/name when available`,
+            bodyVoice: `
+- Excited and enthusiastic
+- Clear next steps
+- Helpful and supportive
+- Build anticipation for the event`,
+            ctaOptimization: `
+- Calendar CTAs: "Add to [Platform] Calendar"
+- Share CTAs: "Share with a Friend"
+- Next step focus: Make it easy to complete the journey`,
+        },
+        conversionPatterns: [
+            "Immediate confirmation reduces anxiety",
+            "Calendar integration increases show-up rate by 40%+",
+            "What to Expect section builds anticipation",
+            "Checklist creates commitment through micro-actions",
+            "Social sharing drives viral growth",
+        ],
+    };
+}
+
+/**
+ * Call Booking Page Framework
+ * Professional call booking with qualification
+ */
+function getCallBookingFramework(): PageFramework {
+    return {
+        pageType: "call_booking",
+        sections: [
+            {
+                order: 1,
+                name: "Booking Hero",
+                purpose: "Set context, communicate value of the call",
+                structure: `
+[HEADLINE] - "Let's Build Your [OUTCOME] Together"
+[SUBHEADLINE] - "Book a free [DURATION]-minute strategy call to discuss your goals and see if we're a fit."
+[VALUE PROPS] - 3 bullets of what they'll get on the call`,
+            },
+            {
+                order: 2,
+                name: "Call Value Proposition",
+                purpose: "Make the call feel valuable, not salesy",
+                structure: `
+[HEADLINE] - "What You'll Get on This Call"
+[BENEFIT CARDS] - 3-4 cards with:
+  - Icon
+  - Title (benefit/outcome)
+  - Description (what happens)
+[NO PRESSURE STATEMENT] - "This is a strategy call, not a sales pitch. We'll give you value whether you join or not."`,
+            },
+            {
+                order: 3,
+                name: "Qualification Questions",
+                purpose: "Pre-qualify leads, set expectations",
+                structure: `
+[HEADLINE] - "Help Us Prepare for Your Call"
+[FORM FIELDS] -
+  - Name (required)
+  - Email (required)
+  - Phone (optional)
+  - Business/Role (required)
+  - Primary Challenge (textarea, required)
+  - Revenue/Team Size (optional dropdown)
+[SUBMIT BUTTON] - "Choose Your Time"`,
+            },
+            {
+                order: 4,
+                name: "Calendar Display",
+                purpose: "Show availability, enable booking",
+                structure: `
+[HEADLINE] - "Pick a Time That Works for You"
+[CALENDAR WIDGET] - Availability display (placeholder for booking tool integration)
+[TIME ZONE SELECTOR] - Auto-detect with manual override
+[BOOKING CONFIRMATION] - Selected time display before final confirmation`,
+            },
+            {
+                order: 5,
+                name: "Trust Builders",
+                purpose: "Reduce booking friction, build confidence",
+                structure: `
+[HEADLINE] - "You're in Good Hands"
+[TRUST ELEMENTS] -
+  - Testimonial quote from past call participant
+  - Photo of call host with credentials
+  - "No pressure, no obligation" guarantee
+  - Average call satisfaction rating`,
+            },
+        ],
+        designSystem: {
+            colorArchitecture: `
+--primary: Professional, trustworthy color
+--background: Clean, professional
+--card: White cards with subtle borders
+--accent: Secondary brand color for highlights`,
+            typography: `
+H1: text-4xl md:text-5xl font-bold
+H2: text-2xl md:text-3xl font-semibold
+Body: text-base leading-relaxed
+Form labels: text-sm font-medium
+Button: text-lg font-semibold`,
+            spacing: `
+Section padding: py-12 md:py-20
+Container: max-w-4xl
+Form spacing: space-y-4
+Card padding: p-6`,
+            visualEffects: `
+Form focus states: ring-2 ring-primary
+Calendar hover: Subtle highlight on available slots
+Button hover: Slight scale and shadow
+Professional aesthetic, not flashy`,
+            componentPatterns: `
+Form Input: p-3 rounded-lg border border-border focus:ring-2
+Benefit Card: p-6 rounded-xl bg-card shadow-soft
+Calendar Slot: p-3 rounded hover:bg-primary/10 transition
+Trust Badge: flex items-center gap-3 with icon`,
+        },
+        copyPrinciples: {
+            headlines: `
+- Collaborative tone: "Let's build together"
+- Clear value: What they get from the call
+- Low pressure: Strategy call, not sales`,
+            bodyVoice: `
+- Professional but warm
+- Consultative, not salesy
+- Focused on their success
+- Transparent about the process`,
+            ctaOptimization: `
+- Form CTA: "Choose Your Time" (next step)
+- Final CTA: "Book My Call" (clear action)
+- Micro-copy: "Takes 30 seconds to complete"`,
+        },
+        conversionPatterns: [
+            "Value-first positioning reduces booking friction",
+            "Qualification questions pre-frame the conversation",
+            "Trust builders overcome skepticism",
+            "Clear availability reduces back-and-forth",
+            "No pressure messaging increases quality bookings",
+        ],
+    };
+}
+
+/**
+ * Checkout Page Framework
+ * Order summary and payment processing
+ */
+function getCheckoutFramework(): PageFramework {
+    return {
+        pageType: "checkout",
+        sections: [
+            {
+                order: 1,
+                name: "Checkout Header",
+                purpose: "Trust and progress indication",
+                structure: `
+[LOGO] - Brand logo linked to home
+[PROGRESS BAR] - Step indicator (Cart → Checkout → Confirmation)
+[SECURITY BADGES] - SSL, payment processor badges`,
+            },
+            {
+                order: 2,
+                name: "Order Summary",
+                purpose: "Clarity on what they're purchasing",
+                structure: `
+[HEADLINE] - "Order Summary"
+[PRODUCT CARD] -
+  - Product name and description
+  - Quantity selector (if applicable)
+  - Unit price
+  - Total price
+[ORDER BUMP] - Optional add-on offer (if configured)
+[SUBTOTAL/TAX/TOTAL] - Clear pricing breakdown`,
+            },
+            {
+                order: 3,
+                name: "Payment Form",
+                purpose: "Collect payment information securely",
+                structure: `
+[HEADLINE] - "Payment Information"
+[STRIPE EMBED] - Stripe Elements for card input (placeholder for integration)
+[BILLING ADDRESS] -
+  - Full name
+  - Email
+  - Address fields (if physical product)
+[SAVE INFO CHECKBOX] - "Save payment info for future purchases"`,
+            },
+            {
+                order: 4,
+                name: "Trust & Guarantee",
+                purpose: "Final objection handling, reduce cart abandonment",
+                structure: `
+[TRUST ROW] -
+  - 🔒 Secure checkout icon + text
+  - ✓ Money-back guarantee badge
+  - 💳 Accepted payment methods
+[GUARANTEE TEXT] - "30-day money-back guarantee. If you're not satisfied, we'll refund you 100%."
+[SUPPORT LINK] - "Questions? Contact support"`,
+            },
+            {
+                order: 5,
+                name: "Checkout CTA",
+                purpose: "Complete the purchase",
+                structure: `
+[BUTTON] - Large, prominent "Complete Purchase" or "Pay $X,XXX"
+[MICRO-COPY] - "By clicking, you agree to our Terms of Service and Privacy Policy"
+[LOADING STATE] - Processing animation when clicked`,
+            },
+        ],
+        designSystem: {
+            colorArchitecture: `
+--primary: Trust-building color (blue/green)
+--background: Clean, minimal
+--card: White with subtle shadow
+--success: Green for trust elements
+--border: Subtle borders for form fields`,
+            typography: `
+H1: text-3xl md:text-4xl font-bold
+H2: text-xl md:text-2xl font-semibold
+Body: text-base leading-normal
+Price: text-2xl md:text-3xl font-bold
+Button: text-lg md:text-xl font-bold`,
+            spacing: `
+Section padding: py-8 md:py-12
+Container: max-w-5xl (two-column layout)
+Form spacing: space-y-3
+Card padding: p-6 md:p-8`,
+            visualEffects: `
+Minimal distractions - focus on conversion
+Form focus: Ring effect on active input
+Button hover: Slight darkening, no aggressive effects
+Trust badges: Subtle, professional appearance`,
+            componentPatterns: `
+Two-column layout: Order summary (sticky) | Payment form
+Order item: flex justify-between items-center p-4
+Form input: p-3 rounded-md border focus:ring-2
+Payment button: Full-width, high-contrast, large padding
+Security badges: Grayscale with opacity`,
+        },
+        copyPrinciples: {
+            headlines: `
+- Clear and direct: "Complete Your Order"
+- Trust-building: Emphasize security
+- No surprises: Transparent pricing`,
+            bodyVoice: `
+- Professional and trustworthy
+- Clear and concise
+- Reassuring about security
+- Transparent about policies`,
+            ctaOptimization: `
+- Button shows exact price: "Pay $1,997"
+- Loading state: "Processing..." with spinner
+- Error states: Clear, actionable error messages`,
+        },
+        conversionPatterns: [
+            "Sticky order summary keeps price visible",
+            "Progress bar reduces abandonment",
+            "Trust badges above the fold",
+            "Guarantee reduces purchase anxiety",
+            "Order bump increases AOV by 20-40%",
+            "Minimal distractions keep focus on completing purchase",
+        ],
+    };
+}
+
+/**
+ * Upsell Page Framework
+ * One-time offer post-purchase
+ */
+function getUpsellFramework(): PageFramework {
+    return {
+        pageType: "upsell",
+        sections: [
+            {
+                order: 1,
+                name: "Urgency Header",
+                purpose: "Create time pressure, highlight exclusivity",
+                structure: `
+[BADGE] - "⚡ ONE-TIME OFFER - This Page Expires in 10 Minutes"
+[COUNTDOWN TIMER] - Visual countdown (10:00)
+[WARNING] - "This offer will NOT be available again at this price."`,
+            },
+            {
+                order: 2,
+                name: "Upsell Hero",
+                purpose: "Present the offer with immediate value",
+                structure: `
+[HEADLINE] - "Wait! Add [PRODUCT] for Just $XXX (Save $XXX)"
+[SUBHEADLINE] - "You just got [MAIN_PRODUCT]. Add [UPSELL_PRODUCT] now and [BIGGER_BENEFIT]."
+[VALUE STACK] - Show original price crossed out, upsell price highlighted`,
+            },
+            {
+                order: 3,
+                name: "Value Proposition",
+                purpose: "Justify the additional purchase",
+                structure: `
+[HEADLINE] - "Here's What You're Adding"
+[PRODUCT DETAILS] -
+  - What it is
+  - What it does
+  - What results it creates
+[FEATURE LIST] - Checkmark list of key features/benefits (5-7 items)`,
+            },
+            {
+                order: 4,
+                name: "Stack Visualization",
+                purpose: "Show total value, create FOMO",
+                structure: `
+[HEADLINE] - "Your Complete Stack"
+[STACK ITEMS] -
+  ✓ [MAIN_PRODUCT] - $X,XXX value
+  ✓ [UPSELL_PRODUCT] - $X,XXX value
+[TOTAL VALUE] - "Total Value: $X,XXX"
+[TODAY'S PRICE] - "Your Price Today: $XXX" (highlighted, large)
+[SAVINGS] - "You Save: $X,XXX (XX%)"`,
+            },
+            {
+                order: 5,
+                name: "Social Proof",
+                purpose: "Validation that others took this offer",
+                structure: `
+[HEADLINE] - "XX% of Customers Add This"
+[TESTIMONIAL] - 1-2 short testimonials from customers who got both
+[STAT] - "Customers who add [UPSELL] are 3x more likely to [RESULT]"`,
+            },
+            {
+                order: 6,
+                name: "Decision CTAs",
+                purpose: "Make it easy to say yes or no",
+                structure: `
+[YES BUTTON] - Large, prominent "YES! Add [PRODUCT] for $XXX"
+[NO LINK] - Smaller, plain text "No thanks, I don't want [BENEFIT]"
+[GUARANTEE] - "Protected by the same 30-day guarantee"`,
+            },
+        ],
+        designSystem: {
+            colorArchitecture: `
+--urgency: Orange/red for countdown and warnings
+--primary: Brand color for yes button
+--background: High-contrast for focus
+--success: Green for checkmarks
+--muted: Gray for no thanks link`,
+            typography: `
+H1: text-4xl md:text-6xl font-bold
+H2: text-2xl md:text-3xl font-bold
+Price: text-5xl md:text-6xl font-black
+Crossed-out price: text-2xl line-through opacity-60
+Button: text-xl md:text-2xl font-bold`,
+            spacing: `
+Tight sections: py-12 md:py-16 (keep it above fold)
+Container: max-w-4xl
+Countdown: Large, impossible to miss
+CTA spacing: gap-4 between yes/no`,
+            visualEffects: `
+Countdown: Pulsing red when under 2 minutes
+Yes button: Pulse animation, glow effect
+Price highlight: Gradient background, shadow-glow
+Urgency indicators: Red/orange accents throughout`,
+            componentPatterns: `
+Countdown: text-6xl font-mono bg-urgency/10 p-6 rounded-xl
+Value Stack: p-8 bg-card rounded-2xl border-2 border-primary
+Yes Button: Full-width or prominent, animated pulse
+No Link: text-sm text-muted hover:text-foreground underline
+Checkmark List: Large checkmarks (text-success) with bold text`,
+        },
+        copyPrinciples: {
+            headlines: `
+- Urgency-driven: "Wait!", "One-Time Only"
+- Benefit-focused: What they'll miss if they decline
+- Clear savings: Show exact dollar and percentage savings`,
+            bodyVoice: `
+- Urgent but not aggressive
+- Benefit-stacking: "And" language
+- FOMO: "This won't be available again"
+- Reassuring: Same guarantee applies`,
+            ctaOptimization: `
+- Yes button: "YES! Add to My Order for $XXX"
+- No link uses negative framing: "No thanks, I don't want [benefit]"
+- One-click purchase (payment already on file)`,
+        },
+        conversionPatterns: [
+            "Countdown timer creates genuine urgency",
+            "One-time-only positioning increases conversion",
+            "Value stack makes price feel small",
+            "Social proof validates the decision",
+            "Framing the 'no' option as losing value",
+            "One-click yes button (payment already captured)",
+            "10-minute timer optimal (not too long, not too short)",
+        ],
+    };
+}
+
+/**
+ * Thank You Page Framework
+ * Post-purchase confirmation and onboarding
+ */
+function getThankYouFramework(): PageFramework {
+    return {
+        pageType: "thank_you",
+        sections: [
+            {
+                order: 1,
+                name: "Celebration Hero",
+                purpose: "Confirm purchase, celebrate decision",
+                structure: `
+[CONFETTI/CELEBRATION VISUAL] - Animated success indicator
+[HEADLINE] - "🎉 Welcome to [PRODUCT_NAME]!"
+[SUBHEADLINE] - "You're officially part of [COMMUNITY/PROGRAM]. Here's what happens next."
+[ORDER CONFIRMATION] - Order number, receipt link`,
+            },
+            {
+                order: 2,
+                name: "What to Expect",
+                purpose: "Set expectations, reduce buyer's remorse",
+                structure: `
+[HEADLINE] - "What Happens Next"
+[TIMELINE CARDS] - 3-4 cards showing immediate next steps:
+  1. "📧 Check your email" - "We just sent your access details to [email]"
+  2. "🚀 Get started" - "Log in and start [action] in the next 10 minutes"
+  3. "📞 Join our community" - "Connect with other members"
+  4. "🎓 First milestone" - "Complete [action] in the next 24 hours"`,
+            },
+            {
+                order: 3,
+                name: "Access Instructions",
+                purpose: "Make it easy to access their purchase",
+                structure: `
+[HEADLINE] - "Access Your [PRODUCT]"
+[ACCESS CARD] - Product-specific instructions:
+  - For courses: "Click the button below to access your course dashboard"
+  - For software: "Download the app or log in to the web platform"
+  - For coaching: "Book your first session using the link below"
+  - For community: "Join the private Slack/Discord/Facebook group"
+[PRIMARY CTA] - "Access Now" / "Get Started" / "Book Session"`,
+            },
+            {
+                order: 4,
+                name: "Quick Start Guide",
+                purpose: "Drive immediate engagement, first value",
+                structure: `
+[HEADLINE] - "Get Your First Win in the Next 10 Minutes"
+[QUICK START CHECKLIST] - 3-5 simple tasks:
+  ✓ Watch the welcome video
+  ✓ Complete your profile
+  ✓ Download the starter template
+  ✓ Join the community
+  ✓ Complete module 1 / first action
+[COMPLETION INCENTIVE] - "Members who complete this checklist are 5x more likely to [outcome]"`,
+            },
+            {
+                order: 5,
+                name: "Support & Community",
+                purpose: "Show them they're not alone",
+                structure: `
+[HEADLINE] - "We're Here to Help"
+[SUPPORT OPTIONS] -
+  - 💬 Community: Link to community platform
+  - 📧 Email: Support email address
+  - 📚 Help Center: Knowledge base link
+  - 📅 Office Hours: Live Q&A schedule (if applicable)
+[COMMUNITY INVITATION] - "Join 10,000+ members in our private community"`,
+            },
+            {
+                order: 6,
+                name: "Social Share",
+                purpose: "Viral growth through happy customers",
+                structure: `
+[HEADLINE] - "Spread the Word"
+[SUBHEADLINE] - "Know someone who'd benefit from [PRODUCT]? Share your excitement!"
+[SHARE BUTTONS] - Pre-populated social shares
+[AFFILIATE CTA] - "Want to earn commission? Join our affiliate program" (if applicable)`,
+            },
+        ],
+        designSystem: {
+            colorArchitecture: `
+--success: Green/emerald for celebration
+--primary: Brand color for CTAs
+--background: Light, positive, welcoming
+--card: White elevated cards
+--accent: Secondary highlights`,
+            typography: `
+H1: text-5xl md:text-7xl font-bold
+H2: text-3xl md:text-4xl font-bold
+H3: text-xl md:text-2xl font-semibold
+Body: text-base md:text-lg leading-relaxed
+Timeline: text-base font-medium`,
+            spacing: `
+Section padding: py-16 md:py-24
+Container: max-w-4xl
+Card padding: p-6 md:p-8
+Timeline gaps: gap-8`,
+            visualEffects: `
+Confetti animation on page load
+Success checkmarks with subtle animation
+Card hover: Lift effect (shadow-float)
+Progress indicators for checklist
+Warm, welcoming color palette`,
+            componentPatterns: `
+Celebration Icon: Large animated checkmark or confetti
+Timeline Card: p-6 rounded-xl bg-card border-l-4 border-success
+Access Button: Large, prominent, gradient background
+Checklist Item: Interactive checkbox with check animation
+Support Card: Icon + heading + description in grid layout`,
+        },
+        copyPrinciples: {
+            headlines: `
+- Celebratory: "Welcome!", "Congratulations!"
+- Clear next steps: "What happens next"
+- Specific: Use their email, product name, order details`,
+            bodyVoice: `
+- Excited and welcoming
+- Clear and actionable
+- Supportive and reassuring
+- Community-focused
+- Anticipation-building`,
+            ctaOptimization: `
+- Access CTA: "Access Now" / "Get Started"
+- Community CTA: "Join the Community"
+- Support CTA: "Get Help"
+- Each CTA action-oriented and benefit-clear`,
+        },
+        conversionPatterns: [
+            "Immediate celebration reduces buyer's remorse",
+            "Clear next steps drive engagement",
+            "Quick start checklist creates momentum",
+            "Access instructions reduce support tickets",
+            "Community invitation increases retention",
+            "Social sharing drives referral growth",
+            "First value in 10 minutes increases lifetime value",
         ],
     };
 }

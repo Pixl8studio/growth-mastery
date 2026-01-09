@@ -7,7 +7,7 @@
  * Total number of funnel steps in the wizard.
  * Update this constant when adding or removing steps.
  */
-export const TOTAL_FUNNEL_STEPS = 12;
+export const TOTAL_FUNNEL_STEPS = 17;
 
 export interface MasterStepConfig {
     id: number;
@@ -35,16 +35,16 @@ export const MASTER_STEPS: MasterStepConfig[] = [
     {
         id: 3,
         title: "Funnel Pages",
-        description: "Build enrollment, watch room, and registration pages",
+        description: "Build your complete funnel from registration to thank you",
         icon: "layout",
-        subSteps: [7, 8, 9],
+        subSteps: [7, 8, 9, 10, 11, 12, 13, 14],
     },
     {
         id: 4,
         title: "Traffic Agents",
         description: "Set up AI follow-up, content engine, and ads",
         icon: "users",
-        subSteps: [10, 11, 12],
+        subSteps: [15, 16, 17],
     },
 ];
 

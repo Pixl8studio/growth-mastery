@@ -76,14 +76,14 @@ export async function hasCompletedIntake(projectId: string): Promise<boolean> {
 }
 
 /**
- * Check completion status for all 12 steps
+ * Check completion status for all 17 steps
  * Returns which steps have actual generated content
  *
  * Step mapping:
  * 1-3: Business Profile (Intake, Funnel Map, Brand Design)
  * 4-6: Presentation Materials (Structure, Create, Upload Video)
- * 7-9: Funnel Pages (Enrollment, Watch, Registration)
- * 10-12: Traffic Agents (AI Follow-Up, Meta Ads Manager, Marketing Content)
+ * 7-14: Funnel Pages (Registration, Confirmation, Watch, Enrollment, Call Booking, Checkout, Upsell, Thank You)
+ * 15-17: Traffic Agents (AI Follow-Up, Content Engine, Ads Manager)
  */
 export async function getStepCompletionStatus(
     projectId: string
@@ -112,6 +112,7 @@ export async function getStepCompletionStatus(
 
         // Check all steps in parallel
         const [
+            // Steps 1-6: Core setup
             transcripts,
             businessProfiles,
             funnelMapConfig,
@@ -119,12 +120,21 @@ export async function getStepCompletionStatus(
             deckStructures,
             gammaDecks,
             videos,
-            enrollmentPages,
-            watchPages,
-            registrationPages,
+            // Steps 7-14: Funnel Pages (legacy tables)
+            registrationPagesLegacy,
+            confirmationPagesLegacy,
+            watchPagesLegacy,
+            enrollmentPagesLegacy,
+            callBookingPagesLegacy,
+            checkoutPagesLegacy,
+            upsellPagesLegacy,
+            thankYouPagesLegacy,
+            // Steps 7-14: Funnel Pages (AI Editor v2)
+            aiEditorPages,
+            // Steps 15-17: Traffic Agents
             followupConfigs,
-            marketingBriefs,
-            adCampaigns,
+            marketingBriefsOrganic,
+            marketingBriefsPaid,
         ] = await Promise.all([
             // Step 1: VAPI Transcripts
             supabase
@@ -177,53 +187,97 @@ export async function getStepCompletionStatus(
                 .eq("funnel_project_id", projectId)
                 .eq("user_id", user.id),
 
-            // Step 7: Enrollment Pages
-            supabase
-                .from("enrollment_pages")
-                .select("id", { count: "exact", head: true })
-                .eq("funnel_project_id", projectId)
-                .eq("user_id", user.id),
-
-            // Step 8: Watch Pages
-            supabase
-                .from("watch_pages")
-                .select("id", { count: "exact", head: true })
-                .eq("funnel_project_id", projectId)
-                .eq("user_id", user.id),
-
-            // Step 9: Registration Pages
+            // Step 7: Registration Pages (legacy)
             supabase
                 .from("registration_pages")
                 .select("id", { count: "exact", head: true })
                 .eq("funnel_project_id", projectId)
                 .eq("user_id", user.id),
 
-            // Step 10: AI Follow-up Configs
+            // Step 8: Confirmation Pages (legacy) - may not exist yet
+            supabase
+                .from("confirmation_pages")
+                .select("id", { count: "exact", head: true })
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id),
+
+            // Step 9: Watch Pages (legacy)
+            supabase
+                .from("watch_pages")
+                .select("id", { count: "exact", head: true })
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id),
+
+            // Step 10: Enrollment Pages (legacy)
+            supabase
+                .from("enrollment_pages")
+                .select("id", { count: "exact", head: true })
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id),
+
+            // Step 11: Call Booking Pages (legacy) - may not exist yet
+            supabase
+                .from("call_booking_pages")
+                .select("id", { count: "exact", head: true })
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id),
+
+            // Step 12: Checkout Pages (legacy) - may not exist yet
+            supabase
+                .from("checkout_pages")
+                .select("id", { count: "exact", head: true })
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id),
+
+            // Step 13: Upsell Pages (legacy) - may not exist yet
+            supabase
+                .from("upsell_pages")
+                .select("id", { count: "exact", head: true })
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id),
+
+            // Step 14: Thank You Pages (legacy) - may not exist yet
+            supabase
+                .from("thank_you_pages")
+                .select("id", { count: "exact", head: true })
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id),
+
+            // AI Editor v2 pages (all types)
+            supabase
+                .from("ai_editor_pages")
+                .select("id, page_type")
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id),
+
+            // Step 15: AI Follow-up Configs
             supabase
                 .from("followup_agent_configs")
                 .select("id", { count: "exact", head: true })
                 .eq("funnel_project_id", projectId)
                 .eq("user_id", user.id),
 
-            // Step 11: Meta Ads Manager (Paid Ad Campaigns)
-            // Note: Both paid ads and organic content use marketing_content_briefs table,
-            // differentiated by campaign_type. See /app/ads-manager/page.tsx for reference.
-            supabase
-                .from("marketing_content_briefs")
-                .select("id", { count: "exact", head: true })
-                .eq("funnel_project_id", projectId)
-                .eq("user_id", user.id)
-                .eq("campaign_type", "paid_ad"),
-
-            // Step 12: Marketing Content Engine (Organic content)
-            // Uses same table as Step 11 with different campaign_type filter.
+            // Step 16: Marketing Content Engine (Organic content)
             supabase
                 .from("marketing_content_briefs")
                 .select("id", { count: "exact", head: true })
                 .eq("funnel_project_id", projectId)
                 .eq("user_id", user.id)
                 .eq("campaign_type", "organic"),
+
+            // Step 17: Ads Manager (Paid content)
+            supabase
+                .from("marketing_content_briefs")
+                .select("id", { count: "exact", head: true })
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id)
+                .in("campaign_type", ["paid", "ads"]),
         ]);
+
+        // Count AI Editor pages by type
+        const aiEditorPageTypes = aiEditorPages.data || [];
+        const countAiEditorByType = (type: string) =>
+            aiEditorPageTypes.filter((p) => p.page_type === type).length;
 
         // Step 1 is completed if we have transcripts OR a business profile with completion > 0
         const hasTranscripts = (transcripts.count ?? 0) > 0;
@@ -239,7 +293,15 @@ export async function getStepCompletionStatus(
                 funnelMapConfig.data?.is_step2_complete
         );
 
+        // Helper to check if step has content (legacy OR AI Editor)
+        const hasPageContent = (legacyCount: number | null, pageType: string) => {
+            const legacy = legacyCount ?? 0;
+            const aiEditor = countAiEditorByType(pageType);
+            return legacy > 0 || aiEditor > 0;
+        };
+
         const completionStatus: StepCompletion[] = [
+            // Master Step 1: Business Profile (Steps 1-3)
             {
                 step: 1,
                 isCompleted: step1Completed,
@@ -255,6 +317,7 @@ export async function getStepCompletionStatus(
                 isCompleted: (brandDesigns.count ?? 0) > 0,
                 hasContent: (brandDesigns.count ?? 0) > 0,
             },
+            // Master Step 2: Presentation Materials (Steps 4-6)
             {
                 step: 4,
                 isCompleted: (deckStructures.count ?? 0) > 0,
@@ -270,38 +333,62 @@ export async function getStepCompletionStatus(
                 isCompleted: (videos.count ?? 0) > 0,
                 hasContent: (videos.count ?? 0) > 0,
             },
+            // Master Step 3: Funnel Pages (Steps 7-14)
             {
                 step: 7,
-                isCompleted: (enrollmentPages.count ?? 0) > 0,
-                hasContent: (enrollmentPages.count ?? 0) > 0,
+                isCompleted: hasPageContent(registrationPagesLegacy.count, "registration"),
+                hasContent: hasPageContent(registrationPagesLegacy.count, "registration"),
             },
             {
                 step: 8,
-                isCompleted: (watchPages.count ?? 0) > 0,
-                hasContent: (watchPages.count ?? 0) > 0,
+                isCompleted: hasPageContent(confirmationPagesLegacy.count, "confirmation"),
+                hasContent: hasPageContent(confirmationPagesLegacy.count, "confirmation"),
             },
             {
                 step: 9,
-                isCompleted: (registrationPages.count ?? 0) > 0,
-                hasContent: (registrationPages.count ?? 0) > 0,
+                isCompleted: hasPageContent(watchPagesLegacy.count, "watch"),
+                hasContent: hasPageContent(watchPagesLegacy.count, "watch"),
             },
-            // Step 10: AI Follow-Up
             {
                 step: 10,
+                isCompleted: hasPageContent(enrollmentPagesLegacy.count, "enrollment"),
+                hasContent: hasPageContent(enrollmentPagesLegacy.count, "enrollment"),
+            },
+            {
+                step: 11,
+                isCompleted: hasPageContent(callBookingPagesLegacy.count, "call_booking"),
+                hasContent: hasPageContent(callBookingPagesLegacy.count, "call_booking"),
+            },
+            {
+                step: 12,
+                isCompleted: hasPageContent(checkoutPagesLegacy.count, "checkout"),
+                hasContent: hasPageContent(checkoutPagesLegacy.count, "checkout"),
+            },
+            {
+                step: 13,
+                isCompleted: hasPageContent(upsellPagesLegacy.count, "upsell"),
+                hasContent: hasPageContent(upsellPagesLegacy.count, "upsell"),
+            },
+            {
+                step: 14,
+                isCompleted: hasPageContent(thankYouPagesLegacy.count, "thank_you"),
+                hasContent: hasPageContent(thankYouPagesLegacy.count, "thank_you"),
+            },
+            // Master Step 4: Traffic Agents (Steps 15-17)
+            {
+                step: 15,
                 isCompleted: (followupConfigs.count ?? 0) > 0,
                 hasContent: (followupConfigs.count ?? 0) > 0,
             },
-            // Step 11: Meta Ads Manager
             {
-                step: 11,
-                isCompleted: (adCampaigns.count ?? 0) > 0,
-                hasContent: (adCampaigns.count ?? 0) > 0,
+                step: 16,
+                isCompleted: (marketingBriefsOrganic.count ?? 0) > 0,
+                hasContent: (marketingBriefsOrganic.count ?? 0) > 0,
             },
-            // Step 12: Marketing Content (Coming Soon)
             {
-                step: 12,
-                isCompleted: (marketingBriefs.count ?? 0) > 0,
-                hasContent: (marketingBriefs.count ?? 0) > 0,
+                step: 17,
+                isCompleted: (marketingBriefsPaid.count ?? 0) > 0,
+                hasContent: (marketingBriefsPaid.count ?? 0) > 0,
             },
         ];
 

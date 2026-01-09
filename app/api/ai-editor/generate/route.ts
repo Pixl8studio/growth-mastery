@@ -48,9 +48,22 @@ export async function POST(request: Request) {
             );
         }
 
-        if (!["registration", "watch", "enrollment"].includes(pageType)) {
+        if (
+            ![
+                "registration",
+                "watch",
+                "enrollment",
+                "confirmation",
+                "call_booking",
+                "checkout",
+                "upsell",
+                "thank_you",
+            ].includes(pageType)
+        ) {
             return NextResponse.json(
-                { error: "pageType must be 'registration', 'watch', or 'enrollment'" },
+                {
+                    error: "pageType must be one of: registration, watch, enrollment, confirmation, call_booking, checkout, upsell, thank_you",
+                },
                 { status: 400 }
             );
         }

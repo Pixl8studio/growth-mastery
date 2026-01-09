@@ -22,16 +22,18 @@ export async function generateConnectUrl(
         requestLogger.info("Generating Stripe Connect URL");
 
         // Validate required Stripe Connect credentials
+        const clientId = env.STRIPE_CONNECT_CLIENT_ID;
         if (
-            !env.STRIPE_CONNECT_CLIENT_ID ||
-            env.STRIPE_CONNECT_CLIENT_ID.includes("your_") ||
-            env.STRIPE_CONNECT_CLIENT_ID.includes("...")
+            !clientId ||
+            clientId.includes("your_") ||
+            clientId.includes("...") ||
+            !clientId.startsWith("ca_")
         ) {
             const errorMessage =
                 "Stripe Connect is not configured correctly. " +
                 "STRIPE_CONNECT_CLIENT_ID must be set to your actual Client ID (starts with 'ca_'). " +
                 "Currently set to: " +
-                (env.STRIPE_CONNECT_CLIENT_ID || "(not set)") +
+                (clientId ? `"${clientId.substring(0, 10)}..."` : "(not set)") +
                 ". Get your Client ID from: Stripe Dashboard > Connect > Settings. " +
                 "See docs/STRIPE_SETUP.md for detailed setup instructions.";
             requestLogger.error({}, errorMessage);

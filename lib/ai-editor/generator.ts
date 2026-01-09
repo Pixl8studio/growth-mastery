@@ -118,6 +118,11 @@ function buildSystemPrompt(pageType: PageType, framework: string): string {
         registration: "Registration",
         watch: "Watch",
         enrollment: "Enrollment",
+        confirmation: "Confirmation",
+        call_booking: "Call Booking",
+        checkout: "Checkout",
+        upsell: "Upsell",
+        thank_you: "Thank You",
     };
 
     return `You are an expert landing page designer and developer with a keen eye for professional, polished design. Your task is to generate a complete, production-ready ${pageTypeLabels[pageType]} page as a single HTML document.
@@ -394,6 +399,41 @@ export function validateGeneratedHtml(
     if (pageType === "enrollment") {
         if (!html.includes("price") && !html.includes("payment")) {
             warnings.push("Enrollment page may be missing pricing information");
+        }
+    }
+
+    if (pageType === "confirmation") {
+        if (!html.includes("calendar") && !html.includes("Calendar")) {
+            warnings.push("Confirmation page may be missing calendar integration");
+        }
+    }
+
+    if (pageType === "call_booking") {
+        if (!html.includes("<form") && !html.includes("form")) {
+            warnings.push("Call booking page missing qualification form");
+        }
+    }
+
+    if (pageType === "checkout") {
+        if (!html.includes("payment") && !html.includes("checkout")) {
+            warnings.push("Checkout page may be missing payment information");
+        }
+    }
+
+    if (pageType === "upsell") {
+        if (!html.includes("countdown") && !html.includes("timer")) {
+            warnings.push("Upsell page may be missing urgency countdown timer");
+        }
+    }
+
+    if (pageType === "thank_you") {
+        if (
+            !html.includes("thank") &&
+            !html.includes("Thank") &&
+            !html.includes("welcome") &&
+            !html.includes("Welcome")
+        ) {
+            warnings.push("Thank you page may be missing confirmation messaging");
         }
     }
 

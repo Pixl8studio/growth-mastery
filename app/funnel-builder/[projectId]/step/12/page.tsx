@@ -1,45 +1,124 @@
-/**
- * Step 12: Marketing Content Engine
- *
- * Comprehensive organic social content generation and publishing system.
- * Features Echo Mode voice mirroring, multi-platform publishing, and analytics.
- */
-
 "use client";
+
+/**
+ * Step 12: Checkout Pages
+ * Create Stripe-powered checkout pages for secure payment processing
+ */
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
-import { useStepCompletion } from "@/app/funnel-builder/use-completion";
+import { DependencyWarning } from "@/components/funnel/dependency-warning";
 import { useIsMobile } from "@/lib/mobile-utils.client";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/components/ui/use-toast";
-import { logger } from "@/lib/client-logger";
 import {
+    FileText,
+    PlusCircle,
+    Eye,
+    Pencil,
+    Trash2,
+    X,
+    Loader2,
+    HelpCircle,
     Sparkles,
-    TrendingUp,
-    Calendar,
-    BarChart3,
-    Settings,
-    Lightbulb,
-    Share2,
+    Check,
+    Circle,
+    CreditCard,
+    AlertTriangle,
+    ExternalLink,
 } from "lucide-react";
+import { logger } from "@/lib/client-logger";
+import { createClient } from "@/lib/supabase/client";
+import { useStepCompletion } from "@/app/funnel-builder/use-completion";
+import { useToast } from "@/components/ui/use-toast";
+import { Switch } from "@/components/ui/switch";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
-// Import enhanced components with comprehensive controls
-import { ProfileConfigForm } from "@/components/marketing/profile-config-form";
-import { ContentGenerator } from "@/components/marketing/content-generator";
-import { ContentCalendar } from "@/components/marketing/content-calendar";
-import { MarketingAnalyticsDashboard } from "@/components/marketing/marketing-analytics-dashboard";
-import { TrendExplorer } from "@/components/marketing/trend-explorer";
-import { MarketingSettings } from "@/components/marketing/marketing-settings";
-import { ApprovalWorkflowModal } from "@/components/marketing/approval-workflow-modal";
-import { ExperimentCreatorModal } from "@/components/marketing/experiment-creator-modal";
-import { ComingSoonOverlay } from "@/components/ui/coming-soon-overlay";
+interface Offer {
+    id: string;
+    name: string;
+    tagline: string | null;
+    description: string | null;
+    price: number;
+    currency: string;
+    features: any;
+    created_at: string;
+}
 
-export default function Step12Page({
+interface CheckoutPage {
+    id: string;
+    headline: string;
+    subheadline: string | null;
+    is_published: boolean;
+    offer_id: string | null;
+    created_at: string;
+    order_bump_config: any;
+}
+
+interface AIEditorPage {
+    id: string;
+    title: string;
+    page_type: string;
+    status: "draft" | "published";
+    version: number;
+    created_at: string;
+    updated_at: string;
+}
+
+// Unified page type for combined list
+interface UnifiedCheckoutPage {
+    id: string;
+    title: string;
+    subtitle?: string;
+    status: "draft" | "published";
+    type: "ai-editor" | "legacy";
+    created_at: string;
+    version?: number;
+    offer_id?: string | null;
+}
+
+// Progress stages for generation
+interface ProgressStage {
+    id: string;
+    label: string;
+    status: "pending" | "in_progress" | "completed";
+}
+
+const GENERATION_STAGES: ProgressStage[] = [
+    { id: "offer", label: "Loading your offer data", status: "pending" },
+    { id: "payment", label: "Configuring payment form", status: "pending" },
+    { id: "brand", label: "Applying brand design", status: "pending" },
+    { id: "summary", label: "Building order summary", status: "pending" },
+    { id: "trust", label: "Adding trust elements", status: "pending" },
+    { id: "finalize", label: "Finalizing checkout page", status: "pending" },
+];
+
+const TEMPLATE_OPTIONS = [
+    {
+        value: "trust-focused",
+        label: "Trust Focused",
+        description:
+            "Prominent security badges, testimonials, and money-back guarantee. Ideal for first-time customers and higher-priced offers.",
+    },
+    {
+        value: "streamlined-express",
+        label: "Streamlined Express",
+        description:
+            "Minimal distractions with fast checkout flow. Perfect for impulse purchases and returning customers.",
+    },
+    {
+        value: "value-reinforcement",
+        label: "Value Reinforcement",
+        description:
+            "Shows offer recap, benefits summary, and value comparison. Best for considered purchases and premium offers.",
+    },
+] as const;
+
+export default function Step12CheckoutPage({
     params,
 }: {
     params: Promise<{ projectId: string }>;
@@ -48,40 +127,172 @@ export default function Step12Page({
     const isMobile = useIsMobile("lg");
     const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
-    const [marketingEnabled, setMarketingEnabled] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState("profile");
+    const [project, setProject] = useState<any>(null);
 
     // Redirect mobile users to desktop-required page
     useEffect(() => {
         if (isMobile && projectId) {
             const params = new URLSearchParams({
-                feature: "Marketing Content Engine",
+                feature: "Checkout Page Editor",
                 description:
-                    "The Marketing Content Engine requires a desktop computer for generating content, managing campaigns, and analyzing performance across multiple platforms.",
+                    "The checkout page editor requires a desktop computer for designing secure payment forms with Stripe integration.",
                 returnPath: `/funnel-builder/${projectId}`,
             });
             router.push(`/desktop-required?${params.toString()}`);
         }
     }, [isMobile, projectId, router]);
 
-    // State for marketing data
-    const [profile, setProfile] = useState<any>(null);
-    const [stats, setStats] = useState({
-        postsThisMonth: 0,
-        totalOptIns: 0,
-        scheduledPosts: 0,
-        activeExperiments: 0,
-        overallOI1000: 0,
-        pendingApprovals: 0,
+    const [offers, setOffers] = useState<Offer[]>([]);
+    const [checkoutPages, setCheckoutPages] = useState<CheckoutPage[]>([]);
+    const [aiEditorPages, setAiEditorPages] = useState<AIEditorPage[]>([]);
+    const [isCreating, setIsCreating] = useState(false);
+    const [progressStages, setProgressStages] = useState<ProgressStage[]>([]);
+    const [showCreateForm, setShowCreateForm] = useState(false);
+    const [stripeConnected, setStripeConnected] = useState<boolean | null>(null);
+    const [formData, setFormData] = useState({
+        offerId: "",
+        templateType: "trust-focused" as
+            | "trust-focused"
+            | "streamlined-express"
+            | "value-reinforcement",
+        orderBumpEnabled: false,
+        orderBumpOfferId: "",
     });
-
-    // Modal states
-    const [showApprovalModal, setShowApprovalModal] = useState(false);
-    const [showExperimentModal, setShowExperimentModal] = useState(false);
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
+
+    // Simulate progress stages with realistic timing
+    const simulateProgress = useCallback(async (): Promise<void> => {
+        const stages = [...GENERATION_STAGES];
+        setProgressStages(stages);
+
+        // Timing for each stage (in ms) - total ~25-35 seconds
+        const stageTiming = [
+            1500, // Loading offer data
+            3000, // Configuring payment form
+            2500, // Applying brand design
+            8000, // Building order summary
+            6000, // Adding trust elements
+            3000, // Finalizing checkout page
+        ];
+
+        for (let i = 0; i < stages.length; i++) {
+            // Mark current stage as in_progress
+            setProgressStages((prev) =>
+                prev.map((s, idx) => ({
+                    ...s,
+                    status:
+                        idx < i ? "completed" : idx === i ? "in_progress" : "pending",
+                }))
+            );
+
+            await new Promise((resolve) => setTimeout(resolve, stageTiming[i]));
+        }
+
+        // Mark all as completed
+        setProgressStages((prev) =>
+            prev.map((s) => ({ ...s, status: "completed" as const }))
+        );
+    }, []);
+
+    // Handle Generate Checkout Page
+    const handleGenerate = async () => {
+        if (!projectId || !formData.offerId) return;
+
+        setIsCreating(true);
+        const startTime = Date.now();
+
+        // Start progress simulation in parallel with API call
+        const progressPromise = simulateProgress();
+
+        try {
+            logger.info(
+                {
+                    projectId,
+                    pageType: "checkout",
+                    offerId: formData.offerId,
+                    templateStyle: formData.templateType,
+                    orderBumpEnabled: formData.orderBumpEnabled,
+                },
+                "Creating checkout page with AI editor"
+            );
+
+            const response = await fetch("/api/ai-editor/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    projectId,
+                    pageType: "checkout",
+                    offerId: formData.offerId,
+                    templateStyle: formData.templateType,
+                    orderBumpConfig: formData.orderBumpEnabled
+                        ? {
+                              enabled: true,
+                              offerId: formData.orderBumpOfferId,
+                          }
+                        : { enabled: false },
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || data.details || "Failed to create page");
+            }
+
+            const elapsed = Date.now() - startTime;
+
+            // If API completed quickly (under 15 seconds), fast-forward progress
+            if (elapsed < 15000) {
+                setProgressStages((prev) =>
+                    prev.map((s) => ({ ...s, status: "completed" as const }))
+                );
+                // Small delay so user sees completion
+                await new Promise((resolve) => setTimeout(resolve, 500));
+            } else {
+                // Otherwise wait for progress simulation to finish naturally
+                await progressPromise;
+            }
+
+            logger.info({ pageId: data.pageId }, "Checkout page created");
+
+            // Add the new page to the list
+            const newPage: AIEditorPage = {
+                id: data.pageId,
+                title: data.title || "Checkout Page",
+                page_type: "checkout",
+                status: "draft",
+                version: 1,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            };
+            setAiEditorPages((prev) => [newPage, ...prev]);
+
+            // Reset form and close
+            setShowCreateForm(false);
+            setProgressStages([]);
+
+            toast({
+                title: "Checkout page created!",
+                description: "Opening the AI Editor in a new tab...",
+            });
+
+            // Open in new tab
+            window.open(`/ai-editor/${data.pageId}`, "_blank");
+        } catch (error: any) {
+            logger.error({ error }, "Failed to create checkout page");
+            setProgressStages([]);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description:
+                    error.message || "Failed to create page. Please try again.",
+            });
+        } finally {
+            setIsCreating(false);
+        }
+    };
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -91,405 +302,726 @@ export default function Step12Page({
         resolveParams();
     }, [params]);
 
-    const loadStats = useCallback(async () => {
-        if (!projectId) return;
+    useEffect(() => {
+        const loadProject = async () => {
+            if (!projectId) return;
 
-        try {
-            // Get posts this month
-            const monthStart = new Date();
-            monthStart.setDate(1);
-            monthStart.setHours(0, 0, 0, 0);
+            try {
+                const supabase = createClient();
+                const { data: projectData, error: projectError } = await supabase
+                    .from("funnel_projects")
+                    .select("*")
+                    .eq("id", projectId)
+                    .single();
 
-            const calendarRes = await fetch(
-                `/api/marketing/calendar?start=${monthStart.toISOString()}`
-            );
-
-            if (calendarRes.ok) {
-                const calendarData = await calendarRes.json();
-                const entries = calendarData.entries || [];
-
-                const published = entries.filter(
-                    (e: any) => e.publish_status === "published"
-                );
-                const scheduled = entries.filter(
-                    (e: any) => e.publish_status === "scheduled"
-                );
-
-                setStats((prev) => ({
-                    ...prev,
-                    postsThisMonth: published.length,
-                    scheduledPosts: scheduled.length,
-                }));
+                if (projectError) throw projectError;
+                setProject(projectData);
+            } catch (error) {
+                logger.error({ error }, "Failed to load project");
             }
+        };
 
-            // Get analytics
-            const analyticsRes = await fetch(
-                `/api/marketing/analytics?funnel_project_id=${projectId}`
-            );
-
-            if (analyticsRes.ok) {
-                const analyticsData = await analyticsRes.json();
-                const dashboard = analyticsData.dashboard;
-
-                if (dashboard) {
-                    setStats((prev) => ({
-                        ...prev,
-                        totalOptIns: dashboard.overview?.total_opt_ins || 0,
-                        overallOI1000: dashboard.overview?.overall_oi_1000 || 0,
-                    }));
-                }
-            }
-
-            // Get experiments count
-            const experimentsRes = await fetch(
-                `/api/marketing/analytics/experiments?funnel_project_id=${projectId}&status=running`
-            );
-
-            if (experimentsRes.ok) {
-                const experimentsData = await experimentsRes.json();
-                setStats((prev) => ({
-                    ...prev,
-                    activeExperiments: experimentsData.experiments?.length || 0,
-                }));
-            }
-        } catch (error) {
-            logger.error({ error }, "Failed to load stats");
-        }
+        loadProject();
     }, [projectId]);
 
-    // Load marketing data
     useEffect(() => {
         const loadData = async () => {
             if (!projectId) return;
 
             try {
-                setLoading(true);
+                const supabase = createClient();
 
-                // Load profile
-                const profileRes = await fetch(
-                    `/api/marketing/profiles?funnel_project_id=${projectId}`
-                );
+                // Check Stripe connection
+                const {
+                    data: { user },
+                } = await supabase.auth.getUser();
 
-                if (profileRes.ok) {
-                    const profileData = await profileRes.json();
-                    if (profileData.profiles && profileData.profiles.length > 0) {
-                        const loadedProfile = profileData.profiles[0];
-                        setProfile(loadedProfile);
-                        setMarketingEnabled(true);
-                        logger.info(
-                            { profileId: loadedProfile.id },
-                            "Marketing profile loaded"
+                if (user) {
+                    const { data: profile, error: profileError } = await supabase
+                        .from("user_profiles")
+                        .select("stripe_account_id, stripe_charges_enabled")
+                        .eq("id", user.id)
+                        .single();
+
+                    if (!profileError && profile) {
+                        setStripeConnected(
+                            !!profile.stripe_account_id &&
+                                profile.stripe_charges_enabled
                         );
-
-                        // Load stats after profile is loaded
-                        await loadStats();
+                    } else {
+                        setStripeConnected(false);
                     }
                 }
+
+                // Load offers
+                const { data: offerData, error: offerError } = await supabase
+                    .from("offers")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (offerError) throw offerError;
+                setOffers(offerData || []);
+
+                // Auto-select first offer
+                if (offerData && offerData.length > 0) {
+                    setFormData((prev) => ({
+                        ...prev,
+                        offerId: offerData[0].id,
+                        orderBumpOfferId:
+                            offerData.length > 1 ? offerData[1].id : "",
+                    }));
+                }
+
+                // Load checkout pages
+                const { data: pagesData, error: pagesError } = await supabase
+                    .from("checkout_pages")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (pagesError) {
+                    logger.warn(
+                        { error: pagesError },
+                        "Failed to load checkout pages"
+                    );
+                } else {
+                    setCheckoutPages(pagesData || []);
+                }
+
+                // Load AI Editor v2 pages
+                const { data: aiPagesData, error: aiPagesError } = await supabase
+                    .from("ai_editor_pages")
+                    .select(
+                        "id, title, page_type, status, version, created_at, updated_at"
+                    )
+                    .eq("funnel_project_id", projectId)
+                    .eq("page_type", "checkout")
+                    .order("created_at", { ascending: false });
+
+                if (aiPagesError) {
+                    logger.warn(
+                        { error: aiPagesError },
+                        "Failed to load AI editor pages"
+                    );
+                } else {
+                    setAiEditorPages(aiPagesData || []);
+                }
             } catch (error) {
-                logger.error({ error }, "Failed to load marketing data");
-            } finally {
-                setLoading(false);
+                logger.error({ error }, "Failed to load data");
             }
         };
 
         loadData();
-    }, [projectId, loadStats]);
+    }, [projectId]);
 
-    const handleEnableMarketing = async (enabled: boolean) => {
-        setMarketingEnabled(enabled);
+    const handleEditAIEditor = (pageId: string) => {
+        window.open(`/ai-editor/${pageId}`, "_blank");
+    };
 
-        if (enabled && !profile) {
-            try {
-                const response = await fetch("/api/marketing/profiles", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        funnel_project_id: projectId,
-                        name: "Main Marketing Profile",
-                    }),
-                });
+    const handlePreviewLegacy = (pageId: string) => {
+        const previewUrl = `/funnel-builder/${projectId}/pages/checkout/${pageId}`;
+        window.open(previewUrl, "_blank");
+    };
 
-                const data = await response.json();
+    // Create unified pages list combining AI Editor and legacy pages
+    const unifiedPages: UnifiedCheckoutPage[] = [
+        // AI Editor pages first (newer)
+        ...aiEditorPages.map((page) => ({
+            id: page.id,
+            title: page.title,
+            status: page.status,
+            type: "ai-editor" as const,
+            created_at: page.created_at,
+            version: page.version,
+        })),
+        // Legacy pages with badge
+        ...checkoutPages.map((page) => ({
+            id: page.id,
+            title: page.headline,
+            subtitle: page.subheadline || undefined,
+            status: (page.is_published ? "published" : "draft") as
+                | "published"
+                | "draft",
+            type: "legacy" as const,
+            created_at: page.created_at,
+            offer_id: page.offer_id,
+        })),
+    ].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
 
-                if (data.success && data.profile) {
-                    setProfile(data.profile);
+    const handleDelete = async (pageId: string) => {
+        if (!confirm("Delete this checkout page?")) return;
 
-                    toast({
-                        title: "Marketing Content Engine Enabled",
-                        description:
-                            "Your profile has been created with auto-populated brand voice from your intake and offer data.",
-                    });
+        try {
+            const supabase = createClient();
+            const { error } = await supabase
+                .from("checkout_pages")
+                .delete()
+                .eq("id", pageId);
 
-                    logger.info(
-                        { profileId: data.profile.id },
-                        "Marketing profile created"
-                    );
-                } else {
-                    throw new Error(data.error || "Failed to create profile");
-                }
-            } catch (error) {
-                logger.error({ error }, "Failed to enable marketing");
-                toast({
-                    title: "Error",
-                    description: "Failed to enable marketing engine. Please try again.",
-                    variant: "destructive",
-                });
-                setMarketingEnabled(false);
-            }
+            if (error) throw error;
+
+            setCheckoutPages((prev) => prev.filter((p) => p.id !== pageId));
+            logger.info({ pageId }, "Checkout page deleted");
+
+            toast({
+                title: "Page Deleted",
+                description: "Checkout page has been removed",
+            });
+        } catch (error: any) {
+            logger.error({ error }, "Failed to delete checkout page");
+            toast({
+                variant: "destructive",
+                title: "Delete Failed",
+                description:
+                    error?.message || "Could not delete the page. Please try again.",
+            });
         }
     };
 
-    if (loading) {
+    const hasOffer = offers.length > 0;
+    const hasCheckoutPage = unifiedPages.length > 0;
+    const canCreatePage = hasOffer && stripeConnected === true;
+
+    if (!projectId) {
         return (
-            <StepLayout
-                stepTitle="Marketing Content Engine"
-                stepDescription="Generate and publish organic social content"
-                currentStep={12}
-                projectId={projectId}
-                completedSteps={completedSteps}
-            >
-                <div className="flex items-center justify-center py-12">
-                    <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4" />
-                        <p className="text-muted-foreground">
-                            Loading marketing engine...
-                        </p>
-                    </div>
-                </div>
-            </StepLayout>
+            <div className="flex h-screen items-center justify-center">
+                <div className="text-muted-foreground">Loading...</div>
+            </div>
         );
     }
 
     return (
         <StepLayout
-            stepTitle="Marketing Content Engine"
-            stepDescription="AI-powered social content generation with Echo Mode voice mirroring"
             currentStep={12}
             projectId={projectId}
             completedSteps={completedSteps}
-            nextLabel="Return to Dashboard"
+            funnelName={project?.name}
+            nextDisabled={!hasCheckoutPage}
+            nextLabel={hasCheckoutPage ? "Create Upsell Pages" : "Create Page First"}
+            stepTitle="Checkout Pages"
+            stepDescription="Create Stripe-powered checkout pages for secure payments"
         >
-            <ComingSoonOverlay
-                featureName="Marketing Content Engine"
-                description="The Marketing Content Engine is currently in development. Soon you'll be able to generate platform-optimized content in your authentic founder voice."
-            >
-                <div className="space-y-6">
-                    {/* Enable/Disable Section */}
-                    <Card className="p-6 bg-gradient-to-r from-primary/5 to-purple-50">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <Share2 className="h-6 w-6 text-primary-foreground" />
-                                <div>
-                                    <h3 className="text-lg font-semibold">
-                                        Enable Marketing Content Engine
-                                    </h3>
-                                    <p className="text-sm text-muted-foreground">
-                                        Generate platform-optimized content in your
-                                        authentic founder voice
-                                    </p>
-                                </div>
+            <div className="space-y-8">
+                {/* Dependency Warnings */}
+                {!hasOffer && (
+                    <DependencyWarning
+                        message="You need to create an offer first."
+                        requiredStep={2}
+                        requiredStepName="Define Offer"
+                        projectId={projectId}
+                    />
+                )}
+
+                {/* Stripe Connection Warning */}
+                {stripeConnected === false && (
+                    <div className="rounded-lg border border-amber-200 bg-gradient-to-br from-amber-50 to-amber-100/50 p-6">
+                        <div className="flex items-start gap-4">
+                            <div className="flex-shrink-0">
+                                <AlertTriangle className="h-6 w-6 text-amber-600" />
                             </div>
-                            <Switch
-                                checked={marketingEnabled}
-                                onCheckedChange={handleEnableMarketing}
-                            />
+                            <div className="flex-1">
+                                <h3 className="mb-2 text-lg font-semibold text-amber-900">
+                                    Stripe Connection Required
+                                </h3>
+                                <p className="mb-4 text-sm text-amber-800">
+                                    Checkout pages require Stripe to process payments. Connect
+                                    your Stripe account to accept credit cards, Apple Pay,
+                                    Google Pay, and other payment methods.
+                                </p>
+                                <a
+                                    href="/settings/payments"
+                                    className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-amber-700"
+                                >
+                                    <CreditCard className="h-4 w-4" />
+                                    Connect Stripe Account
+                                    <ExternalLink className="h-4 w-4" />
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Generate Button or Form */}
+                {!showCreateForm ? (
+                    <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-primary/5 p-8">
+                        <div className="flex flex-col items-center gap-6 text-center">
+                            {/* Animated Generate Button */}
+                            <button
+                                onClick={() => setShowCreateForm(true)}
+                                disabled={!canCreatePage}
+                                className={`group relative flex items-center gap-3 rounded-xl px-10 py-5 text-xl font-bold transition-all duration-300 ${
+                                    canCreatePage
+                                        ? "bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 hover:scale-[1.02]"
+                                        : "cursor-not-allowed bg-gray-300 text-muted-foreground"
+                                }`}
+                            >
+                                {/* Glow effect */}
+                                {canCreatePage && (
+                                    <span className="absolute inset-0 -z-10 animate-pulse rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 opacity-50 blur-lg" />
+                                )}
+                                <Sparkles className="h-7 w-7" />
+                                {canCreatePage
+                                    ? "Generate Checkout Page"
+                                    : stripeConnected === false
+                                      ? "Connect Stripe First"
+                                      : "Complete Prerequisites First"}
+                            </button>
+
+                            {canCreatePage && (
+                                <p className="max-w-md text-sm text-muted-foreground">
+                                    Create a secure, conversion-optimized checkout page with
+                                    Stripe integration in seconds
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="rounded-lg border border-purple-200 bg-gradient-to-br from-purple-50 to-primary/5 p-8 shadow-soft">
+                        <div className="mb-6 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-xl font-semibold text-foreground">
+                                    Generate Checkout Page
+                                </h3>
+                                {!isCreating && (
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        This typically takes 20-30 seconds
+                                    </p>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setShowCreateForm(false);
+                                    setProgressStages([]);
+                                }}
+                                disabled={isCreating}
+                                className="text-muted-foreground hover:text-foreground disabled:opacity-50"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
                         </div>
 
-                        {marketingEnabled && (
-                            <>
-                                <div className="mt-6 grid grid-cols-5 gap-4 text-sm">
-                                    <div className="text-center p-3 bg-card rounded-lg">
-                                        <div className="text-2xl font-bold text-primary">
-                                            {stats.postsThisMonth}
-                                        </div>
-                                        <div className="text-muted-foreground">
-                                            Posts This Month
-                                        </div>
+                        {/* Progress Stages UI */}
+                        {isCreating && progressStages.length > 0 ? (
+                            <div className="space-y-6">
+                                <div className="rounded-lg border border-purple-200 bg-white p-6">
+                                    <div className="mb-4 flex items-center justify-between">
+                                        <span className="text-sm font-medium text-purple-900">
+                                            Creating your checkout page...
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                            ~20-30 seconds
+                                        </span>
                                     </div>
-                                    <div className="text-center p-3 bg-card rounded-lg">
-                                        <div className="text-2xl font-bold text-green-600">
-                                            {stats.totalOptIns}
-                                        </div>
-                                        <div className="text-muted-foreground">
-                                            Total Opt-ins
-                                        </div>
-                                        {stats.overallOI1000 > 0 && (
-                                            <div className="text-xs text-muted-foreground mt-1">
-                                                {stats.overallOI1000.toFixed(1)}{" "}
-                                                O/I-1000
+
+                                    {/* Progress bar */}
+                                    <div className="mb-6 h-2 overflow-hidden rounded-full bg-purple-100">
+                                        <div
+                                            className="h-full rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600 transition-all duration-500"
+                                            style={{
+                                                width: `${(progressStages.filter((s) => s.status === "completed").length / progressStages.length) * 100}%`,
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Stage list */}
+                                    <div className="space-y-3">
+                                        {progressStages.map((stage) => (
+                                            <div
+                                                key={stage.id}
+                                                className={`flex items-center gap-3 rounded-lg p-2 transition-colors ${
+                                                    stage.status === "in_progress"
+                                                        ? "bg-purple-50"
+                                                        : ""
+                                                }`}
+                                            >
+                                                {stage.status === "completed" ? (
+                                                    <Check className="h-5 w-5 text-green-600" />
+                                                ) : stage.status === "in_progress" ? (
+                                                    <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                                                ) : (
+                                                    <Circle className="h-5 w-5 text-gray-300" />
+                                                )}
+                                                <span
+                                                    className={`text-sm ${
+                                                        stage.status === "completed"
+                                                            ? "text-green-700"
+                                                            : stage.status ===
+                                                                "in_progress"
+                                                              ? "font-medium text-purple-900"
+                                                              : "text-muted-foreground"
+                                                    }`}
+                                                >
+                                                    {stage.label}
+                                                </span>
                                             </div>
-                                        )}
-                                    </div>
-                                    <div className="text-center p-3 bg-card rounded-lg">
-                                        <div className="text-2xl font-bold text-purple-600">
-                                            {stats.scheduledPosts}
-                                        </div>
-                                        <div className="text-muted-foreground">
-                                            Scheduled
-                                        </div>
-                                    </div>
-                                    <div className="text-center p-3 bg-card rounded-lg">
-                                        <div className="text-2xl font-bold text-orange-600">
-                                            {stats.activeExperiments}
-                                        </div>
-                                        <div className="text-muted-foreground">
-                                            Active Tests
-                                        </div>
-                                    </div>
-                                    <div
-                                        className="text-center p-3 bg-card rounded-lg cursor-pointer hover:bg-yellow-50 transition-smooth"
-                                        onClick={() => setShowApprovalModal(true)}
-                                    >
-                                        <div className="text-2xl font-bold text-yellow-600">
-                                            {stats.pendingApprovals}
-                                        </div>
-                                        <div className="text-muted-foreground">
-                                            Pending
-                                        </div>
+                                        ))}
                                     </div>
                                 </div>
-
-                                {/* Quick Action Buttons */}
-                                <div className="mt-4 flex justify-end gap-3">
-                                    <Button
-                                        onClick={() => setShowApprovalModal(true)}
-                                        variant="outline"
-                                        size="sm"
-                                    >
-                                        Review Approvals
-                                    </Button>
-                                    <Button
-                                        onClick={() => setShowExperimentModal(true)}
-                                        variant="outline"
-                                        size="sm"
-                                    >
-                                        Create A/B Test
-                                    </Button>
-                                </div>
-                            </>
-                        )}
-                    </Card>
-
-                    {marketingEnabled && profile && (
-                        <Tabs
-                            value={activeTab}
-                            onValueChange={setActiveTab}
-                            className="w-full"
-                        >
-                            <TabsList className="grid w-full grid-cols-6">
-                                <TabsTrigger value="profile">
-                                    <Sparkles className="h-4 w-4 mr-2" />
-                                    Profile
-                                </TabsTrigger>
-                                <TabsTrigger value="generate">
-                                    <Lightbulb className="h-4 w-4 mr-2" />
-                                    Generate
-                                </TabsTrigger>
-                                <TabsTrigger value="calendar">
-                                    <Calendar className="h-4 w-4 mr-2" />
-                                    Calendar
-                                </TabsTrigger>
-                                <TabsTrigger value="analytics">
-                                    <BarChart3 className="h-4 w-4 mr-2" />
-                                    Analytics
-                                </TabsTrigger>
-                                <TabsTrigger value="trends">
-                                    <TrendingUp className="h-4 w-4 mr-2" />
-                                    Trends
-                                </TabsTrigger>
-                                <TabsTrigger value="settings">
-                                    <Settings className="h-4 w-4 mr-2" />
-                                    Settings
-                                </TabsTrigger>
-                            </TabsList>
-
-                            {/* Profile Tab */}
-                            <TabsContent value="profile" className="mt-6">
-                                <ProfileConfigForm
-                                    profile={profile}
-                                    onUpdate={async () => {
-                                        // Reload profile
-                                        const res = await fetch(
-                                            `/api/marketing/profiles?funnel_project_id=${projectId}`
-                                        );
-                                        if (res.ok) {
-                                            const data = await res.json();
-                                            if (data.profiles?.[0]) {
-                                                setProfile(data.profiles[0]);
+                            </div>
+                        ) : (
+                            <TooltipProvider>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="mb-2 block text-sm font-medium text-foreground">
+                                            Offer
+                                        </label>
+                                        <select
+                                            value={formData.offerId}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    offerId: e.target.value,
+                                                })
                                             }
-                                        }
-                                    }}
-                                />
-                            </TabsContent>
+                                            disabled={isCreating}
+                                            className="w-full rounded-lg border border-border bg-card px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {offers.map((offer) => (
+                                                <option key={offer.id} value={offer.id}>
+                                                    {offer.name} - {offer.currency}{" "}
+                                                    {offer.price.toLocaleString()}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="mt-1 text-sm text-muted-foreground">
+                                            The product customers will purchase
+                                        </p>
+                                    </div>
 
-                            {/* Generate Tab */}
-                            <TabsContent value="generate" className="mt-6">
-                                <ContentGenerator
-                                    profileId={profile.id}
-                                    funnelProjectId={projectId}
-                                    onContentGenerated={() => loadStats()}
-                                />
-                            </TabsContent>
+                                    <div>
+                                        <label className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+                                            Template Style
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-muted-foreground" />
+                                                </TooltipTrigger>
+                                                <TooltipContent className="max-w-xs">
+                                                    <p className="text-sm">
+                                                        Choose a template that matches
+                                                        your customer base and offer price
+                                                        point
+                                                    </p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </label>
+                                        <div className="space-y-3">
+                                            {TEMPLATE_OPTIONS.map((template) => (
+                                                <div key={template.value}>
+                                                    <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card p-4 hover:border-purple-300 hover:bg-purple-50">
+                                                        <input
+                                                            type="radio"
+                                                            name="templateType"
+                                                            value={template.value}
+                                                            checked={
+                                                                formData.templateType ===
+                                                                template.value
+                                                            }
+                                                            onChange={(e) =>
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    templateType: e
+                                                                        .target
+                                                                        .value as any,
+                                                                })
+                                                            }
+                                                            disabled={isCreating}
+                                                            className="mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500"
+                                                        />
+                                                        <div className="flex-1">
+                                                            <div className="font-medium text-foreground">
+                                                                {template.label}
+                                                            </div>
+                                                            <p className="mt-1 text-sm text-muted-foreground">
+                                                                {template.description}
+                                                            </p>
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
 
-                            {/* Calendar Tab */}
-                            <TabsContent value="calendar" className="mt-6">
-                                <ContentCalendar
-                                    funnelProjectId={projectId}
-                                    onUpdate={() => loadStats()}
-                                />
-                            </TabsContent>
+                                    {/* Order Bump Configuration */}
+                                    {offers.length > 1 && (
+                                        <div className="rounded-lg border border-border bg-card p-4">
+                                            <div className="mb-3 flex items-center justify-between">
+                                                <div>
+                                                    <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                                                        Order Bump
+                                                        <Tooltip>
+                                                            <TooltipTrigger asChild>
+                                                                <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-muted-foreground" />
+                                                            </TooltipTrigger>
+                                                            <TooltipContent className="max-w-xs">
+                                                                <p className="text-sm">
+                                                                    Add a complementary
+                                                                    offer to the checkout
+                                                                    with a single checkbox
+                                                                </p>
+                                                            </TooltipContent>
+                                                        </Tooltip>
+                                                    </label>
+                                                    <p className="mt-1 text-xs text-muted-foreground">
+                                                        Increase average order value by
+                                                        20-30%
+                                                    </p>
+                                                </div>
+                                                <Switch
+                                                    checked={formData.orderBumpEnabled}
+                                                    onCheckedChange={(checked) =>
+                                                        setFormData({
+                                                            ...formData,
+                                                            orderBumpEnabled: checked,
+                                                        })
+                                                    }
+                                                    disabled={isCreating}
+                                                />
+                                            </div>
 
-                            {/* Analytics Tab */}
-                            <TabsContent value="analytics" className="mt-6">
-                                <MarketingAnalyticsDashboard
-                                    funnelProjectId={projectId}
-                                />
-                            </TabsContent>
+                                            {formData.orderBumpEnabled && (
+                                                <div className="mt-4">
+                                                    <label className="mb-2 block text-sm font-medium text-foreground">
+                                                        Bump Offer
+                                                    </label>
+                                                    <select
+                                                        value={
+                                                            formData.orderBumpOfferId
+                                                        }
+                                                        onChange={(e) =>
+                                                            setFormData({
+                                                                ...formData,
+                                                                orderBumpOfferId:
+                                                                    e.target.value,
+                                                            })
+                                                        }
+                                                        disabled={isCreating}
+                                                        className="w-full rounded-lg border border-border bg-background px-4 py-2 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                                    >
+                                                        {offers
+                                                            .filter(
+                                                                (o) =>
+                                                                    o.id !==
+                                                                    formData.offerId
+                                                            )
+                                                            .map((offer) => (
+                                                                <option
+                                                                    key={offer.id}
+                                                                    value={offer.id}
+                                                                >
+                                                                    {offer.name} -{" "}
+                                                                    {offer.currency}{" "}
+                                                                    {offer.price.toLocaleString()}
+                                                                </option>
+                                                            ))}
+                                                    </select>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
 
-                            {/* Trends Tab */}
-                            <TabsContent value="trends" className="mt-6">
-                                <TrendExplorer
-                                    profileId={profile.id}
-                                    funnelProjectId={projectId}
-                                />
-                            </TabsContent>
+                                    <div className="flex justify-end gap-3 pt-4">
+                                        <button
+                                            onClick={() => setShowCreateForm(false)}
+                                            disabled={isCreating}
+                                            className="rounded-lg border border-border bg-card px-6 py-2 font-medium text-foreground hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleGenerate}
+                                            disabled={!formData.offerId || isCreating}
+                                            className={`flex items-center gap-2 rounded-lg px-6 py-2 font-semibold ${
+                                                formData.offerId && !isCreating
+                                                    ? "bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:opacity-90"
+                                                    : "cursor-not-allowed bg-gray-300 text-muted-foreground"
+                                            }`}
+                                        >
+                                            <Sparkles className="h-4 w-4" />
+                                            Generate Page
+                                        </button>
+                                    </div>
+                                </div>
+                            </TooltipProvider>
+                        )}
+                    </div>
+                )}
 
-                            {/* Settings Tab */}
-                            <TabsContent value="settings" className="mt-6">
-                                <MarketingSettings
-                                    funnelProjectId={projectId}
-                                    profileId={profile.id}
-                                />
-                            </TabsContent>
-                        </Tabs>
-                    )}
+                {/* Unified Pages List */}
+                <div className="rounded-lg border border-border bg-card shadow-soft">
+                    <div className="border-b border-border p-6">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-semibold text-foreground">
+                                Your Checkout Pages
+                            </h3>
+                            <span className="text-sm text-muted-foreground">
+                                {unifiedPages.length} created
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="p-6">
+                        {unifiedPages.length === 0 ? (
+                            <div className="py-16 text-center">
+                                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-purple-100">
+                                    <CreditCard className="h-8 w-8 text-purple-600" />
+                                </div>
+                                <h4 className="mb-2 text-lg font-semibold text-foreground">
+                                    No checkout pages yet
+                                </h4>
+                                <p className="mx-auto mb-6 max-w-sm text-muted-foreground">
+                                    Create your first checkout page to start accepting
+                                    secure payments through Stripe
+                                </p>
+                                {canCreatePage && (
+                                    <button
+                                        onClick={() => setShowCreateForm(true)}
+                                        className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-fuchsia-600 px-6 py-3 font-semibold text-white transition-all hover:opacity-90"
+                                    >
+                                        <Sparkles className="h-5 w-5" />
+                                        Generate Your First Page
+                                    </button>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {unifiedPages.map((page) => {
+                                    const isLegacy = page.type === "legacy";
+                                    const legacyPage = isLegacy
+                                        ? checkoutPages.find((p) => p.id === page.id)
+                                        : null;
+
+                                    return (
+                                        <div
+                                            key={page.id}
+                                            className="rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md"
+                                        >
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1">
+                                                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                                                        <h4 className="text-lg font-semibold text-foreground">
+                                                            {page.title}
+                                                        </h4>
+                                                        {isLegacy && (
+                                                            <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                                                                Legacy
+                                                            </span>
+                                                        )}
+                                                        <span
+                                                            className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                                                page.status ===
+                                                                "published"
+                                                                    ? "bg-green-100 text-green-800"
+                                                                    : "bg-yellow-100 text-yellow-800"
+                                                            }`}
+                                                        >
+                                                            {page.status === "published"
+                                                                ? "Published"
+                                                                : "Draft"}
+                                                        </span>
+                                                    </div>
+
+                                                    {page.subtitle && (
+                                                        <p className="mb-3 text-sm text-muted-foreground">
+                                                            {page.subtitle}
+                                                        </p>
+                                                    )}
+
+                                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                                        <span>
+                                                            Created{" "}
+                                                            {new Date(
+                                                                page.created_at
+                                                            ).toLocaleDateString()}
+                                                        </span>
+                                                        {page.version && (
+                                                            <span>
+                                                                Version {page.version}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-3">
+                                                    {isLegacy ? (
+                                                        <>
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    onClick={() =>
+                                                                        handlePreviewLegacy(
+                                                                            page.id
+                                                                        )
+                                                                    }
+                                                                    className="rounded p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                                                    title="Preview"
+                                                                >
+                                                                    <Eye className="h-4 w-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() =>
+                                                                        handleDelete(
+                                                                            page.id
+                                                                        )
+                                                                    }
+                                                                    className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
+                                                                    title="Delete"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </button>
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            {/* AI Editor page actions */}
+                                                            <button
+                                                                onClick={() =>
+                                                                    handleEditAIEditor(
+                                                                        page.id
+                                                                    )
+                                                                }
+                                                                className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700"
+                                                            >
+                                                                <Pencil className="h-4 w-4" />
+                                                                Edit Page
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
                 </div>
-            </ComingSoonOverlay>
 
-            {/* Approval Workflow Modal */}
-            {marketingEnabled && (
-                <ApprovalWorkflowModal
-                    isOpen={showApprovalModal}
-                    onClose={() => setShowApprovalModal(false)}
-                    funnelProjectId={projectId}
-                    onApprovalComplete={() => {
-                        loadStats();
-                    }}
-                />
-            )}
-
-            {/* Experiment Creator Modal */}
-            {marketingEnabled && (
-                <ExperimentCreatorModal
-                    isOpen={showExperimentModal}
-                    onClose={() => setShowExperimentModal(false)}
-                    funnelProjectId={projectId}
-                    onExperimentCreated={() => {
-                        setShowExperimentModal(false);
-                        loadStats();
-                    }}
-                />
-            )}
+                {/* Helper Info */}
+                <div className="rounded-lg border border-primary/10 bg-primary/5 p-6">
+                    <h4 className="mb-3 font-semibold text-primary">
+                        Checkout Page Tips
+                    </h4>
+                    <ul className="space-y-2 text-sm text-primary">
+                        <li>
+                            • Stripe handles all payment processing, security, and PCI
+                            compliance for you
+                        </li>
+                        <li>
+                            • Use trust-focused templates for first-time customers and
+                            higher-priced offers
+                        </li>
+                        <li>
+                            • Order bumps can increase your average order value by 20-30%
+                        </li>
+                        <li>
+                            • All checkout pages are mobile-responsive and optimized for
+                            conversion
+                        </li>
+                    </ul>
+                </div>
+            </div>
         </StepLayout>
     );
 }

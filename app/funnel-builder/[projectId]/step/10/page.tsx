@@ -1,77 +1,139 @@
-/**
- * Step 10: AI Follow-Up Engine
- *
- * Comprehensive interface for configuring AI-powered post-webinar follow-up automation.
- * Fully exposes the backend follow-up engine capabilities.
- */
-
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
-import { StepLayout } from "@/components/funnel/step-layout";
-import { useStepCompletion } from "@/app/funnel-builder/use-completion";
-import { useIsMobile } from "@/lib/mobile-utils.client";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useToast } from "@/components/ui/use-toast";
-import { logger } from "@/lib/client-logger";
-import {
-    Sparkles,
-    Mail,
-    BookOpen,
-    Settings,
-    BarChart3,
-    Users,
-    MessageSquare,
-    Target,
-    Loader2,
-} from "lucide-react";
-
-// Import our comprehensive components
-import { AgentConfigForm } from "@/components/followup/agent-config-form";
-import { SequenceBuilder } from "@/components/followup/sequence-builder";
-import { MessageTemplateEditor } from "@/components/followup/message-template-editor";
-import { StoryLibrary } from "@/components/followup/story-library";
-import { AnalyticsDashboard } from "@/components/followup/analytics-dashboard";
-import { SenderSetupTab } from "@/components/followup/sender-setup-tab";
-import { TestMessageModal } from "@/components/followup/test-message-modal";
-
 /**
- * Type definitions for Step 10 component state.
- *
- * Note: Child components (AgentConfigForm, SequenceBuilder, etc.) have their
- * own internal types. We use flexible types here that are compatible with
- * their expectations while maintaining safety for internal logic.
+ * Step 10: Enrollment Pages
+ * Create and manage enrollment/sales pages with AI-powered editor
  */
+
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { StepLayout } from "@/components/funnel/step-layout";
+import { DependencyWarning } from "@/components/funnel/dependency-warning";
+import { useIsMobile } from "@/lib/mobile-utils.client";
+import {
+    FileText,
+    PlusCircle,
+    Eye,
+    Pencil,
+    Trash2,
+    X,
+    Loader2,
+    HelpCircle,
+    Sparkles,
+    Check,
+    Circle,
+    ArrowRight,
+} from "lucide-react";
+import { logger } from "@/lib/client-logger";
+import { createClient } from "@/lib/supabase/client";
+import { useStepCompletion } from "@/app/funnel-builder/use-completion";
+import { useToast } from "@/components/ui/use-toast";
+import { Switch } from "@/components/ui/switch";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+interface DeckStructure {
+    id: string;
+    slides: any[];
+    metadata?: {
+        title?: string;
+    };
+    total_slides: number;
+    created_at: string;
+}
+
 interface Offer {
     id: string;
     name: string;
-    tagline?: string;
-    promise?: string;
-    description?: string;
-    price?: number;
-    currency?: string;
-    features?: Array<string | { title?: string }>;
-    guarantee?: string;
+    tagline: string | null;
+    description: string | null;
+    price: number;
+    currency: string;
+    features: any;
+    created_at: string;
 }
 
-interface SequenceWithCount {
+interface EnrollmentPage {
     id: string;
-    name: string;
-    message_count: number;
-    followup_messages?: unknown;
-    [key: string]: unknown;
+    headline: string;
+    subheadline: string;
+    html_content: string;
+    theme: any;
+    is_published: boolean;
+    offer_id: string | null;
+    page_type: string;
+    created_at: string;
 }
 
-// Note: Using 'any' for analytics and agentConfig to match child component internal types
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type AnalyticsState = any;
+interface AIEditorPage {
+    id: string;
+    title: string;
+    page_type: string;
+    status: "draft" | "published";
+    version: number;
+    created_at: string;
+    updated_at: string;
+}
 
-export default function Step10Page({
+// Unified page type for combined list
+interface UnifiedEnrollmentPage {
+    id: string;
+    title: string;
+    subtitle?: string;
+    status: "draft" | "published";
+    type: "ai-editor" | "legacy";
+    created_at: string;
+    version?: number;
+    offer_id?: string | null;
+}
+
+// Progress stages for generation
+interface ProgressStage {
+    id: string;
+    label: string;
+    status: "pending" | "in_progress" | "completed";
+}
+
+const GENERATION_STAGES: ProgressStage[] = [
+    { id: "offer", label: "Loading your offer data", status: "pending" },
+    {
+        id: "presentation",
+        label: "Analyzing presentation structure",
+        status: "pending",
+    },
+    { id: "brand", label: "Applying brand design", status: "pending" },
+    { id: "hero", label: "Generating hero section", status: "pending" },
+    { id: "value", label: "Building value proposition", status: "pending" },
+    { id: "testimonials", label: "Creating testimonials", status: "pending" },
+    { id: "finalize", label: "Finalizing page", status: "pending" },
+];
+
+const TEMPLATE_OPTIONS = [
+    {
+        value: "urgency-convert",
+        label: "Urgency Convert",
+        description:
+            "High-energy sales page with countdown timers and scarcity messaging. Best for time-sensitive offers and launches.",
+    },
+    {
+        value: "premium-elegant",
+        label: "Premium Elegant",
+        description:
+            "Sophisticated design with refined styling. Ideal for high-ticket offers and luxury positioning.",
+    },
+    {
+        value: "value-focused",
+        label: "Value Focused",
+        description:
+            "Emphasizes benefits and ROI. Perfect for educational products and value-driven buyers.",
+    },
+] as const;
+
+export default function Step5EnrollmentPage({
     params,
 }: {
     params: Promise<{ projectId: string }>;
@@ -80,49 +142,243 @@ export default function Step10Page({
     const isMobile = useIsMobile("lg");
     const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
-    const [followupEnabled, setFollowupEnabled] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [loadError, setLoadError] = useState<string | null>(null);
-    const [activeTab, setActiveTab] = useState("sender");
+    const [project, setProject] = useState<any>(null);
 
     // Redirect mobile users to desktop-required page
     useEffect(() => {
         if (isMobile && projectId) {
             const params = new URLSearchParams({
-                feature: "AI Follow-Up Engine",
+                feature: "Enrollment Page Editor",
                 description:
-                    "The AI Follow-Up Engine requires a desktop computer for configuring sequences, managing templates, and setting up advanced automation workflows.",
+                    "The enrollment page editor requires a desktop computer for designing and customizing sales pages with visual editing tools.",
                 returnPath: `/funnel-builder/${projectId}`,
             });
             router.push(`/desktop-required?${params.toString()}`);
         }
     }, [isMobile, projectId, router]);
-    const [generatingBrandVoice, setGeneratingBrandVoice] = useState(false);
-
-    // State for all follow-up data
-    const [agentConfig, setAgentConfig] = useState<any>(null);
-    const [sequences, setSequences] = useState<any[]>([]);
-    const [messages, setMessages] = useState<any[]>([]);
-    const [stories, setStories] = useState<any[]>([]);
-    const [offer, setOffer] = useState<any>(null);
-    const [analytics, setAnalytics] = useState<any>({
-        sequences: [],
-        overall: {
-            totalSent: 0,
-            totalOpened: 0,
-            totalClicked: 0,
-            totalReplied: 0,
-            totalConverted: 0,
-            totalRevenue: 0,
-        },
+    const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
+    const [offers, setOffers] = useState<Offer[]>([]);
+    const [enrollmentPages, setEnrollmentPages] = useState<EnrollmentPage[]>([]);
+    const [aiEditorPages, setAiEditorPages] = useState<AIEditorPage[]>([]);
+    const [isCreating, setIsCreating] = useState(false);
+    const [progressStages, setProgressStages] = useState<ProgressStage[]>([]);
+    const [showCreateForm, setShowCreateForm] = useState(false);
+    const [isMigrating, setIsMigrating] = useState<string | null>(null);
+    const [formData, setFormData] = useState({
+        deckStructureId: "",
+        offerId: "",
+        templateType: "urgency-convert" as
+            | "urgency-convert"
+            | "premium-elegant"
+            | "value-focused",
     });
-    const [selectedSequenceId, setSelectedSequenceId] = useState<string | null>(null);
-    const [testModalOpen, setTestModalOpen] = useState(false);
-    const [queuedCount, setQueuedCount] = useState(0);
-    const [nextScheduledTime, setNextScheduledTime] = useState<string | null>(null);
 
     // Load completion status
     const { completedSteps } = useStepCompletion(projectId);
+
+    // Simulate progress stages with realistic timing
+    const simulateProgress = useCallback(async (): Promise<void> => {
+        const stages = [...GENERATION_STAGES];
+        setProgressStages(stages);
+
+        // Timing for each stage (in ms) - total ~35-45 seconds
+        const stageTiming = [
+            1500, // Loading offer data
+            2000, // Analyzing presentation structure
+            2500, // Applying brand design
+            12000, // Generating hero section (longest - AI generation)
+            8000, // Building value proposition
+            6000, // Creating testimonials
+            3000, // Finalizing page
+        ];
+
+        for (let i = 0; i < stages.length; i++) {
+            // Mark current stage as in_progress
+            setProgressStages((prev) =>
+                prev.map((s, idx) => ({
+                    ...s,
+                    status:
+                        idx < i ? "completed" : idx === i ? "in_progress" : "pending",
+                }))
+            );
+
+            await new Promise((resolve) => setTimeout(resolve, stageTiming[i]));
+        }
+
+        // Mark all as completed
+        setProgressStages((prev) =>
+            prev.map((s) => ({ ...s, status: "completed" as const }))
+        );
+    }, []);
+
+    // Handle Generate Enrollment Page
+    const handleGenerate = async () => {
+        if (!projectId || !formData.offerId || !formData.deckStructureId) return;
+
+        setIsCreating(true);
+        const startTime = Date.now();
+
+        // Start progress simulation in parallel with API call
+        const progressPromise = simulateProgress();
+
+        try {
+            logger.info(
+                {
+                    projectId,
+                    pageType: "enrollment",
+                    offerId: formData.offerId,
+                    deckId: formData.deckStructureId,
+                    templateStyle: formData.templateType,
+                },
+                "Creating enrollment page with AI editor"
+            );
+
+            const response = await fetch("/api/ai-editor/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    projectId,
+                    pageType: "enrollment",
+                    offerId: formData.offerId,
+                    deckId: formData.deckStructureId,
+                    templateStyle: formData.templateType,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || data.details || "Failed to create page");
+            }
+
+            const elapsed = Date.now() - startTime;
+
+            // If API completed quickly (under 15 seconds), fast-forward progress
+            if (elapsed < 15000) {
+                setProgressStages((prev) =>
+                    prev.map((s) => ({ ...s, status: "completed" as const }))
+                );
+                // Small delay so user sees completion
+                await new Promise((resolve) => setTimeout(resolve, 500));
+            } else {
+                // Otherwise wait for progress simulation to finish naturally
+                await progressPromise;
+            }
+
+            logger.info({ pageId: data.pageId }, "Enrollment page created");
+
+            // Add the new page to the list
+            const newPage: AIEditorPage = {
+                id: data.pageId,
+                title: data.title || "Enrollment Page",
+                page_type: "enrollment",
+                status: "draft",
+                version: 1,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            };
+            setAiEditorPages((prev) => [newPage, ...prev]);
+
+            // Reset form and close
+            setShowCreateForm(false);
+            setProgressStages([]);
+
+            toast({
+                title: "Enrollment page created!",
+                description: "Opening the AI Editor in a new tab...",
+            });
+
+            // Open in new tab
+            window.open(`/ai-editor/${data.pageId}`, "_blank");
+        } catch (error: any) {
+            logger.error({ error }, "Failed to create enrollment page");
+            setProgressStages([]);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description:
+                    error.message || "Failed to create page. Please try again.",
+            });
+        } finally {
+            setIsCreating(false);
+        }
+    };
+
+    // Handle migration of legacy page to AI Editor
+    const handleMigrateToAIEditor = async (legacyPage: EnrollmentPage) => {
+        // Validate that the page has an associated offer
+        if (!legacyPage.offer_id) {
+            toast({
+                variant: "destructive",
+                title: "Cannot migrate",
+                description:
+                    "This page is not associated with an offer. Create a new page instead.",
+            });
+            return;
+        }
+
+        setIsMigrating(legacyPage.id);
+
+        try {
+            logger.info(
+                { legacyPageId: legacyPage.id, offerId: legacyPage.offer_id },
+                "Migrating legacy page to AI Editor"
+            );
+
+            // Create a new AI Editor page with the legacy content as a starting point
+            const response = await fetch("/api/ai-editor/generate", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    projectId,
+                    pageType: "enrollment",
+                    offerId: legacyPage.offer_id,
+                    customPrompt: `This is a migration from an existing enrollment page. Use this content as inspiration but create a modern, improved version:
+
+Title: ${legacyPage.headline}
+Subtitle: ${legacyPage.subheadline}
+
+Please create an improved enrollment page that captures the same offer and messaging but with enhanced design and conversion optimization.`,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || data.details || "Failed to migrate page");
+            }
+
+            // Add the new page to the list
+            const newPage: AIEditorPage = {
+                id: data.pageId,
+                title: data.title || legacyPage.headline,
+                page_type: "enrollment",
+                status: "draft",
+                version: 1,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+            };
+            setAiEditorPages((prev) => [newPage, ...prev]);
+
+            toast({
+                title: "Page migrated successfully!",
+                description: "Opening the AI Editor to refine your new page...",
+            });
+
+            // Open in new tab
+            window.open(`/ai-editor/${data.pageId}`, "_blank");
+        } catch (error: any) {
+            logger.error({ error }, "Failed to migrate page");
+            toast({
+                variant: "destructive",
+                title: "Migration Failed",
+                description:
+                    error.message || "Could not migrate the page. Please try again.",
+            });
+        } finally {
+            setIsMigrating(null);
+        }
+    };
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -132,1300 +388,722 @@ export default function Step10Page({
         resolveParams();
     }, [params]);
 
-    // Load initial data (offer, agent config, stories, analytics)
     useEffect(() => {
-        const loadInitialData = async () => {
+        const loadProject = async () => {
             if (!projectId) return;
 
             try {
-                setLoading(true);
-                setLoadError(null);
+                const supabase = createClient();
+                const { data: projectData, error: projectError } = await supabase
+                    .from("funnel_projects")
+                    .select("*")
+                    .eq("id", projectId)
+                    .single();
 
+                if (projectError) throw projectError;
+                setProject(projectData);
+            } catch (error) {
+                logger.error({ error }, "Failed to load project");
+            }
+        };
+
+        loadProject();
+    }, [projectId]);
+
+    useEffect(() => {
+        const loadData = async () => {
+            if (!projectId) return;
+
+            try {
                 const supabase = createClient();
 
-                // Load offer for this funnel
+                // Load deck structures
+                const { data: deckData, error: deckError } = await supabase
+                    .from("deck_structures")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (deckError) throw deckError;
+                setDeckStructures(deckData || []);
+
+                // Load offers
                 const { data: offerData, error: offerError } = await supabase
                     .from("offers")
                     .select("*")
                     .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false })
-                    .limit(1)
-                    .single();
-
-                if (!offerError && offerData) {
-                    setOffer(offerData);
-                    logger.info(
-                        { offerId: offerData.id, offerName: offerData.name },
-                        "Loaded offer for funnel"
-                    );
-                }
-
-                // Load agent config
-                const configRes = await fetch(
-                    `/api/followup/agent-configs?funnel_project_id=${projectId}`
-                );
-                if (configRes.ok) {
-                    const configData = await configRes.json();
-                    if (configData.configs && configData.configs.length > 0) {
-                        setAgentConfig(configData.configs[0]);
-                        setFollowupEnabled(true);
-                    }
-                }
-
-                // Load stories
-                const storiesRes = await fetch(`/api/followup/stories`);
-                if (storiesRes.ok) {
-                    const storiesData = await storiesRes.json();
-                    setStories(storiesData.stories || []);
-                }
-
-                // Load analytics
-                const analyticsRes = await fetch(
-                    `/api/followup/analytics?funnel_project_id=${projectId}`
-                );
-                if (analyticsRes.ok) {
-                    const analyticsData = await analyticsRes.json();
-                    // Merge with defaults to ensure structure integrity
-                    setAnalytics({
-                        sequences: analyticsData.sequences || [],
-                        overall: {
-                            totalSent: analyticsData.overall?.totalSent || 0,
-                            totalOpened: analyticsData.overall?.totalOpened || 0,
-                            totalClicked: analyticsData.overall?.totalClicked || 0,
-                            totalReplied: analyticsData.overall?.totalReplied || 0,
-                            totalConverted: analyticsData.overall?.totalConverted || 0,
-                            totalRevenue: analyticsData.overall?.totalRevenue || 0,
-                        },
-                    });
-                }
-            } catch (error) {
-                logger.error({ error }, "Failed to load follow-up data");
-                setLoadError(
-                    "Failed to load follow-up data. Please check your connection and try again."
-                );
-                toast({
-                    title: "Error Loading Data",
-                    description: "Failed to load follow-up data. Please try again.",
-                    variant: "destructive",
-                });
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadInitialData();
-    }, [projectId, toast]);
-
-    // Load sequences when agentConfig is available (separate effect to fix race condition)
-    useEffect(() => {
-        const loadSequences = async () => {
-            if (!agentConfig?.id) return;
-
-            try {
-                const supabase = createClient();
-
-                // Single query to get sequences with message counts (fixes N+1 pattern)
-                const { data: sequencesData, error: seqError } = await supabase
-                    .from("followup_sequences")
-                    .select(
-                        `
-                        *,
-                        followup_messages(count)
-                    `
-                    )
-                    .eq("agent_config_id", agentConfig.id)
                     .order("created_at", { ascending: false });
 
-                if (seqError) {
-                    logger.error({ error: seqError }, "Failed to load sequences");
-                    toast({
-                        title: "Error Loading Sequences",
-                        description:
-                            "Failed to load sequences. Some data may be missing.",
-                        variant: "destructive",
-                    });
-                    return;
+                if (offerError) throw offerError;
+                setOffers(offerData || []);
+
+                // Auto-select first deck and offer
+                if (deckData && deckData.length > 0) {
+                    setFormData((prev) => ({
+                        ...prev,
+                        deckStructureId: deckData[0].id,
+                    }));
+                }
+                if (offerData && offerData.length > 0) {
+                    setFormData((prev) => ({
+                        ...prev,
+                        offerId: offerData[0].id,
+                    }));
                 }
 
-                if (sequencesData) {
-                    // Transform the nested count into message_count
-                    const sequencesWithCount: SequenceWithCount[] = sequencesData.map(
-                        (seq) => ({
-                            ...seq,
-                            message_count: Array.isArray(seq.followup_messages)
-                                ? seq.followup_messages[0]?.count || 0
-                                : 0,
-                        })
-                    );
-                    setSequences(sequencesWithCount);
-                    logger.info(
-                        {
-                            sequenceCount: sequencesWithCount.length,
-                            messageCounts: sequencesWithCount.map(
-                                (s) => s.message_count
-                            ),
-                        },
-                        "Loaded sequences with message counts"
-                    );
-                }
-
-                // Load queued deliveries count
-                const { count: queuedDeliveries } = await supabase
-                    .from("followup_deliveries")
-                    .select("*", { count: "exact", head: true })
-                    .eq("delivery_status", "pending");
-
-                setQueuedCount(queuedDeliveries || 0);
-
-                // Get next scheduled delivery
-                const { data: nextDelivery } = await supabase
-                    .from("followup_deliveries")
-                    .select("scheduled_send_at")
-                    .eq("delivery_status", "pending")
-                    .order("scheduled_send_at", { ascending: true })
-                    .limit(1)
-                    .single();
-
-                if (nextDelivery) {
-                    const nextTime = new Date(nextDelivery.scheduled_send_at);
-                    const now = new Date();
-                    const diffMs = nextTime.getTime() - now.getTime();
-                    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                    const diffMins = Math.floor(
-                        (diffMs % (1000 * 60 * 60)) / (1000 * 60)
-                    );
-
-                    if (diffHours > 0) {
-                        setNextScheduledTime(`in ${diffHours}h ${diffMins}m`);
-                    } else if (diffMins > 0) {
-                        setNextScheduledTime(`in ${diffMins}m`);
-                    } else {
-                        setNextScheduledTime("now");
-                    }
-                }
-            } catch (error) {
-                logger.error({ error }, "Failed to load sequences");
-            }
-        };
-
-        loadSequences();
-    }, [agentConfig?.id, toast]);
-
-    // Load messages for selected sequence OR all messages
-    useEffect(() => {
-        const loadMessages = async () => {
-            if (!agentConfig?.id) {
-                setMessages([]);
-                return;
-            }
-
-            try {
-                if (selectedSequenceId) {
-                    // Load messages for specific sequence
-                    const res = await fetch(
-                        `/api/followup/sequences/${selectedSequenceId}/messages`
-                    );
-                    if (res.ok) {
-                        const data = await res.json();
-                        setMessages(data.messages || []);
-                    }
-                } else if (sequences.length > 0) {
-                    // Load all messages across all sequences
-                    const allMessages = await Promise.all(
-                        sequences.map(async (seq) => {
-                            const res = await fetch(
-                                `/api/followup/sequences/${seq.id}/messages`
-                            );
-                            if (res.ok) {
-                                const data = await res.json();
-                                return data.messages || [];
-                            }
-                            return [];
-                        })
-                    );
-                    setMessages(allMessages.flat());
-                    logger.info(
-                        { totalMessages: allMessages.flat().length },
-                        "📨 Loaded all messages across sequences"
-                    );
-                }
-            } catch (error) {
-                logger.error({ error }, "Failed to load messages");
-            }
-        };
-
-        loadMessages();
-    }, [selectedSequenceId, sequences, agentConfig]);
-
-    const handleEnableFollowup = async (enabled: boolean) => {
-        setFollowupEnabled(enabled);
-
-        if (enabled && !agentConfig) {
-            // Create default agent config with auto-populated knowledge base
-            try {
-                const supabase = createClient();
-
-                // Fetch intake data for business context
-                const { data: intakeData } = await supabase
-                    .from("vapi_transcripts")
-                    .select("extracted_data, transcript_text")
-                    .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false })
-                    .limit(1)
-                    .single();
-
-                // Fetch offer data for product details
-                const { data: offerData } = await supabase
-                    .from("offers")
+                // Load enrollment pages
+                const { data: pagesData, error: pagesError } = await supabase
+                    .from("enrollment_pages")
                     .select("*")
                     .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false })
-                    .limit(1)
-                    .single();
+                    .order("created_at", { ascending: false });
 
-                // Build knowledge base from intake and offer data
-                const knowledgeBase: any = {
-                    brand_voice: "",
-                    product_knowledge: "",
-                    objection_responses: "",
-                    blacklist_topics: "",
-                };
+                if (pagesError) throw pagesError;
+                setEnrollmentPages(pagesData || []);
 
-                // Build BusinessContext and ProductKnowledge for brand voice generation
-                const businessContext: any = {
-                    business_name: "",
-                    industry: "",
-                    target_audience: "",
-                    main_challenge: "",
-                    desired_outcome: "",
-                };
+                // Load AI Editor v2 pages
+                const { data: aiPagesData, error: aiPagesError } = await supabase
+                    .from("ai_editor_pages")
+                    .select(
+                        "id, title, page_type, status, version, created_at, updated_at"
+                    )
+                    .eq("funnel_project_id", projectId)
+                    .eq("page_type", "enrollment")
+                    .order("created_at", { ascending: false });
 
-                const productKnowledge: any = {
-                    product_name: "",
-                    tagline: "",
-                    promise: "",
-                    features: [],
-                    guarantee: "",
-                };
-
-                // Populate business context from intake data
-                if (intakeData?.extracted_data) {
-                    const extracted = intakeData.extracted_data as any;
-                    businessContext.business_name = extracted.businessName || "";
-                    businessContext.industry = extracted.industry || "";
-                    businessContext.target_audience = extracted.targetAudience || "";
-                    businessContext.main_challenge = extracted.mainProblem || "";
-                    businessContext.desired_outcome = extracted.desiredOutcome || "";
-                }
-
-                // Populate product knowledge from offer data
-                if (offerData) {
-                    productKnowledge.product_name = offerData.name || "";
-                    productKnowledge.tagline = offerData.tagline || "";
-                    productKnowledge.promise = offerData.promise || "";
-                    productKnowledge.features = Array.isArray(offerData.features)
-                        ? offerData.features.map((f: any) =>
-                              typeof f === "string" ? f : f.title || ""
-                          )
-                        : [];
-                    productKnowledge.guarantee = offerData.guarantee || "";
-
-                    // Build product knowledge text for knowledge base
-                    const productDetails = [];
-                    productDetails.push(`Product: ${offerData.name}`);
-                    if (offerData.tagline) {
-                        productDetails.push(`Tagline: ${offerData.tagline}`);
-                    }
-                    if (offerData.promise) {
-                        productDetails.push(`Promise: ${offerData.promise}`);
-                    }
-                    if (offerData.description) {
-                        productDetails.push(`Description: ${offerData.description}`);
-                    }
-                    if (offerData.price) {
-                        productDetails.push(
-                            `Price: ${offerData.currency || "USD"} ${offerData.price}`
-                        );
-                    }
-
-                    // Add features if available
-                    if (offerData.features && Array.isArray(offerData.features)) {
-                        productDetails.push("\nKey Features:");
-                        offerData.features.forEach((feature: any) => {
-                            const featureText =
-                                typeof feature === "string"
-                                    ? feature
-                                    : feature.title || "";
-                            if (featureText) {
-                                productDetails.push(`- ${featureText}`);
-                            }
-                        });
-                    }
-
-                    // Add guarantee if available
-                    if (offerData.guarantee) {
-                        productDetails.push(`\nGuarantee: ${offerData.guarantee}`);
-                    }
-
-                    knowledgeBase.product_knowledge = productDetails.join("\n");
-
-                    // Add basic objection responses based on offer
-                    const objections = [];
-                    objections.push(
-                        "Price: Focus on the value and transformation, not just the cost. " +
-                            (offerData.promise
-                                ? `Highlight: ${offerData.promise}`
-                                : "Emphasize ROI and long-term benefits.")
+                if (aiPagesError) {
+                    logger.warn(
+                        { error: aiPagesError },
+                        "Failed to load AI editor pages"
                     );
-                    objections.push(
-                        "Timing: Acknowledge their concerns while emphasizing why now is the best time to start."
-                    );
-                    if (offerData.guarantee) {
-                        objections.push(
-                            `Trust: We offer ${offerData.guarantee} to remove all risk from your decision.`
-                        );
-                    }
-                    knowledgeBase.objection_responses = objections.join("\n\n");
-                }
-
-                // Generate brand voice guidelines using AI
-                setGeneratingBrandVoice(true);
-                toast({
-                    title: "Generating Brand Voice...",
-                    description:
-                        "Creating personalized guidelines from your intake and offer data",
-                });
-
-                try {
-                    const brandVoiceResponse = await fetch(
-                        "/api/followup/generate-brand-voice",
-                        {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                                businessContext,
-                                productKnowledge,
-                            }),
-                        }
-                    );
-
-                    if (brandVoiceResponse.ok) {
-                        const brandVoiceData = await brandVoiceResponse.json();
-                        if (brandVoiceData.success && brandVoiceData.brandVoice) {
-                            knowledgeBase.brand_voice = brandVoiceData.brandVoice;
-                            logger.info({}, "✅ Brand voice guidelines auto-populated");
-                            toast({
-                                title: "✨ Brand Voice Generated",
-                                description:
-                                    "Your personalized brand voice guidelines are ready",
-                            });
-                        }
-                    }
-                } catch (brandVoiceError) {
-                    logger.error(
-                        { error: brandVoiceError },
-                        "Failed to auto-generate brand voice, using fallback"
-                    );
-                    toast({
-                        title: "Using Default Voice Guidelines",
-                        description:
-                            "AI generation failed, but we've created a good starting point for you",
-                        variant: "default",
-                    });
-                    // Fallback: use basic brand voice guidelines
-                    knowledgeBase.brand_voice = `Brand Voice Guidelines:
-
-Tone: Professional yet approachable, empathetic to customer challenges.
-
-Key Themes:
-- Focus on the transformation and results
-${businessContext.main_challenge ? `- Lead with empathy for ${businessContext.main_challenge}` : ""}
-${productKnowledge.product_name ? `- Emphasize the value of ${productKnowledge.product_name}` : ""}
-
-Approach:
-- Use clear, jargon-free language
-- Share authentic stories and experiences
-- Always connect features to benefits
-- End with clear calls-to-action`;
-                } finally {
-                    setGeneratingBrandVoice(false);
-                }
-
-                const response = await fetch("/api/followup/agent-configs", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        funnel_project_id: projectId,
-                        name: "Main Follow-Up Agent",
-                        voice_config: {
-                            tone: "conversational",
-                            personality: "helpful",
-                            empathy_level: "moderate",
-                            urgency_level: "gentle",
-                        },
-                        knowledge_base: knowledgeBase,
-                    }),
-                });
-
-                const data = await response.json();
-                if (data.success) {
-                    setAgentConfig(data.config);
-
-                    // Create default post-webinar sequence via API
-                    try {
-                        const defaultSequenceResponse = await fetch(
-                            "/api/followup/sequences/create-default",
-                            {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                    agent_config_id: data.config.id,
-                                    offer_data: offerData,
-                                    intake_data: intakeData?.extracted_data || null,
-                                }),
-                            }
-                        );
-
-                        const sequenceData = await defaultSequenceResponse.json();
-
-                        toast({
-                            title: "✨ AI Follow-Up Enabled",
-                            description: sequenceData.success
-                                ? "Agent configured with your business context, offer details, and default sequence"
-                                : "Agent configured - you can add sequences manually",
-                        });
-
-                        logger.info(
-                            {
-                                hasIntake: !!intakeData,
-                                hasOffer: !!offerData,
-                                sequenceCreated: sequenceData.success,
-                            },
-                            "Created agent with auto-populated knowledge base"
-                        );
-                    } catch (seqError) {
-                        logger.error(
-                            { error: seqError },
-                            "Failed to create default sequence, but agent config succeeded"
-                        );
-                        toast({
-                            title: "✨ AI Follow-Up Enabled",
-                            description:
-                                "Agent configured with your business context and offer details",
-                        });
-                    }
+                } else {
+                    setAiEditorPages(aiPagesData || []);
                 }
             } catch (error) {
-                logger.error({ error }, "Failed to create agent config");
-                toast({
-                    title: "Error",
-                    description: "Failed to enable AI follow-up. Please try again.",
-                    variant: "destructive",
-                });
+                logger.error({ error }, "Failed to load data");
             }
-        }
+        };
+
+        loadData();
+    }, [projectId]);
+
+    const handleEditLegacy = (pageId: string) => {
+        const editorUrl = `/funnel-builder/${projectId}/pages/enrollment/${pageId}?edit=true`;
+        window.open(editorUrl, "_blank");
     };
 
-    const handleSaveAgentConfig = async (config: any) => {
-        try {
-            const method = agentConfig ? "PUT" : "POST";
-            const url = agentConfig
-                ? `/api/followup/agent-configs/${agentConfig.id}`
-                : "/api/followup/agent-configs";
-
-            logger.info(
-                { method, url, hasConfig: !!agentConfig },
-                "Saving agent config"
-            );
-
-            const response = await fetch(url, {
-                method,
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    ...config,
-                    funnel_project_id: projectId,
-                }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                logger.error(
-                    { status: response.status, error: errorData },
-                    "Failed to save agent config"
-                );
-                throw new Error(errorData.error || "Failed to save configuration");
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                setAgentConfig(data.config);
-                logger.info(
-                    { configId: data.config?.id },
-                    "Agent config saved successfully"
-                );
-                toast({
-                    title: "✅ Configuration Saved",
-                    description: "Your AI agent settings have been saved",
-                });
-            } else {
-                throw new Error(data.error || "Configuration save failed");
-            }
-        } catch (error) {
-            logger.error({ error }, "❌ Failed to save agent config");
-            toast({
-                title: "Error",
-                description:
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to save configuration",
-                variant: "destructive",
-            });
-        }
+    const handleEditAIEditor = (pageId: string) => {
+        window.open(`/ai-editor/${pageId}`, "_blank");
     };
 
-    const handleCreateSequence = async (sequence: any) => {
-        try {
-            if (!agentConfig?.id) {
-                throw new Error(
-                    "Agent configuration is required before creating sequences"
-                );
-            }
-
-            logger.info({ sequenceName: sequence.name }, "Creating sequence");
-
-            const response = await fetch("/api/followup/sequences", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    ...sequence,
-                    agent_config_id: agentConfig.id,
-                }),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                logger.error(
-                    { status: response.status, error: errorData },
-                    "Failed to create sequence"
-                );
-                throw new Error(errorData.error || "Failed to create sequence");
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                const newSequence = data.sequence;
-                setSequences([...sequences, newSequence]);
-                logger.info(
-                    { sequenceId: newSequence?.id },
-                    "Sequence created successfully"
-                );
-
-                toast({
-                    title: "✅ Sequence Created",
-                    description: `${newSequence.name} has been created successfully`,
-                });
-            } else {
-                throw new Error(data.error || "Sequence creation failed");
-            }
-        } catch (error) {
-            logger.error({ error }, "❌ Failed to create sequence");
-            toast({
-                title: "Error",
-                description:
-                    error instanceof Error
-                        ? error.message
-                        : "Failed to create sequence",
-                variant: "destructive",
-            });
-        }
+    const handlePreviewLegacy = (pageId: string) => {
+        const previewUrl = `/funnel-builder/${projectId}/pages/enrollment/${pageId}`;
+        window.open(previewUrl, "_blank");
     };
 
-    const handleUpdateSequence = async (id: string, updates: any) => {
-        try {
-            const response = await fetch(`/api/followup/sequences/${id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(updates),
-            });
+    // Create unified pages list combining AI Editor and legacy pages
+    const unifiedPages: UnifiedEnrollmentPage[] = [
+        // AI Editor pages first (newer)
+        ...aiEditorPages.map((page) => ({
+            id: page.id,
+            title: page.title,
+            status: page.status,
+            type: "ai-editor" as const,
+            created_at: page.created_at,
+            version: page.version,
+        })),
+        // Legacy pages with badge
+        ...enrollmentPages.map((page) => ({
+            id: page.id,
+            title: page.headline,
+            subtitle: page.subheadline,
+            status: (page.is_published ? "published" : "draft") as
+                | "published"
+                | "draft",
+            type: "legacy" as const,
+            created_at: page.created_at,
+            offer_id: page.offer_id,
+        })),
+    ].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
 
-            const data = await response.json();
-
-            if (data.success) {
-                setSequences(
-                    sequences.map((seq) => (seq.id === id ? data.sequence : seq))
-                );
-                toast({
-                    title: "✅ Sequence Updated",
-                    description: "Sequence has been updated",
-                });
-            }
-        } catch (error) {
-            logger.error({ error }, "Failed to update sequence");
-        }
-    };
-
-    const handleDeleteSequence = async (id: string) => {
-        try {
-            const response = await fetch(`/api/followup/sequences/${id}`, {
-                method: "DELETE",
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                setSequences(sequences.filter((seq) => seq.id !== id));
-                if (selectedSequenceId === id) {
-                    setSelectedSequenceId(null);
-                }
-                toast({
-                    title: "✅ Sequence Deleted",
-                    description: "Sequence has been deleted",
-                });
-            }
-        } catch (error) {
-            logger.error({ error }, "Failed to delete sequence");
-        }
-    };
-
-    const handleCreateMessage = async (message: any) => {
-        try {
-            const response = await fetch(
-                `/api/followup/sequences/${selectedSequenceId}/messages`,
-                {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(message),
-                }
-            );
-
-            const data = await response.json();
-
-            if (data.success) {
-                setMessages([...messages, data.message]);
-                toast({
-                    title: "✅ Message Created",
-                    description: "Message template has been created",
-                });
-            }
-        } catch (error) {
-            logger.error({ error }, "Failed to create message");
-        }
-    };
-
-    const handleUpdateMessage = async (id: string, updates: any) => {
-        try {
-            const response = await fetch(
-                `/api/followup/sequences/${selectedSequenceId}/messages/${id}`,
-                {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(updates),
-                }
-            );
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || "Failed to update message");
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                setMessages(
-                    messages.map((msg) => (msg.id === id ? data.message : msg))
-                );
-                toast({
-                    title: "✅ Message Updated",
-                    description: "Message template has been updated",
-                });
-            } else {
-                throw new Error(data.error || "Update failed");
-            }
-        } catch (error) {
-            logger.error({ error }, "❌ Failed to update message");
-            toast({
-                title: "Error",
-                description:
-                    error instanceof Error ? error.message : "Failed to update message",
-                variant: "destructive",
-            });
-        }
-    };
-
-    const handleDeleteMessage = async (id: string) => {
-        try {
-            const response = await fetch(
-                `/api/followup/sequences/${selectedSequenceId}/messages/${id}`,
-                {
-                    method: "DELETE",
-                }
-            );
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || "Failed to delete message");
-            }
-
-            setMessages(messages.filter((msg) => msg.id !== id));
-            toast({
-                title: "✅ Message Deleted",
-                description: "Message template has been deleted",
-            });
-        } catch (error) {
-            logger.error({ error }, "❌ Failed to delete message");
-            toast({
-                title: "Error",
-                description:
-                    error instanceof Error ? error.message : "Failed to delete message",
-                variant: "destructive",
-            });
-        }
-    };
-
-    const handleCreateStory = async (story: any) => {
-        try {
-            const response = await fetch("/api/followup/stories", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(story),
-            });
-
-            const data = await response.json();
-
-            if (data.success) {
-                setStories([...stories, data.story]);
-                toast({
-                    title: "✅ Story Added",
-                    description: "Story has been added to your library",
-                });
-            }
-        } catch (error) {
-            logger.error({ error }, "Failed to create story");
-        }
-    };
-
-    const handleUpdateStory = async (id: string, updates: any) => {
-        try {
-            const response = await fetch(`/api/followup/stories/${id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(updates),
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || "Failed to update story");
-            }
-
-            const data = await response.json();
-
-            if (data.success) {
-                setStories(
-                    stories.map((story) => (story.id === id ? data.story : story))
-                );
-                toast({
-                    title: "✅ Story Updated",
-                    description: "Story has been updated",
-                });
-            } else {
-                throw new Error(data.error || "Update failed");
-            }
-        } catch (error) {
-            logger.error({ error }, "❌ Failed to update story");
-            toast({
-                title: "Error",
-                description:
-                    error instanceof Error ? error.message : "Failed to update story",
-                variant: "destructive",
-            });
-        }
-    };
-
-    const handleDeleteStory = async (id: string) => {
-        try {
-            const response = await fetch(`/api/followup/stories/${id}`, {
-                method: "DELETE",
-            });
-
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || "Failed to delete story");
-            }
-
-            setStories(stories.filter((story) => story.id !== id));
-            toast({
-                title: "✅ Story Deleted",
-                description: "Story has been deleted",
-            });
-        } catch (error) {
-            logger.error({ error }, "❌ Failed to delete story");
-            toast({
-                title: "Error",
-                description:
-                    error instanceof Error ? error.message : "Failed to delete story",
-                variant: "destructive",
-            });
-        }
-    };
-
-    const reloadSequences = async () => {
-        if (!agentConfig?.id) return;
+    const handleDelete = async (pageId: string) => {
+        if (!confirm("Delete this enrollment page?")) return;
 
         try {
             const supabase = createClient();
+            const { error } = await supabase
+                .from("enrollment_pages")
+                .delete()
+                .eq("id", pageId);
 
-            // Single query to get sequences with message counts (fixes N+1 pattern)
-            const { data: sequencesData, error: seqError } = await supabase
-                .from("followup_sequences")
-                .select(
-                    `
-                    *,
-                    followup_messages(count)
-                `
-                )
-                .eq("agent_config_id", agentConfig.id)
-                .order("created_at", { ascending: false });
+            if (error) throw error;
 
-            if (!seqError && sequencesData) {
-                // Transform the nested count into message_count
-                const sequencesWithCount: SequenceWithCount[] = sequencesData.map(
-                    (seq) => ({
-                        ...seq,
-                        message_count: Array.isArray(seq.followup_messages)
-                            ? seq.followup_messages[0]?.count || 0
-                            : 0,
-                    })
-                );
-                setSequences(sequencesWithCount);
-                logger.info(
-                    {
-                        sequenceCount: sequencesWithCount.length,
-                        messageCounts: sequencesWithCount.map(
-                            (s) => `${s.name}: ${s.message_count} messages`
-                        ),
-                    },
-                    "Sequences reloaded with updated message counts"
-                );
-            }
-        } catch (error) {
-            logger.error({ error }, "Failed to reload sequences");
+            setEnrollmentPages((prev) => prev.filter((p) => p.id !== pageId));
+            logger.info({ pageId }, "Enrollment page deleted");
+
+            toast({
+                title: "Page Deleted",
+                description: "Enrollment page has been removed",
+            });
+        } catch (error: any) {
+            logger.error({ error }, "Failed to delete enrollment page");
+            toast({
+                variant: "destructive",
+                title: "Delete Failed",
+                description:
+                    error?.message || "Could not delete the page. Please try again.",
+            });
         }
     };
 
-    const handleSelectSequence = async (sequenceId: string) => {
-        logger.info({ sequenceId }, "Selecting sequence");
-        setSelectedSequenceId(sequenceId);
-        setActiveTab("messages");
+    const handlePublishToggle = async (pageId: string, currentStatus: boolean) => {
+        try {
+            const supabase = createClient();
+            const newStatus = !currentStatus;
 
-        // Reload sequences to ensure counts are fresh
-        await reloadSequences();
+            const { error } = await supabase
+                .from("enrollment_pages")
+                .update({ is_published: newStatus })
+                .eq("id", pageId);
+
+            if (error) throw error;
+
+            setEnrollmentPages((prev) =>
+                prev.map((p) =>
+                    p.id === pageId ? { ...p, is_published: newStatus } : p
+                )
+            );
+
+            logger.info(
+                { pageId, isPublished: newStatus },
+                "Enrollment page publish status updated"
+            );
+
+            toast({
+                title: newStatus ? "Page Published" : "Page Unpublished",
+                description: newStatus
+                    ? "Your enrollment page is now live and visible to the public"
+                    : "Your enrollment page is now in draft mode",
+            });
+        } catch (error: any) {
+            logger.error({ error }, "Failed to update publish status");
+            toast({
+                variant: "destructive",
+                title: "Update Failed",
+                description:
+                    error?.message ||
+                    "Could not update publish status. Please try again.",
+            });
+        }
     };
 
-    if (loading) {
-        return (
-            <StepLayout
-                stepTitle="AI Follow-Up Engine"
-                stepDescription="Automate post-webinar engagement"
-                currentStep={10}
-                projectId={projectId}
-                completedSteps={completedSteps}
-            >
-                <div className="flex items-center justify-center py-12">
-                    <div className="text-center">
-                        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4" />
-                        <p className="text-muted-foreground">
-                            Loading follow-up engine...
-                        </p>
-                    </div>
-                </div>
-            </StepLayout>
-        );
-    }
+    const hasDeckStructure = deckStructures.length > 0;
+    const hasOffer = offers.length > 0;
+    const hasEnrollmentPage = unifiedPages.length > 0;
+    const canCreatePage = hasDeckStructure && hasOffer;
 
-    if (loadError) {
+    if (!projectId) {
         return (
-            <StepLayout
-                stepTitle="AI Follow-Up Engine"
-                stepDescription="Automate post-webinar engagement"
-                currentStep={10}
-                projectId={projectId}
-                completedSteps={completedSteps}
-            >
-                <Card className="p-6 border-destructive">
-                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                        <h3 className="text-lg font-semibold text-destructive mb-2">
-                            Failed to Load Data
-                        </h3>
-                        <p className="text-muted-foreground mb-4">{loadError}</p>
-                        <Button
-                            onClick={() => window.location.reload()}
-                            variant="outline"
-                        >
-                            Try Again
-                        </Button>
-                    </div>
-                </Card>
-            </StepLayout>
+            <div className="flex h-screen items-center justify-center">
+                <div className="text-muted-foreground">Loading...</div>
+            </div>
         );
     }
 
     return (
         <StepLayout
-            stepTitle="AI Follow-Up Engine"
-            stepDescription="Automate post-webinar engagement with AI-powered sequences"
             currentStep={10}
             projectId={projectId}
             completedSteps={completedSteps}
-            nextLabel="Continue to Meta Ads Manager"
+            funnelName={project?.name}
+            nextDisabled={!hasEnrollmentPage}
+            nextLabel={hasEnrollmentPage ? "Create Watch Page" : "Create Page First"}
+            stepTitle="Enrollment Pages"
+            stepDescription="Create high-converting sales pages with AI-powered design"
         >
-            <div className="space-y-6">
-                {/* Enable/Disable Section */}
-                <Card className="p-6 bg-gradient-to-r from-purple-50 to-primary/5">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                            <Sparkles className="h-6 w-6 text-purple-500" />
-                            <div>
-                                <h3 className="text-lg font-semibold">
-                                    Enable AI Follow-Up
-                                </h3>
-                                <p className="text-sm text-muted-foreground">
-                                    Automatically nurture prospects with personalized,
-                                    AI-powered sequences
-                                </p>
-                            </div>
-                        </div>
-                        <Switch
-                            checked={followupEnabled}
-                            onCheckedChange={handleEnableFollowup}
-                            disabled={generatingBrandVoice}
-                        />
-                    </div>
+            <div className="space-y-8">
+                {/* Dependency Warnings */}
+                {!hasDeckStructure && (
+                    <DependencyWarning
+                        message="You need to create a presentation structure first."
+                        requiredStep={4}
+                        requiredStepName="Presentation Structure"
+                        projectId={projectId}
+                    />
+                )}
+                {!hasOffer && (
+                    <DependencyWarning
+                        message="You need to create an offer first."
+                        requiredStep={2}
+                        requiredStepName="Define Offer"
+                        projectId={projectId}
+                    />
+                )}
 
-                    {generatingBrandVoice && (
-                        <div className="mt-4 flex items-center gap-3 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                            <Loader2 className="h-5 w-5 text-purple-600 animate-spin" />
-                            <div>
-                                <p className="text-sm font-medium text-purple-900">
-                                    Setting up your AI Follow-Up Engine...
-                                </p>
-                                <p className="text-xs text-purple-700 mt-1">
-                                    Analyzing your intake data and offer to create
-                                    personalized brand voice guidelines
-                                </p>
-                            </div>
-                        </div>
-                    )}
-
-                    {followupEnabled && (
-                        <>
-                            <div className="mt-6 grid grid-cols-4 gap-4 text-sm">
-                                <div className="text-center p-3 bg-card rounded-lg">
-                                    <div className="text-2xl font-bold text-purple-600">
-                                        {sequences.length}
-                                    </div>
-                                    <div className="text-muted-foreground">
-                                        Sequences
-                                    </div>
-                                </div>
-                                <div className="text-center p-3 bg-card rounded-lg">
-                                    <div className="text-2xl font-bold text-primary">
-                                        {messages.length}
-                                    </div>
-                                    <div className="text-muted-foreground">
-                                        Templates
-                                    </div>
-                                </div>
-                                <div className="text-center p-3 bg-card rounded-lg">
-                                    <div className="text-2xl font-bold text-orange-600">
-                                        {queuedCount}
-                                    </div>
-                                    <div className="text-muted-foreground">Queued</div>
-                                </div>
-                                <div className="text-center p-3 bg-card rounded-lg">
-                                    <div className="text-sm font-bold text-primary">
-                                        {nextScheduledTime || "None"}
-                                    </div>
-                                    <div className="text-muted-foreground">
-                                        Next Send
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Test Message Button */}
-                            {agentConfig?.id && (
-                                <div className="mt-4 flex justify-end">
-                                    <Button
-                                        onClick={() => setTestModalOpen(true)}
-                                        variant="outline"
-                                        size="sm"
-                                        className="gap-2"
-                                    >
-                                        <MessageSquare className="h-4 w-4" />
-                                        Test Message to Self
-                                    </Button>
-                                </div>
-                            )}
-                        </>
-                    )}
-                </Card>
-
-                {followupEnabled && (
-                    <>
-                        <Tabs
-                            value={activeTab}
-                            onValueChange={setActiveTab}
-                            className="w-full"
-                        >
-                            <TabsList className="grid w-full grid-cols-7">
-                                <TabsTrigger value="sender">
-                                    <Mail className="h-4 w-4 mr-2" />
-                                    Sender
-                                </TabsTrigger>
-                                <TabsTrigger value="agent">
-                                    <Sparkles className="h-4 w-4 mr-2" />
-                                    Agent
-                                </TabsTrigger>
-                                <TabsTrigger value="sequences">
-                                    <Target className="h-4 w-4 mr-2" />
-                                    Sequences
-                                </TabsTrigger>
-                                <TabsTrigger value="messages">
-                                    <MessageSquare className="h-4 w-4 mr-2" />
-                                    Messages
-                                </TabsTrigger>
-                                <TabsTrigger value="stories">
-                                    <BookOpen className="h-4 w-4 mr-2" />
-                                    Stories
-                                </TabsTrigger>
-                                <TabsTrigger value="analytics">
-                                    <BarChart3 className="h-4 w-4 mr-2" />
-                                    Analytics
-                                </TabsTrigger>
-                                <TabsTrigger value="settings">
-                                    <Settings className="h-4 w-4 mr-2" />
-                                    Settings
-                                </TabsTrigger>
-                            </TabsList>
-
-                            {/* Sender Setup Tab */}
-                            <TabsContent value="sender" className="mt-6">
-                                <SenderSetupTab
-                                    agentConfigId={agentConfig?.id}
-                                    funnelProjectId={projectId}
-                                    currentSenderName={agentConfig?.sender_name}
-                                    currentReplyToEmail={
-                                        agentConfig?.metadata?.reply_to_email
-                                    }
-                                    currentSMSSenderId={agentConfig?.sms_sender_id}
-                                    emailMode={agentConfig?.metadata?.email_mode}
-                                    customDomainId={
-                                        agentConfig?.metadata?.custom_domain_id
-                                    }
-                                    onUpdate={async () => {
-                                        // Reload data after sender updates
-                                        if (!projectId) return;
-                                        const configRes = await fetch(
-                                            `/api/followup/agent-configs?funnel_project_id=${projectId}`
-                                        );
-                                        if (configRes.ok) {
-                                            const configData = await configRes.json();
-                                            if (
-                                                configData.configs &&
-                                                configData.configs.length > 0
-                                            ) {
-                                                setAgentConfig(configData.configs[0]);
-                                            }
-                                        }
-                                    }}
-                                />
-                            </TabsContent>
-
-                            {/* Agent Configuration Tab */}
-                            <TabsContent value="agent" className="mt-6">
-                                <AgentConfigForm
-                                    config={agentConfig}
-                                    onSave={handleSaveAgentConfig}
-                                    funnelProjectId={projectId}
-                                />
-                            </TabsContent>
-
-                            {/* Sequences Tab */}
-                            <TabsContent value="sequences" className="mt-6">
-                                <SequenceBuilder
-                                    sequences={sequences}
-                                    onCreateSequence={handleCreateSequence}
-                                    onUpdateSequence={handleUpdateSequence}
-                                    onDeleteSequence={handleDeleteSequence}
-                                    onSelectSequence={handleSelectSequence}
-                                    onReloadSequences={reloadSequences}
-                                    funnelProjectId={projectId}
-                                    offerId={offer?.id}
-                                />
-
-                                {sequences.length > 0 && (
-                                    <Card className="mt-4 p-4 bg-primary/5 border-primary/20">
-                                        <p className="text-sm text-primary">
-                                            💡 <strong>Tip:</strong> Click "View
-                                            Messages" on any sequence or go to the
-                                            Messages tab to view and edit all message
-                                            templates.
-                                        </p>
-                                    </Card>
+                {/* Generate Button or Form */}
+                {!showCreateForm ? (
+                    <div className="rounded-lg border border-purple-100 bg-gradient-to-br from-purple-50 to-primary/5 p-8">
+                        <div className="flex flex-col items-center gap-6 text-center">
+                            {/* Animated Generate Button */}
+                            <button
+                                onClick={() => setShowCreateForm(true)}
+                                disabled={!canCreatePage}
+                                className={`group relative flex items-center gap-3 rounded-xl px-10 py-5 text-xl font-bold transition-all duration-300 ${
+                                    canCreatePage
+                                        ? "bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/40 hover:scale-[1.02]"
+                                        : "cursor-not-allowed bg-gray-300 text-muted-foreground"
+                                }`}
+                            >
+                                {/* Glow effect */}
+                                {canCreatePage && (
+                                    <span className="absolute inset-0 -z-10 animate-pulse rounded-xl bg-gradient-to-r from-purple-600 to-fuchsia-600 opacity-50 blur-lg" />
                                 )}
-                            </TabsContent>
+                                <Sparkles className="h-7 w-7" />
+                                {canCreatePage
+                                    ? "Generate Enrollment Page"
+                                    : "Complete Prerequisites First"}
+                            </button>
 
-                            {/* Messages Tab */}
-                            <TabsContent value="messages" className="mt-6">
-                                <MessageTemplateEditor
-                                    sequenceId={
-                                        selectedSequenceId || sequences[0]?.id || ""
-                                    }
-                                    messages={messages}
-                                    sequences={sequences}
-                                    onCreateMessage={handleCreateMessage}
-                                    onUpdateMessage={handleUpdateMessage}
-                                    onDeleteMessage={handleDeleteMessage}
-                                />
-                            </TabsContent>
+                            {canCreatePage && (
+                                <p className="max-w-md text-sm text-muted-foreground">
+                                    Create a professional, high-converting enrollment
+                                    page tailored to your offer and brand in seconds
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="rounded-lg border border-purple-200 bg-gradient-to-br from-purple-50 to-primary/5 p-8 shadow-soft">
+                        <div className="mb-6 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-xl font-semibold text-foreground">
+                                    Generate Enrollment Page
+                                </h3>
+                                {!isCreating && (
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        This typically takes 30-60 seconds
+                                    </p>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setShowCreateForm(false);
+                                    setProgressStages([]);
+                                }}
+                                disabled={isCreating}
+                                className="text-muted-foreground hover:text-foreground disabled:opacity-50"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
 
-                            {/* Stories Tab */}
-                            <TabsContent value="stories" className="mt-6">
-                                <StoryLibrary
-                                    stories={stories}
-                                    onCreateStory={handleCreateStory}
-                                    onUpdateStory={handleUpdateStory}
-                                    onDeleteStory={handleDeleteStory}
-                                />
-                            </TabsContent>
+                        {/* Progress Stages UI */}
+                        {isCreating && progressStages.length > 0 ? (
+                            <div className="space-y-6">
+                                <div className="rounded-lg border border-purple-200 bg-white p-6">
+                                    <div className="mb-4 flex items-center justify-between">
+                                        <span className="text-sm font-medium text-purple-900">
+                                            Creating your enrollment page...
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                            ~30-60 seconds
+                                        </span>
+                                    </div>
 
-                            {/* Analytics Tab */}
-                            <TabsContent value="analytics" className="mt-6">
-                                <AnalyticsDashboard data={analytics} />
-                            </TabsContent>
+                                    {/* Progress bar */}
+                                    <div className="mb-6 h-2 overflow-hidden rounded-full bg-purple-100">
+                                        <div
+                                            className="h-full rounded-full bg-gradient-to-r from-purple-600 to-fuchsia-600 transition-all duration-500"
+                                            style={{
+                                                width: `${(progressStages.filter((s) => s.status === "completed").length / progressStages.length) * 100}%`,
+                                            }}
+                                        />
+                                    </div>
 
-                            {/* Settings Tab */}
-                            <TabsContent value="settings" className="mt-6">
-                                <div className="space-y-4">
-                                    <Card className="p-6">
-                                        <h3 className="text-lg font-semibold mb-4">
-                                            Follow-Up Settings
-                                        </h3>
-                                        <div className="space-y-4">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <div className="font-medium">
-                                                        Email Follow-Up
-                                                    </div>
-                                                    <div className="text-sm text-muted-foreground">
-                                                        Automated email sequences
-                                                    </div>
-                                                </div>
-                                                <Switch defaultChecked={true} />
-                                            </div>
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <div className="font-medium">
-                                                        SMS Follow-Up
-                                                    </div>
-                                                    <div className="text-sm text-muted-foreground">
-                                                        High-intent SMS messages
-                                                    </div>
-                                                </div>
-                                                <Switch defaultChecked={false} />
-                                            </div>
-                                            <div className="pt-4 border-t">
-                                                <h4 className="font-medium mb-3">
-                                                    Compliance & Limits
-                                                </h4>
-                                                <div className="space-y-2 text-sm">
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">
-                                                            CAN-SPAM Compliance:
-                                                        </span>
-                                                        <span className="font-medium text-green-600">
-                                                            ✓ Enabled
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">
-                                                            Daily Email Limit:
-                                                        </span>
-                                                        <span className="font-medium">
-                                                            500
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">
-                                                            Daily SMS Limit:
-                                                        </span>
-                                                        <span className="font-medium">
-                                                            100
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex justify-between">
-                                                        <span className="text-muted-foreground">
-                                                            Opt-out Link:
-                                                        </span>
-                                                        <span className="font-medium text-green-600">
-                                                            ✓ Auto-included
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </Card>
-
-                                    <Card className="p-6 bg-gradient-to-r from-green-50 to-primary/5">
-                                        <h3 className="text-lg font-semibold mb-4">
-                                            System Features
-                                        </h3>
-                                        <div className="grid grid-cols-2 gap-3 text-sm">
-                                            <div className="flex items-center gap-2">
-                                                <Users className="h-4 w-4 text-purple-600" />
-                                                <span>
-                                                    5-Segment Auto-Categorization
+                                    {/* Stage list */}
+                                    <div className="space-y-3">
+                                        {progressStages.map((stage) => (
+                                            <div
+                                                key={stage.id}
+                                                className={`flex items-center gap-3 rounded-lg p-2 transition-colors ${
+                                                    stage.status === "in_progress"
+                                                        ? "bg-purple-50"
+                                                        : ""
+                                                }`}
+                                            >
+                                                {stage.status === "completed" ? (
+                                                    <Check className="h-5 w-5 text-green-600" />
+                                                ) : stage.status === "in_progress" ? (
+                                                    <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
+                                                ) : (
+                                                    <Circle className="h-5 w-5 text-gray-300" />
+                                                )}
+                                                <span
+                                                    className={`text-sm ${
+                                                        stage.status === "completed"
+                                                            ? "text-green-700"
+                                                            : stage.status ===
+                                                                "in_progress"
+                                                              ? "font-medium text-purple-900"
+                                                              : "text-muted-foreground"
+                                                    }`}
+                                                >
+                                                    {stage.label}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <Sparkles className="h-4 w-4 text-primary" />
-                                                <span>15+ Personalization Tokens</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <BookOpen className="h-4 w-4 text-green-600" />
-                                                <span>AI Story Selection</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Mail className="h-4 w-4 text-orange-600" />
-                                                <span>Multi-Channel (Email + SMS)</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <BarChart3 className="h-4 w-4 text-purple-600" />
-                                                <span>Intent Scoring & Tracking</span>
-                                            </div>
-                                            <div className="flex items-center gap-2">
-                                                <Target className="h-4 w-4 text-red-600" />
-                                                <span>A/B Testing Infrastructure</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <TooltipProvider>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="mb-2 block text-sm font-medium text-foreground">
+                                            Offer
+                                        </label>
+                                        <select
+                                            value={formData.offerId}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    offerId: e.target.value,
+                                                })
+                                            }
+                                            disabled={isCreating}
+                                            className="w-full rounded-lg border border-border bg-card px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {offers.map((offer) => (
+                                                <option key={offer.id} value={offer.id}>
+                                                    {offer.name} - {offer.currency}{" "}
+                                                    {offer.price.toLocaleString()}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="mt-1 text-sm text-muted-foreground">
+                                            Your offer details will be used to create
+                                            compelling page content
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label className="mb-2 block text-sm font-medium text-foreground">
+                                            Presentation Structure
+                                        </label>
+                                        <select
+                                            value={formData.deckStructureId}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    deckStructureId: e.target.value,
+                                                })
+                                            }
+                                            disabled={isCreating}
+                                            className="w-full rounded-lg border border-border bg-card px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {deckStructures.map((deck) => (
+                                                <option key={deck.id} value={deck.id}>
+                                                    {deck.metadata?.title ||
+                                                        `Presentation ${deck.total_slides} slides`}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="mt-1 text-sm text-muted-foreground">
+                                            Content and testimonials from your
+                                            presentation
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+                                            Template Style
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-muted-foreground" />
+                                                </TooltipTrigger>
+                                                <TooltipContent className="max-w-xs">
+                                                    <p className="text-sm">
+                                                        Choose a template that matches
+                                                        your offer positioning and
+                                                        target audience
+                                                    </p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </label>
+                                        <div className="space-y-3">
+                                            {TEMPLATE_OPTIONS.map((template) => (
+                                                <div key={template.value}>
+                                                    <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card p-4 hover:border-purple-300 hover:bg-purple-50">
+                                                        <input
+                                                            type="radio"
+                                                            name="templateType"
+                                                            value={template.value}
+                                                            checked={
+                                                                formData.templateType ===
+                                                                template.value
+                                                            }
+                                                            onChange={(e) =>
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    templateType: e
+                                                                        .target
+                                                                        .value as any,
+                                                                })
+                                                            }
+                                                            disabled={isCreating}
+                                                            className="mt-1 h-4 w-4 text-purple-600 focus:ring-purple-500"
+                                                        />
+                                                        <div className="flex-1">
+                                                            <div className="font-medium text-foreground">
+                                                                {template.label}
+                                                            </div>
+                                                            <p className="mt-1 text-sm text-muted-foreground">
+                                                                {template.description}
+                                                            </p>
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end gap-3 pt-4">
+                                        <button
+                                            onClick={() => setShowCreateForm(false)}
+                                            disabled={isCreating}
+                                            className="rounded-lg border border-border bg-card px-6 py-2 font-medium text-foreground hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleGenerate}
+                                            disabled={
+                                                !formData.offerId ||
+                                                !formData.deckStructureId ||
+                                                isCreating
+                                            }
+                                            className={`flex items-center gap-2 rounded-lg px-6 py-2 font-semibold ${
+                                                formData.offerId &&
+                                                formData.deckStructureId &&
+                                                !isCreating
+                                                    ? "bg-gradient-to-r from-purple-600 to-fuchsia-600 text-white hover:opacity-90"
+                                                    : "cursor-not-allowed bg-gray-300 text-muted-foreground"
+                                            }`}
+                                        >
+                                            <Sparkles className="h-4 w-4" />
+                                            Generate Page
+                                        </button>
+                                    </div>
+                                </div>
+                            </TooltipProvider>
+                        )}
+                    </div>
+                )}
+
+                {/* Unified Pages List */}
+                <div className="rounded-lg border border-border bg-card shadow-soft">
+                    <div className="border-b border-border p-6">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xl font-semibold text-foreground">
+                                Your Enrollment Pages
+                            </h3>
+                            <span className="text-sm text-muted-foreground">
+                                {unifiedPages.length} created
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="p-6">
+                        {unifiedPages.length === 0 ? (
+                            <div className="py-16 text-center">
+                                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-purple-100">
+                                    <FileText className="h-8 w-8 text-purple-600" />
+                                </div>
+                                <h4 className="mb-2 text-lg font-semibold text-foreground">
+                                    No enrollment pages yet
+                                </h4>
+                                <p className="mx-auto mb-6 max-w-sm text-muted-foreground">
+                                    Create your first enrollment page to start
+                                    converting your audience into customers
+                                </p>
+                                {canCreatePage && (
+                                    <button
+                                        onClick={() => setShowCreateForm(true)}
+                                        className="inline-flex items-center gap-2 rounded-lg bg-gradient-to-r from-purple-600 to-fuchsia-600 px-6 py-3 font-semibold text-white transition-all hover:opacity-90"
+                                    >
+                                        <Sparkles className="h-5 w-5" />
+                                        Generate Your First Page
+                                    </button>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {unifiedPages.map((page) => {
+                                    const isLegacy = page.type === "legacy";
+                                    const legacyPage = isLegacy
+                                        ? enrollmentPages.find((p) => p.id === page.id)
+                                        : null;
+
+                                    return (
+                                        <div
+                                            key={page.id}
+                                            className="rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-purple-300 hover:shadow-md"
+                                        >
+                                            <div className="flex items-start justify-between">
+                                                <div className="flex-1">
+                                                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                                                        <h4 className="text-lg font-semibold text-foreground">
+                                                            {page.title}
+                                                        </h4>
+                                                        {isLegacy && (
+                                                            <span className="inline-flex items-center rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+                                                                Legacy
+                                                            </span>
+                                                        )}
+                                                        <span
+                                                            className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                                                page.status ===
+                                                                "published"
+                                                                    ? "bg-green-100 text-green-800"
+                                                                    : "bg-yellow-100 text-yellow-800"
+                                                            }`}
+                                                        >
+                                                            {page.status === "published"
+                                                                ? "Published"
+                                                                : "Draft"}
+                                                        </span>
+                                                    </div>
+
+                                                    {page.subtitle && (
+                                                        <p className="mb-3 text-sm text-muted-foreground">
+                                                            {page.subtitle}
+                                                        </p>
+                                                    )}
+
+                                                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                                        <span>
+                                                            Created{" "}
+                                                            {new Date(
+                                                                page.created_at
+                                                            ).toLocaleDateString()}
+                                                        </span>
+                                                        {page.version && (
+                                                            <span>
+                                                                Version {page.version}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-3">
+                                                    {isLegacy ? (
+                                                        <>
+                                                            {/* Migration button for legacy pages */}
+                                                            <button
+                                                                onClick={() =>
+                                                                    legacyPage &&
+                                                                    handleMigrateToAIEditor(
+                                                                        legacyPage
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    isMigrating ===
+                                                                    page.id
+                                                                }
+                                                                className="inline-flex items-center gap-2 rounded-lg border border-purple-300 bg-purple-50 px-3 py-2 text-sm font-medium text-purple-700 transition-colors hover:bg-purple-100 disabled:opacity-50"
+                                                            >
+                                                                {isMigrating ===
+                                                                page.id ? (
+                                                                    <>
+                                                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                                                        Migrating...
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <ArrowRight className="h-4 w-4" />
+                                                                        Migrate to AI
+                                                                        Editor
+                                                                    </>
+                                                                )}
+                                                            </button>
+                                                            <div className="flex items-center gap-2">
+                                                                <button
+                                                                    onClick={() =>
+                                                                        handlePreviewLegacy(
+                                                                            page.id
+                                                                        )
+                                                                    }
+                                                                    className="rounded p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+                                                                    title="Preview"
+                                                                >
+                                                                    <Eye className="h-4 w-4" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() =>
+                                                                        handleDelete(
+                                                                            page.id
+                                                                        )
+                                                                    }
+                                                                    className="rounded p-2 text-muted-foreground hover:bg-red-50 hover:text-red-600"
+                                                                    title="Delete"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </button>
+                                                            </div>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            {/* AI Editor page actions */}
+                                                            <button
+                                                                onClick={() =>
+                                                                    handleEditAIEditor(
+                                                                        page.id
+                                                                    )
+                                                                }
+                                                                className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700"
+                                                            >
+                                                                <Pencil className="h-4 w-4" />
+                                                                Edit Page
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </Card>
-                                </div>
-                            </TabsContent>
-                        </Tabs>
-                    </>
-                )}
-            </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                </div>
 
-            {/* Test Message Modal */}
-            {agentConfig?.id && (
-                <TestMessageModal
-                    open={testModalOpen}
-                    onClose={() => setTestModalOpen(false)}
-                    agentConfigId={agentConfig.id}
-                    userEmail={agentConfig.sender_email || undefined}
-                />
-            )}
+                {/* Helper Info */}
+                <div className="rounded-lg border border-primary/10 bg-primary/5 p-6">
+                    <h4 className="mb-3 font-semibold text-primary">
+                        Enrollment Page Tips
+                    </h4>
+                    <ul className="space-y-2 text-sm text-primary">
+                        <li>
+                            • Use the AI Editor to refine headlines, add testimonials,
+                            and customize your page
+                        </li>
+                        <li>
+                            • Choose a template style that matches your offer
+                            positioning
+                        </li>
+                        <li>
+                            • Your brand colors and presentation content are
+                            automatically incorporated
+                        </li>
+                        <li>
+                            • Publish your page when you&apos;re ready to start
+                            enrolling customers
+                        </li>
+                    </ul>
+                </div>
+            </div>
         </StepLayout>
     );
 }

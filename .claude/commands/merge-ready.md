@@ -1,7 +1,7 @@
 ---
 description: Automate PR iteration until code reviewer approves - autonomous merge readiness
 argument-hint: [pr-number]
-version: 2.0.0
+version: 2.0.1
 ---
 
 # /merge-ready - Autonomous Merge Readiness Agent
@@ -116,8 +116,30 @@ Prompt: Review all changes in this PR comprehensively. Check for:
 - Code organization and maintainability
 - Test coverage gaps
 
-Review ENTIRE FILES that were modified, not just the diff. Pre-existing issues
-in touched files should be identified and fixed.
+**Review Scope - ENTIRE FILES (Clarified)**:
+
+Review the COMPLETE CONTENT of each modified file, not just the changed lines (diff).
+This means:
+
+1. **Read the full file** - Not just lines 50-75 that changed, but lines 1-200+ (the
+   entire file content).
+
+2. **Identify pre-existing issues** - If line 100 has a bug but the diff only touched
+   lines 50-75, still report the bug at line 100. We're touching this file anyway.
+
+3. **Stay focused on modified files** - Do NOT expand scope to unmodified files unless
+   they are directly related (e.g., a modified file imports from another file that
+   needs checking).
+
+4. **Why this matters** - Touching a file means we own its quality. If we're changing
+   `UserProfile.tsx`, we should ensure the entire component is solid, not just our
+   specific change.
+
+**Example of correct scope**:
+- File `api/users.ts` was modified (lines 50-75 changed)
+- Correct: Review all 200 lines of `api/users.ts`, report issue at line 150
+- Correct: Check `types/user.ts` if `api/users.ts` imports from it
+- Incorrect: Review `api/posts.ts` just because it's in the same folder
 
 Provide specific file:line references for all concerns.
 ```
@@ -128,14 +150,98 @@ Analyze what types of files changed and run appropriate specialized agents IN PA
 
 | Files Changed | Agent to Run |
 |--------------|--------------|
-| API routes, data fetching | performance-reviewer |
-| Auth, user data, external APIs | security-reviewer |
-| try/catch blocks, error states | error-handling-reviewer |
-| React components, UI | design-reviewer |
-| Database queries, migrations | architecture-auditor |
-| Test files | test-analyzer |
+| API routes (`app/api/`), data fetching | performance-reviewer |
+| Auth (`lib/auth/`, `middleware.ts`), user data, external APIs | security-reviewer |
+| try/catch blocks, error states, API error handling | error-handling-reviewer |
+| React components (`components/`, `app/**/page.tsx`) | design-reviewer |
+| Database queries, migrations (`supabase/`) | architecture-auditor |
+| Test files (`__tests__/`) | test-analyzer |
 
-Launch all applicable agents simultaneously for efficiency.
+**File pattern matching for agent dispatch**:
+
+```bash
+# Get changed files
+CHANGED_FILES=$(git diff origin/main --name-only)
+
+# Initialize agent list
+AGENTS_TO_RUN=()
+
+# Check each pattern
+echo "$CHANGED_FILES" | grep -qE '^app/api/|fetch|query' && AGENTS_TO_RUN+=("performance-reviewer")
+echo "$CHANGED_FILES" | grep -qE '^lib/auth/|middleware|token|session|password' && AGENTS_TO_RUN+=("security-reviewer")
+echo "$CHANGED_FILES" | grep -qE '\.tsx?$' && AGENTS_TO_RUN+=("error-handling-reviewer")
+echo "$CHANGED_FILES" | grep -qE '^components/|page\.tsx$|\.tsx$' && AGENTS_TO_RUN+=("design-reviewer")
+echo "$CHANGED_FILES" | grep -qE '^supabase/|\.sql$|migration' && AGENTS_TO_RUN+=("architecture-auditor")
+echo "$CHANGED_FILES" | grep -qE '^__tests__/|\.test\.|\.spec\.' && AGENTS_TO_RUN+=("test-analyzer")
+
+# Report what will run
+echo "Specialized agents to run: ${AGENTS_TO_RUN[@]:-none}"
+```
+
+**Handling documentation-only or non-matching changes**:
+
+If NO files match any of the specialized agent categories (e.g., documentation-only
+changes like `.md` files, config files like `.json`/`.yml`, or other non-code changes):
+
+1. **Skip Step 3 entirely** - No specialized agents are needed
+2. **Proceed directly to Step 4** - Consolidate findings from code-reviewer agent only
+3. **Note in commit message**: "Specialized agents: N/A (non-code changes)"
+
+```bash
+if [ ${#AGENTS_TO_RUN[@]} -eq 0 ]; then
+  echo "No specialized agents applicable for these changes"
+  echo "Proceeding with code-reviewer findings only"
+  # Skip to Step 4
+fi
+```
+
+**Parallel Agent Execution Implementation**:
+
+To achieve parallel execution in the Claude agent framework, use a SINGLE message with
+multiple Task tool calls. This is critical for efficiency - agents launch concurrently
+rather than sequentially.
+
+**Example: Launching multiple agents in parallel**:
+
+```
+# In a SINGLE assistant message, invoke multiple Task tools:
+
+[Task tool call 1]
+subagent_type: performance-reviewer
+prompt: "Review API routes for performance issues. Files: {api_files}.
+Check for N+1 queries, unnecessary data fetching, missing caching..."
+
+[Task tool call 2]
+subagent_type: security-reviewer
+prompt: "Review auth and user data handling. Files: {auth_files}.
+Check for injection vulnerabilities, improper access control..."
+
+[Task tool call 3]
+subagent_type: design-reviewer
+prompt: "Review React components for UI/UX issues. Files: {component_files}.
+Check for accessibility, responsive design, consistent styling..."
+```
+
+**Key implementation points**:
+
+1. **Single message, multiple tool calls** - All Task tool invocations must be in ONE
+   message to achieve parallelism. Sequential messages = sequential execution.
+
+2. **Each agent gets targeted context** - Include only relevant files in each prompt,
+   not the entire diff.
+
+3. **Wait for all results** - All parallel agents complete before proceeding to Step 4.
+
+4. **Combine findings** - Merge results from all agents into a unified issues list.
+
+**Anti-pattern to avoid**:
+
+```
+# DON'T do this - agents run sequentially, slow!
+Message 1: [Task: performance-reviewer]
+Message 2: [Task: security-reviewer]
+Message 3: [Task: design-reviewer]
+```
 
 ### Step 4: Consolidate and Fix Issues
 
@@ -167,16 +273,29 @@ git add -A
 git commit -m "$(cat <<'EOF'
 ♻️ Proactive code quality improvements
 
-Fixes from comprehensive self-review before code reviewer iteration:
-- [List each fix made]
-- [Include file:line references]
+Critical issues fixed:
+- [List each critical fix with file:line reference]
+
+Medium priority issues fixed:
+- [List each medium fix with file:line reference]
+
+Low priority / improvements:
+- [List if applicable, or "N/A"]
 
 Specialized reviews completed:
-- [List agents run and key findings addressed]
+- code-reviewer: [key findings]
+- [agent-name]: [key findings]
+- [agent-name]: [key findings]
+
+All local validations passing (type-check, test, build).
 EOF
 )"
 git push
 ```
+
+**Note**: This commit message format matches the iteration commit format for consistency.
+When reviewing git history, all merge-ready commits have the same structure, making it
+easy to understand what was fixed at each stage.
 
 This proactive phase typically catches 60-80% of issues the code reviewer would find,
 reducing total iterations significantly.
@@ -277,7 +396,9 @@ For EACH blocking issue (critical AND medium priority):
 
 1. **Understand the concern**: Read the code reviewer's analysis carefully
 2. **Locate the code**: Use the file paths and line numbers provided
-3. **Review the ENTIRE file**: Look for similar issues, not just the reported line
+3. **Review the ENTIRE file**: Read the complete file content, look for similar issues
+   beyond the reported line. If the reviewer found one type error, check for others in
+   the same file. (See "Review Scope - ENTIRE FILES" in Step 2 for detailed guidance.)
 4. **Fix the issue**: Follow /autotask and /ai-coding-config development standards
 5. **Verify the fix**: Run relevant tests if applicable
 
@@ -411,7 +532,8 @@ should be handled by your deployment pipeline after the PR is merged.
 
 ### Applying to Preview/Development
 
-Verify environment variables are set:
+Verify environment variables are set AND validate environment safety:
+
 ```bash
 # These must be set in your environment - never hardcode credentials
 if [ -z "$SUPABASE_PROJECT_ID" ] || [ -z "$SUPABASE_TOKEN" ]; then
@@ -419,9 +541,68 @@ if [ -z "$SUPABASE_PROJECT_ID" ] || [ -z "$SUPABASE_TOKEN" ]; then
   exit 1
 fi
 
-# VERIFY you're targeting the correct environment
-echo "Target project: $SUPABASE_PROJECT_ID"
-# Should match your development/preview project, NOT production
+# CRITICAL: Production safety check
+# Define your production project ID(s) - these should NEVER be targeted during iteration
+PRODUCTION_PROJECT_IDS=("your-production-project-ref")  # Add your actual production ref
+
+# Check if current target is production
+for PROD_ID in "${PRODUCTION_PROJECT_IDS[@]}"; do
+  if [ "$SUPABASE_PROJECT_ID" = "$PROD_ID" ]; then
+    echo "═══════════════════════════════════════════════════════════════"
+    echo "  ⛔ DANGER: PRODUCTION DATABASE DETECTED"
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+    echo "  Target project: $SUPABASE_PROJECT_ID"
+    echo "  This appears to be a PRODUCTION database."
+    echo ""
+    echo "  Migrations during /merge-ready iteration are NEVER allowed"
+    echo "  on production. Production migrations should be applied by"
+    echo "  your deployment pipeline AFTER the PR is merged."
+    echo ""
+    echo "  To proceed, either:"
+    echo "  1. Set SUPABASE_PROJECT_ID to your dev/preview project"
+    echo "  2. Skip migration application (commit file only)"
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════"
+    exit 1
+  fi
+done
+
+# Additional safety: Check for common production indicators in project name
+if echo "$SUPABASE_PROJECT_ID" | grep -qiE 'prod|production|live|main'; then
+  echo "⚠️  WARNING: Project ID contains production-like keyword"
+  echo "    Project: $SUPABASE_PROJECT_ID"
+  echo "    If this is NOT production, add it to SAFE_PROJECT_IDS"
+  echo ""
+  echo "    Proceeding with caution... (add explicit confirmation in CI/CD)"
+fi
+
+# Display target for visibility
+echo "Target Supabase project: $SUPABASE_PROJECT_ID"
+echo "Environment: Development/Preview (verified not production)"
+```
+
+**Configuring safe project IDs**:
+
+For additional safety, maintain an allowlist of known-safe project IDs:
+
+```bash
+# Optional: Explicit allowlist of safe projects
+SAFE_PROJECT_IDS=("dev-project-ref" "preview-project-ref" "staging-project-ref")
+
+PROJECT_IS_SAFE=false
+for SAFE_ID in "${SAFE_PROJECT_IDS[@]}"; do
+  if [ "$SUPABASE_PROJECT_ID" = "$SAFE_ID" ]; then
+    PROJECT_IS_SAFE=true
+    break
+  fi
+done
+
+if [ "$PROJECT_IS_SAFE" = false ]; then
+  echo "⚠️  Project ID not in safe allowlist: $SUPABASE_PROJECT_ID"
+  echo "    Add to SAFE_PROJECT_IDS if this is a development/preview project"
+  # Don't exit - just warn. The production blocklist above is the hard stop.
+fi
 ```
 
 Apply using the Supabase Management API:
@@ -566,11 +747,69 @@ Local Validation:
   test: ✅
   build: ✅
 
+═══════════════════════════════════════════════════════════════
+                      Efficiency Metrics
+═══════════════════════════════════════════════════════════════
+
+Proactive Review Impact:
+  Issues caught before code reviewer: {proactive_count}
+  Estimated iterations saved: {saved_iterations}
+
+Code Review Iterations:
+  Total iterations: {iteration_count}
+  Average issues per iteration: {avg_issues}
+
+Time Breakdown:
+  Proactive review phase: {proactive_duration}
+  Iteration loop total: {iteration_duration}
+  Total execution time: {total_duration}
+
+Quality Metrics:
+  Files reviewed (entire content): {files_count}
+  Specialized agents run: {agents_count}
+  Tests added/fixed: {tests_count}
+
+═══════════════════════════════════════════════════════════════
+
 GitHub Issue Created: {issue_url}
 
 The PR is ready for your final review and merge.
 ═══════════════════════════════════════════════════════════════
 ```
+
+**Tracking metrics during execution**:
+
+Throughout the merge-ready process, maintain counters for the metrics above:
+
+```bash
+# Initialize metrics at start
+METRICS_START_TIME=$(date +%s)
+METRICS_PROACTIVE_ISSUES=0
+METRICS_ITERATIONS=0
+METRICS_TOTAL_ISSUES=0
+METRICS_AGENTS_RUN=0
+METRICS_FILES_REVIEWED=0
+
+# After proactive review
+METRICS_PROACTIVE_END=$(date +%s)
+METRICS_PROACTIVE_DURATION=$((METRICS_PROACTIVE_END - METRICS_START_TIME))
+
+# After each iteration
+((METRICS_ITERATIONS++))
+METRICS_TOTAL_ISSUES=$((METRICS_TOTAL_ISSUES + CURRENT_ITERATION_ISSUES))
+
+# At completion
+METRICS_END_TIME=$(date +%s)
+METRICS_TOTAL_DURATION=$((METRICS_END_TIME - METRICS_START_TIME))
+METRICS_AVG_ISSUES=$((METRICS_TOTAL_ISSUES / METRICS_ITERATIONS))
+
+# Estimate iterations saved by proactive review
+# (Proactive issues would have become ~1.5 iterations on average)
+METRICS_SAVED_ITERATIONS=$(echo "scale=1; $METRICS_PROACTIVE_ISSUES * 1.5 / 3" | bc)
+```
+
+These metrics help users understand the ROI of the proactive review phase and identify
+patterns in their code quality process.
 
 </completion>
 
@@ -635,7 +874,61 @@ Pattern Analysis:
 
 ### Recovery Actions
 
-If patterns indicate issues:
+If patterns indicate issues, use these pattern-specific recovery commands:
+
+**Recurring type errors**:
+```bash
+# Regenerate Supabase types (common cause of type mismatches)
+pnpm db:types
+
+# If types still fail, check for interface mismatches
+pnpm type-check 2>&1 | grep "error TS" | head -20
+```
+Action: Review generated types in `lib/database.types.ts`, update component interfaces.
+
+**Recurring import errors**:
+```bash
+# Auto-fix import order and unused imports
+pnpm lint --fix
+
+# Check for circular dependencies
+npx madge --circular --extensions ts,tsx app/ lib/ components/
+```
+Action: If circular deps found, refactor to break the cycle (usually extract shared types).
+
+**Recurring test failures**:
+```bash
+# Run tests in watch mode to debug interactively
+pnpm test --watch
+
+# Run specific failing test with verbose output
+pnpm test -- --reporter=verbose path/to/failing.test.ts
+```
+Action: Fix the test or the underlying code. Don't skip tests.
+
+**Recurring build errors (Server/Client boundary)**:
+```bash
+# Find "use server" exports being imported in client components
+grep -r "use server" app/ lib/ --include="*.ts" --include="*.tsx" -l
+```
+Action: Ensure server actions aren't imported in client components. Use API routes instead.
+
+**Recurring Vercel deployment failures**:
+```bash
+# Simulate Vercel build locally
+pnpm build
+
+# Check for environment variable issues
+grep -rn "process.env" app/ lib/ --include="*.ts" --include="*.tsx" | head -30
+```
+Action: Ensure all env vars are defined in Vercel project settings.
+
+**Recurring N+1 query issues**:
+```bash
+# Search for queries inside loops or map functions
+grep -rn "\.map(" app/ lib/ --include="*.ts" --include="*.tsx" -A 5 | grep -E "supabase|db\.|fetch"
+```
+Action: Use batch queries (`.in()`) or JOIN instead of looping queries.
 
 **Architectural problems**: Run architecture-auditor agent on the affected area
 **Introducing new bugs**: Run comprehensive test coverage, add missing tests
@@ -859,7 +1152,74 @@ or
 ## 🎯 Verdict: **APPROVE**
 ```
 
-Extract the text after "Verdict:" to determine status.
+**Parsing implementation with fallback handling**:
+
+```bash
+# Get the latest claude[bot] comment
+COMMENT_BODY=$(curl -s "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
+  jq -r '.[] | select(.user.login == "claude[bot]") | .body' | tail -1)
+
+# Extract verdict - primary pattern (with emoji)
+VERDICT=$(echo "$COMMENT_BODY" | grep -oP '(?<=## 🎯 Verdict: \*\*)[^*]+' | head -1)
+
+# Fallback 1: try without emoji
+if [ -z "$VERDICT" ]; then
+  VERDICT=$(echo "$COMMENT_BODY" | grep -oP '(?<=## Verdict: \*\*)[^*]+' | head -1)
+fi
+
+# Fallback 2: try with just "Verdict:" anywhere
+if [ -z "$VERDICT" ]; then
+  VERDICT=$(echo "$COMMENT_BODY" | grep -oP '(?<=Verdict: \*\*)[^*]+' | head -1)
+fi
+
+# Normalize variations (remove leading emoji/whitespace)
+VERDICT=$(echo "$VERDICT" | sed 's/^⚠️ //' | sed 's/^[[:space:]]*//')
+
+# Decision logic
+case "$VERDICT" in
+  "REQUEST CHANGES"|"REQUEST_CHANGES")
+    echo "Status: Continue iterating - changes required"
+    SHOULD_CONTINUE=true
+    ;;
+  "APPROVE"|"APPROVED")
+    echo "Status: Success - approved"
+    SHOULD_CONTINUE=false
+    ;;
+  "APPROVE with minor suggestions"|"APPROVE with minor fixes")
+    # Check if minor suggestions are actually critical/medium
+    if echo "$COMMENT_BODY" | grep -qi "critical\|must fix"; then
+      echo "Status: Continue - approval has critical items"
+      SHOULD_CONTINUE=true
+    else
+      echo "Status: Success - approved with optional improvements"
+      SHOULD_CONTINUE=false
+    fi
+    ;;
+  *)
+    echo "Warning: Unknown verdict format: '$VERDICT'"
+    # Fallback: check for approval keywords in comment body
+    if echo "$COMMENT_BODY" | grep -qi "ready to merge\|lgtm\|ship it"; then
+      echo "Detected approval language - treating as approved"
+      SHOULD_CONTINUE=false
+    else
+      echo "Unable to parse verdict - continuing iteration to be safe"
+      SHOULD_CONTINUE=true
+    fi
+    ;;
+esac
+
+# Safety: If verdict parsing fails consistently (3+ times), report to user
+if [ -z "$VERDICT" ] && [ "$PARSE_FAILURES" -ge 3 ]; then
+  echo "ERROR: Unable to parse verdict after multiple attempts"
+  echo "Raw comment body preview:"
+  echo "$COMMENT_BODY" | head -20
+  echo "Please check the PR manually: {pr_url}"
+  exit 1
+fi
+```
+
+**Important**: If verdict parsing fails consistently, report the raw verdict text to the
+user and ask for manual interpretation. Don't infinite loop on parsing errors.
 
 ### Extracting ALL Concerns
 

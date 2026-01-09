@@ -80,3 +80,29 @@ export class DatabaseError extends AppError {
         this.operation = operation;
     }
 }
+
+export class ConfigurationError extends AppError {
+    public readonly configKey: string;
+    public readonly suggestion?: string;
+
+    constructor(
+        message: string,
+        configKey: string,
+        options: { suggestion?: string } = {}
+    ) {
+        super(message, 500);
+        this.configKey = configKey;
+        this.suggestion = options.suggestion;
+    }
+}
+
+export class StripeConfigurationError extends ConfigurationError {
+    constructor(configKey: string, currentValue?: string) {
+        const message = `Stripe Connect is not configured correctly. ${configKey} must be set to a valid value.`;
+        const suggestion = currentValue
+            ? `Currently set to: "${currentValue.substring(0, 10)}..." - Get your credentials from: Stripe Dashboard > Connect > Settings`
+            : `${configKey} is not set - Get your credentials from: Stripe Dashboard > Connect > Settings`;
+
+        super(message, configKey, { suggestion });
+    }
+}

@@ -8,6 +8,22 @@ import { stripe } from "./client";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { env } from "@/lib/env";
+import { StripeConfigurationError } from "@/lib/errors";
+
+/**
+ * Validate Stripe Connect Client ID format
+ * Valid IDs start with 'ca_' prefix
+ * Returns true only if clientId is a valid non-empty string with ca_ prefix
+ */
+function isValidStripeConnectClientId(
+    clientId: string | undefined
+): clientId is string {
+    if (!clientId) return false;
+    if (!clientId.startsWith("ca_")) return false;
+    // Must be at least ca_ + some characters
+    if (clientId.length < 10) return false;
+    return true;
+}
 
 /**
  * Generate Stripe Connect OAuth URL
@@ -21,23 +37,18 @@ export async function generateConnectUrl(
     try {
         requestLogger.info("Generating Stripe Connect URL");
 
-        // Validate required Stripe Connect credentials
+        // Validate required Stripe Connect credentials using typed error
         const clientId = env.STRIPE_CONNECT_CLIENT_ID;
-        if (
-            !clientId ||
-            clientId.includes("your_") ||
-            clientId.includes("...") ||
-            !clientId.startsWith("ca_")
-        ) {
-            const errorMessage =
-                "Stripe Connect is not configured correctly. " +
-                "STRIPE_CONNECT_CLIENT_ID must be set to your actual Client ID (starts with 'ca_'). " +
-                "Currently set to: " +
-                (clientId ? `"${clientId.substring(0, 10)}..."` : "(not set)") +
-                ". Get your Client ID from: Stripe Dashboard > Connect > Settings. " +
-                "See docs/STRIPE_SETUP.md for detailed setup instructions.";
-            requestLogger.error({}, errorMessage);
-            throw new Error(errorMessage);
+        if (!isValidStripeConnectClientId(clientId)) {
+            const error = new StripeConfigurationError(
+                "STRIPE_CONNECT_CLIENT_ID",
+                clientId || undefined
+            );
+            requestLogger.error(
+                { configKey: error.configKey, suggestion: error.suggestion },
+                error.message
+            );
+            throw error;
         }
 
         const baseUrl = env.NEXT_PUBLIC_APP_URL;
@@ -178,10 +189,11 @@ export async function disconnectStripe(
     try {
         requestLogger.info("Disconnecting Stripe account");
 
-        // Validate required Stripe Connect credentials
-        if (!env.STRIPE_CONNECT_CLIENT_ID) {
-            throw new Error(
-                "Stripe Connect is not configured. STRIPE_CONNECT_CLIENT_ID is required."
+        // Validate required Stripe Connect credentials using typed error
+        if (!isValidStripeConnectClientId(env.STRIPE_CONNECT_CLIENT_ID)) {
+            throw new StripeConfigurationError(
+                "STRIPE_CONNECT_CLIENT_ID",
+                env.STRIPE_CONNECT_CLIENT_ID || undefined
             );
         }
 

@@ -34,9 +34,16 @@ import {
     TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+interface DeckSlide {
+    id: string;
+    title?: string;
+    content?: string;
+    type?: string;
+}
+
 interface DeckStructure {
     id: string;
-    slides: any[];
+    slides: DeckSlide[];
     metadata?: {
         title?: string;
     };
@@ -44,12 +51,19 @@ interface DeckStructure {
     created_at: string;
 }
 
+interface PageTheme {
+    primaryColor?: string;
+    secondaryColor?: string;
+    fontFamily?: string;
+    backgroundColor?: string;
+}
+
 interface RegistrationPage {
     id: string;
     headline: string;
     subheadline: string;
     html_content: string;
-    theme: any;
+    theme: PageTheme | null;
     is_published: boolean;
     vanity_slug: string | null;
     created_at: string;
@@ -84,6 +98,14 @@ interface ProgressStage {
     status: "pending" | "in_progress" | "completed";
 }
 
+interface FunnelProject {
+    id: string;
+    name: string;
+    user_id: string;
+    created_at: string;
+    updated_at?: string;
+}
+
 const GENERATION_STAGES: ProgressStage[] = [
     { id: "context", label: "Loading business context", status: "pending" },
     {
@@ -98,7 +120,13 @@ const GENERATION_STAGES: ProgressStage[] = [
     { id: "finalize", label: "Finalizing page", status: "pending" },
 ];
 
-const TEMPLATE_OPTIONS = [
+type TemplateType = "high-conversion" | "minimal-clean" | "story-driven";
+
+const TEMPLATE_OPTIONS: readonly {
+    value: TemplateType;
+    label: string;
+    description: string;
+}[] = [
     {
         value: "high-conversion",
         label: "High Conversion",
@@ -128,7 +156,7 @@ export default function Step9RegistrationPage({
     const isMobile = useIsMobile("lg");
     const { toast } = useToast();
     const [projectId, setProjectId] = useState("");
-    const [project, setProject] = useState<any>(null);
+    const [project, setProject] = useState<FunnelProject | null>(null);
     const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
     const [registrationPages, setRegistrationPages] = useState<RegistrationPage[]>([]);
     const [aiEditorPages, setAiEditorPages] = useState<AIEditorPage[]>([]);
@@ -136,12 +164,12 @@ export default function Step9RegistrationPage({
     const [isMigrating, setIsMigrating] = useState<string | null>(null);
     const [progressStages, setProgressStages] = useState<ProgressStage[]>([]);
     const [showCreateForm, setShowCreateForm] = useState(false);
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<{
+        deckStructureId: string;
+        templateType: TemplateType;
+    }>({
         deckStructureId: "",
-        templateType: "high-conversion" as
-            | "high-conversion"
-            | "minimal-clean"
-            | "story-driven",
+        templateType: "high-conversion",
     });
 
     // Load completion status
@@ -259,14 +287,17 @@ export default function Step9RegistrationPage({
 
             // Open in new tab
             window.open(`/ai-editor/${data.pageId}`, "_blank");
-        } catch (error: any) {
+        } catch (error) {
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "Failed to create page. Please try again.";
             logger.error({ error }, "Failed to create registration page");
             setProgressStages([]);
             toast({
                 variant: "destructive",
                 title: "Error",
-                description:
-                    error.message || "Failed to create page. Please try again.",
+                description: errorMessage,
             });
         } finally {
             setIsCreating(false);
@@ -324,13 +355,16 @@ Please create an improved registration page that captures the same messaging but
 
             // Open in new tab
             window.open(`/ai-editor/${data.pageId}`, "_blank");
-        } catch (error: any) {
+        } catch (error) {
+            const errorMessage =
+                error instanceof Error
+                    ? error.message
+                    : "Could not migrate the page. Please try again.";
             logger.error({ error }, "Failed to migrate page");
             toast({
                 variant: "destructive",
                 title: "Migration Failed",
-                description:
-                    error.message || "Could not migrate the page. Please try again.",
+                description: errorMessage,
             });
         } finally {
             setIsMigrating(null);
@@ -709,7 +743,7 @@ Please create an improved registration page that captures the same messaging but
                                                                     ...formData,
                                                                     templateType: e
                                                                         .target
-                                                                        .value as any,
+                                                                        .value as TemplateType,
                                                                 })
                                                             }
                                                             disabled={isCreating}

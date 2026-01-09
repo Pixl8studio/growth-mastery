@@ -40,6 +40,50 @@ import { AnalyticsDashboard } from "@/components/followup/analytics-dashboard";
 import { SenderSetupTab } from "@/components/followup/sender-setup-tab";
 import { TestMessageModal } from "@/components/followup/test-message-modal";
 
+/**
+ * Type definitions for Step 11 component state.
+ *
+ * Note: Child components (AgentConfigForm, SequenceBuilder, etc.) have their
+ * own internal types. We use flexible types here that are compatible with
+ * their expectations while maintaining safety for internal logic.
+ */
+
+// Offer type for loaded offer data
+interface Offer {
+    id: string;
+    name: string;
+    tagline?: string;
+    promise?: string;
+    description?: string;
+    price?: number;
+    currency?: string;
+    features?: Array<string | { title?: string }>;
+    guarantee?: string;
+}
+
+// Analytics data structure for internal use
+interface AnalyticsOverview {
+    totalSent: number;
+    totalOpened: number;
+    totalClicked: number;
+    totalReplied: number;
+    totalConverted: number;
+    totalRevenue: number;
+}
+
+// Note: Using 'any' for analytics to match AnalyticsDashboard's internal type
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type AnalyticsState = any;
+
+// Sequence with message count from aggregated query
+interface SequenceWithCount {
+    id: string;
+    name: string;
+    message_count: number;
+    followup_messages?: unknown;
+    [key: string]: unknown;
+}
+
 export default function Step11Page({
     params,
 }: {
@@ -66,14 +110,20 @@ export default function Step11Page({
         }
     }, [isMobile, projectId, router]);
     const [generatingBrandVoice, setGeneratingBrandVoice] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     // State for all follow-up data
+    // Note: Using flexible types compatible with child component props
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [agentConfig, setAgentConfig] = useState<any>(null);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [sequences, setSequences] = useState<any[]>([]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [messages, setMessages] = useState<any[]>([]);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const [stories, setStories] = useState<any[]>([]);
-    const [offer, setOffer] = useState<any>(null);
-    const [analytics, setAnalytics] = useState<any>({
+    const [offer, setOffer] = useState<Offer | null>(null);
+    const [analytics, setAnalytics] = useState<AnalyticsState>({
         sequences: [],
         overall: {
             totalSent: 0,
@@ -100,37 +150,40 @@ export default function Step11Page({
         resolveParams();
     }, [params]);
 
-    // Load all follow-up data
+    // Load initial data (offer and agent config)
     useEffect(() => {
-        const loadData = async () => {
+        const loadInitialData = async () => {
             if (!projectId) return;
 
             try {
                 setLoading(true);
+                setLoadError(null);
 
                 const supabase = createClient();
 
-                // Load offer for this funnel
-                const { data: offerData, error: offerError } = await supabase
-                    .from("offers")
-                    .select("*")
-                    .eq("funnel_project_id", projectId)
-                    .order("created_at", { ascending: false })
-                    .limit(1)
-                    .single();
+                // Load offer and agent config in parallel
+                const [offerResult, configRes] = await Promise.all([
+                    supabase
+                        .from("offers")
+                        .select("*")
+                        .eq("funnel_project_id", projectId)
+                        .order("created_at", { ascending: false })
+                        .limit(1)
+                        .single(),
+                    fetch(`/api/followup/agent-configs?funnel_project_id=${projectId}`),
+                ]);
 
-                if (!offerError && offerData) {
-                    setOffer(offerData);
+                if (!offerResult.error && offerResult.data) {
+                    setOffer(offerResult.data as Offer);
                     logger.info(
-                        { offerId: offerData.id, offerName: offerData.name },
+                        {
+                            offerId: offerResult.data.id,
+                            offerName: offerResult.data.name,
+                        },
                         "Loaded offer for funnel"
                     );
                 }
 
-                // Load agent config
-                const configRes = await fetch(
-                    `/api/followup/agent-configs?funnel_project_id=${projectId}`
-                );
                 if (configRes.ok) {
                     const configData = await configRes.json();
                     if (configData.configs && configData.configs.length > 0) {
@@ -139,56 +192,19 @@ export default function Step11Page({
                     }
                 }
 
-                // Load sequences with message counts
-                if (agentConfig) {
-                    const { data: sequencesData, error: seqError } = await supabase
-                        .from("followup_sequences")
-                        .select("*")
-                        .eq("agent_config_id", agentConfig.id)
-                        .order("created_at", { ascending: false });
+                // Load stories and analytics (don't depend on agentConfig)
+                const [storiesRes, analyticsRes] = await Promise.all([
+                    fetch(`/api/followup/stories`),
+                    fetch(`/api/followup/analytics?funnel_project_id=${projectId}`),
+                ]);
 
-                    if (!seqError && sequencesData) {
-                        // Get message counts for each sequence
-                        const sequencesWithCount = await Promise.all(
-                            sequencesData.map(async (seq: any) => {
-                                const { count } = await supabase
-                                    .from("followup_messages")
-                                    .select("*", { count: "exact", head: true })
-                                    .eq("sequence_id", seq.id);
-
-                                return {
-                                    ...seq,
-                                    message_count: count || 0,
-                                };
-                            })
-                        );
-                        setSequences(sequencesWithCount);
-                        logger.info(
-                            {
-                                sequenceCount: sequencesWithCount.length,
-                                messageCounts: sequencesWithCount.map(
-                                    (s) => s.message_count
-                                ),
-                            },
-                            "Loaded sequences with message counts"
-                        );
-                    }
-                }
-
-                // Load stories
-                const storiesRes = await fetch(`/api/followup/stories`);
                 if (storiesRes.ok) {
                     const storiesData = await storiesRes.json();
                     setStories(storiesData.stories || []);
                 }
 
-                // Load analytics
-                const analyticsRes = await fetch(
-                    `/api/followup/analytics?funnel_project_id=${projectId}`
-                );
                 if (analyticsRes.ok) {
                     const analyticsData = await analyticsRes.json();
-                    // Merge with defaults to ensure structure integrity
                     setAnalytics({
                         sequences: analyticsData.sequences || [],
                         overall: {
@@ -201,52 +217,125 @@ export default function Step11Page({
                         },
                     });
                 }
-
-                // Load queued deliveries count
-                if (agentConfig?.id) {
-                    const { count: queuedDeliveries } = await supabase
-                        .from("followup_deliveries")
-                        .select("*", { count: "exact", head: true })
-                        .eq("delivery_status", "pending");
-
-                    setQueuedCount(queuedDeliveries || 0);
-
-                    // Get next scheduled delivery
-                    const { data: nextDelivery } = await supabase
-                        .from("followup_deliveries")
-                        .select("scheduled_send_at")
-                        .eq("delivery_status", "pending")
-                        .order("scheduled_send_at", { ascending: true })
-                        .limit(1)
-                        .single();
-
-                    if (nextDelivery) {
-                        const nextTime = new Date(nextDelivery.scheduled_send_at);
-                        const now = new Date();
-                        const diffMs = nextTime.getTime() - now.getTime();
-                        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-                        const diffMins = Math.floor(
-                            (diffMs % (1000 * 60 * 60)) / (1000 * 60)
-                        );
-
-                        if (diffHours > 0) {
-                            setNextScheduledTime(`in ${diffHours}h ${diffMins}m`);
-                        } else if (diffMins > 0) {
-                            setNextScheduledTime(`in ${diffMins}m`);
-                        } else {
-                            setNextScheduledTime("now");
-                        }
-                    }
-                }
             } catch (error) {
                 logger.error({ error }, "Failed to load follow-up data");
+                setLoadError("Failed to load follow-up data. Please refresh the page.");
+                toast({
+                    title: "Error Loading Data",
+                    description:
+                        "Failed to load follow-up data. Please refresh the page.",
+                    variant: "destructive",
+                });
             } finally {
                 setLoading(false);
             }
         };
 
-        loadData();
-    }, [projectId, agentConfig?.id]);
+        loadInitialData();
+    }, [projectId, toast]);
+
+    // Load sequences when agentConfig is available (separate effect to fix race condition)
+    useEffect(() => {
+        const loadSequences = async () => {
+            if (!agentConfig?.id) return;
+
+            try {
+                const supabase = createClient();
+
+                // Single query to get sequences with message counts using a subquery
+                // This fixes the N+1 query pattern
+                const { data: sequencesData, error: seqError } = await supabase
+                    .from("followup_sequences")
+                    .select(
+                        `
+                        *,
+                        followup_messages(count)
+                    `
+                    )
+                    .eq("agent_config_id", agentConfig.id)
+                    .order("created_at", { ascending: false });
+
+                if (seqError) {
+                    logger.error({ error: seqError }, "Failed to load sequences");
+                    toast({
+                        title: "Error Loading Sequences",
+                        description: "Could not load your sequences. Please try again.",
+                        variant: "destructive",
+                    });
+                    return;
+                }
+
+                if (sequencesData) {
+                    // Map the nested count to a flat message_count property
+                    const sequencesWithCount: SequenceWithCount[] = sequencesData.map(
+                        (seq: SequenceWithCount) => ({
+                            ...seq,
+                            message_count:
+                                (
+                                    seq.followup_messages as unknown as {
+                                        count: number;
+                                    }[]
+                                )?.[0]?.count || 0,
+                        })
+                    );
+                    setSequences(sequencesWithCount);
+                    logger.info(
+                        {
+                            sequenceCount: sequencesWithCount.length,
+                            messageCounts: sequencesWithCount.map(
+                                (s) => s.message_count
+                            ),
+                        },
+                        "Loaded sequences with message counts"
+                    );
+                }
+
+                // Load queued deliveries count
+                const { count: queuedDeliveries } = await supabase
+                    .from("followup_deliveries")
+                    .select("*", { count: "exact", head: true })
+                    .eq("delivery_status", "pending");
+
+                setQueuedCount(queuedDeliveries || 0);
+
+                // Get next scheduled delivery
+                const { data: nextDelivery } = await supabase
+                    .from("followup_deliveries")
+                    .select("scheduled_send_at")
+                    .eq("delivery_status", "pending")
+                    .order("scheduled_send_at", { ascending: true })
+                    .limit(1)
+                    .single();
+
+                if (nextDelivery) {
+                    const nextTime = new Date(nextDelivery.scheduled_send_at);
+                    const now = new Date();
+                    const diffMs = nextTime.getTime() - now.getTime();
+                    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+                    const diffMins = Math.floor(
+                        (diffMs % (1000 * 60 * 60)) / (1000 * 60)
+                    );
+
+                    if (diffHours > 0) {
+                        setNextScheduledTime(`in ${diffHours}h ${diffMins}m`);
+                    } else if (diffMins > 0) {
+                        setNextScheduledTime(`in ${diffMins}m`);
+                    } else {
+                        setNextScheduledTime("now");
+                    }
+                }
+            } catch (error) {
+                logger.error({ error }, "Failed to load sequences");
+                toast({
+                    title: "Error Loading Sequences",
+                    description: "Could not load your sequences. Please try again.",
+                    variant: "destructive",
+                });
+            }
+        };
+
+        loadSequences();
+    }, [agentConfig?.id, toast]);
 
     // Load messages for selected sequence OR all messages
     useEffect(() => {
@@ -321,7 +410,7 @@ export default function Step11Page({
                     .single();
 
                 // Build knowledge base from intake and offer data
-                const knowledgeBase: any = {
+                const knowledgeBase: Record<string, string> = {
                     brand_voice: "",
                     product_knowledge: "",
                     objection_responses: "",
@@ -329,7 +418,7 @@ export default function Step11Page({
                 };
 
                 // Build BusinessContext and ProductKnowledge for brand voice generation
-                const businessContext: any = {
+                const businessContext: Record<string, string> = {
                     business_name: "",
                     industry: "",
                     target_audience: "",
@@ -337,7 +426,13 @@ export default function Step11Page({
                     desired_outcome: "",
                 };
 
-                const productKnowledge: any = {
+                const productKnowledge: {
+                    product_name: string;
+                    tagline: string;
+                    promise: string;
+                    features: string[];
+                    guarantee: string;
+                } = {
                     product_name: "",
                     tagline: "",
                     promise: "",
@@ -347,12 +442,23 @@ export default function Step11Page({
 
                 // Populate business context from intake data
                 if (intakeData?.extracted_data) {
-                    const extracted = intakeData.extracted_data as any;
-                    businessContext.business_name = extracted.businessName || "";
-                    businessContext.industry = extracted.industry || "";
-                    businessContext.target_audience = extracted.targetAudience || "";
-                    businessContext.main_challenge = extracted.mainProblem || "";
-                    businessContext.desired_outcome = extracted.desiredOutcome || "";
+                    const extracted = intakeData.extracted_data as Record<
+                        string,
+                        unknown
+                    >;
+                    businessContext.business_name = String(
+                        extracted.businessName || ""
+                    );
+                    businessContext.industry = String(extracted.industry || "");
+                    businessContext.target_audience = String(
+                        extracted.targetAudience || ""
+                    );
+                    businessContext.main_challenge = String(
+                        extracted.mainProblem || ""
+                    );
+                    businessContext.desired_outcome = String(
+                        extracted.desiredOutcome || ""
+                    );
                 }
 
                 // Populate product knowledge from offer data
@@ -361,7 +467,7 @@ export default function Step11Page({
                     productKnowledge.tagline = offerData.tagline || "";
                     productKnowledge.promise = offerData.promise || "";
                     productKnowledge.features = Array.isArray(offerData.features)
-                        ? offerData.features.map((f: any) =>
+                        ? offerData.features.map((f: string | { title?: string }) =>
                               typeof f === "string" ? f : f.title || ""
                           )
                         : [];
@@ -388,15 +494,17 @@ export default function Step11Page({
                     // Add features if available
                     if (offerData.features && Array.isArray(offerData.features)) {
                         productDetails.push("\nKey Features:");
-                        offerData.features.forEach((feature: any) => {
-                            const featureText =
-                                typeof feature === "string"
-                                    ? feature
-                                    : feature.title || "";
-                            if (featureText) {
-                                productDetails.push(`- ${featureText}`);
+                        offerData.features.forEach(
+                            (feature: string | { title?: string }) => {
+                                const featureText =
+                                    typeof feature === "string"
+                                        ? feature
+                                        : feature.title || "";
+                                if (featureText) {
+                                    productDetails.push(`- ${featureText}`);
+                                }
                             }
-                        });
+                        );
                     }
 
                     // Add guarantee if available
@@ -563,6 +671,7 @@ Approach:
         }
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleSaveAgentConfig = async (config: any) => {
         try {
             const method = agentConfig ? "PUT" : "POST";
@@ -621,6 +730,7 @@ Approach:
         }
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleCreateSequence = async (sequence: any) => {
         try {
             if (!agentConfig?.id) {
@@ -679,6 +789,7 @@ Approach:
         }
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleUpdateSequence = async (id: string, updates: any) => {
         try {
             const response = await fetch(`/api/followup/sequences/${id}`, {
@@ -726,6 +837,7 @@ Approach:
         }
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleCreateMessage = async (message: any) => {
         try {
             const response = await fetch(
@@ -751,6 +863,7 @@ Approach:
         }
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleUpdateMessage = async (id: string, updates: any) => {
         try {
             const response = await fetch(
@@ -821,6 +934,7 @@ Approach:
         }
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleCreateStory = async (story: any) => {
         try {
             const response = await fetch("/api/followup/stories", {
@@ -843,6 +957,7 @@ Approach:
         }
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const handleUpdateStory = async (id: string, updates: any) => {
         try {
             const response = await fetch(`/api/followup/stories/${id}`, {
@@ -913,25 +1028,36 @@ Approach:
         try {
             const supabase = createClient();
 
+            // Single query with message counts - fixes N+1 pattern
             const { data: sequencesData, error: seqError } = await supabase
                 .from("followup_sequences")
-                .select("*")
+                .select(
+                    `
+                    *,
+                    followup_messages(count)
+                `
+                )
                 .eq("agent_config_id", agentConfig.id)
                 .order("created_at", { ascending: false });
 
-            if (!seqError && sequencesData) {
-                // Get message counts for each sequence
-                const sequencesWithCount = await Promise.all(
-                    sequencesData.map(async (seq: any) => {
-                        const { count } = await supabase
-                            .from("followup_messages")
-                            .select("*", { count: "exact", head: true })
-                            .eq("sequence_id", seq.id);
+            if (seqError) {
+                logger.error({ error: seqError }, "Failed to reload sequences");
+                toast({
+                    title: "Error Reloading Sequences",
+                    description: "Could not reload sequences. Please try again.",
+                    variant: "destructive",
+                });
+                return;
+            }
 
-                        return {
-                            ...seq,
-                            message_count: count || 0,
-                        };
+            if (sequencesData) {
+                const sequencesWithCount: SequenceWithCount[] = sequencesData.map(
+                    (seq: SequenceWithCount) => ({
+                        ...seq,
+                        message_count:
+                            (
+                                seq.followup_messages as unknown as { count: number }[]
+                            )?.[0]?.count || 0,
                     })
                 );
                 setSequences(sequencesWithCount);
@@ -942,11 +1068,16 @@ Approach:
                             (s) => `${s.name}: ${s.message_count} messages`
                         ),
                     },
-                    "✅ Sequences reloaded with updated message counts"
+                    "Sequences reloaded with updated message counts"
                 );
             }
         } catch (error) {
             logger.error({ error }, "Failed to reload sequences");
+            toast({
+                title: "Error Reloading Sequences",
+                description: "Could not reload sequences. Please try again.",
+                variant: "destructive",
+            });
         }
     };
 
@@ -976,6 +1107,36 @@ Approach:
                         </p>
                     </div>
                 </div>
+            </StepLayout>
+        );
+    }
+
+    if (loadError) {
+        return (
+            <StepLayout
+                stepTitle="AI Follow-Up Engine"
+                stepDescription="Automate post-webinar engagement"
+                currentStep={11}
+                projectId={projectId}
+                completedSteps={completedSteps}
+            >
+                <Card className="p-6 border-destructive">
+                    <div className="flex flex-col items-center justify-center py-8 text-center">
+                        <div className="rounded-full h-12 w-12 bg-destructive/10 flex items-center justify-center mb-4">
+                            <span className="text-destructive text-2xl">!</span>
+                        </div>
+                        <h3 className="text-lg font-semibold text-destructive mb-2">
+                            Failed to Load Data
+                        </h3>
+                        <p className="text-muted-foreground mb-4">{loadError}</p>
+                        <Button
+                            onClick={() => window.location.reload()}
+                            variant="outline"
+                        >
+                            Try Again
+                        </Button>
+                    </div>
+                </Card>
             </StepLayout>
         );
     }

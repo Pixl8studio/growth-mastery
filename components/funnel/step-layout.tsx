@@ -16,6 +16,7 @@ import {
     getMasterStepForSubStep,
     MASTER_STEPS,
     getFirstIncompleteSubStep,
+    TOTAL_FUNNEL_STEPS,
 } from "@/app/funnel-builder/master-steps-config";
 
 interface StepLayoutProps {
@@ -38,7 +39,7 @@ interface StepLayoutProps {
 
 const getNextStepHref = (currentStep: number, projectId: string) => {
     const nextStep = currentStep + 1;
-    if (nextStep > 10) return `/funnel-builder/${projectId}`;
+    if (nextStep > TOTAL_FUNNEL_STEPS) return `/funnel-builder/${projectId}`;
     return `/funnel-builder/${projectId}/step/${nextStep}`;
 };
 
@@ -137,7 +138,7 @@ export function StepLayout({
                                 </h2>
                                 <div className="space-y-1">
                                     <p className="text-sm text-muted-foreground">
-                                        Step {currentStep} of 13
+                                        Step {currentStep} of {TOTAL_FUNNEL_STEPS}
                                     </p>
                                     {masterStep && (
                                         <p className="text-xs text-primary font-medium">
@@ -267,7 +268,7 @@ export function StepLayout({
                                 </button>
                             )}
 
-                            {currentStep < 11 ? (
+                            {currentStep < TOTAL_FUNNEL_STEPS ? (
                                 onNext ? (
                                     <button
                                         onClick={onNext}

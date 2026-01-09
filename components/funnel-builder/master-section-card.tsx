@@ -22,8 +22,8 @@ import {
 } from "@/app/funnel-builder/master-steps-config";
 import { ComingSoonBadge } from "@/components/ui/coming-soon-overlay";
 
-// Traffic Agent steps (12, 13) are coming soon - step 11 (AI Follow-Up) is now live
-const COMING_SOON_STEPS = [12, 13];
+// Only Marketing Content (step 12) is coming soon - AI Follow-Up and Meta Ads Manager are live
+const COMING_SOON_STEPS = [12];
 
 interface MasterSectionCardProps {
     masterStepId: number;
@@ -51,16 +51,13 @@ const STEPS_DATA = [
     { number: 3, title: "Brand Design", description: "Visual identity" },
     { number: 4, title: "Presentation Structure", description: "AI-generated outline" },
     { number: 5, title: "Create Presentation", description: "Generate Slides" },
-    { number: 6, title: "Enrollment Page", description: "AI sales copy" },
-    { number: 7, title: "Talk Track", description: "Video script" },
-    { number: 8, title: "Upload Video", description: "Pitch recording" },
-    { number: 9, title: "Watch Page", description: "Video landing" },
-    { number: 10, title: "Registration", description: "Lead capture" },
-    { number: 11, title: "Flow Setup", description: "Connect pages" },
-    { number: 12, title: "AI Follow-Up", description: "Smart automation" },
-    { number: 13, title: "Marketing Content", description: "Social content engine" },
-    { number: 14, title: "Ads Manager", description: "Meta/Instagram ads" },
-    { number: 15, title: "Analytics", description: "Track performance" },
+    { number: 6, title: "Upload Video", description: "Pitch recording" },
+    { number: 7, title: "Enrollment Page", description: "AI sales copy" },
+    { number: 8, title: "Watch Page", description: "Video landing" },
+    { number: 9, title: "Registration", description: "Lead capture" },
+    { number: 10, title: "AI Follow-Up", description: "Smart automation" },
+    { number: 11, title: "Meta Ads Manager", description: "Meta/Instagram ads" },
+    { number: 12, title: "Marketing Content", description: "Social content engine" },
 ];
 
 export function MasterSectionCard({

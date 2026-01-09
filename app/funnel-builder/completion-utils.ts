@@ -16,6 +16,7 @@ import {
     MASTER_STEPS,
     calculateMasterStepCompletion,
     calculateOverallCompletion,
+    TOTAL_FUNNEL_STEPS,
 } from "./master-steps-config";
 
 /**
@@ -75,8 +76,14 @@ export async function hasCompletedIntake(projectId: string): Promise<boolean> {
 }
 
 /**
- * Check completion status for all 15 steps
+ * Check completion status for all 12 steps
  * Returns which steps have actual generated content
+ *
+ * Step mapping:
+ * 1-3: Business Profile (Intake, Funnel Map, Brand Design)
+ * 4-6: Presentation Materials (Structure, Create, Upload Video)
+ * 7-9: Funnel Pages (Enrollment, Watch, Registration)
+ * 10-12: Traffic Agents (AI Follow-Up, Meta Ads Manager, Marketing Content)
  */
 export async function getStepCompletionStatus(
     projectId: string
@@ -94,7 +101,7 @@ export async function getStepCompletionStatus(
         } = await supabase.auth.getUser();
 
         if (!user) {
-            return Array.from({ length: 12 }, (_, i) => ({
+            return Array.from({ length: TOTAL_FUNNEL_STEPS }, (_, i) => ({
                 step: i + 1,
                 isCompleted: false,
                 hasContent: false,
@@ -198,21 +205,24 @@ export async function getStepCompletionStatus(
                 .eq("funnel_project_id", projectId)
                 .eq("user_id", user.id),
 
-            // Step 11: Marketing Content Briefs
-            supabase
-                .from("marketing_content_briefs")
-                .select("id", { count: "exact", head: true })
-                .eq("funnel_project_id", projectId)
-                .eq("user_id", user.id)
-                .eq("campaign_type", "organic"),
-
-            // Step 12: Ad Campaigns
+            // Step 11: Meta Ads Manager (Paid Ad Campaigns)
+            // Note: Both paid ads and organic content use marketing_content_briefs table,
+            // differentiated by campaign_type. See /app/ads-manager/page.tsx for reference.
             supabase
                 .from("marketing_content_briefs")
                 .select("id", { count: "exact", head: true })
                 .eq("funnel_project_id", projectId)
                 .eq("user_id", user.id)
                 .eq("campaign_type", "paid_ad"),
+
+            // Step 12: Marketing Content Engine (Organic content)
+            // Uses same table as Step 11 with different campaign_type filter.
+            supabase
+                .from("marketing_content_briefs")
+                .select("id", { count: "exact", head: true })
+                .eq("funnel_project_id", projectId)
+                .eq("user_id", user.id)
+                .eq("campaign_type", "organic"),
         ]);
 
         // Step 1 is completed if we have transcripts OR a business profile with completion > 0
@@ -275,27 +285,29 @@ export async function getStepCompletionStatus(
                 isCompleted: (registrationPages.count ?? 0) > 0,
                 hasContent: (registrationPages.count ?? 0) > 0,
             },
-            // Step 10 (Flow Setup) has been removed - flow is now auto-configured in Step 2
+            // Step 10: AI Follow-Up
             {
                 step: 10,
                 isCompleted: (followupConfigs.count ?? 0) > 0,
                 hasContent: (followupConfigs.count ?? 0) > 0,
             },
+            // Step 11: Meta Ads Manager
             {
                 step: 11,
-                isCompleted: (marketingBriefs.count ?? 0) > 0,
-                hasContent: (marketingBriefs.count ?? 0) > 0,
-            },
-            {
-                step: 12,
                 isCompleted: (adCampaigns.count ?? 0) > 0,
                 hasContent: (adCampaigns.count ?? 0) > 0,
+            },
+            // Step 12: Marketing Content (Coming Soon)
+            {
+                step: 12,
+                isCompleted: (marketingBriefs.count ?? 0) > 0,
+                hasContent: (marketingBriefs.count ?? 0) > 0,
             },
         ];
 
         const completedCount = completionStatus.filter((s) => s.isCompleted).length;
         requestLogger.info(
-            { completedSteps: completedCount, totalSteps: 12 },
+            { completedSteps: completedCount, totalSteps: TOTAL_FUNNEL_STEPS },
             "Step completion status retrieved"
         );
 
@@ -303,7 +315,7 @@ export async function getStepCompletionStatus(
     } catch (error) {
         requestLogger.error({ error }, "Failed to check step completion");
         // Return empty completion status on error
-        return Array.from({ length: 12 }, (_, i) => ({
+        return Array.from({ length: TOTAL_FUNNEL_STEPS }, (_, i) => ({
             step: i + 1,
             isCompleted: false,
             hasContent: false,

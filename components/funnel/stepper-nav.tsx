@@ -15,6 +15,7 @@ import {
     MASTER_STEPS,
     getMasterStepForSubStep,
     calculateMasterStepCompletion,
+    TOTAL_FUNNEL_STEPS,
 } from "@/app/funnel-builder/master-steps-config";
 
 interface Step {
@@ -37,10 +38,9 @@ const STEPS: Step[] = [
     { number: 7, title: "Enrollment Page", description: "AI sales copy" },
     { number: 8, title: "Watch Page", description: "Video landing" },
     { number: 9, title: "Registration", description: "Lead capture" },
-    { number: 10, title: "Flow Setup", description: "Connect pages" },
-    { number: 11, title: "AI Follow-Up", description: "Smart automation" },
+    { number: 10, title: "AI Follow-Up", description: "Smart automation" },
+    { number: 11, title: "Meta Ads Manager", description: "Meta/Instagram ads" },
     { number: 12, title: "Marketing Content", description: "Social content engine" },
-    { number: 13, title: "Ads Manager", description: "Meta/Instagram ads" },
 ];
 
 interface StepperNavProps {
@@ -87,8 +87,9 @@ export function StepperNav({
     }, [expandedMasterStep, onMasterStepExpanded]);
 
     // Calculate overall completion
-    const totalSteps = 13;
-    const completionPercentage = Math.round((completedSteps.length / totalSteps) * 100);
+    const completionPercentage = Math.round(
+        (completedSteps.length / TOTAL_FUNNEL_STEPS) * 100
+    );
 
     return (
         <nav className={cn("space-y-2", className)}>

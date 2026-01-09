@@ -267,7 +267,7 @@ export default function Step12Page({
             currentStep={12}
             projectId={projectId}
             completedSteps={completedSteps}
-            nextLabel="Continue to Ads Manager"
+            nextLabel="Return to Dashboard"
         >
             <ComingSoonOverlay
                 featureName="Marketing Content Engine"
@@ -278,7 +278,7 @@ export default function Step12Page({
                     <Card className="p-6 bg-gradient-to-r from-primary/5 to-purple-50">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <Share2 className="h-6 w-6 text-primary-foreground0" />
+                                <Share2 className="h-6 w-6 text-primary-foreground" />
                                 <div>
                                     <h3 className="text-lg font-semibold">
                                         Enable Marketing Content Engine

@@ -25,6 +25,7 @@ vi.mock("@/app/funnel-builder/master-steps-config", () => ({
         totalCount: 1,
         percentage: 0,
     })),
+    TOTAL_FUNNEL_STEPS: 12,
 }));
 
 describe("StepperNav", () => {
@@ -42,7 +43,7 @@ describe("StepperNav", () => {
     it("should display completion percentage", () => {
         render(<StepperNav {...defaultProps} completedSteps={[1, 2]} />);
 
-        expect(screen.getByText(/15%/)).toBeInTheDocument(); // 2/13 steps
+        expect(screen.getByText(/17%/)).toBeInTheDocument(); // 2/12 steps = 16.67% rounds to 17%
     });
 
     it("should render step navigation", () => {

@@ -3,6 +3,12 @@
  * Defines the 5 master steps and their sub-step mappings
  */
 
+/**
+ * Total number of funnel steps in the wizard.
+ * Update this constant when adding or removing steps.
+ */
+export const TOTAL_FUNNEL_STEPS = 12;
+
 export interface MasterStepConfig {
     id: number;
     title: string;

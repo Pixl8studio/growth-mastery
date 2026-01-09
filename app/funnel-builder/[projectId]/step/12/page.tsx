@@ -267,7 +267,7 @@ export default function Step12Page({
             currentStep={12}
             projectId={projectId}
             completedSteps={completedSteps}
-            nextLabel="Continue to Ads Manager"
+            nextLabel="Return to Dashboard"
         >
             <ComingSoonOverlay
                 featureName="Marketing Content Engine"

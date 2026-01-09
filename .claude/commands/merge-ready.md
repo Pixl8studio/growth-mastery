@@ -1,19 +1,33 @@
 ---
 description: Automate PR iteration until code reviewer approves - autonomous merge readiness
 argument-hint: [pr-number]
-version: 1.2.0
+version: 2.0.0
 ---
 
 # /merge-ready - Autonomous Merge Readiness Agent
 
 <objective>
-Iterate on a PR autonomously until the code reviewer gives approval. You take over after
-the user has reviewed the Vercel preview and approved the UX. Your job is to handle all
-the technical feedback cycles until the PR is ready to merge.
+Iterate on a PR autonomously until the code reviewer gives approval with NO critical or
+medium priority concerns. You are the careful owner of this codebase - your job is to
+ensure imperfect code never reaches users.
 
 This command removes the human from the code review feedback loop. The user designs,
-reviews UX, and approves the merge. You handle everything in between.
+reviews UX, and approves the merge. You handle everything in between with expert
+precision and thoroughness.
 </objective>
+
+<ownership-mindset>
+You are not just processing feedback - you are the guardian of code quality. Act like a
+careful owner who:
+
+- Never lets critical or even medium concerns pass by
+- Double-checks everything with expert precision
+- Reviews proactively rather than just reacting to feedback
+- Ensures users get the absolute best platform
+- Takes pride in delivering clean, well-tested code
+
+This is not about "getting to approval" - it's about deserving approval.
+</ownership-mindset>
 
 <user-provides>
 Optional PR number (auto-detects from current branch if not provided)
@@ -21,10 +35,12 @@ Optional PR number (auto-detects from current branch if not provided)
 
 <command-delivers>
 A PR that has:
-1. Code reviewer verdict of "APPROVE" or "APPROVE with minor suggestions"
-2. No Vercel build errors
-3. Any required Supabase migrations applied
-4. A GitHub issue documenting completion and merge readiness
+1. Code reviewer verdict of "APPROVE" with NO critical or medium concerns
+2. Your own comprehensive review completed and issues addressed
+3. All Vercel build errors resolved
+4. Local validation passing (type-check, tests, build)
+5. Any required Supabase migrations applied
+6. A GitHub issue documenting completion and merge readiness
 </command-delivers>
 
 ## Usage
@@ -71,8 +87,103 @@ Detect or create the PR:
 4. Store the PR number for all subsequent operations
 </pr-detection>
 
+<proactive-upfront-review>
+## CRITICAL: Proactive Review Phase
+
+BEFORE entering the iteration loop, perform your own comprehensive review. Never wait for
+the code reviewer to find issues you could have caught yourself.
+
+### Step 1: Gather Changed Files
+
+Identify all files changed in this PR:
+```bash
+git diff origin/main --name-only
+```
+
+### Step 2: Run Your Own Code Reviewer
+
+Launch the code-reviewer agent on the PR changes:
+
+```
+Task: code-reviewer agent
+Prompt: Review all changes in this PR comprehensively. Check for:
+- Architecture and design pattern issues
+- Security vulnerabilities
+- Performance problems (N+1 queries, unnecessary re-renders)
+- Error handling gaps (silent failures, missing user feedback)
+- Type safety issues (any types, missing interfaces)
+- Race conditions and async issues
+- Code organization and maintainability
+- Test coverage gaps
+
+Review ENTIRE FILES that were modified, not just the diff. Pre-existing issues
+in touched files should be identified and fixed.
+
+Provide specific file:line references for all concerns.
+```
+
+### Step 3: Run Specialized Agents Based on Changes
+
+Analyze what types of files changed and run appropriate specialized agents IN PARALLEL:
+
+| Files Changed | Agent to Run |
+|--------------|--------------|
+| API routes, data fetching | performance-reviewer |
+| Auth, user data, external APIs | security-reviewer |
+| try/catch blocks, error states | error-handling-reviewer |
+| React components, UI | design-reviewer |
+| Database queries, migrations | architecture-auditor |
+| Test files | test-analyzer |
+
+Launch all applicable agents simultaneously for efficiency.
+
+### Step 4: Consolidate and Fix Issues
+
+Combine findings from all agents. For each issue found:
+
+1. **Categorize**: Critical, Medium, or Low priority
+2. **Fix immediately**: All Critical and Medium issues
+3. **Document**: Low priority issues in a comment for future improvement
+
+### Step 5: Run Local Validation
+
+Before pushing ANY changes, run the full local validation suite:
+
+```bash
+pnpm type-check && pnpm test && pnpm build
+```
+
+If any validation fails:
+1. Fix the issues
+2. Re-run validation until it passes
+3. Only then proceed to commit and push
+
+### Step 6: Commit and Push Your Fixes
+
+After fixing all issues found in your proactive review:
+
+```bash
+git add -A
+git commit -m "$(cat <<'EOF'
+♻️ Proactive code quality improvements
+
+Fixes from comprehensive self-review before code reviewer iteration:
+- [List each fix made]
+- [Include file:line references]
+
+Specialized reviews completed:
+- [List agents run and key findings addressed]
+EOF
+)"
+git push
+```
+
+This proactive phase typically catches 60-80% of issues the code reviewer would find,
+reducing total iterations significantly.
+</proactive-upfront-review>
+
 <initial-status-check>
-Before entering the loop, gather current state:
+After your proactive review is complete, gather current state:
 
 1. **Check Vercel deployment status** from the vercel[bot] comment:
    ```bash
@@ -81,21 +192,29 @@ Before entering the loop, gather current state:
    ```
    Look for "Ready" status in the deployment table.
 
-2. **Check for existing code review** from claude[bot]:
+2. **Verify Vercel build succeeded**:
+   If deployment shows "Error", fix the build issue BEFORE proceeding:
+   - Check deployment logs via Vercel dashboard
+   - Parse and fix the error
+   - Push the fix
+   - Wait for successful deployment
+
+3. **Check for existing code review** from claude[bot]:
    ```bash
    curl -s "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
      jq -r '.[] | select(.user.login == "claude[bot]") | .body' | tail -1
    ```
 
-3. Parse the verdict from the most recent claude[bot] comment:
+4. Parse the verdict from the most recent claude[bot] comment:
    - Look for `## 🎯 Verdict:` section
    - Extract verdict type: `REQUEST CHANGES`, `APPROVE`, `APPROVE with minor suggestions`
 
-If already approved with no build errors, skip to completion phase.
+If already approved with no critical/medium concerns and no build errors, skip to
+completion phase.
 </initial-status-check>
 
 <iteration-loop>
-Repeat until approved:
+Repeat until approved with NO critical or medium concerns:
 
 ### Step 1: Wait for Analysis (if not yet available)
 
@@ -114,137 +233,156 @@ Use adaptive polling with increasing intervals to reduce API load:
 | 7-10    | 90 seconds | 10.5 min |
 | 11-12   | 120 seconds | 14.5 min |
 
-Maximum wait: 15 minutes (12 poll attempts). For large PRs with extensive changes,
-the code reviewer may take longer to analyze.
+Maximum wait: 15 minutes (12 poll attempts).
+
+### Step 2: Parse ALL Feedback
+
+Extract ALL actionable items from the code reviewer analysis:
+
+**MUST FIX (Every Iteration)**:
+- Items in "Must Fix", "Critical Issues", or "Critical" sections
+- Items in "Should Fix", "Medium Issues", or "Medium Priority" sections
+- ANY Vercel build errors
+
+**FIX IF APPLICABLE**:
+- "Low Priority" or "Nitpicks" items that suggest new tests should be created
+- "Suggestions" that recommend adding test coverage
+
+**DOCUMENT FOR LATER** (only if not blocking approval):
+- Other low priority items
+- Nice-to-have suggestions that don't affect approval
+
+### Step 3: Verify Vercel Build Status
+
+BEFORE fixing code issues, check the Vercel deployment status:
 
 ```bash
-# Check for claude[bot] comment count
-COMMENT_COUNT=$(curl -s "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
-  jq -r '[.[] | select(.user.login == "claude[bot]")] | length')
-
-# Compare with previous count to detect new analysis
-if [ "$COMMENT_COUNT" -gt "$PREVIOUS_COUNT" ]; then
-  echo "New code review available"
-fi
+curl -s "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
+  jq -r '.[] | select(.user.login == "vercel[bot]") | .body' | tail -1
 ```
 
-If timeout reached without new analysis, report status and suggest manual check.
+If deployment shows "Error":
+1. **STOP** - Fix the build error first
+2. Parse the error from Vercel logs
+3. Fix the underlying issue
+4. Run local validation: `pnpm type-check && pnpm build`
+5. Commit and push the fix
+6. Wait for successful deployment before continuing
 
-### Step 2: Parse Feedback
+Build errors block ALL progress. Never proceed with other fixes while build is broken.
 
-Extract actionable items from the code reviewer analysis:
+### Step 4: Address ALL Critical and Medium Issues
 
-**Must Fix (Blocking)**: Items in the "Must Fix" or "Critical Issues" sections
-**Should Fix (High Priority)**: Items in "Should Fix" or "Medium Issues" sections
-
-Skip "Nice to Have" and "Low Priority" items - these don't block approval.
-
-Also check for Vercel build errors by examining deployment status.
-
-### Step 3: Address Issues
-
-For each blocking issue:
+For EACH blocking issue (critical AND medium priority):
 
 1. **Understand the concern**: Read the code reviewer's analysis carefully
 2. **Locate the code**: Use the file paths and line numbers provided
-3. **Fix the issue**: Follow /autotask and /ai-coding-config development standards
-4. **Verify the fix**: Run relevant tests if applicable
+3. **Review the ENTIRE file**: Look for similar issues, not just the reported line
+4. **Fix the issue**: Follow /autotask and /ai-coding-config development standards
+5. **Verify the fix**: Run relevant tests if applicable
 
 Use the same development patterns you used for the original implementation - you have
 full context from this session.
 
-### Step 4: Commit and Push
+**Important**: Do NOT skip medium priority concerns. These represent real code quality
+issues that will affect users. Fix them in the same iteration as critical issues.
 
-After fixing all blocking issues:
+### Step 5: Run Local Validation BEFORE Pushing
+
+After fixing all issues, run the complete validation suite:
+
+```bash
+pnpm type-check && pnpm test && pnpm build
+```
+
+This catches issues before they reach Vercel:
+- Type errors that would fail the build
+- Test failures that indicate broken functionality
+- Build errors from import/export issues
+
+**If validation fails**:
+1. Fix the issues
+2. Re-run validation
+3. Only commit and push when ALL validations pass
+
+### Step 6: Commit and Push
+
+After ALL fixes are complete AND local validation passes:
 
 ```bash
 git add -A
 git commit -m "$(cat <<'EOF'
-♻️ Address code reviewer concerns
+♻️ Address code reviewer concerns - iteration N
 
-- [List each fix made]
-- [Reference specific concerns by number if applicable]
+Critical issues fixed:
+- [List each critical fix]
+
+Medium priority issues fixed:
+- [List each medium fix]
+
+Low priority / tests added:
+- [List if applicable]
+
+All local validations passing (type-check, test, build).
 EOF
 )"
 git push
 ```
 
-For security fixes, use the security emoji:
-```bash
-git commit -m "🔒 Fix security vulnerability from code review"
-```
-
 Follow project commit conventions from `.cursor/rules/git-interaction.mdc`.
 
-### Step 5: Wait for Re-analysis
+### Step 7: Verify Vercel Build After Push
 
-After pushing:
-- Vercel will redeploy (typically 1-2 minutes)
+After EVERY push, verify the Vercel deployment succeeds:
+
+```bash
+# Wait for deployment to start (30 seconds)
+sleep 30
+
+# Poll for deployment status
+curl -s "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
+  jq -r '.[] | select(.user.login == "vercel[bot]") | .body' | tail -1
+```
+
+If deployment shows "Error":
+1. **Immediately investigate** - Don't wait for code reviewer
+2. Parse the build error
+3. Fix and push
+4. Verify deployment succeeds before continuing
+
+Only proceed to waiting for code reviewer after deployment shows "Ready".
+
+### Step 8: Wait for Re-analysis
+
+After pushing AND verifying deployment:
 - Code reviewer will re-analyze (typically 2-3 minutes)
 
 Wait at least 3 minutes before checking for new analysis. Poll for the NEW claude[bot]
 comment (compare timestamps or comment counts).
 
-### Step 6: Check New Verdict
+### Step 9: Check New Verdict
 
 Parse the latest code reviewer comment for the new verdict.
 
-#### Verified Verdict Formats
+#### Verdict Evaluation
 
-Based on actual claude[bot] output analysis, the verdict appears in this format:
+The goal is not just "APPROVE" but "APPROVE with NO critical or medium concerns".
 
-```markdown
-## 🎯 Verdict: **VERDICT_TEXT**
-```
+**Check the concerns section** even if verdict is "APPROVE":
+- Are there any remaining "Critical" issues? → Fix them
+- Are there any remaining "Medium Priority" issues? → Fix them
+- Are there only "Low Priority" or "Suggestions"? → Acceptable
 
-**Observed verdict values** (from PR #416 and similar):
-- `REQUEST CHANGES` - Has blocking issues that must be fixed
-- `APPROVE` - Full approval, no concerns
-- `⚠️ REQUEST CHANGES` - Variant with warning emoji (treat as REQUEST CHANGES)
+**Continue iterating** if:
+- Verdict is `REQUEST CHANGES`
+- Verdict is `APPROVE with minor fixes` and fixes are critical/medium
+- Any critical or medium concerns remain
 
-**Parsing logic with fallback**:
-```bash
-# Extract verdict from claude[bot] comment
-VERDICT=$(echo "$COMMENT_BODY" | grep -oP '(?<=## 🎯 Verdict: \*\*)[^*]+' | head -1)
-
-# Fallback: try without emoji
-if [ -z "$VERDICT" ]; then
-  VERDICT=$(echo "$COMMENT_BODY" | grep -oP '(?<=Verdict: \*\*)[^*]+' | head -1)
-fi
-
-# Normalize variations
-VERDICT=$(echo "$VERDICT" | sed 's/^⚠️ //')  # Remove leading warning emoji
-
-# Decision logic
-case "$VERDICT" in
-  "REQUEST CHANGES")
-    echo "Continue iterating"
-    ;;
-  "APPROVE"|"APPROVE with minor suggestions")
-    echo "Success - proceed to completion"
-    ;;
-  *)
-    echo "Unknown verdict: $VERDICT - treating as needs review"
-    # Fallback: check for approval keywords in comment body
-    if echo "$COMMENT_BODY" | grep -qi "ready to merge\|lgtm\|ship it"; then
-      echo "Detected approval language - proceeding"
-    else
-      echo "Continuing iteration to be safe"
-    fi
-    ;;
-esac
-```
-
-**Continue iterating** (not yet approved):
-- `REQUEST CHANGES` - Has blocking issues to address
-- Unknown/unparseable verdict - Continue to be safe
-
-**Success** (proceed to completion):
-- `APPROVE` - Full approval
-- `APPROVE with minor suggestions` - Approved with optional improvements
-
-**Important**: If verdict parsing fails consistently, report the raw verdict text to the
-user and ask for manual interpretation. Don't infinite loop on parsing errors.
+**Success** (proceed to completion) if:
+- Verdict is `APPROVE`
+- NO critical concerns remain
+- NO medium priority concerns remain
+- Vercel build is successful
 
 </iteration-loop>
 
@@ -331,14 +469,22 @@ curl -s -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_ID}/dat
 </database-migrations>
 
 <completion>
-When the code reviewer verdict is "APPROVE" or "APPROVE with minor suggestions":
+When the code reviewer verdict is "APPROVE" with NO critical or medium concerns:
 
-### 1. Final Verification
+### 1. Final Verification Checklist
 
-Confirm:
-- Vercel deployment shows "Ready" status
-- No build errors in deployment
-- Code reviewer verdict is approval
+Before declaring merge-ready, verify ALL of the following:
+
+- [ ] Vercel deployment shows "Ready" status
+- [ ] NO build errors in deployment
+- [ ] Code reviewer verdict is "APPROVE"
+- [ ] NO critical concerns remain in the review
+- [ ] NO medium priority concerns remain in the review
+- [ ] Local validation passes: `pnpm type-check && pnpm test && pnpm build`
+- [ ] All tests pass
+- [ ] No TypeScript errors
+
+If ANY item fails, return to the iteration loop.
 
 ### 2. Create Completion Issue
 
@@ -360,7 +506,7 @@ else
     -d "$(cat <<'EOF'
 {
   "title": "✅ PR #{pr_number} Ready to Merge: {pr_title}",
-  "body": "## Merge Ready Summary\n\n**PR:** #{pr_number}\n**Branch:** {branch_name}\n\n### What Was Done\n{summary_of_changes}\n\n### Code Review Iterations\n{number_of_iterations} iteration(s) to reach approval\n\n### Issues Addressed\n{list_of_issues_fixed}\n\n### Why It's Merge Ready\n- Code reviewer verdict: **APPROVE**\n- Vercel preview: **Deployed successfully**\n- All blocking concerns resolved\n- Database migrations applied (if any)\n\n### Next Steps\n1. Review the PR at: {pr_url}\n2. Merge when ready\n3. Close this issue after merge",
+  "body": "## Merge Ready Summary\n\n**PR:** #{pr_number}\n**Branch:** {branch_name}\n\n### Proactive Review Completed\n- Code reviewer agent: ✅\n- Specialized agents run: {list_of_agents}\n- Pre-existing issues in modified files: Addressed\n\n### What Was Done\n{summary_of_changes}\n\n### Code Review Iterations\n{number_of_iterations} iteration(s) to reach approval\n\n### Issues Addressed\n\n**Critical:**\n{critical_issues_fixed}\n\n**Medium Priority:**\n{medium_issues_fixed}\n\n### Validation\n- Local type-check: ✅\n- Local tests: ✅\n- Local build: ✅\n- Vercel deployment: ✅\n\n### Why It's Merge Ready\n- Code reviewer verdict: **APPROVE**\n- NO critical concerns remaining\n- NO medium priority concerns remaining\n- All local validations passing\n- Vercel preview deployed successfully\n\n### Next Steps\n1. Review the PR at: {pr_url}\n2. Merge when ready\n3. Close this issue after merge",
   "labels": ["merge-ready", "automated"]
 }
 EOF
@@ -401,10 +547,24 @@ PR: {title}
 URL: {pr_url}
 
 Vercel Preview: {preview_url}
-Code Review Verdict: APPROVE
+Code Review Verdict: APPROVE ✅
+Critical Concerns: 0
+Medium Concerns: 0
+
+Proactive Review: Completed
+- Code reviewer agent: ✅
+- Specialized agents: {list}
+- Pre-existing issues: Addressed
 
 Iterations: {count}
-Issues Fixed: {list}
+Issues Fixed:
+  Critical: {critical_list}
+  Medium: {medium_list}
+
+Local Validation:
+  type-check: ✅
+  test: ✅
+  build: ✅
 
 GitHub Issue Created: {issue_url}
 
@@ -421,11 +581,21 @@ The PR is ready for your final review and merge.
 <vercel-build-errors>
 If Vercel deployment fails:
 
+**This is a BLOCKING issue. Handle immediately.**
+
 1. Check deployment logs via Vercel MCP tools or the Vercel dashboard
 2. Parse the error message
 3. Fix the build issue (usually TypeScript errors, missing dependencies, etc.)
-4. Push the fix and wait for redeployment
-5. Continue the iteration loop
+4. Run local validation: `pnpm type-check && pnpm build`
+5. Push the fix
+6. Wait for redeployment and verify success
+7. Only then continue the iteration loop
+
+Common build errors and fixes:
+- **Type errors**: Fix the TypeScript issue, may require reading the file
+- **Import errors**: Check for circular dependencies, missing exports
+- **Server/Client boundary**: Don't import "use server" exports into client components
+- **Missing dependencies**: Run `pnpm install`
 </vercel-build-errors>
 
 <connection-issues>
@@ -441,76 +611,123 @@ again. The command will:
 <stuck-iterations>
 If the code reviewer keeps finding new issues after 5+ iterations:
 
-### Concrete Recovery Steps
+### Root Cause Analysis
 
-**At 5 iterations**: Pause and analyze the pattern
+At 5 iterations, pause and analyze:
 
 ```
 ⚠️ ITERATION CHECK: 5 attempts without approval
 
 Pattern Analysis:
 - Are issues in the same file/area? → Possible architectural problem
-- Are issues different each time? → May be chasing edge cases
-- Are issues getting more minor? → Progress is being made
-- Are issues severity increasing? → Fixes may be introducing bugs
+- Are issues different each time? → May be introducing new bugs while fixing
+- Are medium priority issues being skipped? → FIX THEM - they're required
+- Is the proactive review being thorough? → Expand agent coverage
 ```
 
-**At 7 iterations**: Create a summary issue and notify user
+### Self-Check Questions
 
-```bash
-# Create issue documenting the iteration pattern
-curl -X POST "https://api.github.com/repos/Pixl8studio/growth-mastery/issues" \
-  -H "Authorization: Bearer ${GITHUB_TOKEN}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "🔄 PR #X requires attention - 7+ review iterations",
-    "body": "## Iteration Summary\n\n**Iterations:** 7\n**PR:** #X\n\n### Issue Pattern\n[List recurring themes]\n\n### Recommendation\n[Architectural review / design discussion / scope reduction]\n\n### Options\n1. Continue iterating (may need 3-5 more)\n2. Schedule design review\n3. Split PR into smaller changes",
-    "labels": ["needs-attention", "review-stuck"]
-  }'
-```
+1. Am I running local validation before EVERY push?
+2. Am I fixing ALL medium priority issues, not just critical?
+3. Am I reviewing entire files, not just reported lines?
+4. Am I running specialized agents appropriate to the changes?
+5. Am I verifying Vercel build after EVERY push?
 
-**At 10 iterations**: Mandatory pause
+### Recovery Actions
 
-Stop iteration and report to user:
+If patterns indicate issues:
+
+**Architectural problems**: Run architecture-auditor agent on the affected area
+**Introducing new bugs**: Run comprehensive test coverage, add missing tests
+**Missing context**: Re-read the entire file, understand the full picture
+**Type issues**: Add proper interfaces instead of using `any`
+
+### Escalation
+
+At 10 iterations without approval:
+
 ```
 ═══════════════════════════════════════════════════════════════
-           ⚠️ MERGE-READY PAUSED: Manual Review Required
+           ⚠️ MERGE-READY: Extended Iteration Required
 ═══════════════════════════════════════════════════════════════
 
 After 10 iterations, approval has not been achieved.
 
-Summary:
+Analysis:
 - Total iterations: 10
-- Issues addressed: [count]
+- Critical issues addressed: [count]
+- Medium issues addressed: [count]
 - Recurring patterns: [list]
 
-Recommendation: This PR may need:
-□ Architectural review before continuing
-□ Scope reduction (split into smaller PRs)
-□ Design discussion with stakeholders
+Self-Assessment:
+- Local validation running: Yes/No
+- Medium priority being fixed: Yes/No
+- Proactive review completed: Yes/No
+- Entire files reviewed: Yes/No
 
-PR URL: {url}
-Review issue created: {issue_url}
+Recommendation:
+[Based on pattern analysis, suggest specific action]
 
-Run /merge-ready {pr} to resume after addressing root cause.
+Continuing to iterate with expanded review focus...
 ═══════════════════════════════════════════════════════════════
 ```
 
+Do NOT stop at 10 iterations. Continue with more thorough review:
+- Expand specialized agent coverage
+- Review related files that might be affected
+- Add comprehensive test coverage for edge cases
+
+The goal is excellent code, not a quick exit.
+
 ### Declining Invalid Feedback
 
-If code reviewer feedback seems incorrect (per /address-pr-comments patterns):
+If code reviewer feedback is genuinely incorrect:
 
-1. Add thumbs-down reaction to the comment
-2. Reply with explanation of why feedback doesn't apply
-3. Document the decline in your commit message
-4. Continue to next iteration - reviewer will re-evaluate
+1. Verify your understanding by reading the code carefully
+2. Check if the feedback contradicts project requirements
+3. Add thumbs-down reaction to the comment
+4. Reply with detailed explanation of why feedback doesn't apply
+5. Document the decline in your commit message
+6. Continue to next iteration - reviewer will re-evaluate
 
 Valid decline reasons:
 - Bot lacks context about project requirements
 - Suggestion contradicts explicit user requirements
-- Issue is a false positive (code is correct)
+- Issue is a false positive (code is correct, explain why)
 - Suggestion would break existing functionality
+
+**Invalid decline reasons**:
+- "It would take too long to fix" - Fix it anyway
+- "It's not that important" - If it's medium priority, it IS important
+- "The existing code was like this" - Fix pre-existing issues too
 </stuck-iterations>
+
+---
+
+## Development Standards
+
+This command MUST follow development standards from:
+
+- **/autotask**: PR creation, validation, and development standards
+- **/ai-coding-config**: Coding best practices and patterns
+
+Key standards to uphold:
+
+**From autotask.md**:
+- Run code review agent before creating PR (now: before EVERY iteration)
+- Adaptive validation: Intensity matches task risk
+- Fix what agents find before proceeding
+
+**From ai-coding-config.md**:
+- Prefer native tools over bash for file inspection
+- Never change working directory with `cd`
+- Work conversationally, not robotically
+
+**From project CLAUDE.md**:
+- Use pnpm not npm
+- Use Supabase RLS policies for all table security
+- Never skip git hooks with `--no-verify`
+- Follow emoji commit prefixes
 
 ---
 
@@ -617,10 +834,11 @@ To prevent runaway processes:
 |-------|---------|-------------------|
 | Wait for analysis | 15 minutes | Report and suggest manual check |
 | Single iteration | 30 minutes | Report partial progress |
-| Total execution | 2 hours | Mandatory pause, create summary issue |
+| Total execution | No limit | Continue until excellent |
 
-The 2-hour total timeout provides a safety net. Most PRs should reach approval in
-30-60 minutes (2-4 iterations).
+Unlike previous versions, there is NO total execution timeout. The goal is excellent
+code quality, not a quick exit. Continue iterating until the code truly deserves
+approval.
 </timeouts>
 
 ---
@@ -643,17 +861,35 @@ or
 
 Extract the text after "Verdict:" to determine status.
 
-### Extracting Blocking Issues
+### Extracting ALL Concerns
 
-Look for sections labeled:
-- "Must Fix (Blocking)"
-- "Critical Issues"
-- "Should Fix" / "Medium Issues" (address these too for full approval)
+Look for ALL of these sections:
+- "Must Fix (Blocking)" / "Critical Issues" / "Critical" → **Fix**
+- "Should Fix" / "Medium Issues" / "Medium Priority" → **Fix**
+- "Low Priority" / "Nitpicks" → Fix if about adding tests
+- "Suggestions" → Fix if about test coverage
 
-Each concern typically includes:
-- File path and line numbers
-- Description of the issue
-- Suggested fix or code snippet
+### Priority Determination
+
+If the code reviewer doesn't clearly label priority, use this heuristic:
+
+**Critical** (always fix):
+- Security vulnerabilities
+- Data loss potential
+- Build failures
+- Runtime errors/crashes
+
+**Medium** (always fix):
+- Performance issues (N+1 queries, etc.)
+- Type safety issues (`any` types)
+- Error handling gaps
+- Race conditions
+- Missing validation
+
+**Low** (fix if about tests):
+- Code style suggestions
+- Minor refactoring suggestions
+- Documentation improvements
 
 ### Using Vercel MCP Tools
 
@@ -682,13 +918,21 @@ Follow all project standards from CLAUDE.md and loaded rules.
 ## Philosophy
 
 This command embodies the vision of removing humans from the tedious parts of
-development. The user's time is best spent on:
+development while maintaining the highest quality standards. The user's time is best
+spent on:
 - Design thinking
 - UX review
 - Strategic decisions
 
-The iteration loop between "code written" and "code approved" is mechanical. That's what
-this agent automates.
+You handle the technical excellence. Your job is to be:
 
-Your job is to be thorough, patient, and persistent. Keep iterating until the code
-reviewer says approve. Don't shortcut the process - earn the approval.
+**Thorough**: Review proactively, don't just react to feedback
+**Careful**: Fix ALL critical and medium concerns, not just some
+**Precise**: Run local validation before every push
+**Vigilant**: Verify Vercel builds after every push
+**Persistent**: Keep iterating until the code is truly excellent
+
+This is not about "getting to approval" - it's about delivering code that you're proud
+of. Code that you would stake your reputation on. Code that our users deserve.
+
+Never let imperfect code reach users. You are the guardian of quality.

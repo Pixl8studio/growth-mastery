@@ -5,7 +5,7 @@
  * Create and manage registration pages with visual editor integration
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
@@ -18,11 +18,21 @@ import {
     Sparkles,
     Loader2,
     ArrowRight,
+    X,
+    HelpCircle,
+    Check,
+    Circle,
 } from "lucide-react";
 import { logger } from "@/lib/client-logger";
 import { createClient } from "@/lib/supabase/client";
 import { useStepCompletion } from "@/app/funnel-builder/use-completion";
 import { useToast } from "@/components/ui/use-toast";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface DeckStructure {
     id: string;
@@ -67,6 +77,48 @@ interface UnifiedRegistrationPage {
     vanity_slug?: string | null;
 }
 
+// Progress stages for generation
+interface ProgressStage {
+    id: string;
+    label: string;
+    status: "pending" | "in_progress" | "completed";
+}
+
+const GENERATION_STAGES: ProgressStage[] = [
+    { id: "context", label: "Loading business context", status: "pending" },
+    {
+        id: "presentation",
+        label: "Analyzing presentation content",
+        status: "pending",
+    },
+    { id: "brand", label: "Applying brand design", status: "pending" },
+    { id: "headline", label: "Generating compelling headline", status: "pending" },
+    { id: "benefits", label: "Creating benefit sections", status: "pending" },
+    { id: "form", label: "Building registration form", status: "pending" },
+    { id: "finalize", label: "Finalizing page", status: "pending" },
+];
+
+const TEMPLATE_OPTIONS = [
+    {
+        value: "high-conversion",
+        label: "High Conversion",
+        description:
+            "Urgency-focused with countdown timer and scarcity elements. Perfect for maximizing registrations with compelling CTAs.",
+    },
+    {
+        value: "minimal-clean",
+        label: "Minimal & Clean",
+        description:
+            "Simple, distraction-free layout focusing on core value proposition. Ideal for professional or B2B audiences.",
+    },
+    {
+        value: "story-driven",
+        label: "Story Driven",
+        description:
+            "Narrative approach highlighting transformation and social proof. Great for building emotional connection.",
+    },
+] as const;
+
 export default function Step9RegistrationPage({
     params,
 }: {
@@ -82,15 +134,72 @@ export default function Step9RegistrationPage({
     const [aiEditorPages, setAiEditorPages] = useState<AIEditorPage[]>([]);
     const [isCreating, setIsCreating] = useState(false);
     const [isMigrating, setIsMigrating] = useState<string | null>(null);
+    const [progressStages, setProgressStages] = useState<ProgressStage[]>([]);
+    const [showCreateForm, setShowCreateForm] = useState(false);
+    const [formData, setFormData] = useState({
+        deckStructureId: "",
+        templateType: "high-conversion" as
+            | "high-conversion"
+            | "minimal-clean"
+            | "story-driven",
+    });
+
+    // Load completion status
+    const { completedSteps } = useStepCompletion(projectId);
+
+    // Simulate progress stages with realistic timing
+    const simulateProgress = useCallback(async (): Promise<void> => {
+        const stages = [...GENERATION_STAGES];
+        setProgressStages(stages);
+
+        // Timing for each stage (in ms) - total ~25-35 seconds
+        const stageTiming = [
+            1500, // Loading business context
+            2000, // Analyzing presentation content
+            2500, // Applying brand design
+            8000, // Generating compelling headline (longest)
+            5000, // Creating benefit sections
+            4000, // Building registration form
+            2000, // Finalizing page
+        ];
+
+        for (let i = 0; i < stages.length; i++) {
+            // Mark current stage as in_progress
+            setProgressStages((prev) =>
+                prev.map((s, idx) => ({
+                    ...s,
+                    status:
+                        idx < i ? "completed" : idx === i ? "in_progress" : "pending",
+                }))
+            );
+
+            await new Promise((resolve) => setTimeout(resolve, stageTiming[i]));
+        }
+
+        // Mark all as completed
+        setProgressStages((prev) =>
+            prev.map((s) => ({ ...s, status: "completed" as const }))
+        );
+    }, []);
 
     // Handle Generate Registration Page (AI Editor)
     const handleGenerate = async () => {
-        if (!projectId) return;
+        if (!projectId || !formData.deckStructureId) return;
 
         setIsCreating(true);
+        const startTime = Date.now();
+
+        // Start progress simulation in parallel with API call
+        const progressPromise = simulateProgress();
+
         try {
             logger.info(
-                { projectId, pageType: "registration" },
+                {
+                    projectId,
+                    pageType: "registration",
+                    deckId: formData.deckStructureId,
+                    templateStyle: formData.templateType,
+                },
                 "Creating registration page with AI editor"
             );
 
@@ -100,6 +209,8 @@ export default function Step9RegistrationPage({
                 body: JSON.stringify({
                     projectId,
                     pageType: "registration",
+                    deckId: formData.deckStructureId,
+                    templateStyle: formData.templateType,
                 }),
             });
 
@@ -107,6 +218,20 @@ export default function Step9RegistrationPage({
 
             if (!response.ok) {
                 throw new Error(data.error || data.details || "Failed to create page");
+            }
+
+            const elapsed = Date.now() - startTime;
+
+            // If API completed quickly (under 15 seconds), fast-forward progress
+            if (elapsed < 15000) {
+                setProgressStages((prev) =>
+                    prev.map((s) => ({ ...s, status: "completed" as const }))
+                );
+                // Small delay so user sees completion
+                await new Promise((resolve) => setTimeout(resolve, 500));
+            } else {
+                // Otherwise wait for progress simulation to finish naturally
+                await progressPromise;
             }
 
             logger.info({ pageId: data.pageId }, "Registration page created");
@@ -123,6 +248,10 @@ export default function Step9RegistrationPage({
             };
             setAiEditorPages((prev) => [newPage, ...prev]);
 
+            // Reset form and close
+            setShowCreateForm(false);
+            setProgressStages([]);
+
             toast({
                 title: "Registration page created!",
                 description: "Opening the AI Editor in a new tab...",
@@ -132,6 +261,7 @@ export default function Step9RegistrationPage({
             window.open(`/ai-editor/${data.pageId}`, "_blank");
         } catch (error: any) {
             logger.error({ error }, "Failed to create registration page");
+            setProgressStages([]);
             toast({
                 variant: "destructive",
                 title: "Error",
@@ -207,9 +337,6 @@ Please create an improved registration page that captures the same messaging but
         }
     };
 
-    // Load completion status
-    const { completedSteps } = useStepCompletion(projectId);
-
     // Redirect mobile users to desktop-required page
     useEffect(() => {
         if (isMobile && projectId) {
@@ -269,6 +396,14 @@ Please create an improved registration page that captures the same messaging but
 
                 if (deckError) throw deckError;
                 setDeckStructures(deckData || []);
+
+                // Auto-select first deck
+                if (deckData && deckData.length > 0) {
+                    setFormData((prev) => ({
+                        ...prev,
+                        deckStructureId: deckData[0].id,
+                    }));
+                }
 
                 // Load registration pages
                 const { data: pagesData, error: pagesError } = await supabase
@@ -394,40 +529,234 @@ Please create an improved registration page that captures the same messaging but
                     />
                 )}
 
-                {/* Generate Button */}
-                <div className="rounded-lg border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-8">
-                    <div className="flex flex-col items-center gap-4 text-center">
-                        <button
-                            onClick={handleGenerate}
-                            disabled={!hasDeckStructure || isCreating}
-                            className={`flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
-                                hasDeckStructure && !isCreating
-                                    ? "bg-green-600 text-white hover:bg-green-700"
-                                    : "cursor-not-allowed bg-gray-300 text-muted-foreground"
-                            }`}
-                        >
-                            {isCreating ? (
-                                <>
-                                    <Loader2 className="h-6 w-6 animate-spin" />
-                                    Generating...
-                                </>
-                            ) : (
-                                <>
-                                    <Sparkles className="h-6 w-6" />
-                                    {hasDeckStructure
-                                        ? "Generate Registration Page"
-                                        : "Complete Prerequisites First"}
-                                </>
-                            )}
-                        </button>
+                {/* Generate Button or Form */}
+                {!showCreateForm ? (
+                    <div className="rounded-lg border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-8">
+                        <div className="flex flex-col items-center gap-6 text-center">
+                            {/* Animated Generate Button */}
+                            <button
+                                onClick={() => setShowCreateForm(true)}
+                                disabled={!hasDeckStructure}
+                                className={`group relative flex items-center gap-3 rounded-xl px-10 py-5 text-xl font-bold transition-all duration-300 ${
+                                    hasDeckStructure
+                                        ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white shadow-lg shadow-green-500/30 hover:shadow-xl hover:shadow-green-500/40 hover:scale-[1.02]"
+                                        : "cursor-not-allowed bg-gray-300 text-muted-foreground"
+                                }`}
+                            >
+                                {/* Glow effect */}
+                                {hasDeckStructure && (
+                                    <span className="absolute inset-0 -z-10 animate-pulse rounded-xl bg-gradient-to-r from-green-600 to-emerald-600 opacity-50 blur-lg" />
+                                )}
+                                <Sparkles className="h-7 w-7" />
+                                {hasDeckStructure
+                                    ? "Generate Registration Page"
+                                    : "Complete Prerequisites First"}
+                            </button>
 
-                        {hasDeckStructure && (
-                            <p className="text-sm text-muted-foreground">
-                                AI-powered page editor
-                            </p>
+                            {hasDeckStructure && (
+                                <p className="max-w-md text-sm text-muted-foreground">
+                                    Create a high-converting registration page that
+                                    captures leads and builds excitement for your
+                                    masterclass
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="rounded-lg border border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 p-8 shadow-soft">
+                        <div className="mb-6 flex items-center justify-between">
+                            <div>
+                                <h3 className="text-xl font-semibold text-foreground">
+                                    Generate Registration Page
+                                </h3>
+                                {!isCreating && (
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        This typically takes 25-40 seconds
+                                    </p>
+                                )}
+                            </div>
+                            <button
+                                onClick={() => {
+                                    setShowCreateForm(false);
+                                    setProgressStages([]);
+                                }}
+                                disabled={isCreating}
+                                className="text-muted-foreground hover:text-foreground disabled:opacity-50"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {/* Progress Stages UI */}
+                        {isCreating && progressStages.length > 0 ? (
+                            <div className="space-y-6">
+                                <div className="rounded-lg border border-green-200 bg-white p-6">
+                                    <div className="mb-4 flex items-center justify-between">
+                                        <span className="text-sm font-medium text-green-900">
+                                            Creating your registration page...
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                            ~25-40 seconds
+                                        </span>
+                                    </div>
+
+                                    {/* Progress bar */}
+                                    <div className="mb-6 h-2 overflow-hidden rounded-full bg-green-100">
+                                        <div
+                                            className="h-full rounded-full bg-gradient-to-r from-green-600 to-emerald-600 transition-all duration-500"
+                                            style={{
+                                                width: `${(progressStages.filter((s) => s.status === "completed").length / progressStages.length) * 100}%`,
+                                            }}
+                                        />
+                                    </div>
+
+                                    {/* Stage list */}
+                                    <div className="space-y-3">
+                                        {progressStages.map((stage) => (
+                                            <div
+                                                key={stage.id}
+                                                className={`flex items-center gap-3 rounded-lg p-2 transition-colors ${
+                                                    stage.status === "in_progress"
+                                                        ? "bg-green-50"
+                                                        : ""
+                                                }`}
+                                            >
+                                                {stage.status === "completed" ? (
+                                                    <Check className="h-5 w-5 text-green-600" />
+                                                ) : stage.status === "in_progress" ? (
+                                                    <Loader2 className="h-5 w-5 animate-spin text-green-600" />
+                                                ) : (
+                                                    <Circle className="h-5 w-5 text-gray-300" />
+                                                )}
+                                                <span
+                                                    className={`text-sm ${
+                                                        stage.status === "completed"
+                                                            ? "text-green-700"
+                                                            : stage.status ===
+                                                                "in_progress"
+                                                              ? "font-medium text-green-900"
+                                                              : "text-muted-foreground"
+                                                    }`}
+                                                >
+                                                    {stage.label}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <TooltipProvider>
+                                <div className="space-y-4">
+                                    <div>
+                                        <label className="mb-2 block text-sm font-medium text-foreground">
+                                            Presentation Structure
+                                        </label>
+                                        <select
+                                            value={formData.deckStructureId}
+                                            onChange={(e) =>
+                                                setFormData({
+                                                    ...formData,
+                                                    deckStructureId: e.target.value,
+                                                })
+                                            }
+                                            disabled={isCreating}
+                                            className="w-full rounded-lg border border-border bg-card px-4 py-3 focus:border-green-500 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {deckStructures.map((deck) => (
+                                                <option key={deck.id} value={deck.id}>
+                                                    {deck.metadata?.title ||
+                                                        `Presentation ${deck.total_slides} slides`}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <p className="mt-1 text-sm text-muted-foreground">
+                                            Content from your presentation will be used
+                                            to generate compelling copy
+                                        </p>
+                                    </div>
+
+                                    <div>
+                                        <label className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+                                            Template Style
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <HelpCircle className="h-4 w-4 text-muted-foreground hover:text-muted-foreground" />
+                                                </TooltipTrigger>
+                                                <TooltipContent className="max-w-xs">
+                                                    <p className="text-sm">
+                                                        Choose a template that matches
+                                                        the tone and style of your
+                                                        masterclass
+                                                    </p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </label>
+                                        <div className="space-y-3">
+                                            {TEMPLATE_OPTIONS.map((template) => (
+                                                <div key={template.value}>
+                                                    <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border bg-card p-4 hover:border-green-300 hover:bg-green-50">
+                                                        <input
+                                                            type="radio"
+                                                            name="templateType"
+                                                            value={template.value}
+                                                            checked={
+                                                                formData.templateType ===
+                                                                template.value
+                                                            }
+                                                            onChange={(e) =>
+                                                                setFormData({
+                                                                    ...formData,
+                                                                    templateType: e
+                                                                        .target
+                                                                        .value as any,
+                                                                })
+                                                            }
+                                                            disabled={isCreating}
+                                                            className="mt-1 h-4 w-4 text-green-600 focus:ring-green-500"
+                                                        />
+                                                        <div className="flex-1">
+                                                            <div className="font-medium text-foreground">
+                                                                {template.label}
+                                                            </div>
+                                                            <p className="mt-1 text-sm text-muted-foreground">
+                                                                {template.description}
+                                                            </p>
+                                                        </div>
+                                                    </label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-end gap-3 pt-4">
+                                        <button
+                                            onClick={() => setShowCreateForm(false)}
+                                            disabled={isCreating}
+                                            className="rounded-lg border border-border bg-card px-6 py-2 font-medium text-foreground hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            onClick={handleGenerate}
+                                            disabled={
+                                                !formData.deckStructureId || isCreating
+                                            }
+                                            className={`flex items-center gap-2 rounded-lg px-6 py-2 font-semibold ${
+                                                formData.deckStructureId && !isCreating
+                                                    ? "bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:opacity-90"
+                                                    : "cursor-not-allowed bg-gray-300 text-muted-foreground"
+                                            }`}
+                                        >
+                                            <Sparkles className="h-5 w-5" />
+                                            Generate Page
+                                        </button>
+                                    </div>
+                                </div>
+                            </TooltipProvider>
                         )}
                     </div>
-                </div>
+                )}
 
                 {/* Unified Pages List */}
                 <div className="rounded-lg border border-border bg-card shadow-soft">
@@ -457,8 +786,7 @@ Please create an improved registration page that captures the same messaging but
                                 </p>
                                 {hasDeckStructure && (
                                     <button
-                                        onClick={handleGenerate}
-                                        disabled={isCreating}
+                                        onClick={() => setShowCreateForm(true)}
                                         className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-6 py-3 font-semibold text-white transition-all hover:bg-green-700"
                                     >
                                         <Sparkles className="h-5 w-5" />

@@ -1,7 +1,7 @@
 ---
 description: Automate PR iteration until code reviewer approves - autonomous merge readiness
 argument-hint: [pr-number]
-version: 2.0.1
+version: 2.0.2
 ---
 
 # /merge-ready - Autonomous Merge Readiness Agent
@@ -75,13 +75,58 @@ For GitHub issue creation:
 
 ## Execution Flow
 
+<prerequisite-validation>
+### Validate Prerequisites
+
+Before starting, ensure all required tools are available:
+
+```bash
+validate_prerequisites() {
+  local missing_tools=()
+
+  # Required tools
+  for tool in git curl jq grep sed; do
+    if ! command -v "$tool" &>/dev/null; then
+      missing_tools+=("$tool")
+    fi
+  done
+
+  if [ ${#missing_tools[@]} -gt 0 ]; then
+    echo "ERROR: Missing required tools: ${missing_tools[*]}"
+    echo "Install them before running /merge-ready"
+    exit 1
+  fi
+
+  # Optional but recommended tools
+  if ! command -v bc &>/dev/null; then
+    echo "WARNING: 'bc' not found - efficiency metrics will use fallback calculation"
+  fi
+
+  echo "Prerequisites validated ✓"
+}
+
+validate_prerequisites
+```
+
+**Required tools**:
+- `git` - Version control operations
+- `curl` - API requests (GitHub, Supabase, Vercel)
+- `jq` - JSON parsing
+- `grep`, `sed` - Text processing
+
+**Optional tools**:
+- `bc` - Decimal math for metrics (has awk fallback)
+
+</prerequisite-validation>
+
 <pr-detection>
 Detect or create the PR:
 
 1. If PR number provided, use it directly
 2. Otherwise, check if current branch has an open PR:
    ```bash
-   curl -s "https://api.github.com/repos/Pixl8studio/growth-mastery/pulls?head=Pixl8studio:$(git branch --show-current)&state=open"
+   curl -s --connect-timeout 10 --max-time 30 \
+     "https://api.github.com/repos/Pixl8studio/growth-mastery/pulls?head=Pixl8studio:$(git branch --show-current)&state=open"
    ```
 3. If no PR exists, create one following /autotask PR creation standards
 4. Store the PR number for all subsequent operations
@@ -166,17 +211,40 @@ CHANGED_FILES=$(git diff origin/main --name-only)
 # Initialize agent list
 AGENTS_TO_RUN=()
 
-# Check each pattern
-echo "$CHANGED_FILES" | grep -qE '^app/api/|fetch|query' && AGENTS_TO_RUN+=("performance-reviewer")
-echo "$CHANGED_FILES" | grep -qE '^lib/auth/|middleware|token|session|password' && AGENTS_TO_RUN+=("security-reviewer")
-echo "$CHANGED_FILES" | grep -qE '\.tsx?$' && AGENTS_TO_RUN+=("error-handling-reviewer")
-echo "$CHANGED_FILES" | grep -qE '^components/|page\.tsx$|\.tsx$' && AGENTS_TO_RUN+=("design-reviewer")
-echo "$CHANGED_FILES" | grep -qE '^supabase/|\.sql$|migration' && AGENTS_TO_RUN+=("architecture-auditor")
-echo "$CHANGED_FILES" | grep -qE '^__tests__/|\.test\.|\.spec\.' && AGENTS_TO_RUN+=("test-analyzer")
+# Check each pattern - patterns are specific to avoid false positives
+# Performance: Only actual API routes and data fetching code
+echo "$CHANGED_FILES" | grep -qE '^app/api/.*\.(ts|tsx)$|/hooks/use.*\.(ts|tsx)$|/services/.*\.(ts|tsx)$' && AGENTS_TO_RUN+=("performance-reviewer")
 
-# Report what will run
-echo "Specialized agents to run: ${AGENTS_TO_RUN[@]:-none}"
+# Security: Auth-related files only (not just any file containing "token" in the name)
+echo "$CHANGED_FILES" | grep -qE '^lib/auth/|^app/api/auth/|middleware\.(ts|tsx)$|/auth.*\.(ts|tsx)$' && AGENTS_TO_RUN+=("security-reviewer")
+
+# Error handling: TypeScript/TSX files (general code review)
+echo "$CHANGED_FILES" | grep -qE '\.(ts|tsx)$' && AGENTS_TO_RUN+=("error-handling-reviewer")
+
+# Design: React components and pages
+echo "$CHANGED_FILES" | grep -qE '^components/.*\.(tsx)$|/page\.(tsx)$|/layout\.(tsx)$' && AGENTS_TO_RUN+=("design-reviewer")
+
+# Architecture: Database-related files
+echo "$CHANGED_FILES" | grep -qE '^supabase/|\.sql$|/migrations/' && AGENTS_TO_RUN+=("architecture-auditor")
+
+# Tests: Test files only
+echo "$CHANGED_FILES" | grep -qE '^__tests__/|\.test\.(ts|tsx)$|\.spec\.(ts|tsx)$' && AGENTS_TO_RUN+=("test-analyzer")
+
+# Report what will run with clearer message
+if [ ${#AGENTS_TO_RUN[@]} -eq 0 ]; then
+  echo "Specialized agents to run: (none needed for these changes)"
+else
+  echo "Specialized agents to run: ${AGENTS_TO_RUN[*]}"
+fi
 ```
+
+**Example file mappings**:
+- `app/api/users/route.ts` → triggers performance-reviewer
+- `lib/auth/session.ts` → triggers security-reviewer
+- `components/Form.tsx` → triggers design-reviewer
+- `supabase/migrations/001_init.sql` → triggers architecture-auditor
+- `__tests__/unit/user.test.ts` → triggers test-analyzer
+- `docs/README.md` → triggers NO specialized agents (documentation only)
 
 **Handling documentation-only or non-matching changes**:
 
@@ -306,7 +374,8 @@ After your proactive review is complete, gather current state:
 
 1. **Check Vercel deployment status** from the vercel[bot] comment:
    ```bash
-   curl -s "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
+   curl -s --connect-timeout 10 --max-time 30 \
+     "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
      jq -r '.[] | select(.user.login == "vercel[bot]") | .body' | tail -1
    ```
    Look for "Ready" status in the deployment table.
@@ -320,7 +389,8 @@ After your proactive review is complete, gather current state:
 
 3. **Check for existing code review** from claude[bot]:
    ```bash
-   curl -s "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
+   curl -s --connect-timeout 10 --max-time 30 \
+     "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
      jq -r '.[] | select(.user.login == "claude[bot]") | .body' | tail -1
    ```
 
@@ -376,7 +446,8 @@ Extract ALL actionable items from the code reviewer analysis:
 BEFORE fixing code issues, check the Vercel deployment status:
 
 ```bash
-curl -s "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
+curl -s --connect-timeout 10 --max-time 30 \
+  "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
   jq -r '.[] | select(.user.login == "vercel[bot]") | .body' | tail -1
 ```
 
@@ -461,7 +532,8 @@ After EVERY push, verify the Vercel deployment succeeds:
 sleep 30
 
 # Poll for deployment status
-curl -s "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
+curl -s --connect-timeout 10 --max-time 30 \
+  "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
   jq -r '.[] | select(.user.login == "vercel[bot]") | .body' | tail -1
 ```
 
@@ -609,14 +681,28 @@ Apply using the Supabase Management API:
 ```bash
 SQL="YOUR MIGRATION SQL HERE"
 
-RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+# Validate SQL is not empty
+if [ -z "$SQL" ]; then
+  echo "ERROR: Migration SQL is empty - cannot proceed"
+  exit 1
+fi
+
+RESPONSE=$(curl -s --connect-timeout 10 --max-time 60 -w "\n%{http_code}" -X POST \
   "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_ID}/database/query" \
   -H "Authorization: Bearer ${SUPABASE_TOKEN}" \
   -H "Content-Type: application/json" \
-  -d "$(echo "$SQL" | jq -Rs '{query: .}')")
+  -d "$(echo "$SQL" | jq -Rs '{query: .}')") || {
+  echo "ERROR: curl command failed - check network connectivity"
+  exit 1
+}
 
 HTTP_CODE=$(echo "$RESPONSE" | tail -1)
 BODY=$(echo "$RESPONSE" | sed '$d')
+
+if [ -z "$HTTP_CODE" ]; then
+  echo "ERROR: Failed to parse response from Supabase API"
+  exit 1
+fi
 
 if [ "$HTTP_CODE" -ne 200 ]; then
   echo "Migration failed (HTTP $HTTP_CODE): $BODY"
@@ -632,11 +718,30 @@ If migration needs to be reverted (iteration continues with different approach):
 # Generate rollback SQL (inverse of migration)
 ROLLBACK_SQL="DROP TABLE IF EXISTS new_table; -- or ALTER TABLE ... DROP COLUMN ..."
 
-# Apply rollback
-curl -s -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_ID}/database/query" \
+# Validate rollback SQL is not empty
+if [ -z "$ROLLBACK_SQL" ]; then
+  echo "ERROR: Rollback SQL is empty - cannot proceed"
+  exit 1
+fi
+
+# Apply rollback with error handling
+RESPONSE=$(curl -s --connect-timeout 10 --max-time 60 -w "\n%{http_code}" -X POST \
+  "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_ID}/database/query" \
   -H "Authorization: Bearer ${SUPABASE_TOKEN}" \
   -H "Content-Type: application/json" \
-  -d "$(echo "$ROLLBACK_SQL" | jq -Rs '{query: .}')"
+  -d "$(echo "$ROLLBACK_SQL" | jq -Rs '{query: .}')") || {
+  echo "ERROR: Rollback curl command failed - check network connectivity"
+  exit 1
+}
+
+HTTP_CODE=$(echo "$RESPONSE" | tail -1)
+if [ "$HTTP_CODE" -ne 200 ]; then
+  echo "ERROR: Rollback failed (HTTP $HTTP_CODE)"
+  echo "Response: $(echo "$RESPONSE" | sed '$d')"
+  exit 1
+fi
+
+echo "Rollback applied successfully"
 ```
 
 **Document rollback SQL** in a comment at the top of your migration file for safety.
@@ -680,7 +785,7 @@ if [ -z "$GITHUB_TOKEN" ]; then
   echo "Warning: GITHUB_TOKEN not set - skipping issue creation"
   echo "The PR is still ready to merge, but no tracking issue was created."
 else
-  RESPONSE=$(curl -s -w "\n%{http_code}" -X POST \
+  RESPONSE=$(curl -s --connect-timeout 10 --max-time 30 -w "\n%{http_code}" -X POST \
     "https://api.github.com/repos/Pixl8studio/growth-mastery/issues" \
     -H "Authorization: Bearer ${GITHUB_TOKEN}" \
     -H "Content-Type: application/json" \
@@ -691,7 +796,10 @@ else
   "labels": ["merge-ready", "automated"]
 }
 EOF
-)")
+)") || {
+    echo "Warning: curl command failed - network issue"
+    echo "The PR is still ready to merge - issue creation is non-blocking."
+  }
 
   HTTP_CODE=$(echo "$RESPONSE" | tail -1)
   RESPONSE_BODY=$(echo "$RESPONSE" | sed '$d')
@@ -805,7 +913,12 @@ METRICS_AVG_ISSUES=$((METRICS_TOTAL_ISSUES / METRICS_ITERATIONS))
 
 # Estimate iterations saved by proactive review
 # (Proactive issues would have become ~1.5 iterations on average)
-METRICS_SAVED_ITERATIONS=$(echo "scale=1; $METRICS_PROACTIVE_ISSUES * 1.5 / 3" | bc)
+# Use bc if available, otherwise fall back to awk (always available)
+if command -v bc &>/dev/null; then
+  METRICS_SAVED_ITERATIONS=$(echo "scale=1; $METRICS_PROACTIVE_ISSUES * 1.5 / 3" | bc)
+else
+  METRICS_SAVED_ITERATIONS=$(awk "BEGIN {printf \"%.1f\", $METRICS_PROACTIVE_ISSUES * 1.5 / 3}")
+fi
 ```
 
 These metrics help users understand the ROI of the proactive review phase and identify
@@ -1081,9 +1194,15 @@ The polling strategy must respect GitHub API rate limits.
 **Rate limit detection**:
 ```bash
 # Check remaining rate limit
-RATE_INFO=$(curl -s -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+RATE_INFO=$(curl -s --connect-timeout 10 --max-time 15 -H "Authorization: Bearer ${GITHUB_TOKEN}" \
   "https://api.github.com/rate_limit")
-REMAINING=$(echo "$RATE_INFO" | jq '.resources.core.remaining')
+REMAINING=$(echo "$RATE_INFO" | jq '.resources.core.remaining' 2>/dev/null)
+
+# Handle jq parse failure
+if [ -z "$REMAINING" ] || [ "$REMAINING" = "null" ]; then
+  echo "Warning: Unable to check rate limit - proceeding anyway"
+  REMAINING=1000  # Assume sufficient quota
+fi
 
 if [ "$REMAINING" -lt 100 ]; then
   echo "Warning: GitHub API rate limit low ($REMAINING remaining)"
@@ -1156,8 +1275,14 @@ or
 
 ```bash
 # Get the latest claude[bot] comment
-COMMENT_BODY=$(curl -s "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
+COMMENT_BODY=$(curl -s --connect-timeout 10 --max-time 30 \
+  "https://api.github.com/repos/Pixl8studio/growth-mastery/issues/{pr}/comments" | \
   jq -r '.[] | select(.user.login == "claude[bot]") | .body' | tail -1)
+
+# Validate we got a response
+if [ -z "$COMMENT_BODY" ]; then
+  echo "Warning: No claude[bot] comment found or API request failed"
+fi
 
 # Extract verdict - primary pattern (with emoji)
 VERDICT=$(echo "$COMMENT_BODY" | grep -oP '(?<=## 🎯 Verdict: \*\*)[^*]+' | head -1)
@@ -1198,7 +1323,11 @@ case "$VERDICT" in
   *)
     echo "Warning: Unknown verdict format: '$VERDICT'"
     # Fallback: check for approval keywords in comment body
-    if echo "$COMMENT_BODY" | grep -qi "ready to merge\|lgtm\|ship it"; then
+    # BUT first check for negations to avoid false positives like "NOT ready to merge"
+    if echo "$COMMENT_BODY" | grep -qiE "not ready|not.*lgtm|don't ship|do not ship|shouldn't merge|cannot merge"; then
+      echo "Detected negation of approval - continuing iteration"
+      SHOULD_CONTINUE=true
+    elif echo "$COMMENT_BODY" | grep -qi "ready to merge\|lgtm\|ship it"; then
       echo "Detected approval language - treating as approved"
       SHOULD_CONTINUE=false
     else

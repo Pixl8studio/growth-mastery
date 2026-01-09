@@ -2,6 +2,21 @@
  * Shared types and utilities for funnel completion tracking
  */
 
+/**
+ * Business profile completion status structure
+ * Tracks completion percentage for each section of the profile
+ */
+export interface BusinessProfileCompletionStatus {
+    overall: number;
+    sections?: {
+        basicInfo?: number;
+        targetAudience?: number;
+        productService?: number;
+        brandVoice?: number;
+        goals?: number;
+    };
+}
+
 export interface StepCompletion {
     step: number;
     isCompleted: boolean;

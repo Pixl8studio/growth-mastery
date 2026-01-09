@@ -25,9 +25,6 @@ vi.mock("@/app/funnel-builder/master-steps-config", () => ({
         totalCount: 1,
         percentage: 0,
     })),
-}));
-
-vi.mock("@/app/funnel-builder/completion-utils", () => ({
     TOTAL_FUNNEL_STEPS: 12,
 }));
 

@@ -5,12 +5,6 @@
 
 "use server";
 
-/**
- * Total number of funnel steps in the wizard.
- * Update this constant when adding or removing steps.
- */
-export const TOTAL_FUNNEL_STEPS = 12;
-
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import type {
@@ -22,6 +16,7 @@ import {
     MASTER_STEPS,
     calculateMasterStepCompletion,
     calculateOverallCompletion,
+    TOTAL_FUNNEL_STEPS,
 } from "./master-steps-config";
 
 /**

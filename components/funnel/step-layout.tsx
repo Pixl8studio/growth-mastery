@@ -16,8 +16,8 @@ import {
     getMasterStepForSubStep,
     MASTER_STEPS,
     getFirstIncompleteSubStep,
+    TOTAL_FUNNEL_STEPS,
 } from "@/app/funnel-builder/master-steps-config";
-import { TOTAL_FUNNEL_STEPS } from "@/app/funnel-builder/completion-utils";
 
 interface StepLayoutProps {
     children: ReactNode;

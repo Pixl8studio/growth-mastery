@@ -15,8 +15,8 @@ import {
     MASTER_STEPS,
     getMasterStepForSubStep,
     calculateMasterStepCompletion,
+    TOTAL_FUNNEL_STEPS,
 } from "@/app/funnel-builder/master-steps-config";
-import { TOTAL_FUNNEL_STEPS } from "@/app/funnel-builder/completion-utils";
 
 interface Step {
     number: number;

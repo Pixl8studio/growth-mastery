@@ -554,7 +554,7 @@ export default function Step14ThankYouPage({
             funnelName={project?.name}
             nextDisabled={!hasThankYouPage}
             nextLabel={hasThankYouPage ? "Continue" : "Create Page First"}
-            stepTitle="Thank You Pages"
+            stepTitle="Thank You Page"
             stepDescription="Create dynamic purchase confirmation pages with personalized content"
         >
             <div className="space-y-8">

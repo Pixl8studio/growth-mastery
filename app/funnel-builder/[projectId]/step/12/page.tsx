@@ -498,7 +498,7 @@ export default function Step12CheckoutPage({
             funnelName={project?.name}
             nextDisabled={!hasCheckoutPage}
             nextLabel={hasCheckoutPage ? "Create Upsell Pages" : "Create Page First"}
-            stepTitle="Checkout Pages"
+            stepTitle="Checkout Page"
             stepDescription="Create Stripe-powered checkout pages for secure payments"
         >
             <div className="space-y-8">

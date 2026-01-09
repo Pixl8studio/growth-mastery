@@ -401,7 +401,7 @@ Please create an improved watch page that captures the same messaging but with e
             funnelName={project?.name}
             nextDisabled={!hasWatchPage}
             nextLabel={hasWatchPage ? "Create Registration Page" : "Create Page First"}
-            stepTitle="Watch Pages"
+            stepTitle="Watch Page"
             stepDescription="Create engaging video watch pages with visual editor"
         >
             <div className="space-y-8">

@@ -463,7 +463,7 @@ export default function Step13UpsellPage({
             completedSteps={completedSteps}
             funnelName={project?.name}
             nextDisabled={false}
-            stepTitle="Upsell Pages"
+            stepTitle="Upsell Page"
             stepDescription="Increase revenue with one-click post-purchase offers"
         >
             <div className="space-y-8">

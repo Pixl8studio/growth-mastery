@@ -535,7 +535,7 @@ Please create an improved confirmation page that captures the same messaging but
             funnelName={project?.name}
             nextDisabled={false}
             nextLabel="Continue"
-            stepTitle="Confirmation Pages"
+            stepTitle="Confirmation Page"
             stepDescription="Create engaging confirmation pages for event registrations"
         >
             <div className="space-y-8">

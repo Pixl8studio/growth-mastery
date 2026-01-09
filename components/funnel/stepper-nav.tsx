@@ -24,23 +24,36 @@ interface Step {
     description: string;
 }
 
+/**
+ * Step data for all 17 funnel steps
+ * Organized by Master Step sections:
+ * - Business Profile (1-3)
+ * - Presentation Materials (4-6)
+ * - Funnel Pages (7-14)
+ * - Traffic Agents (15-17)
+ */
 const STEPS: Step[] = [
-    {
-        number: 1,
-        title: "Context",
-        description: "Business profile setup",
-    },
+    // Business Profile (Master Step 1)
+    { number: 1, title: "Define Context", description: "Business profile setup" },
     { number: 2, title: "Funnel Map", description: "Plan your funnel" },
     { number: 3, title: "Brand Design", description: "Visual identity" },
+    // Presentation Materials (Master Step 2)
     { number: 4, title: "Presentation Structure", description: "AI-generated outline" },
-    { number: 5, title: "Create Presentation", description: "Generate Slides" },
+    { number: 5, title: "Create Presentation", description: "Generate slides" },
     { number: 6, title: "Upload Video", description: "Pitch recording" },
-    { number: 7, title: "Enrollment Page", description: "AI sales copy" },
-    { number: 8, title: "Watch Page", description: "Video landing" },
-    { number: 9, title: "Registration", description: "Lead capture" },
-    { number: 10, title: "AI Follow-Up", description: "Smart automation" },
-    { number: 11, title: "Call Booking", description: "Schedule discovery calls" },
-    { number: 12, title: "Marketing Content", description: "Social content engine" },
+    // Funnel Pages (Master Step 3)
+    { number: 7, title: "Registration Page", description: "Lead capture" },
+    { number: 8, title: "Confirmation Page", description: "Calendar booking" },
+    { number: 9, title: "Watch Page", description: "Video landing" },
+    { number: 10, title: "Enrollment Page", description: "AI sales copy" },
+    { number: 11, title: "Call Booking Page", description: "Schedule discovery calls" },
+    { number: 12, title: "Checkout Page", description: "Payment processing" },
+    { number: 13, title: "Upsell Page", description: "One-time offers" },
+    { number: 14, title: "Thank You Page", description: "Purchase confirmation" },
+    // Traffic Agents (Master Step 4)
+    { number: 15, title: "AI Follow-Up Engine", description: "Smart automation" },
+    { number: 16, title: "Marketing Content Engine", description: "Social content" },
+    { number: 17, title: "Meta Ads Manager", description: "Paid advertising" },
 ];
 
 interface StepperNavProps {

@@ -380,7 +380,7 @@ Please create an improved registration page that captures the same messaging but
             funnelName={project?.name}
             nextDisabled={!hasRegistrationPage}
             nextLabel={hasRegistrationPage ? "Setup Your Flow" : "Create Page First"}
-            stepTitle="Registration Pages"
+            stepTitle="Registration Page"
             stepDescription="Create high-converting registration pages with visual editor"
         >
             <div className="space-y-8">

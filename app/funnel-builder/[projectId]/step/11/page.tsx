@@ -423,7 +423,7 @@ export default function Step11CallBookingPage({
             nextLabel={
                 hasCallBookingPage ? "Continue to Checkout Pages" : "Create Page First"
             }
-            stepTitle="Call Booking Pages"
+            stepTitle="Call Booking Page"
             stepDescription="Create a professional call booking page with native scheduling"
         >
             <div className="space-y-8">

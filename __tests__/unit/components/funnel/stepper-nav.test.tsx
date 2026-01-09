@@ -49,14 +49,14 @@ describe("StepperNav", () => {
     it("should render step navigation", () => {
         render(<StepperNav {...defaultProps} />);
 
-        expect(screen.getByText("Context")).toBeInTheDocument();
+        expect(screen.getByText("Define Context")).toBeInTheDocument();
         expect(screen.getByText("Define Offer")).toBeInTheDocument();
     });
 
     it("should highlight current step", () => {
         render(<StepperNav {...defaultProps} currentStep={1} />);
 
-        const contextStep = screen.getByText("Context");
+        const contextStep = screen.getByText("Define Context");
         const link = contextStep.closest("a");
         // The link should have primary styling when it's the active step
         expect(link).toHaveClass("border-primary/30");
@@ -87,7 +87,7 @@ describe("StepperNav", () => {
     it("should render correct link hrefs", () => {
         render(<StepperNav {...defaultProps} />);
 
-        const contextLink = screen.getByText("Context").closest("a");
+        const contextLink = screen.getByText("Define Context").closest("a");
         expect(contextLink).toHaveAttribute(
             "href",
             "/funnel-builder/test-project-123/step/1"

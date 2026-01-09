@@ -620,7 +620,7 @@ Please create an improved enrollment page that captures the same offer and messa
             funnelName={project?.name}
             nextDisabled={!hasEnrollmentPage}
             nextLabel={hasEnrollmentPage ? "Create Watch Page" : "Create Page First"}
-            stepTitle="Enrollment Pages"
+            stepTitle="Enrollment Page"
             stepDescription="Create high-converting sales pages with AI-powered design"
         >
             <div className="space-y-8">

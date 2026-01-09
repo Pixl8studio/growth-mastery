@@ -44,7 +44,7 @@ export async function generateConnectUrl(
         const redirectUri = `${baseUrl}/api/stripe/callback`;
 
         const params = new URLSearchParams({
-            client_id: env.STRIPE_CONNECT_CLIENT_ID,
+            client_id: clientId,
             state: userId, // We'll verify this on callback
             scope: "read_write",
             response_type: "code",

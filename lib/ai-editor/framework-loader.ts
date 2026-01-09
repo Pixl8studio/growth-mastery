@@ -1,19 +1,13 @@
 /**
  * Framework Loader
- * Loads page frameworks for Registration, Watch, and Enrollment pages
+ * Loads page frameworks for all funnel page types
  */
 
 import { logger } from "@/lib/logger";
+import type { PageType } from "@/types/pages";
 
-export type PageType =
-    | "registration"
-    | "watch"
-    | "enrollment"
-    | "confirmation"
-    | "call_booking"
-    | "checkout"
-    | "upsell"
-    | "thank_you";
+// Re-export PageType for backward compatibility
+export type { PageType };
 
 export interface PageFramework {
     pageType: PageType;

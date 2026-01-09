@@ -243,7 +243,10 @@ export default function Step13UpsellPage({
             // If API completed quickly (under 15 seconds), fast-forward progress
             if (elapsed < 15000) {
                 setProgressStages((prev: ProgressStage[]) =>
-                    prev.map((s: ProgressStage) => ({ ...s, status: "completed" as const }))
+                    prev.map((s: ProgressStage) => ({
+                        ...s,
+                        status: "completed" as const,
+                    }))
                 );
                 // Small delay so user sees completion
                 await new Promise((resolve) => setTimeout(resolve, 500));
@@ -413,7 +416,9 @@ export default function Step13UpsellPage({
 
             if (error) throw error;
 
-            setUpsellPages((prev: UpsellPage[]) => prev.filter((p: UpsellPage) => p.id !== pageId));
+            setUpsellPages((prev: UpsellPage[]) =>
+                prev.filter((p: UpsellPage) => p.id !== pageId)
+            );
             logger.info({ pageId }, "Upsell page deleted");
 
             toast({
@@ -803,7 +808,8 @@ export default function Step13UpsellPage({
                                                 >
                                                     {stage.status === "completed" ? (
                                                         <Check className="h-5 w-5 text-green-600" />
-                                                    ) : stage.status === "in_progress" ? (
+                                                    ) : stage.status ===
+                                                      "in_progress" ? (
                                                         <Loader2 className="h-5 w-5 animate-spin text-purple-600" />
                                                     ) : (
                                                         <Circle className="h-5 w-5 text-gray-300" />
@@ -844,7 +850,10 @@ export default function Step13UpsellPage({
                                                 className="w-full rounded-lg border border-border bg-card px-4 py-3 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
                                             >
                                                 {offers.map((offer) => (
-                                                    <option key={offer.id} value={offer.id}>
+                                                    <option
+                                                        key={offer.id}
+                                                        value={offer.id}
+                                                    >
                                                         {offer.name} - {offer.currency}{" "}
                                                         {offer.price.toLocaleString()}
                                                     </option>
@@ -869,7 +878,8 @@ export default function Step13UpsellPage({
                                                     onChange={(e) =>
                                                         setFormData({
                                                             ...formData,
-                                                            priceDollars: e.target.value,
+                                                            priceDollars:
+                                                                e.target.value,
                                                         })
                                                     }
                                                     disabled={isCreating}
@@ -921,9 +931,9 @@ export default function Step13UpsellPage({
                                                     </TooltipTrigger>
                                                     <TooltipContent className="max-w-xs">
                                                         <p className="text-sm">
-                                                            Choose a template that matches
-                                                            your upsell offer type and
-                                                            messaging strategy
+                                                            Choose a template that
+                                                            matches your upsell offer
+                                                            type and messaging strategy
                                                         </p>
                                                     </TooltipContent>
                                                 </Tooltip>
@@ -956,7 +966,9 @@ export default function Step13UpsellPage({
                                                                     {template.label}
                                                                 </div>
                                                                 <p className="mt-1 text-sm text-muted-foreground">
-                                                                    {template.description}
+                                                                    {
+                                                                        template.description
+                                                                    }
                                                                 </p>
                                                             </div>
                                                         </label>
@@ -1014,7 +1026,8 @@ export default function Step13UpsellPage({
                             lower-priced alternative (downsell)
                         </li>
                         <li>
-                            • Use strong urgency messaging—this is a one-time opportunity
+                            • Use strong urgency messaging—this is a one-time
+                            opportunity
                         </li>
                         <li>
                             • Focus on how the upsell accelerates results or adds

@@ -336,13 +336,25 @@ export async function getStepCompletionStatus(
             // Master Step 3: Funnel Pages (Steps 7-14)
             {
                 step: 7,
-                isCompleted: hasPageContent(registrationPagesLegacy.count, "registration"),
-                hasContent: hasPageContent(registrationPagesLegacy.count, "registration"),
+                isCompleted: hasPageContent(
+                    registrationPagesLegacy.count,
+                    "registration"
+                ),
+                hasContent: hasPageContent(
+                    registrationPagesLegacy.count,
+                    "registration"
+                ),
             },
             {
                 step: 8,
-                isCompleted: hasPageContent(confirmationPagesLegacy.count, "confirmation"),
-                hasContent: hasPageContent(confirmationPagesLegacy.count, "confirmation"),
+                isCompleted: hasPageContent(
+                    confirmationPagesLegacy.count,
+                    "confirmation"
+                ),
+                hasContent: hasPageContent(
+                    confirmationPagesLegacy.count,
+                    "confirmation"
+                ),
             },
             {
                 step: 9,
@@ -356,8 +368,14 @@ export async function getStepCompletionStatus(
             },
             {
                 step: 11,
-                isCompleted: hasPageContent(callBookingPagesLegacy.count, "call_booking"),
-                hasContent: hasPageContent(callBookingPagesLegacy.count, "call_booking"),
+                isCompleted: hasPageContent(
+                    callBookingPagesLegacy.count,
+                    "call_booking"
+                ),
+                hasContent: hasPageContent(
+                    callBookingPagesLegacy.count,
+                    "call_booking"
+                ),
             },
             {
                 step: 12,

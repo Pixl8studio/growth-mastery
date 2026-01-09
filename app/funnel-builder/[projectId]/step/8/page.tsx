@@ -563,13 +563,13 @@ Please create an improved confirmation page that captures the same messaging but
                                 <p className="mb-3 text-sm text-blue-800">
                                     Your masterclass is configured for{" "}
                                     <strong>immediate access</strong>. When users
-                                    register, they'll go directly to the watch page instead
-                                    of a confirmation page.
+                                    register, they'll go directly to the watch page
+                                    instead of a confirmation page.
                                 </p>
                                 <p className="text-sm text-blue-800">
-                                    You can still create a confirmation page if you'd like
-                                    to add one for future live or scheduled events, but it
-                                    won't be used in your current funnel flow.
+                                    You can still create a confirmation page if you'd
+                                    like to add one for future live or scheduled events,
+                                    but it won't be used in your current funnel flow.
                                 </p>
                             </div>
                         </div>
@@ -603,8 +603,8 @@ Please create an improved confirmation page that captures the same messaging but
                             {canCreatePage && (
                                 <p className="max-w-md text-sm text-muted-foreground">
                                     Create a beautiful confirmation page that builds
-                                    anticipation and ensures attendees show up to your live
-                                    event
+                                    anticipation and ensures attendees show up to your
+                                    live event
                                 </p>
                             )}
                         </div>
@@ -718,8 +718,8 @@ Please create an improved confirmation page that captures the same messaging but
                                             ))}
                                         </select>
                                         <p className="mt-1 text-sm text-muted-foreground">
-                                            Content from your presentation will be used for
-                                            preparation checklist
+                                            Content from your presentation will be used
+                                            for preparation checklist
                                         </p>
                                     </div>
 
@@ -732,8 +732,9 @@ Please create an improved confirmation page that captures the same messaging but
                                                 </TooltipTrigger>
                                                 <TooltipContent className="max-w-xs">
                                                     <p className="text-sm">
-                                                        Choose a template that matches the
-                                                        tone and urgency of your event
+                                                        Choose a template that matches
+                                                        the tone and urgency of your
+                                                        event
                                                     </p>
                                                 </TooltipContent>
                                             </Tooltip>
@@ -828,7 +829,8 @@ Please create an improved confirmation page that captures the same messaging but
                                 </h4>
                                 <p className="mx-auto mb-6 max-w-sm text-muted-foreground">
                                     Create your first confirmation page to build
-                                    excitement and ensure attendees show up to your event
+                                    excitement and ensure attendees show up to your
+                                    event
                                 </p>
                                 {canCreatePage && (
                                     <button
@@ -845,7 +847,9 @@ Please create an improved confirmation page that captures the same messaging but
                                 {unifiedPages.map((page) => {
                                     const isLegacy = page.type === "legacy";
                                     const legacyPage = isLegacy
-                                        ? confirmationPages.find((p) => p.id === page.id)
+                                        ? confirmationPages.find(
+                                              (p) => p.id === page.id
+                                          )
                                         : null;
 
                                     return (
@@ -988,19 +992,20 @@ Please create an improved confirmation page that captures the same messaging but
                     </h4>
                     <ul className="space-y-2 text-sm text-primary">
                         <li>
-                            • Confirmation pages are shown after registration for live or
-                            scheduled events
+                            • Confirmation pages are shown after registration for live
+                            or scheduled events
                         </li>
                         <li>
                             • Add calendar integration to help attendees save the event
                             date
                         </li>
                         <li>
-                            • Use preparation checklists to build anticipation and ensure
-                            they show up ready
+                            • Use preparation checklists to build anticipation and
+                            ensure they show up ready
                         </li>
                         <li>
-                            • Customize countdown timers and reminders to reduce no-shows
+                            • Customize countdown timers and reminders to reduce
+                            no-shows
                         </li>
                     </ul>
                 </div>

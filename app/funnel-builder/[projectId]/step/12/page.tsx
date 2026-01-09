@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
 import { useIsMobile } from "@/lib/mobile-utils.client";
@@ -368,8 +369,7 @@ export default function Step12CheckoutPage({
                     setFormData((prev) => ({
                         ...prev,
                         offerId: offerData[0].id,
-                        orderBumpOfferId:
-                            offerData.length > 1 ? offerData[1].id : "",
+                        orderBumpOfferId: offerData.length > 1 ? offerData[1].id : "",
                     }));
                 }
 
@@ -381,10 +381,7 @@ export default function Step12CheckoutPage({
                     .order("created_at", { ascending: false });
 
                 if (pagesError) {
-                    logger.warn(
-                        { error: pagesError },
-                        "Failed to load checkout pages"
-                    );
+                    logger.warn({ error: pagesError }, "Failed to load checkout pages");
                 } else {
                     setCheckoutPages(pagesData || []);
                 }
@@ -527,18 +524,18 @@ export default function Step12CheckoutPage({
                                     Stripe Connection Required
                                 </h3>
                                 <p className="mb-4 text-sm text-amber-800">
-                                    Checkout pages require Stripe to process payments. Connect
-                                    your Stripe account to accept credit cards, Apple Pay,
-                                    Google Pay, and other payment methods.
+                                    Checkout pages require Stripe to process payments.
+                                    Connect your Stripe account to accept credit cards,
+                                    Apple Pay, Google Pay, and other payment methods.
                                 </p>
-                                <a
+                                <Link
                                     href="/settings/payments"
                                     className="inline-flex items-center gap-2 rounded-lg bg-amber-600 px-6 py-3 text-sm font-semibold text-white transition-colors hover:bg-amber-700"
                                 >
                                     <CreditCard className="h-4 w-4" />
                                     Connect Stripe Account
                                     <ExternalLink className="h-4 w-4" />
-                                </a>
+                                </Link>
                             </div>
                         </div>
                     </div>
@@ -572,8 +569,8 @@ export default function Step12CheckoutPage({
 
                             {canCreatePage && (
                                 <p className="max-w-md text-sm text-muted-foreground">
-                                    Create a secure, conversion-optimized checkout page with
-                                    Stripe integration in seconds
+                                    Create a secure, conversion-optimized checkout page
+                                    with Stripe integration in seconds
                                 </p>
                             )}
                         </div>
@@ -701,8 +698,8 @@ export default function Step12CheckoutPage({
                                                 <TooltipContent className="max-w-xs">
                                                     <p className="text-sm">
                                                         Choose a template that matches
-                                                        your customer base and offer price
-                                                        point
+                                                        your customer base and offer
+                                                        price point
                                                     </p>
                                                 </TooltipContent>
                                             </Tooltip>
@@ -758,8 +755,9 @@ export default function Step12CheckoutPage({
                                                             <TooltipContent className="max-w-xs">
                                                                 <p className="text-sm">
                                                                     Add a complementary
-                                                                    offer to the checkout
-                                                                    with a single checkbox
+                                                                    offer to the
+                                                                    checkout with a
+                                                                    single checkbox
                                                                 </p>
                                                             </TooltipContent>
                                                         </Tooltip>
@@ -1013,7 +1011,8 @@ export default function Step12CheckoutPage({
                             higher-priced offers
                         </li>
                         <li>
-                            • Order bumps can increase your average order value by 20-30%
+                            • Order bumps can increase your average order value by
+                            20-30%
                         </li>
                         <li>
                             • All checkout pages are mobile-responsive and optimized for

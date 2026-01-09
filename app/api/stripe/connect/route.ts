@@ -63,9 +63,7 @@ export async function GET(_request: NextRequest) {
 
         return NextResponse.redirect(
             `${process.env.NEXT_PUBLIC_APP_URL}/settings/payments?error=${encodeURIComponent(
-                isConfigError
-                    ? "stripe_not_configured"
-                    : "connection_failed"
+                isConfigError ? "stripe_not_configured" : "connection_failed"
             )}&error_detail=${encodeURIComponent(errorMessage)}`
         );
     }

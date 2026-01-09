@@ -594,8 +594,8 @@ export default function Step14ThankYouPage({
 
                             {canCreatePage && (
                                 <p className="max-w-md text-sm text-muted-foreground">
-                                    Create a personalized purchase confirmation page that
-                                    adapts to what each customer bought
+                                    Create a personalized purchase confirmation page
+                                    that adapts to what each customer bought
                                 </p>
                             )}
                         </div>
@@ -696,8 +696,9 @@ export default function Step14ThankYouPage({
                                                 </TooltipTrigger>
                                                 <TooltipContent className="max-w-xs">
                                                     <p className="text-sm">
-                                                        Choose a template that matches your
-                                                        product type and customer journey
+                                                        Choose a template that matches
+                                                        your product type and customer
+                                                        journey
                                                     </p>
                                                 </TooltipContent>
                                             </Tooltip>
@@ -752,7 +753,8 @@ export default function Step14ThankYouPage({
                                                         Show Order Summary
                                                     </label>
                                                     <p className="mt-1 text-xs text-muted-foreground">
-                                                        Display what the customer purchased
+                                                        Display what the customer
+                                                        purchased
                                                     </p>
                                                 </div>
                                                 <Switch
@@ -775,15 +777,19 @@ export default function Step14ThankYouPage({
                                                         Enable Social Sharing
                                                     </label>
                                                     <p className="mt-1 text-xs text-muted-foreground">
-                                                        Let customers share their purchase
+                                                        Let customers share their
+                                                        purchase
                                                     </p>
                                                 </div>
                                                 <Switch
-                                                    checked={formData.enableSocialSharing}
+                                                    checked={
+                                                        formData.enableSocialSharing
+                                                    }
                                                     onCheckedChange={(checked) =>
                                                         setFormData({
                                                             ...formData,
-                                                            enableSocialSharing: checked,
+                                                            enableSocialSharing:
+                                                                checked,
                                                         })
                                                     }
                                                     disabled={isCreating}
@@ -801,8 +807,8 @@ export default function Step14ThankYouPage({
                                                         </TooltipTrigger>
                                                         <TooltipContent className="max-w-xs">
                                                             <p className="text-sm">
-                                                                Invite customers to join your
-                                                                community
+                                                                Invite customers to join
+                                                                your community
                                                             </p>
                                                         </TooltipContent>
                                                     </Tooltip>
@@ -812,20 +818,23 @@ export default function Step14ThankYouPage({
                                                     onChange={(e) =>
                                                         setFormData({
                                                             ...formData,
-                                                            communityPlatform: e.target.value,
+                                                            communityPlatform:
+                                                                e.target.value,
                                                         })
                                                     }
                                                     disabled={isCreating}
                                                     className="w-full rounded-lg border border-border bg-background px-4 py-2 focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
                                                 >
-                                                    {COMMUNITY_PLATFORMS.map((platform) => (
-                                                        <option
-                                                            key={platform.value}
-                                                            value={platform.value}
-                                                        >
-                                                            {platform.label}
-                                                        </option>
-                                                    ))}
+                                                    {COMMUNITY_PLATFORMS.map(
+                                                        (platform) => (
+                                                            <option
+                                                                key={platform.value}
+                                                                value={platform.value}
+                                                            >
+                                                                {platform.label}
+                                                            </option>
+                                                        )
+                                                    )}
                                                 </select>
                                             </div>
                                         </div>
@@ -837,9 +846,9 @@ export default function Step14ThankYouPage({
                                             Access Instructions
                                         </h4>
                                         <p className="mb-4 text-sm text-muted-foreground">
-                                            Configure what content shows based on what each
-                                            customer purchased. Leave blank to use AI-generated
-                                            instructions.
+                                            Configure what content shows based on what
+                                            each customer purchased. Leave blank to use
+                                            AI-generated instructions.
                                         </p>
                                         <div className="space-y-4">
                                             {/* Core Offer */}
@@ -847,14 +856,17 @@ export default function Step14ThankYouPage({
                                                 <div>
                                                     <div className="mb-2 flex items-center justify-between">
                                                         <label className="text-sm font-medium text-foreground">
-                                                            {coreOffer.name} (Core Offer)
+                                                            {coreOffer.name} (Core
+                                                            Offer)
                                                         </label>
                                                         <Switch
                                                             checked={
-                                                                formData.contentBlocks.coreOffer
-                                                                    .enabled
+                                                                formData.contentBlocks
+                                                                    .coreOffer.enabled
                                                             }
-                                                            onCheckedChange={(checked) =>
+                                                            onCheckedChange={(
+                                                                checked
+                                                            ) =>
                                                                 setFormData({
                                                                     ...formData,
                                                                     contentBlocks: {
@@ -863,7 +875,8 @@ export default function Step14ThankYouPage({
                                                                             ...formData
                                                                                 .contentBlocks
                                                                                 .coreOffer,
-                                                                            enabled: checked,
+                                                                            enabled:
+                                                                                checked,
                                                                         },
                                                                     },
                                                                 })
@@ -875,7 +888,8 @@ export default function Step14ThankYouPage({
                                                         .enabled && (
                                                         <textarea
                                                             value={
-                                                                formData.contentBlocks.coreOffer
+                                                                formData.contentBlocks
+                                                                    .coreOffer
                                                                     .accessInstructions
                                                             }
                                                             onChange={(e) =>
@@ -888,7 +902,8 @@ export default function Step14ThankYouPage({
                                                                                 .contentBlocks
                                                                                 .coreOffer,
                                                                             accessInstructions:
-                                                                                e.target.value,
+                                                                                e.target
+                                                                                    .value,
                                                                         },
                                                                     },
                                                                 })
@@ -907,14 +922,17 @@ export default function Step14ThankYouPage({
                                                 <div>
                                                     <div className="mb-2 flex items-center justify-between">
                                                         <label className="text-sm font-medium text-foreground">
-                                                            {orderBumpOffer.name} (Order Bump)
+                                                            {orderBumpOffer.name} (Order
+                                                            Bump)
                                                         </label>
                                                         <Switch
                                                             checked={
-                                                                formData.contentBlocks.orderBump
-                                                                    .enabled
+                                                                formData.contentBlocks
+                                                                    .orderBump.enabled
                                                             }
-                                                            onCheckedChange={(checked) =>
+                                                            onCheckedChange={(
+                                                                checked
+                                                            ) =>
                                                                 setFormData({
                                                                     ...formData,
                                                                     contentBlocks: {
@@ -923,7 +941,8 @@ export default function Step14ThankYouPage({
                                                                             ...formData
                                                                                 .contentBlocks
                                                                                 .orderBump,
-                                                                            enabled: checked,
+                                                                            enabled:
+                                                                                checked,
                                                                         },
                                                                     },
                                                                 })
@@ -935,7 +954,8 @@ export default function Step14ThankYouPage({
                                                         .enabled && (
                                                         <textarea
                                                             value={
-                                                                formData.contentBlocks.orderBump
+                                                                formData.contentBlocks
+                                                                    .orderBump
                                                                     .accessInstructions
                                                             }
                                                             onChange={(e) =>
@@ -948,7 +968,8 @@ export default function Step14ThankYouPage({
                                                                                 .contentBlocks
                                                                                 .orderBump,
                                                                             accessInstructions:
-                                                                                e.target.value,
+                                                                                e.target
+                                                                                    .value,
                                                                         },
                                                                     },
                                                                 })
@@ -967,14 +988,17 @@ export default function Step14ThankYouPage({
                                                 <div>
                                                     <div className="mb-2 flex items-center justify-between">
                                                         <label className="text-sm font-medium text-foreground">
-                                                            {upsell1Offer.name} (Upsell 1)
+                                                            {upsell1Offer.name} (Upsell
+                                                            1)
                                                         </label>
                                                         <Switch
                                                             checked={
-                                                                formData.contentBlocks.upsell1
-                                                                    .enabled
+                                                                formData.contentBlocks
+                                                                    .upsell1.enabled
                                                             }
-                                                            onCheckedChange={(checked) =>
+                                                            onCheckedChange={(
+                                                                checked
+                                                            ) =>
                                                                 setFormData({
                                                                     ...formData,
                                                                     contentBlocks: {
@@ -983,7 +1007,8 @@ export default function Step14ThankYouPage({
                                                                             ...formData
                                                                                 .contentBlocks
                                                                                 .upsell1,
-                                                                            enabled: checked,
+                                                                            enabled:
+                                                                                checked,
                                                                         },
                                                                     },
                                                                 })
@@ -995,7 +1020,8 @@ export default function Step14ThankYouPage({
                                                         .enabled && (
                                                         <textarea
                                                             value={
-                                                                formData.contentBlocks.upsell1
+                                                                formData.contentBlocks
+                                                                    .upsell1
                                                                     .accessInstructions
                                                             }
                                                             onChange={(e) =>
@@ -1008,7 +1034,8 @@ export default function Step14ThankYouPage({
                                                                                 .contentBlocks
                                                                                 .upsell1,
                                                                             accessInstructions:
-                                                                                e.target.value,
+                                                                                e.target
+                                                                                    .value,
                                                                         },
                                                                     },
                                                                 })
@@ -1027,14 +1054,17 @@ export default function Step14ThankYouPage({
                                                 <div>
                                                     <div className="mb-2 flex items-center justify-between">
                                                         <label className="text-sm font-medium text-foreground">
-                                                            {upsell2Offer.name} (Upsell 2)
+                                                            {upsell2Offer.name} (Upsell
+                                                            2)
                                                         </label>
                                                         <Switch
                                                             checked={
-                                                                formData.contentBlocks.upsell2
-                                                                    .enabled
+                                                                formData.contentBlocks
+                                                                    .upsell2.enabled
                                                             }
-                                                            onCheckedChange={(checked) =>
+                                                            onCheckedChange={(
+                                                                checked
+                                                            ) =>
                                                                 setFormData({
                                                                     ...formData,
                                                                     contentBlocks: {
@@ -1043,7 +1073,8 @@ export default function Step14ThankYouPage({
                                                                             ...formData
                                                                                 .contentBlocks
                                                                                 .upsell2,
-                                                                            enabled: checked,
+                                                                            enabled:
+                                                                                checked,
                                                                         },
                                                                     },
                                                                 })
@@ -1055,7 +1086,8 @@ export default function Step14ThankYouPage({
                                                         .enabled && (
                                                         <textarea
                                                             value={
-                                                                formData.contentBlocks.upsell2
+                                                                formData.contentBlocks
+                                                                    .upsell2
                                                                     .accessInstructions
                                                             }
                                                             onChange={(e) =>
@@ -1068,7 +1100,8 @@ export default function Step14ThankYouPage({
                                                                                 .contentBlocks
                                                                                 .upsell2,
                                                                             accessInstructions:
-                                                                                e.target.value,
+                                                                                e.target
+                                                                                    .value,
                                                                         },
                                                                     },
                                                                 })
@@ -1091,27 +1124,31 @@ export default function Step14ThankYouPage({
                                             Dynamic Content Preview
                                         </h4>
                                         <p className="mb-3 text-sm text-blue-800">
-                                            Your thank you page will automatically show different
-                                            content based on what each customer purchased:
+                                            Your thank you page will automatically show
+                                            different content based on what each
+                                            customer purchased:
                                         </p>
                                         <ul className="space-y-1 text-sm text-blue-800">
                                             <li>
-                                                • Core offer only → Shows core access instructions
+                                                • Core offer only → Shows core access
+                                                instructions
                                             </li>
                                             {orderBumpOffer && (
                                                 <li>
-                                                    • Core + Order Bump → Shows both sections
+                                                    • Core + Order Bump → Shows both
+                                                    sections
                                                 </li>
                                             )}
                                             {upsell1Offer && (
                                                 <li>
-                                                    • Core + Upsell 1 → Shows core and upsell 1
+                                                    • Core + Upsell 1 → Shows core and
+                                                    upsell 1
                                                 </li>
                                             )}
                                             {upsell2Offer && (
                                                 <li>
-                                                    • Core + All Upsells → Shows all enabled
-                                                    sections
+                                                    • Core + All Upsells → Shows all
+                                                    enabled sections
                                                 </li>
                                             )}
                                         </ul>
@@ -1167,8 +1204,8 @@ export default function Step14ThankYouPage({
                                     No thank you pages yet
                                 </h4>
                                 <p className="mx-auto mb-6 max-w-sm text-muted-foreground">
-                                    Create your first thank you page to delight customers
-                                    after purchase with personalized content
+                                    Create your first thank you page to delight
+                                    customers after purchase with personalized content
                                 </p>
                                 {canCreatePage && (
                                     <button
@@ -1308,12 +1345,12 @@ export default function Step14ThankYouPage({
                             refunds
                         </li>
                         <li>
-                            • Social sharing can drive referral traffic and word-of-mouth
-                            marketing
+                            • Social sharing can drive referral traffic and
+                            word-of-mouth marketing
                         </li>
                         <li>
-                            • Clear access instructions reduce support requests and improve
-                            satisfaction
+                            • Clear access instructions reduce support requests and
+                            improve satisfaction
                         </li>
                     </ul>
                 </div>

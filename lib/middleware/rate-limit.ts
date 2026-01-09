@@ -121,6 +121,18 @@ const aiEditorChatRatelimit = new Ratelimit({
     prefix: "ratelimit:ai-editor-chat",
 });
 
+/**
+ * Rate limiter for AI page generation
+ * Limits: 20 requests per hour per user (expensive: ~$0.24 per generation at 16k tokens)
+ * Rationale: Full page generation is the most expensive AI operation
+ */
+const aiPageGenerationRatelimit = new Ratelimit({
+    redis: kv,
+    limiter: Ratelimit.slidingWindow(20, "1 h"),
+    analytics: true,
+    prefix: "ratelimit:ai-page-generation",
+});
+
 export type RateLimitEndpoint =
     | "scraping"
     | "brand-colors"
@@ -131,7 +143,8 @@ export type RateLimitEndpoint =
     | "funnel-chat"
     | "funnel-drafts"
     | "image-upload"
-    | "ai-editor-chat";
+    | "ai-editor-chat"
+    | "ai-page-generation";
 
 /**
  * Rate limit check result with metadata for headers
@@ -169,6 +182,7 @@ export async function checkRateLimitWithInfo(
             "funnel-drafts": funnelDraftsRatelimit,
             "image-upload": imageUploadRatelimit,
             "ai-editor-chat": aiEditorChatRatelimit,
+            "ai-page-generation": aiPageGenerationRatelimit,
         };
 
         const limiter = limiterMap[endpoint];

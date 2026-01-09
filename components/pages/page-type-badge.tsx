@@ -9,7 +9,7 @@ interface PageTypeBadgeProps {
 }
 
 export function PageTypeBadge({ type }: PageTypeBadgeProps) {
-    const config = {
+    const config: Record<PageType, { label: string; className: string }> = {
         enrollment: {
             label: "Enrollment",
             className: "bg-primary/10 text-primary",
@@ -21,6 +21,26 @@ export function PageTypeBadge({ type }: PageTypeBadgeProps) {
         registration: {
             label: "Registration",
             className: "bg-green-100 text-green-800",
+        },
+        confirmation: {
+            label: "Confirmation",
+            className: "bg-emerald-100 text-emerald-800",
+        },
+        call_booking: {
+            label: "Call Booking",
+            className: "bg-blue-100 text-blue-800",
+        },
+        checkout: {
+            label: "Checkout",
+            className: "bg-amber-100 text-amber-800",
+        },
+        upsell: {
+            label: "Upsell",
+            className: "bg-orange-100 text-orange-800",
+        },
+        thank_you: {
+            label: "Thank You",
+            className: "bg-teal-100 text-teal-800",
         },
     };
 

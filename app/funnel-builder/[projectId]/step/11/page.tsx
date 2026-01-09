@@ -238,7 +238,10 @@ export default function Step11CallBookingPage({
             // If API completed quickly (under 15 seconds), fast-forward progress
             if (elapsed < 15000) {
                 setProgressStages((prev: ProgressStage[]) =>
-                    prev.map((s: ProgressStage) => ({ ...s, status: "completed" as const }))
+                    prev.map((s: ProgressStage) => ({
+                        ...s,
+                        status: "completed" as const,
+                    }))
                 );
                 // Small delay so user sees completion
                 await new Promise((resolve) => setTimeout(resolve, 500));
@@ -460,9 +463,9 @@ export default function Step11CallBookingPage({
 
                             {canCreatePage && (
                                 <p className="max-w-md text-sm text-muted-foreground">
-                                    Create a professional call booking page with calendar
-                                    integration for scheduling discovery calls and strategy
-                                    sessions
+                                    Create a professional call booking page with
+                                    calendar integration for scheduling discovery calls
+                                    and strategy sessions
                                 </p>
                             )}
                         </div>
@@ -576,8 +579,8 @@ export default function Step11CallBookingPage({
                                             ))}
                                         </select>
                                         <p className="mt-1 text-sm text-muted-foreground">
-                                            Your business and offer details for the booking
-                                            page
+                                            Your business and offer details for the
+                                            booking page
                                         </p>
                                     </div>
 
@@ -590,8 +593,9 @@ export default function Step11CallBookingPage({
                                                 </TooltipTrigger>
                                                 <TooltipContent className="max-w-xs">
                                                     <p className="text-sm">
-                                                        Choose a template that matches your
-                                                        call objective and positioning
+                                                        Choose a template that matches
+                                                        your call objective and
+                                                        positioning
                                                     </p>
                                                 </TooltipContent>
                                             </Tooltip>
@@ -611,7 +615,8 @@ export default function Step11CallBookingPage({
                                                             onChange={(e) =>
                                                                 setFormData({
                                                                     ...formData,
-                                                                    templateType: e.target
+                                                                    templateType: e
+                                                                        .target
                                                                         .value as any,
                                                                 })
                                                             }
@@ -641,7 +646,9 @@ export default function Step11CallBookingPage({
                                             onChange={(e) =>
                                                 setFormData({
                                                     ...formData,
-                                                    callDuration: parseInt(e.target.value),
+                                                    callDuration: parseInt(
+                                                        e.target.value
+                                                    ),
                                                 })
                                             }
                                             disabled={isCreating}
@@ -756,9 +763,9 @@ export default function Step11CallBookingPage({
                                                     Calendar Integration
                                                 </h4>
                                                 <p className="text-sm text-blue-800 mb-3">
-                                                    Your call booking page will include a
-                                                    native scheduling interface based on
-                                                    your availability settings above.
+                                                    Your call booking page will include
+                                                    a native scheduling interface based
+                                                    on your availability settings above.
                                                 </p>
                                                 <div className="space-y-2">
                                                     <div className="flex items-center gap-2 text-sm">
@@ -781,8 +788,8 @@ export default function Step11CallBookingPage({
                                                     </div>
                                                 </div>
                                                 <p className="text-sm text-blue-700 mt-3">
-                                                    For now, you'll manage bookings manually
-                                                    through the dashboard.
+                                                    For now, you'll manage bookings
+                                                    manually through the dashboard.
                                                 </p>
                                             </div>
                                         </div>
@@ -797,8 +804,8 @@ export default function Step11CallBookingPage({
                                             <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
                                                 <Calendar className="h-4 w-4" />
                                                 <span>
-                                                    {formData.callDuration} minute calls available
-                                                    on:
+                                                    {formData.callDuration} minute calls
+                                                    available on:
                                                 </span>
                                             </div>
                                             <div className="grid grid-cols-7 gap-2">
@@ -818,10 +825,11 @@ export default function Step11CallBookingPage({
                                                 ))}
                                             </div>
                                             <div className="mt-3 text-xs text-muted-foreground">
-                                                Bookings allowed {formData.advanceBookingDays}{" "}
-                                                days in advance with{" "}
-                                                {formData.minimumNoticeHours} hour minimum
-                                                notice
+                                                Bookings allowed{" "}
+                                                {formData.advanceBookingDays} days in
+                                                advance with{" "}
+                                                {formData.minimumNoticeHours} hour
+                                                minimum notice
                                             </div>
                                         </div>
                                     </div>
@@ -925,14 +933,18 @@ export default function Step11CallBookingPage({
                                                         ).toLocaleDateString()}
                                                     </span>
                                                     {page.version && (
-                                                        <span>Version {page.version}</span>
+                                                        <span>
+                                                            Version {page.version}
+                                                        </span>
                                                     )}
                                                 </div>
                                             </div>
 
                                             <div className="flex items-center gap-3">
                                                 <button
-                                                    onClick={() => handleEditPage(page.id)}
+                                                    onClick={() =>
+                                                        handleEditPage(page.id)
+                                                    }
                                                     className="inline-flex items-center gap-2 rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700"
                                                 >
                                                     <Pencil className="h-4 w-4" />

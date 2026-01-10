@@ -75,22 +75,23 @@ WITH
 
 -- ===========================================
 -- ORDERS: Validate checkout page exists and required fields
+-- Note: Anonymous orders MUST have a checkout page context for revenue attribution
+-- Backend processes (Stripe webhooks) use service role, not anonymous
 -- ===========================================
 CREATE POLICY "Validated anon order creation" ON public.orders FOR INSERT TO anon
 WITH
   CHECK (
-    -- Checkout page must exist and be published (if provided)
-    (
-      checkout_page_id IS NULL
-      OR EXISTS (
-        SELECT
-          1
-        FROM
-          public.checkout_pages cp
-        WHERE
-          cp.id = checkout_page_id
-          AND cp.is_published = true
-      )
+    -- Checkout page MUST exist and be published (required for anonymous orders)
+    -- This ensures proper funnel attribution and prevents orphaned orders
+    checkout_page_id IS NOT NULL
+    AND EXISTS (
+      SELECT
+        1
+      FROM
+        public.checkout_pages cp
+      WHERE
+        cp.id = checkout_page_id
+        AND cp.is_published = true
     )
     -- Required fields
     AND customer_email IS NOT NULL

@@ -57,7 +57,11 @@ describe("MasterSectionCard", () => {
         completedSubSteps: [],
         projectId: "project-123",
         subStepDetails: [
-            { number: 1, title: "Intake", description: "Multiple input options" },
+            {
+                number: 1,
+                title: "Define Context",
+                description: "Multiple input options",
+            },
             { number: 2, title: "Funnel Map", description: "Plan your funnel" },
             { number: 3, title: "Brand Design", description: "Visual identity" },
         ],
@@ -196,7 +200,7 @@ describe("MasterSectionCard", () => {
         const showButton = screen.getByText("Show Details");
         fireEvent.click(showButton);
 
-        expect(screen.getByText("Intake")).toBeInTheDocument();
+        expect(screen.getByText("Define Context")).toBeInTheDocument();
         expect(screen.getByText("Funnel Map")).toBeInTheDocument();
         expect(screen.getByText("Brand Design")).toBeInTheDocument();
     });
@@ -213,8 +217,8 @@ describe("MasterSectionCard", () => {
         fireEvent.click(showButton);
 
         // Check that completed step has check icon (using aria-hidden or other accessible attributes)
-        const intakeLink = screen.getByText("Intake").closest("a");
-        expect(intakeLink).toBeInTheDocument();
+        const defineContextLink = screen.getByText("Define Context").closest("a");
+        expect(defineContextLink).toBeInTheDocument();
     });
 
     it("should link to correct navigation href", () => {

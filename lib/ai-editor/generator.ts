@@ -4,6 +4,7 @@
  */
 
 import Anthropic from "@anthropic-ai/sdk";
+import * as Sentry from "@sentry/nextjs";
 import { logger } from "@/lib/logger";
 import { loadPageFramework, PageType } from "./framework-loader";
 import {
@@ -13,6 +14,78 @@ import {
 } from "./context-aggregator";
 
 const anthropic = new Anthropic();
+
+/**
+ * Sanitize generated HTML to prevent XSS attacks
+ * Removes dangerous patterns while preserving legitimate content
+ */
+function sanitizeGeneratedHtml(html: string): string {
+    let sanitized = html;
+
+    // Track if any sanitization occurred for logging
+    const originalLength = html.length;
+
+    // Remove <script> tags and their content
+    sanitized = sanitized.replace(
+        /<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi,
+        ""
+    );
+
+    // Remove event handlers (onclick, onerror, onload, etc.)
+    sanitized = sanitized.replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, "");
+    sanitized = sanitized.replace(/\s+on\w+\s*=\s*[^\s>]+/gi, "");
+
+    // Remove javascript: URLs
+    sanitized = sanitized.replace(/javascript\s*:/gi, "blocked:");
+
+    // Remove data: URLs that could contain scripts (but allow data:image)
+    sanitized = sanitized.replace(
+        /data:(?!image\/)[^;,\s'"]+[;,][^'">\s]*/gi,
+        "blocked:"
+    );
+
+    // Remove <iframe> tags (prevent embedding external content)
+    // Note: We allow iframe placeholders in watch pages for video embeds
+    // but remove any with src attributes pointing to external domains
+    sanitized = sanitized.replace(
+        /<iframe[^>]*src\s*=\s*["'](?!https:\/\/(?:www\.)?(?:youtube\.com|vimeo\.com|loom\.com|cloudflarestream\.com))[^"']*["'][^>]*>/gi,
+        "<!-- external iframe removed -->"
+    );
+
+    // Remove <object>, <embed>, <applet> tags (legacy attack vectors)
+    sanitized = sanitized.replace(
+        /<(?:object|embed|applet)\b[^>]*>.*?<\/(?:object|embed|applet)>/gis,
+        ""
+    );
+    sanitized = sanitized.replace(/<(?:object|embed|applet)\b[^>]*\/?>/gi, "");
+
+    // Remove <base> tag (can be used to hijack relative URLs)
+    sanitized = sanitized.replace(/<base\b[^>]*\/?>/gi, "");
+
+    // Remove <meta http-equiv="refresh"> (redirect attacks)
+    sanitized = sanitized.replace(
+        /<meta\s+[^>]*http-equiv\s*=\s*["']refresh["'][^>]*>/gi,
+        ""
+    );
+
+    // Log if sanitization removed content
+    if (sanitized.length !== originalLength) {
+        const bytesRemoved = originalLength - sanitized.length;
+        logger.warn(
+            { bytesRemoved, originalLength, sanitizedLength: sanitized.length },
+            "XSS patterns removed from generated HTML"
+        );
+
+        Sentry.addBreadcrumb({
+            category: "security.xss",
+            message: "XSS patterns removed from AI-generated HTML",
+            level: "warning",
+            data: { bytesRemoved, originalLength },
+        });
+    }
+
+    return sanitized;
+}
 
 export interface GeneratePageOptions {
     projectId: string;
@@ -118,6 +191,11 @@ function buildSystemPrompt(pageType: PageType, framework: string): string {
         registration: "Registration",
         watch: "Watch",
         enrollment: "Enrollment",
+        confirmation: "Confirmation",
+        call_booking: "Call Booking",
+        checkout: "Checkout",
+        upsell: "Upsell",
+        thank_you: "Thank You",
     };
 
     return `You are an expert landing page designer and developer with a keen eye for professional, polished design. Your task is to generate a complete, production-ready ${pageTypeLabels[pageType]} page as a single HTML document.
@@ -252,6 +330,7 @@ function buildUserPrompt(
 
 /**
  * Parse the generated content to extract HTML, title, and sections
+ * Applies XSS sanitization to the generated HTML
  */
 function parseGeneratedContent(
     content: string,
@@ -272,7 +351,10 @@ function parseGeneratedContent(
 
     html = html.trim();
 
-    // Extract title from <title> tag
+    // Apply XSS sanitization to the generated HTML
+    html = sanitizeGeneratedHtml(html);
+
+    // Extract title from <title> tag (after sanitization)
     const titleMatch = html.match(/<title>([^<]*)<\/title>/i);
     const title =
         titleMatch?.[1] ||
@@ -394,6 +476,41 @@ export function validateGeneratedHtml(
     if (pageType === "enrollment") {
         if (!html.includes("price") && !html.includes("payment")) {
             warnings.push("Enrollment page may be missing pricing information");
+        }
+    }
+
+    if (pageType === "confirmation") {
+        if (!html.includes("calendar") && !html.includes("Calendar")) {
+            warnings.push("Confirmation page may be missing calendar integration");
+        }
+    }
+
+    if (pageType === "call_booking") {
+        if (!html.includes("<form") && !html.includes("form")) {
+            warnings.push("Call booking page missing qualification form");
+        }
+    }
+
+    if (pageType === "checkout") {
+        if (!html.includes("payment") && !html.includes("checkout")) {
+            warnings.push("Checkout page may be missing payment information");
+        }
+    }
+
+    if (pageType === "upsell") {
+        if (!html.includes("countdown") && !html.includes("timer")) {
+            warnings.push("Upsell page may be missing urgency countdown timer");
+        }
+    }
+
+    if (pageType === "thank_you") {
+        if (
+            !html.includes("thank") &&
+            !html.includes("Thank") &&
+            !html.includes("welcome") &&
+            !html.includes("Welcome")
+        ) {
+            warnings.push("Thank you page may be missing confirmation messaging");
         }
     }
 

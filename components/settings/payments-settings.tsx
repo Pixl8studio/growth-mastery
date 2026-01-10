@@ -6,19 +6,48 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { logger } from "@/lib/client-logger";
 
 export function PaymentsSettings() {
+    const searchParams = useSearchParams();
     const [loading, setLoading] = useState(true);
     const [stripeConnected, setStripeConnected] = useState(false);
     const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
     const [chargesEnabled, setChargesEnabled] = useState(false);
     const [payoutsEnabled, setPayoutsEnabled] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
+    const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+    // Check for URL parameters (error/success from OAuth flow)
+    const urlError = searchParams.get("error");
+    const urlSuccess = searchParams.get("success");
+    const errorDetail = searchParams.get("error_detail");
 
     useEffect(() => {
         loadPaymentSettings();
-    }, []);
+
+        // Handle URL parameters
+        if (urlError === "stripe_not_configured") {
+            setErrorMessage(
+                "Stripe Connect is not configured on this server. " +
+                    "Please contact support or check that STRIPE_CONNECT_CLIENT_ID is set correctly."
+            );
+        } else if (urlError === "connection_failed") {
+            setErrorMessage(
+                errorDetail || "Failed to connect to Stripe. Please try again."
+            );
+        } else if (urlError) {
+            setErrorMessage(errorDetail || "An error occurred with Stripe Connect.");
+        }
+
+        if (urlSuccess === "true") {
+            setSuccessMessage("Stripe account connected successfully!");
+            // Clear success message after 5 seconds
+            setTimeout(() => setSuccessMessage(null), 5000);
+        }
+    }, [urlError, urlSuccess, errorDetail]);
 
     const loadPaymentSettings = async () => {
         try {
@@ -106,9 +135,67 @@ export function PaymentsSettings() {
             <div className="mb-6">
                 <h2 className="text-2xl font-bold text-foreground">Payment Settings</h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                    Connect Stripe to accept payments through your funnel pages
+                    Connect your Stripe account to receive payments from your funnels
                 </p>
             </div>
+
+            {/* Success Message */}
+            {successMessage && (
+                <div className="mb-4 rounded-md bg-green-50 p-4">
+                    <div className="flex">
+                        <div className="flex-shrink-0">
+                            <svg
+                                className="h-5 w-5 text-green-400"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path
+                                    fillRule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clipRule="evenodd"
+                                />
+                            </svg>
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm font-medium text-green-800">
+                                {successMessage}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Error Message */}
+            {errorMessage && (
+                <div className="mb-4 rounded-md bg-red-50 p-4">
+                    <div className="flex">
+                        <div className="flex-shrink-0">
+                            <svg
+                                className="h-5 w-5 text-red-400"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                            >
+                                <path
+                                    fillRule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                                    clipRule="evenodd"
+                                />
+                            </svg>
+                        </div>
+                        <div className="ml-3">
+                            <p className="text-sm font-medium text-red-800">
+                                {errorMessage}
+                            </p>
+                            <button
+                                onClick={() => setErrorMessage(null)}
+                                className="mt-2 text-sm text-red-600 hover:text-red-500 underline"
+                            >
+                                Dismiss
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <div className="rounded-lg border border-border bg-card p-6">
                 <div className="flex items-start justify-between">

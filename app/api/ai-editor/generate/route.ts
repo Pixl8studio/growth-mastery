@@ -5,22 +5,36 @@
  */
 
 import * as Sentry from "@sentry/nextjs";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
 import { generatePage, validateGeneratedHtml } from "@/lib/ai-editor/generator";
-import type { PageType } from "@/lib/ai-editor/framework-loader";
+import { PAGE_TYPES } from "@/types/pages";
+import {
+    checkRateLimitWithInfo,
+    getRateLimitIdentifier,
+    addRateLimitHeaders,
+} from "@/lib/middleware/rate-limit";
 
-interface GenerateRequest {
-    projectId: string;
-    pageType: PageType;
-    customPrompt?: string;
-    offerId?: string;
-    deckId?: string;
-    templateStyle?: "urgency-convert" | "premium-elegant" | "value-focused";
-}
+// Validation schema using the single source of truth for page types
+const GenerateRequestSchema = z.object({
+    projectId: z.string().uuid("Invalid project ID format"),
+    pageType: z.enum(PAGE_TYPES),
+    customPrompt: z
+        .string()
+        .max(5000, "Custom prompt too long (max 5000 characters)")
+        .optional(),
+    offerId: z.string().uuid("Invalid offer ID format").optional(),
+    deckId: z.string().uuid("Invalid deck ID format").optional(),
+    templateStyle: z
+        .enum(["urgency-convert", "premium-elegant", "value-focused"])
+        .optional(),
+});
 
-export async function POST(request: Request) {
+type GenerateRequest = z.infer<typeof GenerateRequestSchema>;
+
+export async function POST(request: NextRequest) {
     const startTime = Date.now();
 
     try {
@@ -35,25 +49,41 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        // Parse request body
-        const body: GenerateRequest = await request.json();
+        // Check rate limit (20 generations per hour per user)
+        const rateLimitId = getRateLimitIdentifier(request, user.id);
+        const rateLimitResult = await checkRateLimitWithInfo(
+            rateLimitId,
+            "ai-page-generation"
+        );
+
+        if (rateLimitResult.blocked) {
+            logger.warn({ userId: user.id }, "AI page generation rate limit exceeded");
+            return rateLimitResult.response!;
+        }
+
+        // Parse and validate request body with Zod
+        const rawBody = await request.json();
+        const validationResult = GenerateRequestSchema.safeParse(rawBody);
+
+        if (!validationResult.success) {
+            logger.warn(
+                { errors: validationResult.error.issues },
+                "Invalid AI generation request"
+            );
+            return NextResponse.json(
+                {
+                    error: "Invalid request",
+                    details: validationResult.error.issues.map((issue) => ({
+                        field: issue.path.join("."),
+                        message: issue.message,
+                    })),
+                },
+                { status: 400 }
+            );
+        }
+
         const { projectId, pageType, customPrompt, offerId, deckId, templateStyle } =
-            body;
-
-        // Validate inputs
-        if (!projectId || !pageType) {
-            return NextResponse.json(
-                { error: "projectId and pageType are required" },
-                { status: 400 }
-            );
-        }
-
-        if (!["registration", "watch", "enrollment"].includes(pageType)) {
-            return NextResponse.json(
-                { error: "pageType must be 'registration', 'watch', or 'enrollment'" },
-                { status: 400 }
-            );
-        }
+            validationResult.data;
 
         // Verify user owns the project
         const { data: project, error: projectError } = await supabase
@@ -70,19 +100,6 @@ export async function POST(request: Request) {
             return NextResponse.json(
                 { error: "You don't have access to this project" },
                 { status: 403 }
-            );
-        }
-
-        // Validate templateStyle if provided
-        const validTemplateStyles = [
-            "urgency-convert",
-            "premium-elegant",
-            "value-focused",
-        ];
-        if (templateStyle && !validTemplateStyles.includes(templateStyle)) {
-            return NextResponse.json(
-                { error: "Invalid templateStyle" },
-                { status: 400 }
             );
         }
 
@@ -207,7 +224,8 @@ export async function POST(request: Request) {
             "Page generation successful"
         );
 
-        return NextResponse.json({
+        // Build response with rate limit headers
+        const response = NextResponse.json({
             success: true,
             pageId: newPage.id,
             html: result.html,
@@ -219,6 +237,9 @@ export async function POST(request: Request) {
                 warnings: validation.warnings,
             },
         });
+
+        // Add rate limit headers for transparency
+        return addRateLimitHeaders(response, rateLimitResult.info);
     } catch (error) {
         const errorMessage =
             error instanceof Error ? error.message : "Unknown error occurred";

@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * Step 9: Registration Pages
- * Create and manage registration pages with visual editor integration
+ * Step 9: Watch Pages
+ * Create and manage watch pages with visual editor integration
  */
 
 import { useState, useEffect } from "react";
@@ -11,7 +11,7 @@ import { StepLayout } from "@/components/funnel/step-layout";
 import { DependencyWarning } from "@/components/funnel/dependency-warning";
 import { useIsMobile } from "@/lib/mobile-utils.client";
 import {
-    FileText,
+    Video,
     Eye,
     Pencil,
     Trash2,
@@ -34,14 +34,22 @@ interface DeckStructure {
     created_at: string;
 }
 
-interface RegistrationPage {
+interface PitchVideo {
+    id: string;
+    video_url: string;
+    thumbnail_url: string | null;
+    video_duration: number;
+    created_at: string;
+}
+
+interface WatchPage {
     id: string;
     headline: string;
     subheadline: string;
     html_content: string;
     theme: any;
     is_published: boolean;
-    vanity_slug: string | null;
+    pitch_video_id: string | null;
     created_at: string;
 }
 
@@ -56,7 +64,7 @@ interface AIEditorPage {
 }
 
 // Unified page type for combined list
-interface UnifiedRegistrationPage {
+interface UnifiedWatchPage {
     id: string;
     title: string;
     subtitle?: string;
@@ -64,10 +72,10 @@ interface UnifiedRegistrationPage {
     type: "ai-editor" | "legacy";
     created_at: string;
     version?: number;
-    vanity_slug?: string | null;
+    pitch_video_id?: string | null;
 }
 
-export default function Step9RegistrationPage({
+export default function Step8WatchPage({
     params,
 }: {
     params: Promise<{ projectId: string }>;
@@ -78,20 +86,21 @@ export default function Step9RegistrationPage({
     const [projectId, setProjectId] = useState("");
     const [project, setProject] = useState<any>(null);
     const [deckStructures, setDeckStructures] = useState<DeckStructure[]>([]);
-    const [registrationPages, setRegistrationPages] = useState<RegistrationPage[]>([]);
+    const [pitchVideos, setPitchVideos] = useState<PitchVideo[]>([]);
+    const [watchPages, setWatchPages] = useState<WatchPage[]>([]);
     const [aiEditorPages, setAiEditorPages] = useState<AIEditorPage[]>([]);
     const [isCreating, setIsCreating] = useState(false);
     const [isMigrating, setIsMigrating] = useState<string | null>(null);
 
-    // Handle Generate Registration Page (AI Editor)
+    // Handle Generate Watch Page (AI Editor)
     const handleGenerate = async () => {
         if (!projectId) return;
 
         setIsCreating(true);
         try {
             logger.info(
-                { projectId, pageType: "registration" },
-                "Creating registration page with AI editor"
+                { projectId, pageType: "watch" },
+                "Creating watch page with AI editor"
             );
 
             const response = await fetch("/api/ai-editor/generate", {
@@ -99,7 +108,7 @@ export default function Step9RegistrationPage({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     projectId,
-                    pageType: "registration",
+                    pageType: "watch",
                 }),
             });
 
@@ -109,13 +118,13 @@ export default function Step9RegistrationPage({
                 throw new Error(data.error || data.details || "Failed to create page");
             }
 
-            logger.info({ pageId: data.pageId }, "Registration page created");
+            logger.info({ pageId: data.pageId }, "Watch page created");
 
             // Add the new page to the list immediately
             const newPage: AIEditorPage = {
                 id: data.pageId,
-                title: data.title || "Registration Page",
-                page_type: "registration",
+                title: data.title || "Watch Page",
+                page_type: "watch",
                 status: "draft",
                 version: 1,
                 created_at: new Date().toISOString(),
@@ -124,14 +133,14 @@ export default function Step9RegistrationPage({
             setAiEditorPages((prev) => [newPage, ...prev]);
 
             toast({
-                title: "Registration page created!",
+                title: "Watch page created!",
                 description: "Opening the AI Editor in a new tab...",
             });
 
             // Open in new tab
             window.open(`/ai-editor/${data.pageId}`, "_blank");
         } catch (error: any) {
-            logger.error({ error }, "Failed to create registration page");
+            logger.error({ error }, "Failed to create watch page");
             toast({
                 variant: "destructive",
                 title: "Error",
@@ -144,13 +153,13 @@ export default function Step9RegistrationPage({
     };
 
     // Handle migration of legacy page to AI Editor
-    const handleMigrateToAIEditor = async (legacyPage: RegistrationPage) => {
+    const handleMigrateToAIEditor = async (legacyPage: WatchPage) => {
         setIsMigrating(legacyPage.id);
 
         try {
             logger.info(
                 { legacyPageId: legacyPage.id },
-                "Migrating legacy registration page to AI Editor"
+                "Migrating legacy watch page to AI Editor"
             );
 
             // Create a new AI Editor page with the legacy content as a starting point
@@ -159,13 +168,13 @@ export default function Step9RegistrationPage({
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     projectId,
-                    pageType: "registration",
-                    customPrompt: `This is a migration from an existing registration page. Use this content as inspiration but create a modern, improved version:
+                    pageType: "watch",
+                    customPrompt: `This is a migration from an existing watch page. Use this content as inspiration but create a modern, improved version:
 
 Title: ${legacyPage.headline}
 Subtitle: ${legacyPage.subheadline}
 
-Please create an improved registration page that captures the same messaging but with enhanced design and conversion optimization.`,
+Please create an improved watch page that captures the same messaging but with enhanced design and engagement optimization.`,
                 }),
             });
 
@@ -179,7 +188,7 @@ Please create an improved registration page that captures the same messaging but
             const newPage: AIEditorPage = {
                 id: data.pageId,
                 title: data.title || legacyPage.headline,
-                page_type: "registration",
+                page_type: "watch",
                 status: "draft",
                 version: 1,
                 created_at: new Date().toISOString(),
@@ -207,21 +216,21 @@ Please create an improved registration page that captures the same messaging but
         }
     };
 
-    // Load completion status
-    const { completedSteps } = useStepCompletion(projectId);
-
     // Redirect mobile users to desktop-required page
     useEffect(() => {
         if (isMobile && projectId) {
             const params = new URLSearchParams({
-                feature: "Registration Page Editor",
+                feature: "Watch Page Editor",
                 description:
-                    "The registration page editor requires a desktop computer for creating and customizing registration pages with visual editing tools.",
+                    "The watch page editor requires a desktop computer for creating and customizing video watch pages with visual editing tools.",
                 returnPath: `/funnel-builder/${projectId}`,
             });
             router.push(`/desktop-required?${params.toString()}`);
         }
     }, [isMobile, projectId, router]);
+
+    // Load completion status
+    const { completedSteps } = useStepCompletion(projectId);
 
     useEffect(() => {
         const resolveParams = async () => {
@@ -270,15 +279,25 @@ Please create an improved registration page that captures the same messaging but
                 if (deckError) throw deckError;
                 setDeckStructures(deckData || []);
 
-                // Load registration pages
+                // Load pitch videos
+                const { data: videoData, error: videoError } = await supabase
+                    .from("pitch_videos")
+                    .select("*")
+                    .eq("funnel_project_id", projectId)
+                    .order("created_at", { ascending: false });
+
+                if (videoError) throw videoError;
+                setPitchVideos(videoData || []);
+
+                // Load watch pages
                 const { data: pagesData, error: pagesError } = await supabase
-                    .from("registration_pages")
+                    .from("watch_pages")
                     .select("*")
                     .eq("funnel_project_id", projectId)
                     .order("created_at", { ascending: false });
 
                 if (pagesError) throw pagesError;
-                setRegistrationPages(pagesData || []);
+                setWatchPages(pagesData || []);
 
                 // Load AI Editor v2 pages
                 const { data: aiPagesData, error: aiPagesError } = await supabase
@@ -287,7 +306,7 @@ Please create an improved registration page that captures the same messaging but
                         "id, title, page_type, status, version, created_at, updated_at"
                     )
                     .eq("funnel_project_id", projectId)
-                    .eq("page_type", "registration")
+                    .eq("page_type", "watch")
                     .order("created_at", { ascending: false });
 
                 if (aiPagesError) {
@@ -311,31 +330,31 @@ Please create an improved registration page that captures the same messaging but
     };
 
     const handlePreviewLegacy = (pageId: string) => {
-        const previewUrl = `/funnel-builder/${projectId}/pages/registration/${pageId}`;
+        const previewUrl = `/funnel-builder/${projectId}/pages/watch/${pageId}`;
         window.open(previewUrl, "_blank");
     };
 
     const handleDelete = async (pageId: string) => {
-        if (!confirm("Delete this registration page?")) return;
+        if (!confirm("Delete this watch page?")) return;
 
         try {
             const supabase = createClient();
             const { error } = await supabase
-                .from("registration_pages")
+                .from("watch_pages")
                 .delete()
                 .eq("id", pageId);
 
             if (!error) {
-                setRegistrationPages((prev) => prev.filter((p) => p.id !== pageId));
-                logger.info({ pageId }, "Registration page deleted");
+                setWatchPages((prev) => prev.filter((p) => p.id !== pageId));
+                logger.info({ pageId }, "Watch page deleted");
             }
         } catch (error) {
-            logger.error({ error }, "Failed to delete registration page");
+            logger.error({ error }, "Failed to delete watch page");
         }
     };
 
     // Create unified pages list combining AI Editor and legacy pages
-    const unifiedPages: UnifiedRegistrationPage[] = [
+    const unifiedPages: UnifiedWatchPage[] = [
         // AI Editor pages first (newer)
         ...aiEditorPages.map((page) => ({
             id: page.id,
@@ -346,7 +365,7 @@ Please create an improved registration page that captures the same messaging but
             version: page.version,
         })),
         // Legacy pages with badge
-        ...registrationPages.map((page) => ({
+        ...watchPages.map((page) => ({
             id: page.id,
             title: page.headline,
             subtitle: page.subheadline,
@@ -355,14 +374,16 @@ Please create an improved registration page that captures the same messaging but
                 | "draft",
             type: "legacy" as const,
             created_at: page.created_at,
-            vanity_slug: page.vanity_slug,
+            pitch_video_id: page.pitch_video_id,
         })),
     ].sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     );
 
     const hasDeckStructure = deckStructures.length > 0;
-    const hasRegistrationPage = unifiedPages.length > 0;
+    const hasPitchVideo = pitchVideos.length > 0;
+    const hasWatchPage = unifiedPages.length > 0;
+    const canCreatePage = hasDeckStructure && hasPitchVideo;
 
     if (!projectId) {
         return (
@@ -378,31 +399,39 @@ Please create an improved registration page that captures the same messaging but
             projectId={projectId}
             completedSteps={completedSteps}
             funnelName={project?.name}
-            nextDisabled={!hasRegistrationPage}
-            nextLabel={hasRegistrationPage ? "Setup Your Flow" : "Create Page First"}
-            stepTitle="Registration Pages"
-            stepDescription="Create high-converting registration pages with visual editor"
+            nextDisabled={!hasWatchPage}
+            nextLabel={hasWatchPage ? "Create Registration Page" : "Create Page First"}
+            stepTitle="Watch Page"
+            stepDescription="Create engaging video watch pages with visual editor"
         >
             <div className="space-y-8">
-                {/* Dependency Warning */}
+                {/* Dependency Warnings */}
                 {!hasDeckStructure && (
                     <DependencyWarning
-                        message="You need to create a deck structure first before generating registration pages."
+                        message="You need to create a deck structure first."
                         requiredStep={4}
                         requiredStepName="Deck Structure"
                         projectId={projectId}
                     />
                 )}
+                {!hasPitchVideo && (
+                    <DependencyWarning
+                        message="You need to upload a pitch video first."
+                        requiredStep={6}
+                        requiredStepName="Pitch Video"
+                        projectId={projectId}
+                    />
+                )}
 
                 {/* Generate Button */}
-                <div className="rounded-lg border border-green-100 bg-gradient-to-br from-green-50 to-emerald-50 p-8">
+                <div className="rounded-lg border border-cyan-100 bg-gradient-to-br from-cyan-50 to-primary/5 p-8">
                     <div className="flex flex-col items-center gap-4 text-center">
                         <button
                             onClick={handleGenerate}
-                            disabled={!hasDeckStructure || isCreating}
+                            disabled={!canCreatePage || isCreating}
                             className={`flex items-center gap-3 rounded-lg px-8 py-4 text-lg font-semibold transition-colors ${
-                                hasDeckStructure && !isCreating
-                                    ? "bg-green-600 text-white hover:bg-green-700"
+                                canCreatePage && !isCreating
+                                    ? "bg-cyan-600 text-white hover:bg-cyan-700"
                                     : "cursor-not-allowed bg-gray-300 text-muted-foreground"
                             }`}
                         >
@@ -414,14 +443,14 @@ Please create an improved registration page that captures the same messaging but
                             ) : (
                                 <>
                                     <Sparkles className="h-6 w-6" />
-                                    {hasDeckStructure
-                                        ? "Generate Registration Page"
+                                    {canCreatePage
+                                        ? "Generate Watch Page"
                                         : "Complete Prerequisites First"}
                                 </>
                             )}
                         </button>
 
-                        {hasDeckStructure && (
+                        {canCreatePage && (
                             <p className="text-sm text-muted-foreground">
                                 AI-powered page editor
                             </p>
@@ -434,7 +463,7 @@ Please create an improved registration page that captures the same messaging but
                     <div className="border-b border-border p-6">
                         <div className="flex items-center justify-between">
                             <h3 className="text-xl font-semibold text-foreground">
-                                Your Registration Pages
+                                Your Watch Pages
                             </h3>
                             <span className="text-sm text-muted-foreground">
                                 {unifiedPages.length} created
@@ -445,21 +474,21 @@ Please create an improved registration page that captures the same messaging but
                     <div className="p-6">
                         {unifiedPages.length === 0 ? (
                             <div className="py-16 text-center">
-                                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                                    <FileText className="h-8 w-8 text-green-600" />
+                                <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-cyan-100">
+                                    <Video className="h-8 w-8 text-cyan-600" />
                                 </div>
                                 <h4 className="mb-2 text-lg font-semibold text-foreground">
-                                    No registration pages yet
+                                    No watch pages yet
                                 </h4>
                                 <p className="mx-auto mb-6 max-w-sm text-muted-foreground">
-                                    Create your first registration page to start
-                                    capturing leads
+                                    Create your first watch page to engage your audience
+                                    with video content
                                 </p>
-                                {hasDeckStructure && (
+                                {canCreatePage && (
                                     <button
                                         onClick={handleGenerate}
                                         disabled={isCreating}
-                                        className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-6 py-3 font-semibold text-white transition-all hover:bg-green-700"
+                                        className="inline-flex items-center gap-2 rounded-lg bg-cyan-600 px-6 py-3 font-semibold text-white transition-all hover:bg-cyan-700"
                                     >
                                         <Sparkles className="h-5 w-5" />
                                         Generate Your First Page
@@ -471,15 +500,13 @@ Please create an improved registration page that captures the same messaging but
                                 {unifiedPages.map((page) => {
                                     const isLegacy = page.type === "legacy";
                                     const legacyPage = isLegacy
-                                        ? registrationPages.find(
-                                              (p) => p.id === page.id
-                                          )
+                                        ? watchPages.find((p) => p.id === page.id)
                                         : null;
 
                                     return (
                                         <div
                                             key={page.id}
-                                            className="rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-green-300 hover:shadow-md"
+                                            className="rounded-lg border border-border bg-card p-6 shadow-sm transition-all hover:border-cyan-300 hover:shadow-md"
                                         >
                                             <div className="flex items-start justify-between">
                                                 <div className="flex-1">
@@ -524,11 +551,6 @@ Please create an improved registration page that captures the same messaging but
                                                                 Version {page.version}
                                                             </span>
                                                         )}
-                                                        {page.vanity_slug && (
-                                                            <span>
-                                                                /{page.vanity_slug}
-                                                            </span>
-                                                        )}
                                                     </div>
                                                 </div>
 
@@ -547,7 +569,7 @@ Please create an improved registration page that captures the same messaging but
                                                                     isMigrating ===
                                                                     page.id
                                                                 }
-                                                                className="inline-flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 px-3 py-2 text-sm font-medium text-green-700 transition-colors hover:bg-green-100 disabled:opacity-50"
+                                                                className="inline-flex items-center gap-2 rounded-lg border border-cyan-300 bg-cyan-50 px-3 py-2 text-sm font-medium text-cyan-700 transition-colors hover:bg-cyan-100 disabled:opacity-50"
                                                             >
                                                                 {isMigrating ===
                                                                 page.id ? (
@@ -597,7 +619,7 @@ Please create an improved registration page that captures the same messaging but
                                                                         page.id
                                                                     )
                                                                 }
-                                                                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700"
+                                                                className="inline-flex items-center gap-2 rounded-lg bg-cyan-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-cyan-700"
                                                             >
                                                                 <Pencil className="h-4 w-4" />
                                                                 Edit Page
@@ -617,17 +639,14 @@ Please create an improved registration page that captures the same messaging but
                 {/* Helper Info */}
                 <div className="rounded-lg border border-primary/10 bg-primary/5 p-6">
                     <h4 className="mb-3 font-semibold text-primary">
-                        💡 Registration Page Tips
+                        💡 Watch Page Tips
                     </h4>
                     <ul className="space-y-2 text-sm text-primary">
+                        <li>• The video block is protected and can't be deleted</li>
                         <li>
-                            • Use the Visual Editor to customize all content, colors,
-                            and layout
+                            • Use the Visual Editor to customize surrounding content
                         </li>
-                        <li>• Add/remove sections using the component library</li>
-                        <li>
-                            • Content is automatically pulled from your deck structure
-                        </li>
+                        <li>• Add engagement elements like progress bars and CTAs</li>
                         <li>• Changes auto-save every 3 seconds</li>
                     </ul>
                 </div>

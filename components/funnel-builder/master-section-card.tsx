@@ -22,8 +22,8 @@ import {
 } from "@/app/funnel-builder/master-steps-config";
 import { ComingSoonBadge } from "@/components/ui/coming-soon-overlay";
 
-// Only Marketing Content (step 12) is coming soon - AI Follow-Up and Meta Ads Manager are live
-const COMING_SOON_STEPS = [12];
+// Marketing Content Engine (step 16) is coming soon
+const COMING_SOON_STEPS = [16];
 
 interface MasterSectionCardProps {
     masterStepId: number;
@@ -45,19 +45,40 @@ const ICON_MAP = {
     5: BarChart3,
 };
 
+/**
+ * Step data for all 17 funnel steps
+ * Organized by Master Step sections:
+ * - Business Profile (1-3)
+ * - Presentation Materials (4-6)
+ * - Funnel Pages (7-14)
+ * - Traffic Agents (15-17)
+ */
 const STEPS_DATA = [
-    { number: 1, title: "Intake", description: "Multiple input options" },
+    // Business Profile (Master Step 1)
+    { number: 1, title: "Define Context", description: "Multiple input options" },
     { number: 2, title: "Funnel Map", description: "Plan your funnel" },
     { number: 3, title: "Brand Design", description: "Visual identity" },
+    // Presentation Materials (Master Step 2)
     { number: 4, title: "Presentation Structure", description: "AI-generated outline" },
-    { number: 5, title: "Create Presentation", description: "Generate Slides" },
+    { number: 5, title: "Create Presentation", description: "Generate slides" },
     { number: 6, title: "Upload Video", description: "Pitch recording" },
-    { number: 7, title: "Enrollment Page", description: "AI sales copy" },
-    { number: 8, title: "Watch Page", description: "Video landing" },
-    { number: 9, title: "Registration", description: "Lead capture" },
-    { number: 10, title: "AI Follow-Up", description: "Smart automation" },
-    { number: 11, title: "Meta Ads Manager", description: "Meta/Instagram ads" },
-    { number: 12, title: "Marketing Content", description: "Social content engine" },
+    // Funnel Pages (Master Step 3)
+    { number: 7, title: "Registration Page", description: "Lead capture" },
+    { number: 8, title: "Confirmation Page", description: "Calendar booking" },
+    { number: 9, title: "Watch Page", description: "Video landing" },
+    { number: 10, title: "Enrollment Page", description: "AI sales copy" },
+    {
+        number: 11,
+        title: "Call Booking Page",
+        description: "Schedule discovery calls",
+    },
+    { number: 12, title: "Checkout Page", description: "Payment processing" },
+    { number: 13, title: "Upsell Page", description: "One-time offers" },
+    { number: 14, title: "Thank You Page", description: "Purchase confirmation" },
+    // Traffic Agents (Master Step 4)
+    { number: 15, title: "AI Follow-Up Engine", description: "Smart automation" },
+    { number: 16, title: "Marketing Content Engine", description: "Social content" },
+    { number: 17, title: "Meta Ads Manager", description: "Paid advertising" },
 ];
 
 export function MasterSectionCard({

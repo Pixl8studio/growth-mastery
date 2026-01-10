@@ -20,6 +20,7 @@ vi.mock("@/app/funnel-builder/master-steps-config", () => ({
     getMasterStepForSubStep: vi.fn(() => ({ id: 1, name: "Business Context" })),
     MASTER_STEPS: [],
     getFirstIncompleteSubStep: vi.fn(),
+    TOTAL_FUNNEL_STEPS: 17,
 }));
 
 describe("StepLayout", () => {

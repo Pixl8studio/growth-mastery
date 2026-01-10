@@ -2,7 +2,26 @@
  * Type definitions for the Pages feature
  */
 
-export type PageType = "enrollment" | "watch" | "registration";
+/**
+ * All valid page types as a const tuple for runtime validation (e.g., Zod)
+ * IMPORTANT: This is the single source of truth for page types.
+ * Do not define PageType elsewhere.
+ */
+export const PAGE_TYPES = [
+    "registration",
+    "confirmation",
+    "watch",
+    "enrollment",
+    "call_booking",
+    "checkout",
+    "upsell",
+    "thank_you",
+] as const;
+
+/**
+ * Page type union derived from PAGE_TYPES constant
+ */
+export type PageType = (typeof PAGE_TYPES)[number];
 
 export interface PageWebhookConfig {
     webhook_enabled: boolean | null;

@@ -51,9 +51,20 @@ export async function GET(_request: NextRequest) {
                 endpoint: "GET /api/stripe/connect",
             },
         });
-        return NextResponse.json(
-            { error: "Failed to initiate Stripe Connect" },
-            { status: 500 }
+
+        // Redirect to settings page with error message for better UX
+        const errorMessage =
+            error instanceof Error
+                ? error.message
+                : "Failed to initiate Stripe Connect";
+        const isConfigError =
+            errorMessage.includes("not configured") ||
+            errorMessage.includes("STRIPE_CONNECT_CLIENT_ID");
+
+        return NextResponse.redirect(
+            `${process.env.NEXT_PUBLIC_APP_URL}/settings/payments?error=${encodeURIComponent(
+                isConfigError ? "stripe_not_configured" : "connection_failed"
+            )}&error_detail=${encodeURIComponent(errorMessage)}`
         );
     }
 }

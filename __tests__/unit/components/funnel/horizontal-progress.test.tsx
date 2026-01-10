@@ -29,19 +29,19 @@ describe("HorizontalProgress", () => {
         completedSteps: [1, 2],
     };
 
-    it("renders all 14 steps", { timeout: 15000 }, () => {
+    it("renders all 17 steps", { timeout: 15000 }, () => {
         render(<HorizontalProgress {...defaultProps} />);
 
-        // Check that we have 14 links (one for each step)
+        // Check that we have 17 links (one for each step)
         const links = screen.getAllByRole("link");
-        expect(links).toHaveLength(14);
+        expect(links).toHaveLength(17);
     });
 
     it("displays correct completion percentage", () => {
         render(<HorizontalProgress {...defaultProps} />);
 
-        // 2 completed out of 14 = 14%
-        expect(screen.getByText("14%")).toBeInTheDocument();
+        // 2 completed out of 17 = 12%
+        expect(screen.getByText("12%")).toBeInTheDocument();
     });
 
     it("shows step numbers for non-completed steps", () => {
@@ -67,7 +67,7 @@ describe("HorizontalProgress", () => {
 
         expect(screen.getByText("2 completed")).toBeInTheDocument();
         expect(screen.getByText("1 active")).toBeInTheDocument();
-        expect(screen.getByText("11 remaining")).toBeInTheDocument();
+        expect(screen.getByText("14 remaining")).toBeInTheDocument();
     });
 
     it("generates correct links for each step", { timeout: 15000 }, () => {
@@ -98,16 +98,16 @@ describe("HorizontalProgress", () => {
     });
 
     it("handles 100% completion", () => {
-        const allSteps = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+        const allSteps = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
         render(
             <HorizontalProgress
                 projectId="test-id"
-                currentStep={14}
+                currentStep={17}
                 completedSteps={allSteps}
             />
         );
 
         expect(screen.getByText("100%")).toBeInTheDocument();
-        expect(screen.getByText("14 completed")).toBeInTheDocument();
+        expect(screen.getByText("17 completed")).toBeInTheDocument();
     });
 });

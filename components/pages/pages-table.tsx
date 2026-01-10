@@ -50,14 +50,24 @@ export function PagesTable({ pages, username }: PagesTableProps) {
 
     const getStepNumber = (type: PageListItem["type"]): number => {
         switch (type) {
-            case "enrollment":
-                return 5;
-            case "watch":
-                return 8;
             case "registration":
+                return 7;
+            case "confirmation":
+                return 8;
+            case "watch":
                 return 9;
+            case "enrollment":
+                return 10;
+            case "call_booking":
+                return 11;
+            case "checkout":
+                return 12;
+            case "upsell":
+                return 13;
+            case "thank_you":
+                return 14;
             default:
-                return 5;
+                return 7;
         }
     };
 

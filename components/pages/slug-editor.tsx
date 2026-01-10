@@ -11,10 +11,11 @@ import { Input } from "@/components/ui/input";
 import { Pencil, Check, X, Copy } from "lucide-react";
 import { useToast } from "@/components/ui/use-toast";
 import { logger } from "@/lib/client-logger";
+import type { PageType } from "@/types/pages";
 
 interface SlugEditorProps {
     pageId: string;
-    pageType: "registration" | "watch" | "enrollment";
+    pageType: PageType;
     initialSlug: string | null;
     username: string;
     onUpdate?: (newSlug: string) => void;

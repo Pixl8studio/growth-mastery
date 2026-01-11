@@ -35,7 +35,8 @@ const STREAM_TIMEOUT_MS = 75 * 60 * 1000;
 
 // Heartbeat interval to keep SSE connection alive during slow image generation
 // Proxies and load balancers may close "idle" connections after 30-60 seconds
-const HEARTBEAT_INTERVAL_MS = 25 * 1000;
+// Using 20s to stay well under common proxy timeouts (30-60s)
+const HEARTBEAT_INTERVAL_MS = 20 * 1000;
 
 // Per-image generation timeout and retry settings
 const IMAGE_GENERATION_TIMEOUT_MS = 90 * 1000; // 90 seconds per image attempt
@@ -61,8 +62,28 @@ function getOpenAIClient(): OpenAI {
 }
 
 /**
- * Helper to wrap a promise with a timeout
- * Uses proper type safety for timeoutId to handle edge cases
+ * Wraps a promise with a timeout, rejecting if the operation takes too long.
+ *
+ * Used to prevent hanging on slow external API calls (OpenAI DALL-E, image downloads).
+ * The timeout is enforced via Promise.race - the underlying operation continues
+ * but we stop waiting for it.
+ *
+ * Note: This does NOT cancel the underlying operation (e.g., a fetch request).
+ * For cancellable operations, use AbortController separately.
+ *
+ * @template T - The type returned by the promise
+ * @param promise - The promise to wrap with timeout
+ * @param timeoutMs - Maximum time to wait in milliseconds
+ * @param operationName - Human-readable name for error messages (e.g., "DALL-E image generation")
+ * @returns The resolved value of the promise
+ * @throws Error with message "{operationName} timed out after {timeoutMs}ms"
+ *
+ * @example
+ * const result = await withTimeout(
+ *   openai.images.generate({ prompt: "..." }),
+ *   90000,
+ *   "DALL-E image generation"
+ * );
  */
 async function withTimeout<T>(
     promise: Promise<T>,
@@ -156,12 +177,35 @@ async function generateSlideImage(
                 return null;
             }
 
-            // Download and upload to permanent storage (also with timeout)
-            const imageResponse = await withTimeout(
-                fetch(tempImageUrl),
-                IMAGE_DOWNLOAD_TIMEOUT_MS,
-                "Image download"
-            );
+            // Download and upload to permanent storage with AbortController
+            // AbortController ensures the fetch is cancelled on timeout, preventing memory leaks
+            const downloadController = new AbortController();
+            const downloadTimeout = setTimeout(() => {
+                downloadController.abort();
+            }, IMAGE_DOWNLOAD_TIMEOUT_MS);
+
+            let imageResponse: Response;
+            try {
+                imageResponse = await fetch(tempImageUrl, {
+                    signal: downloadController.signal,
+                });
+            } catch (fetchError) {
+                clearTimeout(downloadTimeout);
+                const isAbortError =
+                    fetchError instanceof Error && fetchError.name === "AbortError";
+                logger.warn(
+                    { presentationId, slideNumber, attempt, isAbortError },
+                    isAbortError
+                        ? "Image download timed out"
+                        : "Failed to fetch image from OpenAI"
+                );
+                if (attempt < IMAGE_GENERATION_MAX_RETRIES) {
+                    continue; // Retry
+                }
+                return null;
+            } finally {
+                clearTimeout(downloadTimeout);
+            }
 
             if (!imageResponse.ok) {
                 logger.warn(
@@ -249,9 +293,12 @@ async function generateSlideImage(
                 return null;
             }
 
-            // Exponential backoff before retry: 1s, 2s, 4s, etc.
-            // Reduces pressure on OpenAI API during transient issues
-            const backoffDelay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+            // Exponential backoff with jitter before retry
+            // Base delays: 1s, 2s, 4s with ±30% random jitter
+            // Jitter prevents thundering herd when multiple requests retry simultaneously
+            const baseDelay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+            const jitter = (Math.random() - 0.5) * 0.6; // ±30% variation
+            const backoffDelay = Math.round(baseDelay * (1 + jitter));
             await new Promise((resolve) => setTimeout(resolve, backoffDelay));
         }
     }

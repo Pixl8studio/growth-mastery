@@ -14,6 +14,7 @@ import OpenAI from "openai";
 
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
+import { AIGenerationError } from "@/lib/errors";
 import { generatePresentation } from "@/lib/presentations/slide-generator";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
 import {
@@ -576,6 +577,9 @@ export async function GET(request: NextRequest) {
                     // Wrap generation in timeout to prevent hung connections
                     // This protects against OpenAI API hangs and ensures resources are released
                     // Generate only the slides that need to be generated (filtered for resume)
+                    // CRITICAL: Pass explicit timeout to align with stream timeout
+                    // Without this, slide-generator uses a 5-minute default which is too short
+                    // for presentations with image generation (~30-60 seconds per slide)
                     const generationPromise = generatePresentation({
                         deckStructure: {
                             id: deckStructure.id,
@@ -598,6 +602,7 @@ export async function GET(request: NextRequest) {
                         customization,
                         businessProfile: businessProfile || undefined,
                         brandDesign: brandDesign || undefined,
+                        timeoutMs: STREAM_TIMEOUT_MS,
                         onSlideGenerated: async (slide, progress) => {
                             // Generate image for the slide if it has an imagePrompt
                             // This happens BEFORE sending the slide to the client
@@ -729,7 +734,15 @@ export async function GET(request: NextRequest) {
 
                     controller.close();
                 } catch (error) {
-                    const isTimeout = error instanceof StreamTimeoutError;
+                    // Detect timeout from either:
+                    // 1. StreamTimeoutError (outer Promise.race timeout)
+                    // 2. AIGenerationError with TIMEOUT code (inner slide-generator timeout)
+                    const isStreamTimeout = error instanceof StreamTimeoutError;
+                    const isGenerationTimeout =
+                        error instanceof AIGenerationError &&
+                        error.errorCode === "TIMEOUT";
+                    const isTimeout = isStreamTimeout || isGenerationTimeout;
+
                     const errorMessage = isTimeout
                         ? "AI_PROVIDER_TIMEOUT"
                         : error instanceof Error

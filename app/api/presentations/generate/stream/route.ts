@@ -23,6 +23,28 @@ import {
     PresentationStatus,
 } from "@/lib/constants/presentations";
 
+// =============================================================================
+// Timeout Configuration
+// All timeout values in one place for easy tuning and maintenance
+// =============================================================================
+
+// Stream timeout protection (75 minutes for reliable 60-slide generation with images)
+// Each slide with image takes ~30-60 seconds, so 60 slides needs up to 60 minutes
+// Adding 15 minute buffer for network latency and API variability
+const STREAM_TIMEOUT_MS = 75 * 60 * 1000;
+
+// Heartbeat interval to keep SSE connection alive during slow image generation
+// Proxies and load balancers may close "idle" connections after 30-60 seconds
+const HEARTBEAT_INTERVAL_MS = 25 * 1000;
+
+// Per-image generation timeout and retry settings
+const IMAGE_GENERATION_TIMEOUT_MS = 90 * 1000; // 90 seconds per image attempt
+const IMAGE_DOWNLOAD_TIMEOUT_MS = 30 * 1000; // 30 seconds for image download
+const IMAGE_GENERATION_MAX_RETRIES = 2; // Try up to 2 times before giving up
+const RETRY_BASE_DELAY_MS = 1000; // Base delay for exponential backoff
+
+// =============================================================================
+
 // Lazy OpenAI client initialization for image generation
 let openaiClient: OpenAI | null = null;
 
@@ -40,13 +62,14 @@ function getOpenAIClient(): OpenAI {
 
 /**
  * Helper to wrap a promise with a timeout
+ * Uses proper type safety for timeoutId to handle edge cases
  */
 async function withTimeout<T>(
     promise: Promise<T>,
     timeoutMs: number,
     operationName: string
 ): Promise<T> {
-    let timeoutId: NodeJS.Timeout;
+    let timeoutId: NodeJS.Timeout | undefined;
     const timeoutPromise = new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => {
             reject(new Error(`${operationName} timed out after ${timeoutMs}ms`));
@@ -55,10 +78,10 @@ async function withTimeout<T>(
 
     try {
         const result = await Promise.race([promise, timeoutPromise]);
-        clearTimeout(timeoutId!);
+        if (timeoutId) clearTimeout(timeoutId);
         return result;
     } catch (error) {
-        clearTimeout(timeoutId!);
+        if (timeoutId) clearTimeout(timeoutId);
         throw error;
     }
 }
@@ -66,6 +89,12 @@ async function withTimeout<T>(
 /**
  * Generate an image for a slide using DALL-E 3 with timeout and retry
  * Returns the permanent Supabase storage URL or null on failure
+ *
+ * Retry behavior:
+ * - Network errors, timeouts, and transient failures: Will retry with exponential backoff
+ * - Empty URL from OpenAI: No retry (indicates content policy rejection or API issue,
+ *   not a transient error - retrying would waste time and credits)
+ * - Failed download/upload: Will retry (transient network issues)
  */
 async function generateSlideImage(
     presentationId: string,
@@ -88,7 +117,7 @@ async function generateSlideImage(
 
     const enhancedPrompt = `${styleContext} ${imagePrompt}`;
 
-    // Retry loop for image generation
+    // Retry loop for image generation with exponential backoff
     for (let attempt = 1; attempt <= IMAGE_GENERATION_MAX_RETRIES; attempt++) {
         try {
             logger.info(
@@ -118,18 +147,19 @@ async function generateSlideImage(
 
             const tempImageUrl = response.data?.[0]?.url;
             if (!tempImageUrl) {
+                // Empty URL typically means content policy rejection or API-side issue
+                // This is not transient - retrying would waste time and API credits
                 logger.warn(
                     { presentationId, slideNumber, attempt },
-                    "No image URL returned from OpenAI"
+                    "No image URL returned from OpenAI - likely content policy or API issue, not retrying"
                 );
-                // Don't retry for this - it's not a transient error
                 return null;
             }
 
             // Download and upload to permanent storage (also with timeout)
             const imageResponse = await withTimeout(
                 fetch(tempImageUrl),
-                30000, // 30 second timeout for download
+                IMAGE_DOWNLOAD_TIMEOUT_MS,
                 "Image download"
             );
 
@@ -196,16 +226,33 @@ async function generateSlideImage(
             );
 
             if (attempt >= IMAGE_GENERATION_MAX_RETRIES) {
-                // All retries exhausted - log error and return null
+                // All retries exhausted - log error, track in Sentry, and return null
                 logger.error(
                     { error, presentationId, slideNumber },
                     "Failed to generate image after all retries - slide will show placeholder"
                 );
+
+                // Track exhausted retries in Sentry for monitoring
+                Sentry.captureException(error, {
+                    tags: {
+                        component: "image-generation",
+                        action: "dall-e-retry-exhausted",
+                    },
+                    extra: {
+                        presentationId,
+                        slideNumber,
+                        maxRetries: IMAGE_GENERATION_MAX_RETRIES,
+                        isTimeout,
+                    },
+                });
+
                 return null;
             }
 
-            // Brief delay before retry (1 second)
-            await new Promise((resolve) => setTimeout(resolve, 1000));
+            // Exponential backoff before retry: 1s, 2s, 4s, etc.
+            // Reduces pressure on OpenAI API during transient issues
+            const backoffDelay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+            await new Promise((resolve) => setTimeout(resolve, backoffDelay));
         }
     }
 
@@ -244,19 +291,6 @@ interface SSEMessage {
 function formatSSE(message: SSEMessage): string {
     return `event: ${message.type}\ndata: ${JSON.stringify(message.data)}\n\n`;
 }
-
-// Stream timeout protection (75 minutes for reliable 60-slide generation with images)
-// Each slide with image takes ~30-60 seconds, so 60 slides needs up to 60 minutes
-// Adding 15 minute buffer for network latency and API variability
-const STREAM_TIMEOUT_MS = 75 * 60 * 1000;
-
-// Heartbeat interval to keep SSE connection alive during slow image generation
-// Proxies and load balancers may close "idle" connections after 30-60 seconds
-const HEARTBEAT_INTERVAL_MS = 25 * 1000;
-
-// Per-image generation timeout and retry settings
-const IMAGE_GENERATION_TIMEOUT_MS = 90 * 1000; // 90 seconds per image attempt
-const IMAGE_GENERATION_MAX_RETRIES = 2; // Try up to 2 times before giving up
 
 class StreamTimeoutError extends Error {
     constructor(timeoutMs: number) {

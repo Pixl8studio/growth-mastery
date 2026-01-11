@@ -14,6 +14,7 @@ import OpenAI from "openai";
 
 import { createClient } from "@/lib/supabase/server";
 import { logger } from "@/lib/logger";
+import { AIGenerationError } from "@/lib/errors";
 import { generatePresentation } from "@/lib/presentations/slide-generator";
 import { checkRateLimit, getRateLimitIdentifier } from "@/lib/middleware/rate-limit";
 import {
@@ -21,6 +22,29 @@ import {
     PRESENTATION_LIMIT_ENABLED,
     PresentationStatus,
 } from "@/lib/constants/presentations";
+
+// =============================================================================
+// Timeout Configuration
+// All timeout values in one place for easy tuning and maintenance
+// =============================================================================
+
+// Stream timeout protection (75 minutes for reliable 60-slide generation with images)
+// Each slide with image takes ~30-60 seconds, so 60 slides needs up to 60 minutes
+// Adding 15 minute buffer for network latency and API variability
+const STREAM_TIMEOUT_MS = 75 * 60 * 1000;
+
+// Heartbeat interval to keep SSE connection alive during slow image generation
+// Proxies and load balancers may close "idle" connections after 30-60 seconds
+// Using 20s to stay well under common proxy timeouts (30-60s)
+const HEARTBEAT_INTERVAL_MS = 20 * 1000;
+
+// Per-image generation timeout and retry settings
+const IMAGE_GENERATION_TIMEOUT_MS = 90 * 1000; // 90 seconds per image attempt
+const IMAGE_DOWNLOAD_TIMEOUT_MS = 30 * 1000; // 30 seconds for image download
+const IMAGE_GENERATION_MAX_RETRIES = 2; // Try up to 2 times before giving up
+const RETRY_BASE_DELAY_MS = 1000; // Base delay for exponential backoff
+
+// =============================================================================
 
 // Lazy OpenAI client initialization for image generation
 let openaiClient: OpenAI | null = null;
@@ -38,8 +62,60 @@ function getOpenAIClient(): OpenAI {
 }
 
 /**
- * Generate an image for a slide using DALL-E 3
+ * Wraps a promise with a timeout, rejecting if the operation takes too long.
+ *
+ * Used to prevent hanging on slow external API calls (OpenAI DALL-E, image downloads).
+ * The timeout is enforced via Promise.race - the underlying operation continues
+ * but we stop waiting for it.
+ *
+ * Note: This does NOT cancel the underlying operation (e.g., a fetch request).
+ * For cancellable operations, use AbortController separately.
+ *
+ * @template T - The type returned by the promise
+ * @param promise - The promise to wrap with timeout
+ * @param timeoutMs - Maximum time to wait in milliseconds
+ * @param operationName - Human-readable name for error messages (e.g., "DALL-E image generation")
+ * @returns The resolved value of the promise
+ * @throws Error with message "{operationName} timed out after {timeoutMs}ms"
+ *
+ * @example
+ * const result = await withTimeout(
+ *   openai.images.generate({ prompt: "..." }),
+ *   90000,
+ *   "DALL-E image generation"
+ * );
+ */
+async function withTimeout<T>(
+    promise: Promise<T>,
+    timeoutMs: number,
+    operationName: string
+): Promise<T> {
+    let timeoutId: NodeJS.Timeout | undefined;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(() => {
+            reject(new Error(`${operationName} timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+    });
+
+    try {
+        const result = await Promise.race([promise, timeoutPromise]);
+        if (timeoutId) clearTimeout(timeoutId);
+        return result;
+    } catch (error) {
+        if (timeoutId) clearTimeout(timeoutId);
+        throw error;
+    }
+}
+
+/**
+ * Generate an image for a slide using DALL-E 3 with timeout and retry
  * Returns the permanent Supabase storage URL or null on failure
+ *
+ * Retry behavior:
+ * - Network errors, timeouts, and transient failures: Will retry with exponential backoff
+ * - Empty URL from OpenAI: No retry (indicates content policy rejection or API issue,
+ *   not a transient error - retrying would waste time and credits)
+ * - Failed download/upload: Will retry (transient network issues)
  */
 async function generateSlideImage(
     presentationId: string,
@@ -48,94 +124,186 @@ async function generateSlideImage(
     brandPrimaryColor: string | null,
     supabase: Awaited<ReturnType<typeof createClient>>
 ): Promise<string | null> {
-    try {
-        const openai = getOpenAIClient();
+    const openai = getOpenAIClient();
 
-        // Enhance prompt with brand context
-        const styleContext = [
-            "Professional business presentation slide image.",
-            brandPrimaryColor ? `Color scheme inspired by ${brandPrimaryColor}.` : "",
-            "Clean, modern design suitable for presentations.",
-            "High quality, no text overlays.",
-        ]
-            .filter(Boolean)
-            .join(" ");
+    // Enhance prompt with brand context
+    const styleContext = [
+        "Professional business presentation slide image.",
+        brandPrimaryColor ? `Color scheme inspired by ${brandPrimaryColor}.` : "",
+        "Clean, modern design suitable for presentations.",
+        "High quality, no text overlays.",
+    ]
+        .filter(Boolean)
+        .join(" ");
 
-        const enhancedPrompt = `${styleContext} ${imagePrompt}`;
+    const enhancedPrompt = `${styleContext} ${imagePrompt}`;
 
-        logger.info(
-            { presentationId, slideNumber, promptLength: enhancedPrompt.length },
-            "Generating AI image for slide during streaming"
-        );
-
-        const response = await openai.images.generate({
-            model: "dall-e-3",
-            prompt: enhancedPrompt,
-            n: 1,
-            size: "1792x1024", // 16:9 aspect ratio for slides
-            quality: "standard",
-            style: "natural",
-        });
-
-        const tempImageUrl = response.data?.[0]?.url;
-        if (!tempImageUrl) {
-            logger.warn(
-                { presentationId, slideNumber },
-                "No image URL returned from OpenAI"
+    // Retry loop for image generation with exponential backoff
+    for (let attempt = 1; attempt <= IMAGE_GENERATION_MAX_RETRIES; attempt++) {
+        try {
+            logger.info(
+                {
+                    presentationId,
+                    slideNumber,
+                    attempt,
+                    maxRetries: IMAGE_GENERATION_MAX_RETRIES,
+                    promptLength: enhancedPrompt.length,
+                },
+                "Generating AI image for slide during streaming"
             );
-            return null;
-        }
 
-        // Download and upload to permanent storage
-        const imageResponse = await fetch(tempImageUrl);
-        if (!imageResponse.ok) {
-            logger.warn(
-                { presentationId, slideNumber },
-                "Failed to download image from OpenAI"
+            // Wrap OpenAI call with timeout to prevent hanging
+            const response = await withTimeout(
+                openai.images.generate({
+                    model: "dall-e-3",
+                    prompt: enhancedPrompt,
+                    n: 1,
+                    size: "1792x1024", // 16:9 aspect ratio for slides
+                    quality: "standard",
+                    style: "natural",
+                }),
+                IMAGE_GENERATION_TIMEOUT_MS,
+                "DALL-E image generation"
             );
-            return null;
-        }
 
-        const imageBlob = await imageResponse.blob();
-        const imageBuffer = await imageBlob.arrayBuffer();
+            const tempImageUrl = response.data?.[0]?.url;
+            if (!tempImageUrl) {
+                // Empty URL typically means content policy rejection or API-side issue
+                // This is not transient - retrying would waste time and API credits
+                logger.warn(
+                    { presentationId, slideNumber, attempt },
+                    "No image URL returned from OpenAI - likely content policy or API issue, not retrying"
+                );
+                return null;
+            }
 
-        const timestamp = Date.now();
-        const storagePath = `presentations/${presentationId}/slide-${slideNumber}-${timestamp}.png`;
+            // Download and upload to permanent storage with AbortController
+            // AbortController ensures the fetch is cancelled on timeout, preventing memory leaks
+            const downloadController = new AbortController();
+            const downloadTimeout = setTimeout(() => {
+                downloadController.abort();
+            }, IMAGE_DOWNLOAD_TIMEOUT_MS);
 
-        const { error: uploadError } = await supabase.storage
-            .from("presentation-media")
-            .upload(storagePath, imageBuffer, {
-                contentType: "image/png",
-                cacheControl: "31536000",
-                upsert: true,
-            });
+            let imageResponse: Response;
+            try {
+                imageResponse = await fetch(tempImageUrl, {
+                    signal: downloadController.signal,
+                });
+            } catch (fetchError) {
+                clearTimeout(downloadTimeout);
+                const isAbortError =
+                    fetchError instanceof Error && fetchError.name === "AbortError";
+                logger.warn(
+                    { presentationId, slideNumber, attempt, isAbortError },
+                    isAbortError
+                        ? "Image download timed out"
+                        : "Failed to fetch image from OpenAI"
+                );
+                if (attempt < IMAGE_GENERATION_MAX_RETRIES) {
+                    continue; // Retry
+                }
+                return null;
+            } finally {
+                clearTimeout(downloadTimeout);
+            }
 
-        if (uploadError) {
-            logger.warn(
-                { error: uploadError, presentationId, slideNumber },
-                "Failed to upload image to storage"
+            if (!imageResponse.ok) {
+                logger.warn(
+                    { presentationId, slideNumber, attempt },
+                    "Failed to download image from OpenAI"
+                );
+                if (attempt < IMAGE_GENERATION_MAX_RETRIES) {
+                    continue; // Retry
+                }
+                return null;
+            }
+
+            const imageBlob = await imageResponse.blob();
+            const imageBuffer = await imageBlob.arrayBuffer();
+
+            const timestamp = Date.now();
+            const storagePath = `presentations/${presentationId}/slide-${slideNumber}-${timestamp}.png`;
+
+            const { error: uploadError } = await supabase.storage
+                .from("presentation-media")
+                .upload(storagePath, imageBuffer, {
+                    contentType: "image/png",
+                    cacheControl: "31536000",
+                    upsert: true,
+                });
+
+            if (uploadError) {
+                logger.warn(
+                    { error: uploadError, presentationId, slideNumber, attempt },
+                    "Failed to upload image to storage"
+                );
+                if (attempt < IMAGE_GENERATION_MAX_RETRIES) {
+                    continue; // Retry
+                }
+                return null;
+            }
+
+            const { data: urlData } = supabase.storage
+                .from("presentation-media")
+                .getPublicUrl(storagePath);
+
+            logger.info(
+                { presentationId, slideNumber, storagePath, attempt },
+                "Image generated and uploaded successfully during streaming"
             );
-            return null;
+
+            return urlData.publicUrl;
+        } catch (error) {
+            const isTimeout =
+                error instanceof Error && error.message.includes("timed out");
+
+            logger.warn(
+                {
+                    error,
+                    presentationId,
+                    slideNumber,
+                    attempt,
+                    maxRetries: IMAGE_GENERATION_MAX_RETRIES,
+                    isTimeout,
+                },
+                `Image generation attempt ${attempt} failed${attempt < IMAGE_GENERATION_MAX_RETRIES ? ", retrying..." : ""}`
+            );
+
+            if (attempt >= IMAGE_GENERATION_MAX_RETRIES) {
+                // All retries exhausted - log error, track in Sentry, and return null
+                logger.error(
+                    { error, presentationId, slideNumber },
+                    "Failed to generate image after all retries - slide will show placeholder"
+                );
+
+                // Track exhausted retries in Sentry for monitoring
+                Sentry.captureException(error, {
+                    tags: {
+                        component: "image-generation",
+                        action: "dall-e-retry-exhausted",
+                    },
+                    extra: {
+                        presentationId,
+                        slideNumber,
+                        maxRetries: IMAGE_GENERATION_MAX_RETRIES,
+                        isTimeout,
+                    },
+                });
+
+                return null;
+            }
+
+            // Exponential backoff with jitter before retry
+            // Base delays: 1s, 2s, 4s with ±30% random jitter
+            // Jitter prevents thundering herd when multiple requests retry simultaneously
+            const baseDelay = RETRY_BASE_DELAY_MS * Math.pow(2, attempt - 1);
+            const jitter = (Math.random() - 0.5) * 0.6; // ±30% variation
+            const backoffDelay = Math.round(baseDelay * (1 + jitter));
+            await new Promise((resolve) => setTimeout(resolve, backoffDelay));
         }
-
-        const { data: urlData } = supabase.storage
-            .from("presentation-media")
-            .getPublicUrl(storagePath);
-
-        logger.info(
-            { presentationId, slideNumber, storagePath },
-            "Image generated and uploaded successfully during streaming"
-        );
-
-        return urlData.publicUrl;
-    } catch (error) {
-        // Log but don't throw - image generation failure shouldn't stop slide generation
-        logger.error(
-            { error, presentationId, slideNumber },
-            "Failed to generate image during streaming - slide will show placeholder"
-        );
-        return null;
     }
+
+    return null;
 }
 
 // Zod schema for presentation customization
@@ -170,9 +338,6 @@ interface SSEMessage {
 function formatSSE(message: SSEMessage): string {
     return `event: ${message.type}\ndata: ${JSON.stringify(message.data)}\n\n`;
 }
-
-// Stream timeout protection (30 minutes max for large presentations)
-const STREAM_TIMEOUT_MS = 30 * 60 * 1000;
 
 class StreamTimeoutError extends Error {
     constructor(timeoutMs: number) {
@@ -556,26 +721,55 @@ export async function GET(request: NextRequest) {
 
         const stream = new ReadableStream({
             async start(controller) {
-                // Send connected event with resume info
-                controller.enqueue(
-                    encoder.encode(
-                        formatSSE({
-                            type: "connected",
-                            data: {
-                                presentationId: presentation.id,
-                                totalSlides: validatedSlides.length,
-                                isResuming,
-                                startFromSlide: startFromSlideNumber,
-                                slidesToGenerate: slidesToGenerate.length,
-                            },
-                        })
-                    )
-                );
+                // Start heartbeat to keep connection alive during slow image generation
+                // Proxies/load balancers may close connections that appear idle
+                // Using SSE comments (lines starting with :) for efficient keep-alive
+                let heartbeatStopped = false;
+                const heartbeatInterval = setInterval(() => {
+                    if (heartbeatStopped) {
+                        clearInterval(heartbeatInterval);
+                        return;
+                    }
+                    try {
+                        // SSE comment format - ignored by clients, keeps connection alive
+                        controller.enqueue(
+                            encoder.encode(`:heartbeat ${Date.now()}\n\n`)
+                        );
+                    } catch {
+                        // Controller closed - mark as stopped and clear interval
+                        heartbeatStopped = true;
+                        clearInterval(heartbeatInterval);
+                    }
+                }, HEARTBEAT_INTERVAL_MS);
+
+                // Helper to clean up heartbeat on stream end - idempotent
+                const stopHeartbeat = () => {
+                    heartbeatStopped = true;
+                    clearInterval(heartbeatInterval);
+                };
 
                 try {
+                    // Send connected event with resume info
+                    controller.enqueue(
+                        encoder.encode(
+                            formatSSE({
+                                type: "connected",
+                                data: {
+                                    presentationId: presentation.id,
+                                    totalSlides: validatedSlides.length,
+                                    isResuming,
+                                    startFromSlide: startFromSlideNumber,
+                                    slidesToGenerate: slidesToGenerate.length,
+                                },
+                            })
+                        )
+                    );
                     // Wrap generation in timeout to prevent hung connections
                     // This protects against OpenAI API hangs and ensures resources are released
                     // Generate only the slides that need to be generated (filtered for resume)
+                    // CRITICAL: Pass explicit timeout to align with stream timeout
+                    // Without this, slide-generator uses a 5-minute default which is too short
+                    // for presentations with image generation (~30-60 seconds per slide)
                     const generationPromise = generatePresentation({
                         deckStructure: {
                             id: deckStructure.id,
@@ -598,6 +792,7 @@ export async function GET(request: NextRequest) {
                         customization,
                         businessProfile: businessProfile || undefined,
                         brandDesign: brandDesign || undefined,
+                        timeoutMs: STREAM_TIMEOUT_MS,
                         onSlideGenerated: async (slide, progress) => {
                             // Generate image for the slide if it has an imagePrompt
                             // This happens BEFORE sending the slide to the client
@@ -727,9 +922,18 @@ export async function GET(request: NextRequest) {
                         "Streaming presentation generation complete"
                     );
 
+                    stopHeartbeat();
                     controller.close();
                 } catch (error) {
-                    const isTimeout = error instanceof StreamTimeoutError;
+                    // Detect timeout from either:
+                    // 1. StreamTimeoutError (outer Promise.race timeout)
+                    // 2. AIGenerationError with TIMEOUT code (inner slide-generator timeout)
+                    const isStreamTimeout = error instanceof StreamTimeoutError;
+                    const isGenerationTimeout =
+                        error instanceof AIGenerationError &&
+                        error.errorCode === "TIMEOUT";
+                    const isTimeout = isStreamTimeout || isGenerationTimeout;
+
                     const errorMessage = isTimeout
                         ? "AI_PROVIDER_TIMEOUT"
                         : error instanceof Error
@@ -812,6 +1016,7 @@ export async function GET(request: NextRequest) {
                         },
                     });
 
+                    stopHeartbeat();
                     controller.close();
                 }
             },
